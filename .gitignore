@@ -129,3 +129,7 @@ Signal%20Jam/
 # WSL / editor noise
 *.swp
 *~
+
+# .NET build outputs (regenerable)
+**/bin/
+**/obj/
