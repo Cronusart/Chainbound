@@ -1,0 +1,163 @@
+COMBAT_02A_StatusFrameworkAndCatalog_v1.2
+
+REVISION NOTES (v1.2 lockdown):
+- Added 7 missing General statuses required by baseline inscriptions and modifiers
+- All inscription-applied effects now have formal catalog entries
+- No engine implementation should reference an uncataloged status
+
+0. Purpose
+Defines:
+- Status classes and timing
+- Authoritative status catalog
+- Source rules (ChemistryOnly vs General)
+
+1. Status Classes (Exclusive)
+DurationStatus: persists N turns; reapply refreshes up to max
+InstantStatus: resolves immediately
+CounterStatus: increments counter; triggers at threshold
+ConsumedStatus: persists until consumed OR expires
+
+2. Duration Semantics (Authoritative)
+All "xN" values represent duration in turns unless explicitly a CounterStatus increment.
+No hidden intensity scaling unless explicitly stated in that status definition.
+
+3. Turn Timing (Authoritative)
+Start of Turn:
+- Turn-start triggers
+- Gain baseline AP (+2)
+Action Resolution:
+- hit check
+- damage
+- apply statuses (from inscriptions, passives, chemistry resolver)
+End of Turn:
+- DoT / regen
+- status AP changes (Pumped/Drained etc)
+- decrement durations
+
+4. Cleanse & Immunity
+- Cleanse removes DurationStatus debuffs (General only by default)
+- Cleanse does not remove CounterStatus unless allowed
+- Immunity prevents application; does not remove existing effects
+
+5. Status Origin Types (Authoritative)
+ChemistryOnly: can only be produced by chemistry resolver on damaging hit
+General: can be applied by inscriptions/passives if they say so
+
+Section 6 — Status Catalog
+[DATA MIGRATED] → See Docs/Specs/Combat/Data/Statuses.csv (62 entries)
+Refer to Data/_LEGEND.md for column definitions and enum values.
+
+7. Triggered Event Percentages (Authoritative Defaults)
+
+When inscriptions or passives reference chance-based triggers, use these baseline values unless explicitly overridden:
+
+7.1 Action Disruption
+- Rekt (lose action): 25%
+- Glitched Mind (mis-act): 50%
+- Offline (wake on damage): 100% on any damage
+
+7.2 AP-Related Triggers
+- Refund AP on miss: 25%
+- Bonus AP on crit: 25%
+- AP steal per turn (MEV Extracted): 1 AP (100%)
+
+7.3 Random Selection
+- Random stat selection (Meme Surge, etc.): Equal probability across valid stats
+- Random debuff selection: Equal probability across curated set
+
+7.4 Conditional Triggers
+- Default "on hit" trigger chance: 25%
+- Default "on crit" trigger chance: 50%
+- Default "end of turn" trigger chance: 100% (deterministic)
+
+7.5 Recoil & Self-Damage
+- Overleveraged recoil: 25% of damage dealt
+- Overclocked recoil (legacy serialized reaction only): 8% MaxHP
+- FOMO self-DoT: 1/16 MaxHP per turn
+
+## 7.6 Chemistry Reaction Redesign v2
+
+ChemistryOnly reactions use the seeded combat resolver and are recorded in the
+forensic log. Each matrix cell has one primary output with an explicit Self or
+Foe recipient. Chemistry reactions do not use stacks.
+
+- Firewall: Duration 2. The first Projectile hit each turn deals 30% less damage;
+  Contact hits are unaffected. Chemistry application still resolves after damage
+  mitigation.
+- Slowed: Duration 2. Speed -2 only. It does not roll an action skip.
+- Shattered: Instant. Deal 8% of current HP (minimum 1) and apply Def -1; it is
+  not an execute.
+- Drip: Duration 3. Heal 6% MaxHP once at End of Turn.
+- Rugged: Duration 3. End-of-Turn damage is counter/16 of MaxHP, increasing by
+  one per tick and capping at counter 15.
+- FOMO: Duration 3. Atk +1 and 1/16 MaxHP self-damage at End of Turn.
+- Anchored: Consumed. Suppresses spread expansion on the affected Chainling's
+  next damaging move, including Broadcast and Splinter.
+- Splinter: Consumed. The next damaging move hits each active foe at 65% damage
+  when two or more foes are active; against one foe it deals 15% more final
+  damage.
+- Cascade Failure: Counter threshold 3. The third chemistry application deals
+  25% MaxHP damage and resets the counter. Swapping out resets it; bench time
+  does not advance it.
+- Isolated: Ally-targeted Support effects, including healing, AP transfer, and
+  stage buffs, are rejected. Self-support, field effects, damage, and swapping
+  remain legal.
+
+Firewalled, Halted, Crashed, LiquidityPump, Evasive, Bridged, Narrowcast, and Overclocked are
+deprecated authoring IDs retained only for migration and serialized-save reads.
+
+8. Resistance & Mitigation Rules
+
+8.1 Single-Source Mitigation Cap
+- Maximum damage mitigation from any single passive or effect: 30%
+- Rationale: 50% mitigation is too strong for competitive balance
+
+8.2 Mitigation Stacking
+- Multiple mitigation sources stack multiplicatively, not additively
+- Example: Two 20% sources = 1 - (0.8 * 0.8) = 36% total, not 40%
+- Hard floor: Target always takes at least 10% of original damage
+
+8.3 Resistance Passives
+- Type-resistance passives: 20-25% mitigation (Rare tier)
+- Conditional resistance passives: Up to 30% mitigation (Epic+ tier)
+- No passive may grant full immunity to a damage type
+
+9. Cross-Spec References
+
+- Passive damage events (e.g., Reactive Ping, contact triggers): See COMBAT_02C_ResolutionMath Section 7
+- Chemistry-triggered status application: See COMBAT_01_TypeChemistry Section 2
+- Inscription status application rules: See COMBAT_03A_Moves_CoreFramework Section 5
+- Multi-hit resolution and wall interactions: See COMBAT_02C_ResolutionMath Section 6
+- Barrier bypass via statuses: See COMBAT_03A Section 9.4
+- Priority block turn order: See COMBAT_02C Section 9
+- Damage redirect resolution: See COMBAT_02C Section 10.2
+
+10. New General Statuses (v1 Revisions)
+
+The following statuses were added to support barrier bypass and damage redirect:
+
+10.1 Unsealed (StatusId 307)
+- Origin: General
+- Class: Duration (2 turns)
+- Effect: 50% chance per hit to bypass single-hit barriers
+- Not a debuff or buff; applied via support moves
+- Does NOT consume barrier hits when bypass triggers
+
+10.2 Relay (StatusId 308)
+- Origin: General
+- Class: Consumed (1 stack)
+- Effect: Full barrier bypass for the next hit
+- Consumed on use (whether or not target had a barrier)
+- Higher priority than Unsealed in bypass resolution
+
+10.3 DamageIntercept (StatusId 309)
+- Origin: General
+- Class: Consumed (1 stack)
+- Effect: Redirect next single-target attack on this Chainling to the interceptor
+- Applied by damage_intercept and signal_redirect moves
+- Sets redirectInterceptor reference on the protected Chainling
+- Consumed when redirect triggers; reference cleared
+
+All three are cataloged in Statuses.csv. See Data/_LEGEND.md for CSV format.
+
+END

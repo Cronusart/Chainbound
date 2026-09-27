@@ -1,0 +1,16 @@
+Core Interaction Matrix v1,,,,,,,,,,,,,,
+Attacker / Defender,Node,Gas,Block,Encrypted,Burned,Frozen,Forked,Mined,Staked,Compressed,Bot,Glitched,Shard,Meme
+Node,-,-,-,-,-,Defueled @Self,Anchored @Foe,Pumped @Self,-,Dusted @Foe,-,-,-,-
+Gas,Jammed @Foe,-,Pumped @Self,-,-,-,-,-,Isolated @Foe,-,Drained @Foe,-,-,-
+Block,-,-,-,-,Firewall @Self,-,Anchored @Foe,-,-,-,-,-,Anchored @Foe,-
+Encrypted,-,Drained @Foe,-,-,Defueled @Self,Jammed @Foe,-,-,-,-,Jammed @Foe,-,-,-
+Burned,-,Rugged @Foe,-,-,-,Rugged @Foe,-,Rugged @Foe,Isolated @Foe,Rugged @Foe,Backlash Bot Dmg @Foe,-,Rugged @Foe,-
+Frozen,-,Jammed @Foe,-,-,-,-,-,-,Slowed @Foe,-,Jammed @Foe,Jammed @Foe,Anchored @Foe,-
+Forked,-,-,-,-,Defueled @Self,-,-,Splinter @Self,-,-,Splinter @Self,Leaked @Foe,-,-
+Mined,-,Pumped @Self,Shattered @Foe,FOMO @Self,-,Dusted @Foe,-,-,FOMO @Self,-,-,-,-,-
+Staked,-,-,-,-,-,-,Anchored @Foe,-,-,Drip @Self,-,-,Siphoned @Self,-
+Compressed,-,-,Dusted @Foe,Pumped @Self,-,Jammed @Foe,-,-,-,-,-,-,-,-
+Bot,Drained @Foe,-,Drained @Foe,-,-,-,-,Backlash Bot Dmg @Foe,Drained @Foe,-,-,Jammed @Foe,-,-
+Glitched,Corroded @Foe,-,Cascade Failure @Foe,Corroded @Foe,Corroded @Foe,-,-,-,-,-,-,-,-,-
+Shard,Leaked @Foe,-,-,Shattered @Foe,-,-,Anchored @Foe,Shattered @Foe,-,Dusted @Foe,-,Shattered @Foe,-,-
+Meme,-,-,-,-,-,-,-,-,-,-,-,-,-,-

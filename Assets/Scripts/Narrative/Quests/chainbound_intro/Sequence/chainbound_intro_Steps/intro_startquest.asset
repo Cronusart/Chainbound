@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aebdd368303e1a42b1cfa384a316513, type: 3}
+  m_Name: intro_startquest
+  m_EditorClassIdentifier: 
+  stepName: chainbound_startquest
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 3c9b9823-e592-49be-a00b-6c5629d7f593
+  questDefinition: {fileID: 11400000, guid: 015cc1a15e789b648bd1f011f84db266, type: 2}

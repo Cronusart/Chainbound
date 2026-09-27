@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fca774587e661aa4688485a5df0464f3, type: 3}
+  m_Name: Typography_cycle_ii
+  m_EditorClassIdentifier: 
+  palette: {fileID: 11400000, guid: 8364c9f05d3da4f42ac6ecdd86de5e7b, type: 2}
+  fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
+  materialPreset: {fileID: 2100000, guid: 787d589d59b8f224184030ecdd5bf73e, type: 2}
+  materialAssignment: 1
+  faceColorSlot: 1
+  customFaceColor: {r: 1, g: 1, b: 1, a: 1}
+  faceColorTint: {r: 1, g: 1, b: 1, a: 1}
+  applyFaceColorToTextColor: 1
+  driveOutlineFromPalette: 1
+  outlineColorMode: 0
+  outlineColorSlot: 6
+  customOutlineColor: {r: 0.42, g: 0.28, b: 0.16, a: 1}
+  outlineWidth: 0.06
+  driveUnderlayFromPalette: 1
+  underlayColorMode: 0
+  underlayColorSlot: 4
+  customUnderlayColor: {r: 0.78, g: 0.48, b: 0.22, a: 0.35}
+  underlayOffset: {x: 0, y: -0.28}
+  underlayDilate: 0.08
+  underlaySoftness: 0.42
+  driveGlowFromPalette: 0
+  glowColorMode: 0
+  glowColorSlot: 4
+  customGlowColor: {r: 1, g: 0.78, b: 0.42, a: 0.55}
+  glowPower: 0.18
+  fontSizeMultiplier: 1
+  transformScaleMultiplier: 1
+  useVertexGradient: 0
+  gradientScope: 0
+  vertexGradientMode: 0
+  vertexGradientStartSlot: 1
+  vertexGradientEndSlot: 3
+  customVertexGradientStart: {r: 0.86, g: 0.62, b: 0.38, a: 1}
+  customVertexGradientEnd: {r: 0.95, g: 0.76, b: 0.46, a: 1}
+  vertexGradientTopSlot: 1
+  vertexGradientBottomSlot: 3
+  customVertexGradientTop: {r: 0.86, g: 0.62, b: 0.38, a: 1}
+  customVertexGradientBottom: {r: 0.95, g: 0.76, b: 0.46, a: 1}
+  animatePalettePulse: 0
+  pulseIntensityMin: 0.45
+  pulseIntensityMax: 1.75
+  pulseGlowOuter: 1
+  animateGradientShimmer: 0
+  gradientShimmerSpeed: 0.35
+  gradientShimmerUseUnscaledTime: 1
+  materialPropertyOverrides: []

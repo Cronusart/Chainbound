@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_loomville_gate_sequence
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_loomville_gate_sequence
+  startCheckpointId: coffee_gate_idle
+  safeResumeLabel: coffee_gate_idle
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 1
+  autoStartQuestId: coffee_and_beer
+  autoStartLifecycleMask: 12
+  autoStartSkipWorldFlagKey: world.loomville_mart.open
+  steps:
+  - {fileID: 11400000, guid: 6039483fda59a594fb67d80a3a880724, type: 2}
+  - {fileID: 11400000, guid: 35ccea59516acda4295d8b9a0214103f, type: 2}
+  - {fileID: 11400000, guid: 3c7704df6ed69554da9dcfb8f50f276b, type: 2}
+  - {fileID: 11400000, guid: 0fb22d325cb64eb42ae3020b6b5fde1e, type: 2}
+  - {fileID: 11400000, guid: 98396b0de49471745a4479b4e250f5bb, type: 2}
+  - {fileID: 11400000, guid: 87f1a6608c83b264f8eff4ba1a632bce, type: 2}
+  - {fileID: 11400000, guid: 396e32ca9f014994ab22cddca9816334, type: 2}
+  - {fileID: 11400000, guid: 99d878c3115c8bc418a849c58ebca2e8, type: 2}
+  - {fileID: 11400000, guid: 8bcfc491c6171e84493caa17ecbbc871, type: 2}
+  - {fileID: 11400000, guid: d26e7482a0c250744a44de9f14182bc9, type: 2}
+  - {fileID: 11400000, guid: 5cae6cb26d2479b41b68acd8a8e59936, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0109, type: 2}

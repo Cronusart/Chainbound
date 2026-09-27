@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Overrides Unity's Library (main) manifest template under Assets/Plugins/Android.
+  Because this replaces the template, MAIN/LAUNCHER must be declared on the
+  active entry activity or the home-screen icon / Build And Run entry point can vanish.
+  Soft-input is merged onto both Activity and GameActivity for Unity 6 entry options.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+
+  <uses-permission android:name="android.permission.VIBRATE" />
+
+  <application>
+    <!-- Unity 6 default application entry: GameActivity -->
+    <activity
+      android:name="com.unity3d.player.UnityPlayerGameActivity"
+      android:exported="true"
+      android:screenOrientation="sensorLandscape"
+      android:theme="@style/BaseUnityGameActivityTheme"
+      android:windowSoftInputMode="stateAlwaysHidden"
+      tools:node="merge">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+      <meta-data
+        android:name="unityplayer.UnityActivity"
+        android:value="true" />
+    </activity>
+
+    <!-- If Player Settings use classic Activity entry, keep soft-input merge here too.
+         Do NOT add a second MAIN/LAUNCHER (that creates a second launcher icon). -->
+    <activity
+      android:name="com.unity3d.player.UnityPlayerActivity"
+      android:screenOrientation="sensorLandscape"
+      android:windowSoftInputMode="stateAlwaysHidden"
+      tools:node="merge" />
+
+    <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="${applicationId}.fileprovider"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/file_paths" />
+    </provider>
+  </application>
+</manifest>

@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d275dc1417a05f94c83a620d48642323, type: 3}
+  m_Name: NightAccentConfig
+  m_EditorClassIdentifier: 
+  maxActivePointLights: 8
+  pointLightCullDistance: 50
+  globalTurnOnTime: 0.75
+  globalTurnOffTime: 0.25
+  accentGroups:
+  - groupName: StreetLights
+    presetType: 2
+    enabled: 1
+    emissionColor: {r: 0.93207544, g: 0.84069926, b: 0.42031327, a: 0}
+    emissionIntensity: 0
+    fadeDuration: 10
+    enablePointLights: 1
+    pointLightRange: 50
+    pointLightIntensity: 500
+    pointLightColor: {r: 1, g: 0.9761394, b: 0.80566037, a: 0}
+    useEmissionColorForLight: 1
+    enableFlicker: 0
+    flickerFrequencyRange: {x: 0, y: 0}
+    flickerIntensityRange: {x: 0, y: 0}
+    useCustomTiming: 1
+    customTurnOnTime: 0.75
+    customTurnOffTime: 0.25
+  - groupName: BuildingWindows
+    presetType: 1
+    enabled: 1
+    emissionColor: {r: 0.93207544, g: 0.84069926, b: 0.42031327, a: 0}
+    emissionIntensity: 4
+    fadeDuration: 30
+    enablePointLights: 0
+    pointLightRange: 0
+    pointLightIntensity: 0
+    pointLightColor: {r: 0, g: 0, b: 0, a: 0}
+    useEmissionColorForLight: 0
+    enableFlicker: 0
+    flickerFrequencyRange: {x: 1, y: 1}
+    flickerIntensityRange: {x: 1, y: 1}
+    useCustomTiming: 0
+    customTurnOnTime: 0.162
+    customTurnOffTime: 0.814
+  - groupName: Purple Neon
+    presetType: 3
+    enabled: 1
+    emissionColor: {r: 0.93207544, g: 0.84069926, b: 0.42031327, a: 0}
+    emissionIntensity: 4
+    fadeDuration: 30
+    enablePointLights: 0
+    pointLightRange: 0
+    pointLightIntensity: 0
+    pointLightColor: {r: 0, g: 0, b: 0, a: 0}
+    useEmissionColorForLight: 0
+    enableFlicker: 0
+    flickerFrequencyRange: {x: 1, y: 1}
+    flickerIntensityRange: {x: 1, y: 1}
+    useCustomTiming: 0
+    customTurnOnTime: 0.162
+    customTurnOffTime: 0.814
+  - groupName: Blue Neon
+    presetType: 3
+    enabled: 1
+    emissionColor: {r: 0.93207544, g: 0.84069926, b: 0.42031327, a: 0}
+    emissionIntensity: 4
+    fadeDuration: 30
+    enablePointLights: 0
+    pointLightRange: 0
+    pointLightIntensity: 0
+    pointLightColor: {r: 0, g: 0, b: 0, a: 0}
+    useEmissionColorForLight: 0
+    enableFlicker: 0
+    flickerFrequencyRange: {x: 1, y: 1}
+    flickerIntensityRange: {x: 1, y: 1}
+    useCustomTiming: 0
+    customTurnOnTime: 0.162
+    customTurnOffTime: 0.814
+  - groupName: Green Neon
+    presetType: 3
+    enabled: 1
+    emissionColor: {r: 0.93207544, g: 0.84069926, b: 0.42031327, a: 0}
+    emissionIntensity: 4
+    fadeDuration: 30
+    enablePointLights: 0
+    pointLightRange: 0
+    pointLightIntensity: 0
+    pointLightColor: {r: 0, g: 0, b: 0, a: 0}
+    useEmissionColorForLight: 0
+    enableFlicker: 0
+    flickerFrequencyRange: {x: 1, y: 1}
+    flickerIntensityRange: {x: 1, y: 1}
+    useCustomTiming: 0
+    customTurnOnTime: 0.162
+    customTurnOffTime: 0.814

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_loomville_gate_exit_track
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_loomville_gate_exit_track
+  startCheckpointId: 
+  safeResumeLabel: 
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 0
+  autoStartQuestId: 
+  autoStartLifecycleMask: 0
+  autoStartSkipWorldFlagKey: 
+  steps:
+  - {fileID: 11400000, guid: efa274b28b9f3634bad84ec8a0fbaeeb, type: 2}
+  - {fileID: 11400000, guid: 9e2f2a9d84c18fa4c8d3b9a63f5fb479, type: 2}
+  - {fileID: 11400000, guid: b7c41e90a2d64f5c8e1a0b3d6f9c2847, type: 2}
+  - {fileID: 11400000, guid: 8d6023efbfe092446a718c11e434ed8f, type: 2}
+  - {fileID: 11400000, guid: 9b3d64e3ba1be314d911b0be974ffc71, type: 2}
+  - {fileID: 11400000, guid: 02caef737b0fbae42a6518aae0339b2a, type: 2}
+  - {fileID: 11400000, guid: ad14e37cbf862f4458a6ed0427cdb7cc, type: 2}
+  - {fileID: 11400000, guid: b0613694104afd949a7ac8aba79e09d8, type: 2}
+  - {fileID: 11400000, guid: 54c59aa2289461f41ab75330fc7be7a0, type: 2}
+  - {fileID: 11400000, guid: 8ec74ad80add9d34ba2b9e5ae3ce6c57, type: 2}
+  - {fileID: 11400000, guid: d23c2a73406e37f4180e55f3f9f090c0, type: 2}
+  - {fileID: 11400000, guid: 4e314e9b61caadd4a95e09d419ad8074, type: 2}
+  - {fileID: 11400000, guid: 8d02f5b3c7e9501d0f4b2c6e9d1a3579, type: 2}
+  - {fileID: 11400000, guid: a705c0b449300474eaa85ca0190afb73, type: 2}
+  - {fileID: 11400000, guid: bfb850915222ace478a3eeb4a4615d4b, type: 2}

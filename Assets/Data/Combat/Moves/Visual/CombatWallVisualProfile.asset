@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52f559595e42420f9bd62cae052cc112, type: 3}
+  m_Name: CombatWallVisualProfile
+  m_EditorClassIdentifier: 
+  defaultWallSprite: {fileID: 21300000, guid: 0aa28dcfa44edf24492d9c61b6607bc6, type: 3}
+  defaultWallMaterial: {fileID: 2100000, guid: afc5e935ed4953444a774d6a1775fefb, type: 2}
+  defaultTint: {r: 1, g: 1, b: 1, a: 1}
+  spriteSize: {x: 5, y: 5}
+  preserveSpriteAspect: 1
+  defaultScale: {x: 1, y: 1}
+  raiseDuration: 0.22
+  raiseEase: 27
+  hitShoveDistance: 0.08
+  hitStretchY: 1.08
+  hitOutDuration: 0.06
+  hitRecoilDuration: 0.07
+  hitSettleDuration: 0.08
+  hitEase: 6
+  breakDuration: 0.2
+  breakEase: 26

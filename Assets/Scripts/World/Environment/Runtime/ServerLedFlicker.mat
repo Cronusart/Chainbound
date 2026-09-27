@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ServerLedFlicker
+  m_Shader: {fileID: 4800000, guid: 1a2b3c4d5e6f7890abcdef1234567890, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _USEFAKEGLOW_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MaskTex:
+        m_Texture: {fileID: 2800000, guid: 380ef362424974d41a0661f4a641b699, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Clip: 0.5
+    - _Cols: 17
+    - _Density: 0.15
+    - _Emission: 1.5
+    - _GlowSpread: 1
+    - _GlowStrength: 0.3
+    - _LedGapPx: 1
+    - _LedSizePx: 1
+    - _LedStartX: 1
+    - _Rows: 15
+    - _Seed: 11.31
+    - _Speed: 15
+    - _UseFakeGlow: 1
+    m_Colors:
+    - _TexSize: {r: 23, g: 27, b: 0, a: 0}
+    - _Tint: {r: 0, g: 1, b: 0.85, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

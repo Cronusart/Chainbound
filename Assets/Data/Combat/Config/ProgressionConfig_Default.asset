@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c4e15b8dfe4b4e4782cc764566120f7, type: 3}
+  m_Name: ProgressionConfig_Default
+  m_EditorClassIdentifier: 
+  configVersion: 1
+  starXpThresholds:
+  - 450
+  - 700
+  - 1050
+  - 1600
+  - 2400
+  masteryBaseXp: 3000
+  rebirthXpMultiplierBase: 1.18
+  rebirthRamCosts:
+  - 1000
+  - 1500
+  - 2000
+  - 2500
+  - 3000
+  cycleAutoStatFlat: 1
+  cycleAutoStatPercent: 0
+  cyclePickStatFlat: 1
+  cyclePickStatPercent: 0
+  cycleAutoHpFlat: 0
+  cycleAutoHpPercent: 0.05
+  cyclePickHpFlat: 0
+  cyclePickHpPercent: 0.05
+  moveLearnRarityWeights:
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1
+  - 1

@@ -1,0 +1,357 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43b6677170e2af84fb16d3ebbd7141f2, type: 3}
+  m_Name: TypeChemistryMatrix
+  m_EditorClassIdentifier: 
+  reactions:
+  - attackerType: 1
+    defenderType: 6
+    output:
+      statusId: 105
+      recipient: 1
+      parameterType: 0
+  - attackerType: 1
+    defenderType: 7
+    output:
+      statusId: 114
+      recipient: 0
+      parameterType: 0
+  - attackerType: 1
+    defenderType: 8
+    output:
+      statusId: 100
+      recipient: 1
+      parameterType: 0
+  - attackerType: 1
+    defenderType: 10
+    output:
+      statusId: 116
+      recipient: 0
+      parameterType: 0
+  - attackerType: 2
+    defenderType: 1
+    output:
+      statusId: 108
+      recipient: 0
+      parameterType: 0
+  - attackerType: 2
+    defenderType: 3
+    output:
+      statusId: 100
+      recipient: 1
+      parameterType: 0
+  - attackerType: 2
+    defenderType: 9
+    output:
+      statusId: 125
+      recipient: 0
+      parameterType: 0
+  - attackerType: 2
+    defenderType: 11
+    output:
+      statusId: 101
+      recipient: 0
+      parameterType: 0
+  - attackerType: 3
+    defenderType: 5
+    output:
+      statusId: 126
+      recipient: 1
+      parameterType: 0
+  - attackerType: 3
+    defenderType: 7
+    output:
+      statusId: 114
+      recipient: 0
+      parameterType: 0
+  - attackerType: 3
+    defenderType: 13
+    output:
+      statusId: 114
+      recipient: 0
+      parameterType: 0
+  - attackerType: 4
+    defenderType: 2
+    output:
+      statusId: 101
+      recipient: 0
+      parameterType: 0
+  - attackerType: 4
+    defenderType: 5
+    output:
+      statusId: 105
+      recipient: 1
+      parameterType: 0
+  - attackerType: 4
+    defenderType: 6
+    output:
+      statusId: 108
+      recipient: 0
+      parameterType: 0
+  - attackerType: 4
+    defenderType: 11
+    output:
+      statusId: 108
+      recipient: 0
+      parameterType: 0
+  - attackerType: 5
+    defenderType: 2
+    output:
+      statusId: 102
+      recipient: 0
+      parameterType: 0
+  - attackerType: 5
+    defenderType: 6
+    output:
+      statusId: 102
+      recipient: 0
+      parameterType: 0
+  - attackerType: 5
+    defenderType: 8
+    output:
+      statusId: 102
+      recipient: 0
+      parameterType: 0
+  - attackerType: 5
+    defenderType: 9
+    output:
+      statusId: 125
+      recipient: 0
+      parameterType: 0
+  - attackerType: 5
+    defenderType: 10
+    output:
+      statusId: 102
+      recipient: 0
+      parameterType: 0
+  - attackerType: 5
+    defenderType: 11
+    output:
+      statusId: 118
+      recipient: 0
+      parameterType: 11
+  - attackerType: 5
+    defenderType: 13
+    output:
+      statusId: 102
+      recipient: 0
+      parameterType: 0
+  - attackerType: 6
+    defenderType: 2
+    output:
+      statusId: 108
+      recipient: 0
+      parameterType: 0
+  - attackerType: 6
+    defenderType: 9
+    output:
+      statusId: 127
+      recipient: 0
+      parameterType: 0
+  - attackerType: 6
+    defenderType: 11
+    output:
+      statusId: 108
+      recipient: 0
+      parameterType: 0
+  - attackerType: 6
+    defenderType: 12
+    output:
+      statusId: 108
+      recipient: 0
+      parameterType: 0
+  - attackerType: 6
+    defenderType: 13
+    output:
+      statusId: 114
+      recipient: 0
+      parameterType: 0
+  - attackerType: 7
+    defenderType: 5
+    output:
+      statusId: 105
+      recipient: 1
+      parameterType: 0
+  - attackerType: 7
+    defenderType: 8
+    output:
+      statusId: 130
+      recipient: 1
+      parameterType: 0
+  - attackerType: 7
+    defenderType: 11
+    output:
+      statusId: 130
+      recipient: 1
+      parameterType: 0
+  - attackerType: 7
+    defenderType: 12
+    output:
+      statusId: 104
+      recipient: 0
+      parameterType: 0
+  - attackerType: 8
+    defenderType: 2
+    output:
+      statusId: 100
+      recipient: 1
+      parameterType: 0
+  - attackerType: 8
+    defenderType: 3
+    output:
+      statusId: 128
+      recipient: 0
+      parameterType: 0
+  - attackerType: 8
+    defenderType: 4
+    output:
+      statusId: 111
+      recipient: 1
+      parameterType: 0
+  - attackerType: 8
+    defenderType: 6
+    output:
+      statusId: 116
+      recipient: 0
+      parameterType: 0
+  - attackerType: 8
+    defenderType: 9
+    output:
+      statusId: 111
+      recipient: 1
+      parameterType: 0
+  - attackerType: 9
+    defenderType: 7
+    output:
+      statusId: 114
+      recipient: 0
+      parameterType: 0
+  - attackerType: 9
+    defenderType: 10
+    output:
+      statusId: 129
+      recipient: 1
+      parameterType: 0
+  - attackerType: 9
+    defenderType: 13
+    output:
+      statusId: 112
+      recipient: 1
+      parameterType: 0
+  - attackerType: 10
+    defenderType: 3
+    output:
+      statusId: 116
+      recipient: 0
+      parameterType: 0
+  - attackerType: 10
+    defenderType: 4
+    output:
+      statusId: 100
+      recipient: 1
+      parameterType: 0
+  - attackerType: 10
+    defenderType: 6
+    output:
+      statusId: 108
+      recipient: 0
+      parameterType: 0
+  - attackerType: 11
+    defenderType: 1
+    output:
+      statusId: 101
+      recipient: 0
+      parameterType: 0
+  - attackerType: 11
+    defenderType: 3
+    output:
+      statusId: 101
+      recipient: 0
+      parameterType: 0
+  - attackerType: 11
+    defenderType: 8
+    output:
+      statusId: 118
+      recipient: 0
+      parameterType: 11
+  - attackerType: 11
+    defenderType: 9
+    output:
+      statusId: 101
+      recipient: 0
+      parameterType: 0
+  - attackerType: 11
+    defenderType: 12
+    output:
+      statusId: 108
+      recipient: 0
+      parameterType: 0
+  - attackerType: 12
+    defenderType: 1
+    output:
+      statusId: 119
+      recipient: 0
+      parameterType: 0
+  - attackerType: 12
+    defenderType: 3
+    output:
+      statusId: 124
+      recipient: 0
+      parameterType: 0
+  - attackerType: 12
+    defenderType: 4
+    output:
+      statusId: 119
+      recipient: 0
+      parameterType: 0
+  - attackerType: 12
+    defenderType: 5
+    output:
+      statusId: 119
+      recipient: 0
+      parameterType: 0
+  - attackerType: 13
+    defenderType: 1
+    output:
+      statusId: 104
+      recipient: 0
+      parameterType: 0
+  - attackerType: 13
+    defenderType: 4
+    output:
+      statusId: 128
+      recipient: 0
+      parameterType: 0
+  - attackerType: 13
+    defenderType: 7
+    output:
+      statusId: 114
+      recipient: 0
+      parameterType: 0
+  - attackerType: 13
+    defenderType: 8
+    output:
+      statusId: 128
+      recipient: 0
+      parameterType: 0
+  - attackerType: 13
+    defenderType: 10
+    output:
+      statusId: 116
+      recipient: 0
+      parameterType: 0
+  - attackerType: 13
+    defenderType: 12
+    output:
+      statusId: 128
+      recipient: 0
+      parameterType: 0

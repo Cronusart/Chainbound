@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 967a6dddafc4cec4786b781bae45afde, type: 3}
+  m_Name: UiMotionProfile
+  m_EditorClassIdentifier: 
+  focusScale: 1.06
+  focusInDuration: 0.12
+  focusOutDuration: 0.12
+  focusEase: 31
+  enableFocusPulse: 1
+  pulseScaleMin: 1.03
+  pulseDuration: 0.35
+  pressScale: 0.95
+  pressDuration: 0.08
+  staggerDelay: 0.06
+  shimmerFps: 15
+  shimmerPauseDuration: 1.25

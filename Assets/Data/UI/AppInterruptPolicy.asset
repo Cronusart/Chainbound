@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 497a1df635be9a044877f066f2e74652, type: 3}
+  m_Name: AppInterruptPolicy
+  m_EditorClassIdentifier: 
+  rules:
+  - context: 0
+    pauseTimeScale: 1
+    muteAudio: 1
+    overlay: 1
+    lockInput: 1
+    keepBattle: 1
+  - context: 1
+    pauseTimeScale: 1
+    muteAudio: 1
+    overlay: 1
+    lockInput: 1
+    keepBattle: 1
+  - context: 2
+    pauseTimeScale: 0
+    muteAudio: 0
+    overlay: 0
+    lockInput: 0
+    keepBattle: 1
+  - context: 3
+    pauseTimeScale: 1
+    muteAudio: 1
+    overlay: 2
+    lockInput: 1
+    keepBattle: 1
+  - context: 4
+    pauseTimeScale: 1
+    muteAudio: 1
+    overlay: 1
+    lockInput: 1
+    keepBattle: 1
+  - context: 5
+    pauseTimeScale: 0
+    muteAudio: 0
+    overlay: 3
+    lockInput: 1
+    keepBattle: 1
+  - context: 6
+    pauseTimeScale: 0
+    muteAudio: 0
+    overlay: 0
+    lockInput: 0
+    keepBattle: 1
+  walletTimeoutSeconds: 120
+  ignoreOsInterruptsInEditor: 1

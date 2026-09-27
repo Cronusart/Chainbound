@@ -1,0 +1,140 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f988bc0d55107749a911c0375bba164, type: 3}
+  m_Name: Dial_AdmiralGreeting
+  m_EditorClassIdentifier: 
+  lines:
+  - speakerName: Admiral
+    text: Loomville! You seem lost as a sailor without a compass
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: admiral
+      targetTag: 
+  - speakerName: Admiral
+    text: You new around here?
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: admiral
+      targetTag: 
+  - speakerName: '{playerName}'
+    text: I don't belong here. What's going on?
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 2
+      npcId: 
+      targetTag: 
+  - speakerName: Admiral
+    text: Ah, the classic "wake up in a weird spot" tale
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: admiral
+      targetTag: 
+  - speakerName: Admiral
+    text: Sounds like you've been pulled into something bigger than a dog's dinner
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: admiral
+      targetTag: 
+  - speakerName: Admiral
+    text: Head to the lab. They're the folks who untangle these messes
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: admiral
+      targetTag: 
+  - speakerName: '{playerName}'
+    text: The lab? Where is that?
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 2
+      npcId: 
+      targetTag: 
+  - speakerName: Admiral
+    text: Just that way, past the twisty paths. Big building
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: 821c1e2854d5ef340979533b3aa2f7e5, type: 2}
+      targetSource: 4
+      npcId: 
+      targetTag: Signal_Lab
+  - speakerName: Admiral
+    text: can't miss it. Smells like experiments and bad decisions
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: 821c1e2854d5ef340979533b3aa2f7e5, type: 2}
+      targetSource: 4
+      npcId: 
+      targetTag: Signal_Lab
+  - speakerName: Admiral
+    text: 'Take care, and remember: In Loomville'
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: admiral
+      targetTag: 
+  - speakerName: Admiral
+    text: curiosity didn't kill the dog... It just minted into something new
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: admiral
+      targetTag: 
+  autoAdvance: 0
+  autoAdvanceDelay: 2
+  allowSkip: 1
+  skipToEndOfLine: 1

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7456cb5dc2988b41bcb46d2a1c441c7, type: 3}
+  m_Name: intro_playcam
+  m_EditorClassIdentifier: 
+  stepName: intro_camerashot
+  enableDebugLogs: 1
+  executeOnce: 0
+  failurePolicy: 3
+  onFailLabel: 
+  retryAttempts: 3
+  stepGuid: a140599f-7996-42d0-b01c-4592eee5593e
+  shotPreset: {fileID: 11400000, guid: d47626ec7f7f69b4a99d7326d3263ada, type: 2}
+  targetTransform: {fileID: 2959136035111340551, guid: 905e736b9b4bb1b4fabb16b01822a3aa, type: 3}
+  fallbackTargetId: Player

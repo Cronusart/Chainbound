@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e3d7a62c5914c69bff928ad0fead011, type: 3}
+  m_Name: PlayerMenuTabButtonVisualProfile
+  m_EditorClassIdentifier: 
+  normalSprite: {fileID: 1528972383, guid: 41310a8ea4b08784992163791f7724c7, type: 3}
+  selectedSprite: {fileID: 2037605807, guid: ddcc2d71f4e50b34f93273b51b96280b, type: 3}
+  lockedSprite: {fileID: 1528972383, guid: 41310a8ea4b08784992163791f7724c7, type: 3}
+  imageType: 1
+  preserveAspect: 0
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  selectedColor: {r: 1, g: 1, b: 1, a: 1}
+  lockedColor: {r: 0.3735848, g: 0.3735848, b: 0.3735848, a: 1}
+  selectedScale: 1.05
+  focusDuration: 0.14
+  unfocusDuration: 0.14
+  focusEase: 3
+  unfocusEase: 4
+  pressScale: 0.94
+  pressDuration: 0.08
+  pressEase: 3
+  pressReturnEase: 27
+  useUnscaledTime: 1
+  shimmerFrames:
+  - {fileID: 1090987539, guid: bd59341cf17871c449cb79e74faa86c8, type: 3}
+  - {fileID: 1304998233, guid: 3fa49be136317a24ab315a3c20a2ce89, type: 3}
+  - {fileID: 1213084269, guid: 2dfb9b7a0306e274dbe0765caeb44ff7, type: 3}
+  - {fileID: 1259637743, guid: abf3457afe8d72e489e4803733e1196f, type: 3}
+  - {fileID: 1780755877, guid: 1269cb62f439d8e4195af199d99b558c, type: 3}
+  - {fileID: 195510076, guid: 718dfbe277f9d4544a0a9c0cc3457d2c, type: 3}
+  - {fileID: -1349622420, guid: 974d88fe3e796b643b2fd6fce04ade57, type: 3}
+  - {fileID: -1678393456, guid: 5f933dff3f445a649a6b471c2baadcfe, type: 3}
+  - {fileID: -1234372984, guid: 149dede62de9e5f4fb9054884a747739, type: 3}
+  - {fileID: -1777821903, guid: e570ff28be948084cb45426f4d002204, type: 3}
+  - {fileID: 1532703020, guid: 44ca5a85073ca3f4dbbf48c6b4dcef5c, type: 3}
+  - {fileID: 1006779304, guid: f0946b17c5dec4447a6820f82018ec97, type: 3}
+  - {fileID: 332415313, guid: fe0a1a06d95987447ba5e774e9dc8e6c, type: 3}
+  - {fileID: 1738219417, guid: 3176756e9a5395a49890f528289dd8b7, type: 3}
+  shimmerFps: 12
+  shimmerPauseDuration: 0.6

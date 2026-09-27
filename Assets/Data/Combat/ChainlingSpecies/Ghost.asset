@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Ghost
+  m_EditorClassIdentifier: 
+  speciesId: ghost
+  displayName: '   '
+  description: '   '
+  primaryType: 14
+  secondaryType: 0
+  baseMaxHP: 0
+  baseMeleeAtk: 0
+  baseMeleeDef: 0
+  baseRangedAtk: 0
+  baseRangedDef: 0
+  baseSpeed: 0
+  maxEvolutionStages: 1
+  learnableMoves: []
+  learnLevels: 
+  exclusiveMoves: []
+  flagshipMove: {fileID: 0}
+  initialMoves: []
+  progressionMovePool: []
+  isStarter: 0
+  defaultCaptureProfile: 1
+  combatRoleOverride: 0
+  designNotes: ghost party for no visibility

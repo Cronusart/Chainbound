@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cba2cbe95b6e0c14590828a68db02374, type: 3}
+  m_Name: Profile_cycle_ii
+  m_EditorClassIdentifier: 
+  tierId: cycle_ii
+  displayName: Cycle II
+  sharedPalette: {fileID: 11400000, guid: 8364c9f05d3da4f42ac6ecdd86de5e7b, type: 2}
+  typographyPreset: {fileID: 11400000, guid: aa8c3dd953c364b42a0e5b8cc0c24e59, type: 2}
+  meshPreset: {fileID: 0}
+  auraPreset: {fileID: 0}

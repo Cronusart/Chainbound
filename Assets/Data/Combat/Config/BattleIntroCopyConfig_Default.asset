@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f3a1c6e9b2d4f50a7c8e1d4b6f90213, type: 3}
+  m_Name: BattleIntroCopyConfig_Default
+  m_EditorClassIdentifier: 
+  configVersion: 1
+  wildSingleTemplate: A wild {subject} has appeared!
+  wildDualTemplate: A wild {subject0} and a wild {subject1} have appeared!
+  trainerTemplate: '{team} has challenged you!'
+  pvpTemplate: Opponent has challenged you!
+  traitOrder:
+  - 0
+  - 1
+  - 2
+  - 3
+  traitSeparator: ' '
+  mutatedStyle:
+    includeWhenActive: 1
+    label: mutated
+    colorize: 1
+    colorSource: 2
+    paletteSlot: 1
+    fallbackColor: {r: 0.82, g: 0.22, b: 0.58, a: 1}
+    applyVertexGradient: 0
+  entangledStyle:
+    includeWhenActive: 1
+    label: entangled
+    colorize: 1
+    colorSource: 3
+    paletteSlot: 1
+    fallbackColor: {r: 0.97, g: 0.48, b: 0.69, a: 1}
+    applyVertexGradient: 0
+  nameStyle:
+    includeWhenActive: 1
+    label: 
+    colorize: 1
+    colorSource: 5
+    paletteSlot: 1
+    fallbackColor: {r: 1, g: 0.78, b: 0.22, a: 1}
+    applyVertexGradient: 0
+  variantStyle:
+    includeWhenActive: 1
+    label: variant
+    colorize: 1
+    colorSource: 4
+    paletteSlot: 1
+    fallbackColor: {r: 0.6, g: 0.27, b: 1, a: 1}
+    applyVertexGradient: 1
+  typeDisplay: {fileID: 11400000, guid: 6b3e0c45a8f20573b1e5f6c3d8a74abc, type: 2}
+  mutatedPalette: {fileID: 11400000, guid: 4e0b7a23f6d97251e8b2d3f0a5c41789, type: 2}
+  variantProfile: {fileID: 11400000, guid: d890e7ee10138854eacd161d65f89c9c, type: 2}
+  applyVariantVertexGradient: 1

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c42f036f5f2578a4d92878c0d8d00483, type: 3}
+  m_Name: coffee_main_run_standing
+  m_EditorClassIdentifier: 
+  stepName: coffee_main_run_standing
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 60a478f1-f5d4-4fb6-a786-76e559acda15
+  trackId: standing_leftover
+  trackType: 4
+  sequence: {fileID: 11400000, guid: 00e73258010854e429b9bde66d79d394, type: 2}
+  contextMode: 1
+  cancelPolicy: 0
+  blockingMode: 0

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7499e2bd25b2b8246b931995aab0948a, type: 3}
+  m_Name: coffee_main_wait_signal
+  m_EditorClassIdentifier: 
+  stepName: coffee_main_wait_signal
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 439bd947-b09f-4d84-beab-d483cbbaa5f5
+  trackId: 
+  completionMode: 1
+  signalId: mart_leftover_granted
+  timeoutSeconds: 0
+  onTimeoutLabel: 

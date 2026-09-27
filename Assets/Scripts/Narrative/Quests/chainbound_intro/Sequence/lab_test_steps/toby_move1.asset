@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7fcc854e34e6ce44a68a17ed20f7faa, type: 3}
+  m_Name: toby_move1
+  m_EditorClassIdentifier: 
+  stepName: toby_move1
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: c75a36a5-31d8-4e47-bc5e-cf4b924258a5
+  npcId: prof_toby
+  useWaypointId: 1
+  waypointId: waypoint1
+  worldPosition: {x: 0, y: 0, z: 0}
+  timeout: 30
+  suspendAutonomyDuringStep: 1
+  fireAndForget: 0

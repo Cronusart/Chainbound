@@ -1,0 +1,3920 @@
+{
+  "address": "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ",
+  "metadata": {
+    "name": "chainbound_game",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "add_chainling_from_capture",
+      "discriminator": [
+        192,
+        82,
+        146,
+        130,
+        87,
+        148,
+        119,
+        183
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  105,
+                  110,
+                  108,
+                  105,
+                  110,
+                  103,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "ChainlingVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "chainling_id",
+          "type": "u16"
+        },
+        {
+          "name": "level",
+          "type": "u16"
+        },
+        {
+          "name": "ivs_seed",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "apply_xp_and_maybe_level_up",
+      "discriminator": [
+        224,
+        249,
+        53,
+        47,
+        54,
+        16,
+        116,
+        220
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "_chainling_instance_id",
+          "type": "u32"
+        },
+        {
+          "name": "_xp_delta",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "bind_chainling",
+      "docs": [
+        "Publishes one Chainling Archive and atomically consumes its cover plus the selected",
+        "Stamped move or cosmetic skin Core asset."
+      ],
+      "discriminator": [
+        181,
+        19,
+        166,
+        249,
+        245,
+        197,
+        66,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "chainling",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  105,
+                  110,
+                  108,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "chainling_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "core_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  114,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cover",
+          "writable": true
+        },
+        {
+          "name": "component",
+          "writable": true
+        },
+        {
+          "name": "cover_collection",
+          "writable": true
+        },
+        {
+          "name": "moves_collection",
+          "writable": true
+        },
+        {
+          "name": "cosmetics_collection",
+          "writable": true
+        },
+        {
+          "name": "archives_collection",
+          "writable": true
+        },
+        {
+          "name": "archive_asset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  114,
+                  99,
+                  104,
+                  105,
+                  118,
+                  101,
+                  95,
+                  97,
+                  115,
+                  115,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "chainling_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  105,
+                  110,
+                  100,
+                  95,
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "chainling_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "core_program",
+          "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "chainling_id",
+          "type": "u64"
+        },
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "component_kind",
+          "type": "u8"
+        },
+        {
+          "name": "archive_name",
+          "type": "string"
+        },
+        {
+          "name": "archive_uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "burn_known_move_for_ram",
+      "discriminator": [
+        52,
+        70,
+        128,
+        132,
+        155,
+        170,
+        40,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  118,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "MoveVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "MoveVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "move_index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "consume_encounter_randomness",
+      "docs": [
+        "Marks fulfilled bytes consumed exactly once after the game has read them."
+      ],
+      "discriminator": [
+        7,
+        114,
+        169,
+        20,
+        163,
+        95,
+        27,
+        181
+      ],
+      "accounts": [
+        {
+          "name": "encounter_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "encounter_request.request_seed",
+                "account": "EncounterRequest"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "encounter_request"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_chainling",
+      "discriminator": [
+        183,
+        200,
+        202,
+        25,
+        7,
+        99,
+        222,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "chainling",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  105,
+                  110,
+                  108,
+                  105,
+                  110,
+                  103,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              },
+              {
+                "kind": "arg",
+                "path": "chainling_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "player"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "chainling_id",
+          "type": "u64"
+        },
+        {
+          "name": "species_id",
+          "type": "string"
+        },
+        {
+          "name": "level",
+          "type": "u16"
+        },
+        {
+          "name": "ivs",
+          "type": {
+            "array": [
+              "i8",
+              6
+            ]
+          }
+        },
+        {
+          "name": "ivs_seed",
+          "type": "u64"
+        },
+        {
+          "name": "mutated_type_flag",
+          "type": "u8"
+        },
+        {
+          "name": "entangled_flag",
+          "type": "u8"
+        },
+        {
+          "name": "base_visual_variant_id",
+          "type": "string"
+        },
+        {
+          "name": "entangled_type",
+          "type": "string"
+        },
+        {
+          "name": "mutation_ids",
+          "type": {
+            "vec": "string"
+          }
+        },
+        {
+          "name": "known_move_ids",
+          "type": {
+            "vec": "u16"
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_move_vault",
+      "discriminator": [
+        13,
+        174,
+        181,
+        106,
+        193,
+        119,
+        14,
+        60
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  118,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_profile",
+      "discriminator": [
+        225,
+        205,
+        234,
+        143,
+        17,
+        186,
+        50,
+        220
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "fulfill_encounter",
+      "docs": [
+        "MagicBlock callback. The scoped identity injected by `vrf_callback` proves the caller."
+      ],
+      "discriminator": [
+        179,
+        121,
+        75,
+        29,
+        254,
+        142,
+        143,
+        171
+      ],
+      "accounts": [
+        {
+          "name": "vrf_program_identity",
+          "docs": [
+            "Scoped VRF identity PDA, bound to this program. Its presence as a signer proves",
+            "the callback was issued by the VRF program for this program."
+          ],
+          "signer": true
+        },
+        {
+          "name": "encounter_request",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "randomness",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "grant_ram",
+      "docs": [
+        "Credits RAM under the configured daily cap. Profile creation intentionally grants zero;",
+        "only the pinned result authority can authorize a grant, and the receipt makes retries unique."
+      ],
+      "discriminator": [
+        178,
+        154,
+        17,
+        238,
+        34,
+        122,
+        206,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  103,
+                  114,
+                  97,
+                  110,
+                  116,
+                  95,
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "result_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "schema_version",
+          "type": "u16"
+        },
+        {
+          "name": "ram_daily_cap",
+          "type": "u16"
+        },
+        {
+          "name": "ram_per_burn",
+          "type": "u32"
+        },
+        {
+          "name": "instruction_flags",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_chainling_vault",
+      "discriminator": [
+        98,
+        201,
+        167,
+        52,
+        106,
+        25,
+        158,
+        104
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  105,
+                  110,
+                  108,
+                  105,
+                  110,
+                  103,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_equipped_registry",
+      "discriminator": [
+        115,
+        209,
+        73,
+        17,
+        169,
+        54,
+        141,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  113,
+                  117,
+                  105,
+                  112,
+                  112,
+                  101,
+                  100,
+                  95,
+                  109,
+                  111,
+                  118,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "chainling_instance_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "chainling_instance_id",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "initialize_ownership_config",
+      "discriminator": [
+        241,
+        13,
+        60,
+        90,
+        194,
+        86,
+        195,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "ownership_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "schema_version",
+          "type": "u16"
+        },
+        {
+          "name": "moves_collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "archives_collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "covers_collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "cosmetics_collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "stamp_ram_cost",
+          "type": "u32"
+        },
+        {
+          "name": "bind_ram_cost",
+          "type": "u32"
+        },
+        {
+          "name": "generator_version",
+          "type": "u32"
+        },
+        {
+          "name": "pool_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "prepare_stamp_ticket",
+      "docs": [
+        "Result-authority/VRF crank records the immutable modifier result. The owner wallet",
+        "performs the actual Stamp in a later atomic transaction."
+      ],
+      "discriminator": [
+        244,
+        254,
+        92,
+        75,
+        125,
+        49,
+        21,
+        158
+      ],
+      "accounts": [
+        {
+          "name": "ticket",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  95,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  118,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "known_instance_id",
+          "type": "u64"
+        },
+        {
+          "name": "modifier_ids",
+          "type": {
+            "vec": "string"
+          }
+        },
+        {
+          "name": "rarity",
+          "type": "u8"
+        },
+        {
+          "name": "asset_name",
+          "type": "string"
+        },
+        {
+          "name": "asset_uri",
+          "type": "string"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "remove_chainling",
+      "discriminator": [
+        150,
+        217,
+        4,
+        148,
+        150,
+        250,
+        180,
+        246
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  105,
+                  110,
+                  108,
+                  105,
+                  110,
+                  103,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault.owner",
+                "account": "ChainlingVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "request_encounter",
+      "docs": [
+        "Requests base-layer MagicBlock VRF randomness for one bounded request seed."
+      ],
+      "discriminator": [
+        224,
+        239,
+        0,
+        38,
+        149,
+        200,
+        66,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "encounter_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "arg",
+                "path": "request_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "oracle_queue",
+          "writable": true,
+          "address": "Cuj97ggrhhidhbu39TijNVqE74xvKJ69gDervRUXAxGh"
+        },
+        {
+          "name": "program_identity",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  100,
+                  101,
+                  110,
+                  116,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vrf_program",
+          "address": "Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz"
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "request_seed",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "roll_known_move",
+      "docs": [
+        "Authoritative Academy roll. The player wallet is not a signer: the result authority",
+        "writes one zero-modifier Known instance and an immutable replay receipt."
+      ],
+      "discriminator": [
+        42,
+        140,
+        118,
+        198,
+        71,
+        101,
+        152,
+        152
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  118,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  107,
+                  110,
+                  111,
+                  119,
+                  110,
+                  95,
+                  114,
+                  111,
+                  108,
+                  108,
+                  95,
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "move_id",
+          "type": "u16"
+        },
+        {
+          "name": "element",
+          "type": "u8"
+        },
+        {
+          "name": "base_power",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "set_equipped_slot",
+      "discriminator": [
+        202,
+        159,
+        125,
+        247,
+        191,
+        139,
+        184,
+        76
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  113,
+                  117,
+                  105,
+                  112,
+                  112,
+                  101,
+                  100,
+                  95,
+                  109,
+                  111,
+                  118,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "registry.owner",
+                "account": "EquippedMoveRegistry"
+              },
+              {
+                "kind": "account",
+                "path": "registry.chainling_instance_id",
+                "account": "EquippedMoveRegistry"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "slot_index",
+          "type": "u8"
+        },
+        {
+          "name": "tier",
+          "type": "u8"
+        },
+        {
+          "name": "source_kind",
+          "type": "u8"
+        },
+        {
+          "name": "known_index",
+          "type": "u8"
+        },
+        {
+          "name": "asset_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "move_id",
+          "type": "u16"
+        },
+        {
+          "name": "mod_cache",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "spend_ram",
+      "discriminator": [
+        93,
+        139,
+        148,
+        148,
+        86,
+        26,
+        219,
+        69
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "profile.owner",
+                "account": "PlayerProfile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "stamp_known_move",
+      "docs": [
+        "Atomically consumes one Known instance and RAM and creates its Stamped Core asset."
+      ],
+      "discriminator": [
+        169,
+        191,
+        199,
+        46,
+        62,
+        34,
+        188,
+        181
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  111,
+                  118,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ticket",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  95,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "core_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  114,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "stamped_asset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  101,
+                  100,
+                  95,
+                  97,
+                  115,
+                  115,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moves_collection",
+          "writable": true
+        },
+        {
+          "name": "core_program",
+          "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_game_config",
+      "discriminator": [
+        180,
+        82,
+        7,
+        205,
+        89,
+        182,
+        61,
+        128
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_authority",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "result_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "schema_version",
+          "type": "u16"
+        },
+        {
+          "name": "ram_daily_cap",
+          "type": "u16"
+        },
+        {
+          "name": "ram_per_burn",
+          "type": "u32"
+        },
+        {
+          "name": "instruction_flags",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "update_ownership_config",
+      "discriminator": [
+        23,
+        138,
+        77,
+        76,
+        181,
+        159,
+        184,
+        114
+      ],
+      "accounts": [
+        {
+          "name": "ownership_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_authority",
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "schema_version",
+          "type": "u16"
+        },
+        {
+          "name": "moves_collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "archives_collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "covers_collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "cosmetics_collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "stamp_ram_cost",
+          "type": "u32"
+        },
+        {
+          "name": "bind_ram_cost",
+          "type": "u32"
+        },
+        {
+          "name": "generator_version",
+          "type": "u32"
+        },
+        {
+          "name": "pool_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_position",
+      "discriminator": [
+        102,
+        75,
+        42,
+        126,
+        57,
+        196,
+        156,
+        9
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "scene_id",
+          "type": "u32"
+        },
+        {
+          "name": "x",
+          "type": "i16"
+        },
+        {
+          "name": "y",
+          "type": "i16"
+        },
+        {
+          "name": "z",
+          "type": "i16"
+        }
+      ]
+    },
+    {
+      "name": "update_wins_losses",
+      "discriminator": [
+        248,
+        192,
+        181,
+        104,
+        80,
+        81,
+        248,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "profile.owner",
+                "account": "PlayerProfile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "is_win",
+          "type": "bool"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BindReceipt",
+      "discriminator": [
+        178,
+        55,
+        40,
+        1,
+        22,
+        166,
+        212,
+        254
+      ]
+    },
+    {
+      "name": "ChainlingAccount",
+      "discriminator": [
+        126,
+        210,
+        27,
+        85,
+        136,
+        74,
+        53,
+        142
+      ]
+    },
+    {
+      "name": "ChainlingVault",
+      "discriminator": [
+        249,
+        254,
+        142,
+        175,
+        246,
+        71,
+        53,
+        95
+      ]
+    },
+    {
+      "name": "EncounterRequest",
+      "discriminator": [
+        222,
+        227,
+        20,
+        3,
+        21,
+        206,
+        97,
+        156
+      ]
+    },
+    {
+      "name": "EquippedMoveRegistry",
+      "discriminator": [
+        171,
+        194,
+        26,
+        25,
+        254,
+        19,
+        32,
+        60
+      ]
+    },
+    {
+      "name": "GameConfig",
+      "discriminator": [
+        45,
+        146,
+        146,
+        33,
+        170,
+        69,
+        96,
+        133
+      ]
+    },
+    {
+      "name": "KnownRollReceipt",
+      "discriminator": [
+        168,
+        108,
+        149,
+        105,
+        64,
+        120,
+        128,
+        147
+      ]
+    },
+    {
+      "name": "MoveVault",
+      "discriminator": [
+        30,
+        75,
+        22,
+        221,
+        63,
+        126,
+        196,
+        29
+      ]
+    },
+    {
+      "name": "OwnershipConfig",
+      "discriminator": [
+        227,
+        236,
+        116,
+        131,
+        86,
+        134,
+        101,
+        163
+      ]
+    },
+    {
+      "name": "PlayerProfile",
+      "discriminator": [
+        82,
+        226,
+        99,
+        87,
+        164,
+        130,
+        181,
+        80
+      ]
+    },
+    {
+      "name": "RamGrantReceipt",
+      "discriminator": [
+        151,
+        111,
+        207,
+        251,
+        59,
+        36,
+        69,
+        29
+      ]
+    },
+    {
+      "name": "StampTicket",
+      "discriminator": [
+        27,
+        188,
+        81,
+        247,
+        225,
+        23,
+        30,
+        219
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "ChainlingBound",
+      "discriminator": [
+        54,
+        209,
+        49,
+        31,
+        192,
+        203,
+        151,
+        202
+      ]
+    },
+    {
+      "name": "KnownMoveRolled",
+      "discriminator": [
+        113,
+        53,
+        78,
+        112,
+        51,
+        220,
+        157,
+        59
+      ]
+    },
+    {
+      "name": "RamGranted",
+      "discriminator": [
+        239,
+        4,
+        235,
+        242,
+        128,
+        224,
+        11,
+        34
+      ]
+    },
+    {
+      "name": "StampedMoveCreated",
+      "discriminator": [
+        133,
+        39,
+        101,
+        168,
+        242,
+        179,
+        233,
+        9
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ArithmeticOverflow",
+      "msg": "Arithmetic overflow."
+    },
+    {
+      "code": 6001,
+      "name": "InsufficientRam",
+      "msg": "Insufficient RAM."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidRamGrant",
+      "msg": "RAM grant amount must be positive and fit the configured accounting fields."
+    },
+    {
+      "code": 6003,
+      "name": "RamDailyCapExceeded",
+      "msg": "RAM grant would exceed the configured daily cap."
+    },
+    {
+      "code": 6004,
+      "name": "VaultFull",
+      "msg": "The target vault is full."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidIndex",
+      "msg": "Invalid index."
+    },
+    {
+      "code": 6006,
+      "name": "InvalidAuthority",
+      "msg": "Invalid authority for this account."
+    },
+    {
+      "code": 6007,
+      "name": "StringTooLong",
+      "msg": "String exceeds the account's bounded storage."
+    },
+    {
+      "code": 6008,
+      "name": "ContractNotImplemented",
+      "msg": "This contract entrypoint is declared but not implemented yet."
+    },
+    {
+      "code": 6009,
+      "name": "InvalidConfig",
+      "msg": "Game configuration values are invalid."
+    },
+    {
+      "code": 6010,
+      "name": "KnownMoveNotFound",
+      "msg": "The Known move instance does not exist or was already consumed."
+    },
+    {
+      "code": 6011,
+      "name": "KnownMoveMismatch",
+      "msg": "The ticket move no longer matches the selected Known instance."
+    },
+    {
+      "code": 6012,
+      "name": "InvalidModifierCount",
+      "msg": "Stamped moves require exactly one or two modifiers."
+    },
+    {
+      "code": 6013,
+      "name": "InvalidModifier",
+      "msg": "Modifier identifiers must be non-empty."
+    },
+    {
+      "code": 6014,
+      "name": "DuplicateModifier",
+      "msg": "Stamped modifier identifiers must be distinct."
+    },
+    {
+      "code": 6015,
+      "name": "StaleConfiguration",
+      "msg": "The ticket was produced for a different ownership configuration."
+    },
+    {
+      "code": 6016,
+      "name": "TicketExpired",
+      "msg": "This ticket has expired."
+    },
+    {
+      "code": 6017,
+      "name": "TicketAlreadyConsumed",
+      "msg": "This ticket was already consumed."
+    },
+    {
+      "code": 6018,
+      "name": "IdempotencyMismatch",
+      "msg": "The idempotency key does not match this receipt or ticket."
+    },
+    {
+      "code": 6019,
+      "name": "WrongCollection",
+      "msg": "The supplied Core collection is not the configured trusted collection."
+    },
+    {
+      "code": 6020,
+      "name": "InvalidCollectionAuthority",
+      "msg": "The supplied Core collection is not controlled by the program authority PDA."
+    },
+    {
+      "code": 6021,
+      "name": "AssetOwnerMismatch",
+      "msg": "The supplied Core asset is not owned by the signing wallet."
+    },
+    {
+      "code": 6022,
+      "name": "InvalidCoreAccount",
+      "msg": "The supplied Metaplex Core account could not be decoded."
+    },
+    {
+      "code": 6023,
+      "name": "InvalidComponentKind",
+      "msg": "Bind component kind must be a Stamped move or cosmetic skin."
+    },
+    {
+      "code": 6024,
+      "name": "DuplicateComponent",
+      "msg": "The cover and selected third component must be different assets."
+    },
+    {
+      "code": 6025,
+      "name": "ChainlingMismatch",
+      "msg": "The Chainling does not match the requested Bind."
+    },
+    {
+      "code": 6026,
+      "name": "AlreadyBound",
+      "msg": "This Chainling is already Bound."
+    },
+    {
+      "code": 6027,
+      "name": "TooManyMutations",
+      "msg": "Capture supplied too many mutation IDs."
+    },
+    {
+      "code": 6028,
+      "name": "TooManyKnownMoves",
+      "msg": "Capture supplied too many Known move IDs."
+    },
+    {
+      "code": 6029,
+      "name": "InvalidEncounterStatus",
+      "msg": "Encounter randomness is not in the required lifecycle state."
+    }
+  ],
+  "types": [
+    {
+      "name": "BindReceipt",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "chainling_id",
+            "type": "u64"
+          },
+          {
+            "name": "idempotency_key",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "cover_asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "component_asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "component_kind",
+            "type": "u8"
+          },
+          {
+            "name": "archive_asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "completed",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChainlingAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "chainling_id",
+            "type": "u64"
+          },
+          {
+            "name": "species_id",
+            "type": "string"
+          },
+          {
+            "name": "level",
+            "type": "u16"
+          },
+          {
+            "name": "ivs",
+            "type": {
+              "array": [
+                "i8",
+                6
+              ]
+            }
+          },
+          {
+            "name": "ivs_seed",
+            "type": "u64"
+          },
+          {
+            "name": "mutated_type_flag",
+            "type": "bool"
+          },
+          {
+            "name": "entangled_flag",
+            "type": "bool"
+          },
+          {
+            "name": "base_visual_variant_id",
+            "type": "string"
+          },
+          {
+            "name": "entangled_type",
+            "type": "string"
+          },
+          {
+            "name": "mutation_ids",
+            "type": {
+              "vec": "string"
+            }
+          },
+          {
+            "name": "known_move_ids",
+            "type": {
+              "vec": "u16"
+            }
+          },
+          {
+            "name": "is_bound",
+            "type": "bool"
+          },
+          {
+            "name": "archive_asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChainlingBound",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "chainling_id",
+            "type": "u64"
+          },
+          {
+            "name": "archive_asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "cover_asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "component_asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "component_kind",
+            "type": "u8"
+          },
+          {
+            "name": "idempotency_key",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChainlingEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "chainling_id",
+            "type": "u16"
+          },
+          {
+            "name": "instance_id",
+            "type": "u32"
+          },
+          {
+            "name": "level",
+            "type": "u16"
+          },
+          {
+            "name": "xp",
+            "type": "u32"
+          },
+          {
+            "name": "ivs_seed",
+            "type": "u64"
+          },
+          {
+            "name": "flags",
+            "type": "u16"
+          },
+          {
+            "name": "pending_level_reward",
+            "type": "u8"
+          },
+          {
+            "name": "pending_reward_seed",
+            "type": "u64"
+          },
+          {
+            "name": "claimed_reward_bits",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChainlingVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "chainling_capacity",
+            "type": "u8"
+          },
+          {
+            "name": "chainling_count",
+            "type": "u8"
+          },
+          {
+            "name": "chainlings",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "ChainlingEntry"
+                  }
+                },
+                25
+              ]
+            }
+          },
+          {
+            "name": "next_instance_id",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EncounterRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
+            "name": "randomness",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_seed",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "requested_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "fulfilled_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EquippedMoveRegistry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "chainling_instance_id",
+            "type": "u32"
+          },
+          {
+            "name": "slots",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "EquippedMoveSlot"
+                  }
+                },
+                16
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EquippedMoveSlot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tier",
+            "type": "u8"
+          },
+          {
+            "name": "source_kind",
+            "type": "u8"
+          },
+          {
+            "name": "known_index",
+            "type": "u8"
+          },
+          {
+            "name": "asset_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "move_id",
+            "type": "u16"
+          },
+          {
+            "name": "mod_cache",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GameConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "program_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "result_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "schema_version",
+            "type": "u16"
+          },
+          {
+            "name": "ram_daily_cap",
+            "type": "u16"
+          },
+          {
+            "name": "ram_per_burn",
+            "type": "u32"
+          },
+          {
+            "name": "instruction_flags",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "KnownMove",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "instance_id",
+            "type": "u64"
+          },
+          {
+            "name": "move_id",
+            "type": "u16"
+          },
+          {
+            "name": "element",
+            "type": "u8"
+          },
+          {
+            "name": "base_power",
+            "type": "u16"
+          },
+          {
+            "name": "generator_version",
+            "type": "u32"
+          },
+          {
+            "name": "pool_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "KnownMoveRolled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "known_instance_id",
+            "type": "u64"
+          },
+          {
+            "name": "move_id",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "KnownRollReceipt",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "idempotency_key",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "known_instance_id",
+            "type": "u64"
+          },
+          {
+            "name": "move_id",
+            "type": "u16"
+          },
+          {
+            "name": "generator_version",
+            "type": "u32"
+          },
+          {
+            "name": "pool_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MoveVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "known_capacity",
+            "type": "u8"
+          },
+          {
+            "name": "known_count",
+            "type": "u8"
+          },
+          {
+            "name": "known_moves",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "KnownMove"
+                }
+              }
+            }
+          },
+          {
+            "name": "next_instance_id",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OwnershipConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "schema_version",
+            "type": "u16"
+          },
+          {
+            "name": "moves_collection",
+            "type": "pubkey"
+          },
+          {
+            "name": "archives_collection",
+            "type": "pubkey"
+          },
+          {
+            "name": "covers_collection",
+            "type": "pubkey"
+          },
+          {
+            "name": "cosmetics_collection",
+            "type": "pubkey"
+          },
+          {
+            "name": "stamp_ram_cost",
+            "type": "u32"
+          },
+          {
+            "name": "bind_ram_cost",
+            "type": "u32"
+          },
+          {
+            "name": "generator_version",
+            "type": "u32"
+          },
+          {
+            "name": "pool_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlayerProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "schema_version",
+            "type": "u16"
+          },
+          {
+            "name": "created_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "wins",
+            "type": "u32"
+          },
+          {
+            "name": "losses",
+            "type": "u32"
+          },
+          {
+            "name": "last_known_scene_id",
+            "type": "u32"
+          },
+          {
+            "name": "last_known_pos_x",
+            "type": "i16"
+          },
+          {
+            "name": "last_known_pos_y",
+            "type": "i16"
+          },
+          {
+            "name": "last_known_pos_z",
+            "type": "i16"
+          },
+          {
+            "name": "ram_balance",
+            "type": "u32"
+          },
+          {
+            "name": "daily_ram_earned",
+            "type": "u16"
+          },
+          {
+            "name": "last_ram_reset_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "ram_lifetime_earned",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamGrantReceipt",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "idempotency_key",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "balance_after",
+            "type": "u32"
+          },
+          {
+            "name": "utc_day",
+            "type": "i64"
+          },
+          {
+            "name": "result_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamGranted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "balance_after",
+            "type": "u32"
+          },
+          {
+            "name": "utc_day",
+            "type": "i64"
+          },
+          {
+            "name": "idempotency_key",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "StampTicket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "idempotency_key",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "known_instance_id",
+            "type": "u64"
+          },
+          {
+            "name": "move_id",
+            "type": "u16"
+          },
+          {
+            "name": "modifier_count",
+            "type": "u8"
+          },
+          {
+            "name": "modifier_ids",
+            "type": {
+              "array": [
+                "string",
+                2
+              ]
+            }
+          },
+          {
+            "name": "rarity",
+            "type": "u8"
+          },
+          {
+            "name": "asset_name",
+            "type": "string"
+          },
+          {
+            "name": "asset_uri",
+            "type": "string"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "consumed",
+            "type": "bool"
+          },
+          {
+            "name": "stamped_asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "generator_version",
+            "type": "u32"
+          },
+          {
+            "name": "pool_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StampedMoveCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "known_instance_id",
+            "type": "u64"
+          },
+          {
+            "name": "move_id",
+            "type": "u16"
+          },
+          {
+            "name": "modifier_count",
+            "type": "u8"
+          },
+          {
+            "name": "asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "idempotency_key",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

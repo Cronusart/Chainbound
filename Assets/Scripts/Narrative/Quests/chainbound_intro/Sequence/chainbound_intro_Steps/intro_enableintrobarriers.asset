@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1407371d73398f34698de67689a8d545, type: 3}
+  m_Name: intro_enableintrobarriers
+  m_EditorClassIdentifier: 
+  stepName: intro_barriers1
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 711ada4c-2d84-42b4-b37f-d6990efb2760
+  gameObjectName: Intro_Collider1
+  enable: 1
+  additionalTargets:
+  - gameObjectName: Intro_Collider4
+    enable: 1
+    stateIdOverride: 
+  - gameObjectName: Intro_Collider5
+    enable: 1
+    stateIdOverride: 
+  includeInactive: 1
+  persistAcrossSceneLoads: 1
+  allowMissingWhenPersisting: 0
+  stateIdOverride: 
+  persistAsProfileWorldFlag: 1

@@ -1,0 +1,117 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b5f532141285848a823d0c08f7392c, type: 3}
+  m_Name: Zoomed3
+  m_EditorClassIdentifier: 
+  shotProfile: {fileID: 11400000, guid: 97b3998a82521b04ca42fec64092d328, type: 2}
+  targetTransformId: 
+  targetPosition: {x: 0, y: 0, z: 0}
+  useWorldPosition: 0
+  followMode: 0
+  duration: 2
+  dialogueLineDurationOverride: 0
+  holdTime: 1.5
+  deferRestore: 1
+  easingCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  yawMode: 2
+  yawRotation90Steps: 0
+  absoluteYawIndex: 2
+  holdSettleOffset: {x: 0, y: 0, z: 0}
+  holdSettleCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  holdZoomOffset: 0
+  holdZoomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.8531587
+      value: 1.0077294
+      inSlope: 0.58821726
+      outSlope: 0.58821726
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  holdBobAmplitude: {x: 0, y: 0, z: 0}
+  holdBobFrequency: 0
+  targetZoom: -1
+  targetPitch: -1
+  offset: {x: 0, y: 0, z: 0}
+  lookAtTarget: 1
+  smoothRotation: 1
+  occlusionRevealProfile: {fileID: 11400000, guid: 8f2c1a4e9b7d46a0b3e5c8d1f6a09247, type: 2}

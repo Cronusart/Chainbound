@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1973bb492a43109c17ae9589b604c2, type: 3}
+  m_Name: intro_prompt_starter_name
+  m_EditorClassIdentifier: 
+  stepName: intro_prompt_starter_name
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 43ef51e8-0481-4822-909e-a6080cf1c6e9
+  displayNameVariable: starter_display_name
+  minNameLength: 2
+  maxNameLength: 12
+  keyboardTitle: Chainling's Name
+  keyboardPrompt: What will you call your Chainling?

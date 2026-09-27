@@ -1,0 +1,123 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Whale
+  m_EditorClassIdentifier: 
+  speciesId: whale
+  displayName: Whale
+  description: Dense Compressed leviathan that soaks pressure through sheer HP, efficient
+    trades, and hard recovery.
+  primaryType: 10
+  secondaryType: 0
+  baseMaxHP: 128
+  baseMeleeAtk: 48
+  baseMeleeDef: 72
+  baseRangedAtk: 24
+  baseRangedDef: 50
+  baseSpeed: 18
+  maxEvolutionStages: 1
+  learnableMoves:
+  - {fileID: 11400000, guid: 95aa98c6f895d6f4c982f72ebb32fd3d, type: 2}
+  - {fileID: 11400000, guid: 3cdc7709a5d98134782fb5321d85a6ee, type: 2}
+  - {fileID: 11400000, guid: b595b599739107d439d3614cece97cc6, type: 2}
+  - {fileID: 11400000, guid: d5ee791449d35724a8f069719f703452, type: 2}
+  - {fileID: 11400000, guid: e72675c79b76bc1489b761df7cdd438a, type: 2}
+  - {fileID: 11400000, guid: a38fdcf34d3968941a08b99d1c607be1, type: 2}
+  - {fileID: 11400000, guid: 6bca7adf21d56b84195d7f6e280a5da5, type: 2}
+  - {fileID: 11400000, guid: 5876169bfa266bf41b876bd8f3149a1e, type: 2}
+  - {fileID: 11400000, guid: 781d90ba5489a1140bbd9aba7b62ffb0, type: 2}
+  - {fileID: 11400000, guid: 3c7f5e89bf323804c8e13e965e35d6dc, type: 2}
+  - {fileID: 11400000, guid: 425c7089a8ab67f41a2d85a01a183550, type: 2}
+  - {fileID: 11400000, guid: 8b6f4b2aedcc534408a96b246c242fc5, type: 2}
+  learnLevels: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  exclusiveMoves: []
+  flagshipMove: {fileID: 11400000, guid: a38fdcf34d3968941a08b99d1c607be1, type: 2}
+  initialMoves: []
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 95aa98c6f895d6f4c982f72ebb32fd3d, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 3cdc7709a5d98134782fb5321d85a6ee, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: b595b599739107d439d3614cece97cc6, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: d5ee791449d35724a8f069719f703452, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: e72675c79b76bc1489b761df7cdd438a, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: a38fdcf34d3968941a08b99d1c607be1, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 6bca7adf21d56b84195d7f6e280a5da5, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 5876169bfa266bf41b876bd8f3149a1e, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 781d90ba5489a1140bbd9aba7b62ffb0, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 3c7f5e89bf323804c8e13e965e35d6dc, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 425c7089a8ab67f41a2d85a01a183550, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 8b6f4b2aedcc534408a96b246c242fc5, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 0
+  defaultCaptureProfile: 1
+  combatRoleOverride: 2
+  designNotes: 'Wild catch. Compressed soft-wall HP soak. Flagship barrier_wall (wired
+    MitigationWindow). Off-type hibernate (Frozen) for data-backed 25% self-heal.
+    Dropped Block kit / unwired blockade. Total base stats: 340.'

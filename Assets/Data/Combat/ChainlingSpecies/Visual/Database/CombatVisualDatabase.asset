@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39307f5f04bd100459b7c5ab203c8d55, type: 3}
+  m_Name: CombatVisualDatabase
+  m_EditorClassIdentifier: 
+  entries:
+  - speciesId: validape
+    visualVariantId: base
+    entangledType: 0
+    profile: {fileID: 11400000, guid: e1a546dd2a9767a46b181de02db64c28, type: 2}
+  - speciesId: validape
+    visualVariantId: hockey_variant
+    entangledType: 0
+    profile: {fileID: 11400000, guid: 6f2a9c1e4b8d47a3a1c5e9f0b2d84671, type: 2}
+  - speciesId: gilarime
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 19f02ca08a9efbc428525608ede3e426, type: 2}
+  - speciesId: kitsauto
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 0a93fa66d68655b45882e6baaadb5640, type: 2}
+  - speciesId: ghost
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 30a0b5d6690a3a2479c181949b8be581, type: 2}
+  - speciesId: kreechank
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 6007703254f4f1c488cc87db1912fe45, type: 2}
+  - speciesId: cinislug
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: e5209c64e7b54fe4e90835d13cc4a98c, type: 2}
+  - speciesId: snek
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 14502d42e23a4f8fb9cf1f2b495ec248, type: 2}
+  - speciesId: whale
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: dfd034acebed4e21a9f1aa2b5acecbaa, type: 2}
+  - speciesId: lad
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 31bd5746e6334c4fa820493cde515dbc, type: 2}
+  - speciesId: ghosty
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 1412a8c97fb6483c8c06e869a21ee441, type: 2}
+  - speciesId: deghoul
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 4d56e7b01d064ab68b9eb0145a30abaf, type: 2}
+  - speciesId: caw
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: 05c5665a1d914a0ea4585cafc0eac6f9, type: 2}
+  - speciesId: cofi_lootwak
+    visualVariantId: base
+    entangledType: 0
+    profile: {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1201, type: 2}
+  speciesVisualSets:
+  - {fileID: 11400000, guid: 3e8b7a6c5d4f4291b0c9e8d7a6f54321, type: 2}
+  - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1202, type: 2}
+  fallbackProfile: {fileID: 0}

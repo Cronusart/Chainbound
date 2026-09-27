@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 164c181c6e1b4d01b3d6ce72eb94dcde, type: 3}
+  m_Name: CombatBattleSfxCatalog
+  m_EditorClassIdentifier: 
+  turnStartApGrant: {fileID: 11400000, guid: 406a3ff8c715347448372a9378a7696f, type: 2}
+  apGain: {fileID: 11400000, guid: 406a3ff8c715347448372a9378a7696f, type: 2}
+  apDrain: {fileID: 0}
+  apBlocked: {fileID: 0}
+  hit: {fileID: 11400000, guid: b5b4aa3f4a888f440b51e35d400ed932, type: 2}
+  critHit: {fileID: 0}
+  block: {fileID: 0}
+  miss: {fileID: 0}
+  heal: {fileID: 0}
+  ko: {fileID: 0}
+  buffApplied: {fileID: 0}
+  debuffApplied: {fileID: 0}
+  statusImmune: {fileID: 0}
+  statusCleanse: {fileID: 0}
+  glitchIn: {fileID: 0}
+  glitchOut: {fileID: 0}
+  swapIn: {fileID: 0}
+  swapOut: {fileID: 0}
+  victoryStinger: {fileID: 11400000, guid: 3c8e1f2a9b4d4e6f8a0c1d2e3f4a5b6c, type: 2}
+  defeatStinger: {fileID: 11400000, guid: 4d9f2a3b0c5e4f708b1d2e3f4a5b6c7d, type: 2}
+  captureStinger: {fileID: 11400000, guid: 5e0a3b4c1d6f50819c2e3f4a5b6c7d8e, type: 2}
+  xpShare: {fileID: 0}
+  starUp: {fileID: 11400000, guid: 73d675397d409ab41994d4a73c9b5d84, type: 2}
+  rewardConfirm: {fileID: 0}
+  statusSfxEntries: []
+  wallSfxCatalog: {fileID: 11400000, guid: 57f12b7de1d64387a329650b58d8f985, type: 2}
+  critWindupSound: {fileID: 0}
+  defaultImpactStaggerSeconds: 0.04
+  statusAfterImpactDelaySeconds: 0.08
+  critAccentDelaySeconds: 0.04
+  critWindupLeadSeconds: 0.06
+  koDelayAfterImpactSeconds: 0.1
+  koStaggerSeconds: 0.04
+  maxSimultaneousOutcomeVoices: 4
+  turnStartApVolumeScale: 0.85
+  multiTargetVolumeScale: 0.82
+  pairedImpactAccentVolumeScale: 0.6
+  debugLogResolvedSequence: 0

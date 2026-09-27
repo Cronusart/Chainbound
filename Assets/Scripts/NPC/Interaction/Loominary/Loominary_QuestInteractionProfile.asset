@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b8700e866f11944f836c258d6049e3a, type: 3}
+  m_Name: Loominary_QuestInteractionProfile
+  m_EditorClassIdentifier: 
+  questDefinition: {fileID: 11400000, guid: 015cc1a15e789b648bd1f011f84db266, type: 2}
+  questId: chainbound_intro
+  rules:
+  - label: during quest
+    objectiveId: choose_starter
+    objectiveComparison: 2
+    objectiveValue: 0
+    flagPredicates: []
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: c4b2ccb970c2a10499acde72895a9b1c, type: 2}
+    triggerId: loom_broken
+  inactiveDialogue: {fileID: 11400000, guid: c4b2ccb970c2a10499acde72895a9b1c, type: 2}
+  inactiveTriggerId: 
+  activeFallbackDialogue: {fileID: 11400000, guid: c4b2ccb970c2a10499acde72895a9b1c, type: 2}
+  activeFallbackTriggerId: 
+  designerNotes: Post-intro fallback uses the broken-machine look so talk is never empty while coffee_and_beer is active.
+ 

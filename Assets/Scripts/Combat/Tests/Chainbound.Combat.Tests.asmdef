@@ -1,0 +1,29 @@
+{
+    "name": "Chainbound.Combat.Tests",
+    "rootNamespace": "Chainbound.Combat.Tests",
+    "references": [
+        "Chainbound.Combat.Core",
+        "Chainbound.Combat.Runtime",
+        "SignalJam.AudioData",
+        "SignalJam.UI.MenuNavigation",
+        "SignalJam.VisualFx",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

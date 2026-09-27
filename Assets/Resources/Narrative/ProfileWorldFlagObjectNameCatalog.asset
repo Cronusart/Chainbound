@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9f5b2e30c84517e9f6d8b7c5a4e3d21, type: 3}
+  m_Name: ProfileWorldFlagObjectNameCatalog
+  m_EditorClassIdentifier: 
+  rules:
+  - sceneId: Loomville
+    objectName: Intro_Collider1
+    flagKey: intro.guardrail.Intro_Collider1
+    expectedFlagValue: 1
+    activeWhenMatched: 1
+  - sceneId: Loomville
+    objectName: Intro_Collider2
+    flagKey: intro.guardrail.Intro_Collider2
+    expectedFlagValue: 1
+    activeWhenMatched: 1
+  - sceneId: Loomville
+    objectName: Intro_Collider3
+    flagKey: intro.guardrail.Intro_Collider3
+    expectedFlagValue: 1
+    activeWhenMatched: 1
+  - sceneId: Loomville
+    objectName: Intro_Collider4
+    flagKey: intro.guardrail.Intro_Collider4
+    expectedFlagValue: 1
+    activeWhenMatched: 1
+  - sceneId: Loomville
+    objectName: Intro_Collider5
+    flagKey: intro.guardrail.Intro_Collider5
+    expectedFlagValue: 1
+    activeWhenMatched: 1
+  - sceneId: Loomville
+    objectName: playerhouse_door
+    flagKey: intro.guardrail.playerhouse_door
+    expectedFlagValue: 1
+    activeWhenMatched: 1
+  - sceneId: Loomville
+    objectName: TransitionTrigger
+    flagKey: intro.guardrail.TransitionTrigger
+    expectedFlagValue: 1
+    activeWhenMatched: 1
+  - sceneId: loom_lab
+    objectName: Orb_Validape
+    flagKey: world.pickup.loom_lab.starter_orb.validape
+    expectedFlagValue: 1
+    activeWhenMatched: 0
+  - sceneId: loom_lab
+    objectName: Orb_Kitsauto
+    flagKey: world.pickup.loom_lab.starter_orb.kitsauto
+    expectedFlagValue: 1
+    activeWhenMatched: 0
+  - sceneId: loom_lab
+    objectName: Orb_Gilarime
+    flagKey: world.pickup.loom_lab.starter_orb.gilarime
+    expectedFlagValue: 1
+    activeWhenMatched: 0

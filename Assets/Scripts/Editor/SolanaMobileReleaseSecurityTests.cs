@@ -1,0 +1,367 @@
+#if UNITY_EDITOR
+using System.IO;
+using Chainbound.Combat;
+using NUnit.Framework;
+using TMPro;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UI;
+
+public sealed class SolanaMobileReleaseSecurityTests
+{
+    private const string LegacyWalletLinkPath = "supabase/functions/account_link_wallet/index.ts";
+    private const string MainManifestPath = "Assets/Plugins/Android/AndroidManifest.xml";
+    private const string MwaManifestPath = "Assets/Plugins/Android/SignalJamSolanaMwa.androidlib/src/main/AndroidManifest.xml";
+    private const string MwaGradlePath = "Assets/Plugins/Android/SignalJamSolanaMwa.androidlib/build.gradle";
+    private const string ReleaseValidatorPath = "Assets/Scripts/Editor/SolanaMobileReleaseValidator.cs";
+    private const string SolanaBridgePath = "Assets/Scripts/Solana/Services/SolanaServiceBridge.cs";
+    private const string WalletPromptPath = "Assets/Scripts/UI/MainMenu/WalletConnectionPromptService.cs";
+    private const string WalletConnectPath = "supabase/functions/wallet_connect_verified/index.ts";
+    private const string AccountSessionPath = "Assets/Scripts/Combat/Runtime/Accounts/AccountSessionService.cs";
+    private const string WalletMigrationPath = "supabase/migrations/20260924061959_single_active_profile_wallet.sql";
+    private const string WalletRecoveryMigrationPath = "supabase/migrations/20260925010000_wallet_profile_recovery.sql";
+    private const string WalletRestorePath = "supabase/functions/wallet_restore_profile/index.ts";
+    private const string GameServicesPrefabPath = "Assets/Prefabs/GameServices/GameServices.prefab";
+    private const string WalletPromptPrefabPath = "Assets/Prefabs/UI/WalletConnectionPrompt.prefab";
+
+    [Test]
+    public void LegacyWalletLinkEndpoint_IsFailClosedAndNonMutating()
+    {
+        string source = File.ReadAllText(LegacyWalletLinkPath);
+
+        StringAssert.Contains("legacy_wallet_link_disabled", source);
+        StringAssert.Contains("410", source);
+        StringAssert.DoesNotContain("profile_wallets", source);
+        StringAssert.DoesNotContain(".insert(", source);
+    }
+
+    [Test]
+    public void AndroidWalletHostAndUnityActivities_AreLandscape()
+    {
+        string appManifest = File.ReadAllText(MainManifestPath);
+        string walletManifest = File.ReadAllText(MwaManifestPath);
+
+        Assert.GreaterOrEqual(Count(appManifest, "android:screenOrientation=\"sensorLandscape\""), 2);
+        StringAssert.Contains("SignalJamMwaActivity", walletManifest);
+        StringAssert.Contains("android:screenOrientation=\"sensorLandscape\"", walletManifest);
+    }
+
+    [Test]
+    public void AndroidWalletClient_PinsReviewedOfficialVersion()
+    {
+        string gradle = File.ReadAllText(MwaGradlePath);
+        StringAssert.Contains("com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.7", gradle);
+        StringAssert.Contains("id 'org.jetbrains.kotlin.android'", gradle);
+
+        string validator = File.ReadAllText(ReleaseValidatorPath);
+        StringAssert.Contains("KotlinPluginVersion = \"2.1.10\"", validator);
+        StringAssert.Contains("version '{KotlinPluginVersion}' apply false", validator);
+    }
+
+    [Test]
+    public void ClosedBetaBridge_DoesNotComposeGatedServices()
+    {
+        string source = File.ReadAllText(SolanaBridgePath);
+        string[] gated = { "new SupabaseOwnershipSpineGateway(", "enableDevnetOwnershipSpine = true" };
+        foreach (string constructor in gated)
+            StringAssert.DoesNotContain(constructor, source);
+    }
+
+    [Test]
+    public void MainMenuWalletPrompt_UsesCompleteVerifiedConnectFlow()
+    {
+        string source = File.ReadAllText(WalletPromptPath);
+
+        StringAssert.Contains("flow.ConnectWalletToCurrentProfileAsync()", source);
+        StringAssert.DoesNotContain("flow.LinkWalletToCurrentProfile(", source);
+        StringAssert.Contains("ShowAccessAsync", source);
+    }
+
+    [Test]
+    public void CandidateWalletConnection_DoesNotOverwriteLinkedProfileIdentity()
+    {
+        string source = File.ReadAllText(AccountSessionPath);
+        int connectStart = source.IndexOf("public async Task<WalletConnectResult> ConnectWalletAsync", System.StringComparison.Ordinal);
+        int verifiedStart = source.IndexOf("public async Task<PlayerAccountSession> ConnectWalletAndResolveSessionAsync", connectStart, System.StringComparison.Ordinal);
+        string connectBody = source.Substring(connectStart, verifiedStart - connectStart);
+
+        StringAssert.DoesNotContain("walletIdentity.walletPublicKey =", connectBody);
+        StringAssert.DoesNotContain("walletIdentity.isActive = false", source);
+        StringAssert.Contains("wallet_mismatch_for_profile", source);
+    }
+
+    [Test]
+    public void WalletDatabase_EnforcesOneActiveWalletPerProfileAndPerWallet()
+    {
+        string migration = File.ReadAllText(WalletMigrationPath);
+        StringAssert.Contains("ux_profile_wallets_active_profile", migration);
+        StringAssert.Contains("PARTITION BY player_profile_id", migration);
+        StringAssert.Contains("WHERE is_active = true", migration);
+        StringAssert.Contains("AND unlinked_at IS NULL", migration);
+
+        string function = File.ReadAllText(WalletConnectPath);
+        StringAssert.Contains("profile_wallet_mismatch", function);
+        StringAssert.Contains("wallet_link_race_conflict", function);
+    }
+
+    [Test]
+    public void VerifiedConnect_RecoversExistingWalletProfileThroughServiceRoleTransaction()
+    {
+        string function = File.ReadAllText(WalletConnectPath);
+        string migration = File.ReadAllText(WalletRecoveryMigrationPath);
+
+        StringAssert.Contains("profile_recover_by_wallet_tx", function);
+        StringAssert.Contains("wallet_profile_restored", function);
+        StringAssert.DoesNotContain("wallet_linked_to_different_profile", function);
+        StringAssert.Contains("pg_advisory_xact_lock", migration);
+        StringAssert.Contains("verified_wallet_profile_recovery", migration);
+        StringAssert.Contains(
+            "REVOKE ALL ON FUNCTION public.profile_recover_by_wallet_tx(TEXT, UUID, TEXT) FROM anon, authenticated",
+            migration);
+        StringAssert.Contains(
+            "GRANT EXECUTE ON FUNCTION public.profile_recover_by_wallet_tx(TEXT, UUID, TEXT) TO service_role",
+            migration);
+    }
+
+    [Test]
+    public void GameMenuPrefab_OffersPlayAndConnectWithoutSeparateRestoreAction()
+    {
+        const string path = "Assets/Prefabs/UI/MainMenu/GameMenuPanel.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        Assert.NotNull(prefab);
+
+        Transform newGameView = prefab.transform.Find("NewGameView");
+        Assert.NotNull(newGameView);
+        Assert.NotNull(newGameView.Find("NewGameButton"));
+        Assert.NotNull(newGameView.Find("ConnectWalletButton"));
+        Assert.IsNull(newGameView.Find("RestoreProfileButton"));
+
+        Button[] buttons = newGameView.GetComponentsInChildren<Button>(true);
+        Assert.AreEqual(2, buttons.Length);
+        foreach (Button button in buttons)
+            Assert.AreEqual(Navigation.Mode.Explicit, button.navigation.mode, button.name);
+    }
+
+    [Test]
+    public void WalletAccessPrefab_HasPersistentCoordinatorSafeAreaAndTouchTargets()
+    {
+        GameObject promptPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WalletPromptPrefabPath);
+        Assert.NotNull(promptPrefab, "The scene-authored wallet prompt must have a reusable prefab.");
+        WalletConnectionPromptService prefabPresenter =
+            promptPrefab.GetComponent<WalletConnectionPromptService>();
+        Assert.NotNull(prefabPresenter);
+        Assert.IsFalse(promptPrefab.activeSelf);
+        Canvas promptCanvas = promptPrefab.GetComponent<Canvas>();
+        Assert.NotNull(promptCanvas);
+        Assert.IsTrue(promptCanvas.overrideSorting);
+        Assert.That(promptCanvas.sortingOrder, Is.GreaterThanOrEqualTo(500));
+        Assert.NotNull(promptPrefab.GetComponent<GraphicRaycaster>());
+        CanvasGroup promptGroup = promptPrefab.GetComponent<CanvasGroup>();
+        Assert.NotNull(promptGroup);
+        Assert.AreEqual(1f, promptGroup.alpha);
+
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(GameServicesPrefabPath);
+        Assert.NotNull(prefab);
+        ProfileWalletAccessCoordinator coordinator = prefab.GetComponent<ProfileWalletAccessCoordinator>();
+        Assert.NotNull(coordinator);
+        Assert.NotNull(prefab.GetComponent<WalletOperationGuard>());
+        WalletConnectionPromptService[] presenters =
+            prefab.GetComponentsInChildren<WalletConnectionPromptService>(true);
+        Assert.AreEqual(1, presenters.Length, "Exactly one persistent prompt presenter must own wallet access.");
+        WalletConnectionPromptService prompt = presenters[0];
+        Assert.NotNull(prompt);
+        Transform walletCanvas = prefab.transform.Find("WalletAccessCanvas");
+        Assert.NotNull(walletCanvas);
+        Transform safeAreaTransform = walletCanvas.Find("SafeArea");
+        Assert.NotNull(safeAreaTransform);
+        SignalJam.UI.MobileControls.SafeAreaAdapter safeArea =
+            safeAreaTransform.GetComponent<SignalJam.UI.MobileControls.SafeAreaAdapter>();
+        Assert.NotNull(safeArea);
+
+        Transform panel = safeArea.transform.Find("WalletConnectionPrompt");
+        Assert.NotNull(panel);
+        Assert.AreSame(panel.gameObject, prompt.gameObject,
+            "The reusable prompt prefab must own its presenter and activation state.");
+        Assert.IsFalse(panel.gameObject.activeSelf);
+        Assert.IsNull(safeArea.GetComponent<WalletConnectionPromptService>());
+        Assert.AreEqual(
+            WalletPromptPrefabPath,
+            PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(panel.gameObject));
+
+        SerializedObject serializedPrompt = new SerializedObject(prompt);
+        Assert.AreSame(panel.gameObject,
+            serializedPrompt.FindProperty("root").objectReferenceValue);
+
+        SerializedObject serializedCoordinator = new SerializedObject(coordinator);
+        Assert.AreSame(prompt,
+            serializedCoordinator.FindProperty("promptPresenter").objectReferenceValue);
+
+        Button[] buttons = prompt.GetComponentsInChildren<Button>(true);
+        Assert.That(buttons.Length, Is.GreaterThanOrEqualTo(2));
+        foreach (Button button in buttons)
+        {
+            LayoutElement layout = button.GetComponent<LayoutElement>();
+            Assert.NotNull(layout, $"{button.name} needs an authored touch target.");
+            Assert.That(layout.minHeight, Is.GreaterThanOrEqualTo(60f), button.name);
+            Assert.AreEqual(Navigation.Mode.Explicit, button.navigation.mode, button.name);
+        }
+    }
+
+    [Test]
+    public void WalletPrompt_FirstRequestedActivation_RemainsOpenAndSelectable()
+    {
+        GameObject root = new GameObject("WalletPromptTestRoot", typeof(RectTransform), typeof(CanvasGroup));
+        try
+        {
+            TextMeshProUGUI title = CreateText(root.transform, "Title");
+            TextMeshProUGUI body = CreateText(root.transform, "Body");
+            TextMeshProUGUI status = CreateText(root.transform, "Status");
+            Button connect = CreateButton(root.transform, "Connect");
+            Button offline = CreateButton(root.transform, "Offline");
+            Button retry = CreateButton(root.transform, "Retry");
+
+            root.SetActive(false);
+            WalletConnectionPromptService presenter = root.AddComponent<WalletConnectionPromptService>();
+            SerializedObject serializedPresenter = new SerializedObject(presenter);
+            serializedPresenter.FindProperty("root").objectReferenceValue = root;
+            serializedPresenter.FindProperty("titleText").objectReferenceValue = title;
+            serializedPresenter.FindProperty("bodyText").objectReferenceValue = body;
+            serializedPresenter.FindProperty("statusText").objectReferenceValue = status;
+            serializedPresenter.FindProperty("connectButton").objectReferenceValue = connect;
+            serializedPresenter.FindProperty("skipButton").objectReferenceValue = offline;
+            serializedPresenter.FindProperty("restoreButton").objectReferenceValue = retry;
+            serializedPresenter.ApplyModifiedPropertiesWithoutUndo();
+
+            var task = presenter.ShowAccessAsync(new WalletAccessPromptModel
+            {
+                showPrimary = true,
+                primaryLabel = "Connect Linked Wallet",
+                primaryChoice = WalletAccessPromptChoice.Connect,
+                showSecondary = true,
+                secondaryLabel = "Continue Offline",
+                secondaryChoice = WalletAccessPromptChoice.ContinueOffline,
+                showTertiary = false,
+            });
+
+            Assert.IsTrue(root.activeInHierarchy,
+                "A requested first activation must not be hidden by Awake.");
+            Assert.IsFalse(task.IsCompleted);
+            // EditMode has no live UI EventSystem. Runtime default selection is
+            // guarded here by the presenter's explicit selection call.
+            string presenterSource = File.ReadAllText(WalletPromptPath);
+            StringAssert.Contains("ShowPrompt(defaultButton)", presenterSource);
+            StringAssert.Contains("Select(defaultButton)", presenterSource);
+            StringAssert.DoesNotContain("Destroy(gameObject)", presenterSource,
+                "A persistent fallback must not destroy a scene-authored presenter.");
+            StringAssert.DoesNotContain("group.alpha =", presenterSource,
+                "Runtime prompting must preserve the authored CanvasGroup appearance.");
+            StringAssert.DoesNotContain("SetAsLastSibling", presenterSource,
+                "Runtime prompting must preserve the authored hierarchy order.");
+            Assert.AreSame(offline, connect.navigation.selectOnDown);
+            Assert.AreSame(connect, offline.navigation.selectOnUp);
+
+            Assert.IsTrue(presenter.TryCancel());
+            Assert.IsTrue(task.IsCompleted);
+            Assert.AreEqual(WalletAccessPromptChoice.Cancel, task.Result);
+            Assert.IsFalse(root.activeSelf);
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    private static TextMeshProUGUI CreateText(Transform parent, string name)
+    {
+        GameObject textObject = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
+        textObject.transform.SetParent(parent, false);
+        return textObject.GetComponent<TextMeshProUGUI>();
+    }
+
+    private static Button CreateButton(Transform parent, string name)
+    {
+        GameObject buttonObject = new GameObject(
+            name,
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button));
+        buttonObject.transform.SetParent(parent, false);
+        return buttonObject.GetComponent<Button>();
+    }
+
+    [Test]
+    public void WalletAccessCoordinator_AuthorsRequiredPromptCopyAndShortAddress()
+    {
+        string source = File.ReadAllText("Assets/Scripts/Core/Services/ProfileWalletAccessCoordinator.cs");
+        StringAssert.Contains("Connect Linked Wallet", source);
+        StringAssert.Contains("Continue Offline", source);
+        StringAssert.Contains("Connect & Link Wallet", source);
+        StringAssert.Contains("Wrong Wallet", source);
+        StringAssert.Contains("Substring(0, 4)", source);
+    }
+
+    [Test]
+    public void WalletAccessCoordinator_ReportsClosedBetaGateSeparatelyFromProofFailure()
+    {
+        System.Reflection.MethodInfo method = typeof(ProfileWalletAccessCoordinator).GetMethod(
+            "BuildRetryPrompt",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var model = (WalletAccessPromptModel)method.Invoke(
+            null,
+            new object[] { null, "wallet_connect_verified returned 403: beta_not_allowlisted", false });
+
+        Assert.AreEqual("Closed Beta Access Required", model.title);
+        StringAssert.Contains("wallet proof succeeded", model.body.ToLowerInvariant());
+        Assert.AreEqual(MainMenuAccountStatusCopy.BetaAccessRequired, model.status);
+    }
+
+    [Test]
+    public void ClosedBetaInstructionPolicy_FailsClosed()
+    {
+        Assert.IsTrue(ClosedBetaFeaturePolicy.IsPlayerInstructionAllowed("create_profile"));
+        Assert.IsTrue(ClosedBetaFeaturePolicy.IsPlayerInstructionAllowed("update_position"));
+        foreach (string denied in new[]
+        {
+            "update_wins_losses", "roll_known_move", "prepare_stamp_ticket", "stamp_known_move",
+            "add_chainling_from_capture", "create_chainling", "spend_ram", "set_equipped_slot", "ranked_wager", "unknown"
+        })
+            Assert.IsFalse(ClosedBetaFeaturePolicy.IsPlayerInstructionAllowed(denied), denied);
+    }
+
+    [TestCase(WalletConnectPath)]
+    [TestCase(WalletRestorePath)]
+    public void ClosedBetaMembership_IsCheckedOnlyAfterCryptographicProof(string path)
+    {
+        string source = File.ReadAllText(path);
+        int proof = source.IndexOf("if (!verified && !devBypass)", System.StringComparison.Ordinal);
+        int allowlist = source.IndexOf("isApprovedBetaWallet", proof + 1, System.StringComparison.Ordinal);
+        Assert.That(proof, Is.GreaterThanOrEqualTo(0));
+        Assert.That(allowlist, Is.GreaterThan(proof));
+        StringAssert.Contains("beta_not_allowlisted", source);
+    }
+
+    [TestCase("NO_WALLET_FOUND: No compatible wallet", MainMenuAccountStatusCopy.WalletUnavailable)]
+    [TestCase("REQUEST_IN_PROGRESS: Another wallet request is already active.", MainMenuAccountStatusCopy.WalletBusy)]
+    [TestCase("legacy_wallet_link_disabled", MainMenuAccountStatusCopy.ClientUpdateRequired)]
+    [TestCase("beta_not_allowlisted", MainMenuAccountStatusCopy.BetaAccessRequired)]
+    public void WalletErrors_MapToPlayerFacingCopy(string error, string expected)
+    {
+        Assert.AreEqual(expected, MainMenuAccountStatusCopy.Resolve(error));
+    }
+
+    private static int Count(string source, string value)
+    {
+        int count = 0;
+        int offset = 0;
+        while ((offset = source.IndexOf(value, offset, System.StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            offset += value.Length;
+        }
+        return count;
+    }
+}
+#endif

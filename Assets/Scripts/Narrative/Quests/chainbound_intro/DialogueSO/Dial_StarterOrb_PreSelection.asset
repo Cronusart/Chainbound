@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f988bc0d55107749a911c0375bba164, type: 3}
+  m_Name: Dial_StarterOrb_PreSelection
+  m_EditorClassIdentifier: 
+  lines:
+  - speakerName: 
+    text: HEY! Keep your paws to yourself! We can't afford a shutdown at these speeds!
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: prof_toby
+      targetTag: 
+  autoAdvance: 0
+  autoAdvanceDelay: 2
+  allowSkip: 1
+  skipToEndOfLine: 1

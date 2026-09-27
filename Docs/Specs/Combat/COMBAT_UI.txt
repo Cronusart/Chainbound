@@ -1,0 +1,1335 @@
+﻿COMBAT_08_CombatUI_v1.0
+
+===============================================================================
+0. Purpose
+===============================================================================
+
+Defines the complete Combat UI layout, component hierarchy, data bindings,
+interaction flows, and visual language for the battle system. This spec bridges
+the data schemas in Spec 07 (Â§5) to concrete Unity UI implementation.
+
+AESTHETIC REFERENCE: Cassette Beasts (Bytten Studio, 2023)
+- Clean, minimal HUD with information density on demand
+- Pixel-art-inspired 3D models on stylised arena backgrounds
+- Bottom-anchored action panel for move selection
+- Top-anchored enemy info panels
+- Status icons as small badges beneath HP bars
+- Type indicators using distinct colour-coded icons
+- Pop-up text for effectiveness, crits, and AP changes
+- No visible turn-order bar; speed determines action priority
+
+ADAPTATION FOR CHAINBOUND:
+- Moves (up to 16 slots) replace CB's 8-slot sticker system
+- Persistent AP pool (cap 10, +2/turn) replaces CB's per-turn AP
+- Modifier badges on moves add visual complexity
+- Chemistry reactions (coatings, transmutation) need clear feedback
+- Combat log panel for deterministic replay support
+- Type chemistry feedback is richer than CB's simple effectiveness
+
+DESIGN PRINCIPLES:
+- Minimal by default, detailed on demand (progressive disclosure)
+- All combat-relevant state visible without menus during action resolution
+- Consistent with systems-first architecture (all UI binds to data, not logic)
+- Deterministic: every UI state is reconstructable from combat log
+- Accessible: colour is never the sole differentiator; use icons + text
+
+CROSS-REFERENCES:
+- COMBAT_01_TypeChemistry_v1.1.txt â€” Type colours and chemistry reactions
+- COMBAT_02A_StatusFrameworkAndCatalog_v1.2.txt â€” Status icon catalog
+- COMBAT_02B_StatsStagesIVs_v1.2.txt â€” Stat display and stage indicators
+- COMBAT_02C_ResolutionMath_v1.3.txt â€” AP system, damage numbers, recharge
+- COMBAT_03A_Moves_CoreFramework_v1.1.txt â€” Move categories/tags
+- COMBAT_03A1_Moves_BaselineList_v1.2.1.txt â€” 184 move entries
+- COMBAT_04_AcquisitionRarity_v1.0.txt â€” Rarity colours
+- COMBAT_05_MoveModifiers_v1.2.txt â€” Modifier badge visuals
+- COMBAT_06_SpeciesMovePools_v1.2.txt â€” Species display data
+- COMBAT_07_ImplementationGuide_v1.0.txt â€” UI schemas (Â§5.1-5.4)
+
+===============================================================================
+1. Battle Screen Layout â€” Overview
+===============================================================================
+
+The battle screen is divided into 5 visual layers, rendered back-to-front:
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ LAYER 5: OVERLAY (popups, effectiveness text, damage numbers)   â”‚
+â”‚                                                                 â”‚
+â”‚ LAYER 4: ENEMY INFO BAR (top)                                   â”‚
+â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”               â”‚
+â”‚ â”‚  [Enemy A Info]      â”‚ â”‚  [Enemy B Info]      â”‚               â”‚
+â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜               â”‚
+â”‚                                                                 â”‚
+â”‚ LAYER 3: BATTLEFIELD (3D arena, Chainling models, FX)           â”‚
+â”‚                                                                 â”‚
+â”‚     â”Œâ”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”                â”Œâ”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”             â”‚
+â”‚     â”‚ P1  â”‚ â”‚ P2  â”‚                â”‚ E1  â”‚ â”‚ E2  â”‚             â”‚
+â”‚     â””â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”˜                â””â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”˜             â”‚
+â”‚                                                                 â”‚
+â”‚ LAYER 2: ALLY INFO BAR (bottom-mid)                             â”‚
+â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”               â”‚
+â”‚ â”‚  [Player A Info]     â”‚ â”‚  [Partner B Info]    â”‚               â”‚
+â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜               â”‚
+â”‚                                                                 â”‚
+â”‚ LAYER 1: ACTION PANEL (bottom, player-controlled)               â”‚
+â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
+â”‚ â”‚  [Move Grid] [AP Meter] [Options] [Combat Log Toggle]â”‚ â”‚
+â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+1.1 Battle Format
+
+Default format: 2v2 (Player + Partner vs Enemy A + Enemy B)
+- Mirrors Cassette Beasts' 2v2 partner battle structure
+- Player controls their own Chainling; partner is AI-controlled or co-op
+- Wild encounters may be 2v1 or 2v2
+- Boss encounters may be 2v1 (boss has boosted stats)
+
+1.2 Camera
+
+- Default: Behind player team, slightly elevated, looking toward enemies
+- On action: camera smoothly shifts to focus on attacker â†’ target
+- On chemistry reaction: brief camera shake + zoom on affected Chainling
+- On KO: slow-motion final hit, camera pulls back
+
+1.3 Rendering Order (Unity Sorting)
+
+| Layer | Sorting Order | Content                              |
+|-------|---------------|--------------------------------------|
+| 1     | 100           | Action Panel (Canvas, Screen Space)  |
+| 2     | 90            | Ally Info Bars (Canvas, Screen Space) |
+| 3     | â€”             | 3D Battlefield (World Space)         |
+| 4     | 80            | Enemy Info Bars (Canvas, Screen Space)|
+| 5     | 110           | Overlay (Canvas, Screen Space)       |
+
+===============================================================================
+2. Chainling Info Panel (ChainlingInfoPanel.cs)
+===============================================================================
+
+Used for BOTH ally and enemy Chainling displays. Position differs:
+- Ally panels: bottom of screen, left-aligned
+- Enemy panels: top of screen, right-aligned
+- Layout mirrors CB's clean HP bar + type icon + name format
+
+2.1 Panel Layout
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ [Type Icon] [Name]            â˜…[StarCount]       â”‚
+â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
+â”‚ â”‚ â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘ HP 145/200      â”‚ â”‚
+â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
+â”‚ [AP: â—â—â—â—â—â—â—‹â—‹â—‹â—‹]  [Status: ðŸ”¥ â„ï¸ âš¡]           â”‚
+â”‚ [Coating Badge]    [Stage Arrows]                â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+2.2 Data Binding (references Spec 07 Â§5.1)
+
+```
+ChainlingInfoPanelData {
+  // Identity
+  displayName: string,           // From ChainlingDisplayData.displayName
+  starCount: int,                // 0-5 stars (replaces legacy level 1-100)
+  typeIcons: TypeIcon[],         // 1-2 type icons (primary, optional secondary)
+  miniSprite: Sprite,            // From ChainlingDisplayData.miniSprite
+
+  // Health
+  currentHP: int,                // Live value
+  maxHP: int,                    // From base stat + IV + star scaling
+  hpBarColor: Color,             // Green (>50%), Yellow (25-50%), Red (<25%)
+  hpBarAnimSpeed: float,         // Smooth interpolation speed
+
+  // AP (visible for ALL Chainlings â€” player and enemy)
+  currentAP: int,                // 0-10, live value
+  maxAP: int,                    // Always 10 (02C Â§1.1)
+  apPips: bool[10],              // Filled/empty for each AP point
+
+  // Status Effects
+  activeStatuses: StatusIconData[], // Up to 8 visible icons
+  coatingType: ChainlingType?,   // If coated, show coating badge
+
+  // Stage Indicators (compact)
+  stageIndicators: StageArrow[], // Small up/down arrows for buffed/debuffed stats
+}
+```
+
+2.3 Sub-Components
+
+-------------------------------------------------------------------------------
+2.3.1 Type Icon
+-------------------------------------------------------------------------------
+
+Each of the 14 types has a unique icon and colour (from Spec 01 Â§1):
+
+| Type       | Primary Color | Icon Shape              | Hex     |
+|------------|---------------|-------------------------|---------|
+| Node       | Green         | Interconnected nodes    | #4CAF50 |
+| Gas        | Orange        | Flame/gas cloud         | #FF9800 |
+| Block      | Grey-Blue     | Solid block/shield      | #607D8B |
+| Encrypted  | Purple        | Lock/cipher             | #9C27B0 |
+| Burned     | Red-Orange    | Flame trail             | #F44336 |
+| Frozen     | Ice Blue      | Snowflake/crystal       | #03A9F4 |
+| Forked     | Yellow        | Lightning fork          | #FFEB3B |
+| Mined      | Brown-Gold    | Pickaxe/ore             | #795548 |
+| Staked     | Dark Green    | Yield/growth icon       | #388E3C |
+| Compressed | Teal          | Compressed arrows       | #009688 |
+| Bot        | Steel Blue    | Gear/circuit            | #455A64 |
+| Glitched   | Magenta       | Broken pixel            | #E91E63 |
+| Shard      | Crystal White | Shattered crystal       | #B0BEC5 |
+| Meme       | Hot Pink      | Chaos star/wildcard     | #FF4081 |
+| Typeless   | White/Grey    | Circle (neutral)        | #9E9E9E |
+
+NOTE: Dual-type Chainlings show two type icons side-by-side. If a Coating is
+active, the coated type icon pulses/glows to indicate temporary override.
+
+-------------------------------------------------------------------------------
+2.3.2 HP Bar
+-------------------------------------------------------------------------------
+
+- Width: 200px (scalable)
+- Height: 12px
+- Fill direction: left to right
+- Color transitions: smooth lerp based on HP percentage
+  - >50%: Green (#4CAF50) â†’ Yellow (#FFEB3B) at 50%
+  - 25-50%: Yellow (#FFEB3B) â†’ Red (#F44336) at 25%
+  - <25%: Red (#F44336), bar pulses gently
+- Damage preview: when hovering an attack move, show a translucent
+  damage preview region on the target's HP bar (estimated damage range)
+- Numeric text: right-aligned, "[current]/[max]"
+- Animation: smooth interpolation over 0.3s when HP changes
+
+CB REFERENCE: Cassette Beasts uses a simple greenâ†’red HP bar with numeric
+overlay. We match this but add the damage preview on hover.
+
+-------------------------------------------------------------------------------
+2.3.3 AP Pips
+-------------------------------------------------------------------------------
+
+Display AP as a row of 10 circular pips (matching AP cap from 02C Â§1.1):
+
+```
+â—â—â—â—â—â—â—‹â—‹â—‹â—‹  = 6/10 AP
+```
+
+| State    | Visual                     | Color            |
+|----------|----------------------------|------------------|
+| Filled   | Solid circle               | Bright cyan      |
+| Empty    | Hollow circle              | Dark grey        |
+| Gaining  | Pulse animation (0.2s)     | Cyan flash       |
+| Losing   | Shrink animation (0.2s)    | Red flash        |
+| Locked   | X over pip (Thread Lock)   | Dark red         |
+
+For enemy Chainlings: AP is visible to both players (information symmetry,
+matching CB's approach of showing enemy resources).
+
+HOVER TOOLTIP:
+"AP: [current]/10 | +2 per turn | [status effects on AP]"
+
+CB REFERENCE: Cassette Beasts doesn't show AP as pips but uses a counter.
+We use pips for faster visual parsing during turn decisions.
+
+-------------------------------------------------------------------------------
+2.3.4 Status Icon Strip
+-------------------------------------------------------------------------------
+
+- Position: below HP bar, left-aligned
+- Max visible: 8 icons (scroll indicator if more)
+- Each icon: 16x16px, type-coloured border if applicable
+- Duration overlay: small number in corner (turns remaining)
+- Class indicator: icon shape varies by status class
+  - DurationStatus: clock icon overlay
+  - ConsumedStatus: lightning bolt overlay
+  - CounterStatus: numbered badge overlay
+  - InstantStatus: (no icon, resolves immediately)
+
+```
+StatusIconData {
+  statusId: string,              // "Rekt", "FUD", "Node_Coating", etc.
+  icon: Sprite,                  // Status-specific icon
+  turnsRemaining: int?,          // null for non-duration
+  stackCount: int?,              // For CounterStatus
+  isDebuff: bool,                // Red border if debuff, blue if buff
+  origin: StatusOrigin,          // ChemistryOnly or General
+  tooltipText: string            // "FUD: Atk/Def/Acc/Spd -1 (2 turns)"
+}
+```
+
+HOVER TOOLTIP for each status:
+```
+[Status Name]
+[Effect description]
+Duration: [N] turns remaining
+Origin: [Chemistry / Move / Passive]
+```
+
+CB REFERENCE: Cassette Beasts shows small status icons beneath the HP bar
+with a hover tooltip. We match this exactly.
+
+-------------------------------------------------------------------------------
+2.3.5 Coating Badge
+-------------------------------------------------------------------------------
+
+When a Chainling has an active Type Coating (from chemistry):
+
+- Display a prominent badge overlaying the type icon
+- Badge shows the coating type's colour and icon
+- Pulse animation to indicate it's temporary
+- Duration counter in corner
+
+```
+[Node Icon] â†’ [Node Icon with Frozen Coating overlay]
+```
+
+"Coated" text in the type icon's tooltip.
+
+CB REFERENCE: CB shows type coating as a visual change on the creature model
+with a small icon. We replicate this with both a model shader change and
+a UI badge.
+
+-------------------------------------------------------------------------------
+2.3.6 Stage Arrows (Compact Stat Indicator)
+-------------------------------------------------------------------------------
+
+Instead of showing all 6 stats, display compact arrows:
+
+```
+â†‘ Atk  â†‘â†‘ Spd  â†“ Def
+```
+
+- Up arrows (green): each arrow = +1 to +2 stages (max 3 arrows for +6)
+- Down arrows (red): each arrow = -1 to -2 stages
+- Hidden if stage = 0 (neutral)
+- Only show stats that have been modified from baseline
+
+HOVER expands to full stat stage table:
+```
+Stage Changes:
+MeleeAtk:  +2  (Ã—2.00)
+MeleeDef:  -1  (Ã—0.67)
+RangedAtk:  0  (Ã—1.00)
+RangedDef:  0  (Ã—1.00)
+Speed:     +3  (Ã—2.50)
+```
+
+CB REFERENCE: CB shows stat changes as colored arrows next to the creature.
+We match this approach with a more compact representation.
+
+===============================================================================
+3. Action Panel (ActionPanel.cs)
+===============================================================================
+
+The primary player interaction surface. Anchored at bottom of screen.
+Only visible during the player's decision phase (hidden during resolution).
+
+3.1 Panel Layout
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
+â”‚ â”‚          INSCRIPTION GRID                   â”‚ â”‚ AP  â”‚ â”‚ OPTIONS   â”‚ â”‚
+â”‚ â”‚ â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”‚ â”‚â—â—â—â— â”‚ â”‚ [Swap]    â”‚ â”‚
+â”‚ â”‚ â”‚ M1 â”‚ â”‚ M2 â”‚ â”‚ M3 â”‚ â”‚ M4 â”‚ â”‚ M5 â”‚ â”‚ M6 â”‚ â”‚ â”‚â—â—â—‹â—‹ â”‚ â”‚ [Items]   â”‚ â”‚
+â”‚ â”‚ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â”‚ â”‚â—‹â—‹â—‹â—‹ â”‚ â”‚ [Flee]    â”‚ â”‚
+â”‚ â”‚ â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”‚ â”‚     â”‚ â”‚ [Log â–¾]   â”‚ â”‚
+â”‚ â”‚ â”‚ M7 â”‚ â”‚ M8 â”‚ â”‚ M9 â”‚ â”‚M10â”‚ â”‚M11â”‚ â”‚M12â”‚ â”‚ â””â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
+â”‚ â”‚ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â”‚                       â”‚
+â”‚ â”‚ â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”               â”‚ [CATEGORY FILTERS]    â”‚
+â”‚ â”‚ â”‚M13â”‚ â”‚M14â”‚ â”‚M15â”‚ â”‚M16â”‚               â”‚ [All][DMG][UTL][SUP]  â”‚
+â”‚ â”‚ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜               â”‚ [PAS][TRIG][APMAN]    â”‚
+â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                       â”‚
+â”‚ [INSCRIPTION DETAIL PREVIEW â€” shown on hover]                         â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+3.2 Move Grid
+
+- SUPERSEDED: Current loadout capacity is 4-9 slots based on rebirth count.
+  See MOVE_LOADOUT_RULES_AND_UI_SPEC.md.
+- Grid layout: flexible, accommodates the rebirth-based equipped move cap.
+- Slot sizing: Each slot is a square card (80x80px recommended)
+- Grid rows: Up to 3 rows of 6, scrollable if needed
+- Empty slots: shown as locked/greyed outlines with lock icon
+
+CB REFERENCE: Cassette Beasts uses a single-row scrollable sticker list.
+We expand this to a grid because Chainlings can have up to 16 moves
+(vs CB's ~8 stickers). The grid is more efficient for this many options.
+
+-------------------------------------------------------------------------------
+3.2.1 Move Card (MoveCardUI.cs)
+-------------------------------------------------------------------------------
+
+Each move in the grid is rendered as a compact card:
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ [Type Color Bar]   â”‚  â† Top edge coloured by move type
+â”‚ â”Œâ”€â”€â”               â”‚
+â”‚ â”‚ICâ”‚ [Name]        â”‚  â† Icon + short name
+â”‚ â””â”€â”€â”˜               â”‚
+â”‚ [â—â—â—‹] [DMG][MULTI] â”‚  â† AP cost pips + tag badges
+â”‚ [ðŸ”µ][ðŸŸ£][ðŸŸ¡]      â”‚  â† Modifier badges (up to 3)
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+CARD STATES:
+| State         | Visual                                    |
+|---------------|-------------------------------------------|
+| Available     | Full colour, selectable                   |
+| Insufficient AP| Dimmed, AP cost pips in red              |
+| Recharging    | Greyed out, timer overlay (turns left)    |
+| Selected      | Glowing border, slightly enlarged         |
+| Passive       | Permanent subtle glow (always active)     |
+| Disabled      | Crossed out (by status effect like Halted)|
+
+Data binding: MoveCardData from Spec 07 Â§5.2
+
+3.3 Move Detail Preview
+
+When hovering over an move card, a detail panel appears:
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ [Type Color Header Bar]                              â”‚
+â”‚                                                     â”‚
+â”‚ BASELINE STRIKER                           [Common] â”‚
+â”‚ "Neutral-typed strike. Reliable, no frills."        â”‚
+â”‚                                                     â”‚
+â”‚ Category: Damaging (Melee)    Tags: [DMG]           â”‚
+â”‚ Power: 75    Accuracy: 95%    AP Cost: â—â—â—‹          â”‚
+â”‚ Targeting: Single             Range: Melee          â”‚
+â”‚                                                     â”‚
+â”‚ MODIFIERS:                                          â”‚
+â”‚ [ðŸ”µ +12% power] [ðŸŸ£ 15% AP refund] [â€”emptyâ€”]       â”‚
+â”‚                                                     â”‚
+â”‚ Chemistry: This move uses [Typeless] type for       â”‚
+â”‚ chemistry resolution. No advantage/disadvantage.    â”‚
+â”‚                                                     â”‚
+â”‚ [ESTIMATED DAMAGE: 45-52 vs current target]         â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+The detail preview provides:
+1. Full move name and flavor text
+2. All mechanical properties (power, accuracy, AP, targeting)
+3. Modifier badges with hover-able tooltips
+4. Chemistry context (type advantage vs current target)
+5. Estimated damage range (calculated from current stats, stages, modifiers)
+
+CB REFERENCE: CB shows a similar detail panel when hovering stickers, including
+power, AP cost, and a brief description. We extend this with modifier info
+and damage estimation.
+
+3.4 AP Meter (Compact)
+
+Vertical stack of 10 pips adjacent to the move grid:
+
+```
+â—  (10)
+â—  (9)
+â—  (8)
+â—  (7)
+â—  (6)   â† Current AP level
+â—  (5)
+â—‹  (4)
+â—‹  (3)
+â—‹  (2)
+â—‹  (1)
+```
+
+- Selecting an move dims the pips that would be consumed
+- Visual: "if I select this 3-AP move, pips 6/5/4 flash red briefly"
+- After confirming, the consumed pips animate out
+- On gaining AP (start of turn), pips animate in with a cyan pulse
+
+3.5 Options Column
+
+| Button   | Action                                    | Hotkey |
+|----------|-------------------------------------------|--------|
+| Swap     | Open swap panel to switch active Chainling| S      |
+| Items    | Open items panel (if applicable)          | I      |
+| Flee     | Attempt to flee (wild encounters only)    | F      |
+| Log â–¾    | Toggle combat log panel                   | L      |
+
+3.6 Category Filters
+
+Quick-filter buttons to show/hide moves by tag:
+- [All]: show all (default)
+- [DMG]: only damaging
+- [UTL]: only utility
+- [SUP]: only support
+- [PAS]: passives (shown separately, always active)
+- [TRIG]: triggered moves
+- [APMAN]: AP manipulation moves
+
+Filtering is additive (click multiple to show multiple categories).
+
+CB REFERENCE: CB doesn't have filters (fewer stickers to manage). This is
+a Chainbound addition to handle 16-slot builds efficiently.
+
+===============================================================================
+4. Targeting Overlay (TargetingOverlay.cs)
+===============================================================================
+
+After selecting an move, the targeting overlay appears:
+
+4.1 Targeting Modes
+
+| TargetingMode | UI Behavior                                         |
+|---------------|-----------------------------------------------------|
+| Single        | Highlight each valid target; click to confirm        |
+| Multi         | Highlight all valid targets; auto-confirm             |
+| Self          | Highlight self; auto-confirm                          |
+| Ally          | Highlight each ally; click to confirm                 |
+| AllAllies     | Highlight all allies; auto-confirm                    |
+| AllFoes       | Highlight all foes; auto-confirm                      |
+| Field         | Highlight entire field; auto-confirm                  |
+
+4.2 Target Highlight
+
+- Valid targets: bright outline glow (green for allies, red for enemies)
+- Invalid targets: dimmed/greyed out
+- Hovered target: enlarged slightly, detailed info tooltip appears
+- Chemistry preview: show effectiveness indicator above target
+
+```
+[TARGET HIGHLIGHT]
+     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+     â”‚   âš¡ 1.2x  â”‚  â† Chemistry advantage indicator
+     â”‚  [Enemy A] â”‚
+     â”‚  HP â–ˆâ–ˆâ–ˆâ–ˆâ–‘â–‘ â”‚
+     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+Chemistry effectiveness indicators:
+| Chemistry Result | Display                    | Color  |
+|------------------|----------------------------|--------|
+| Advantage        | "â–² Advantage (Ã—1.2)"      | Green  |
+| Resisted         | "â–¼ Resisted (Ã—0.8)"       | Red    |
+| ChemAdv = ChemDis| "â€” Neutral"               | Grey   |
+| Coating active   | "â—† Coated ([Type])"       | Type   |
+
+4.3 Confirmation
+
+- Click target to confirm (Single, Ally targeting)
+- Auto-confirm for Multi, Self, AllAllies, AllFoes, Field
+- Right-click or Escape to cancel and return to move grid
+- Confirmation animation: brief flash on selected target
+
+===============================================================================
+5. Resolution Phase UI (ResolutionDisplay.cs)
+===============================================================================
+
+During action resolution (after all players have chosen), the Action Panel
+hides and the resolution display takes over.
+
+5.1 Action Queue
+
+Actions resolve in Speed order (02C Â§2). Display a brief turn-order banner:
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ TURN ORDER: [Kitsauto] â†’ [Enemy A] â†’ [P2] â†’ [Enemy B] â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+This banner appears for 1.5s at the start of resolution, then fades.
+
+CB REFERENCE: CB does NOT show an explicit turn-order bar. The actions just
+resolve. For competitive play and clarity, we add this brief preview.
+
+5.2 Action Execution Display
+
+For each action in the queue:
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ [Attacker Sprite] uses [Move Name]!          â”‚
+â”‚                                                     â”‚
+â”‚ [Target Sprite] takes [Damage] damage!              â”‚
+â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                    â”‚
+â”‚ â”‚ â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â”‚ HP 145â†’98          â”‚
+â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                    â”‚
+â”‚                                                     â”‚
+â”‚ "Super Effective!" (Chemistry â–²)                    â”‚
+â”‚ "Critical Hit!"                                     â”‚
+â”‚ [Status Applied: FUD (2 turns)]                     â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+5.3 Damage Numbers (Floating Text)
+
+- Damage numbers float upward from the target
+- Color coding:
+  | Type               | Color    | Style         |
+  |--------------------|----------|---------------|
+  | Normal damage      | White    | Normal        |
+  | Critical hit       | Yellow   | Bold + larger |
+  | Chemistry advantage| Green    | Normal        |
+  | Chemistry disadvant| Red      | Normal        |
+  | Healing            | Green    | Normal        |
+  | AP change (+)      | Cyan     | Normal        |
+  | AP change (-)      | Orange   | Normal        |
+  | Recoil/self-damage | Dark Red | Italic        |
+  | Multi-hit          | Smaller  | Each hit separate|
+  | Total (multi-hit)  | White    | Bold (after all)|
+
+- Multi-hit display: each hit shows a small number, then total in bold
+
+```
+  12  14  11  15    â† Individual hits
+       52           â† Total (bold, after all hits land)
+```
+
+5.4 Chemistry Reaction Display
+
+When chemistry resolves (type interaction produces a status):
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚           âš—ï¸ CHEMISTRY REACTION                 â”‚
+â”‚                                                 â”‚
+â”‚  [Block] â†’ [Burned] = Firewall â†’ Self         â”‚
+â”‚                                                 â”‚
+â”‚  [Attacker] gained Firewall!                    â”‚
+â”‚  (First projectile hit: 30% less damage)        â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+- Chemistry popup: appears center screen for 2s
+- Shows attacker type â†’ target type â†’ resulting status
+- Uses type colours for the type labels
+- Subtle particle effect matching the resulting status
+
+CB REFERENCE: CB shows "Super Effective!" and applies status changes with
+brief text. We add a more informative chemistry reaction card since our
+chemistry system is more complex than simple type effectiveness.
+
+5.5 Coating/Transmutation Animation
+
+When a Type Coating is applied:
+
+1. Target model gets a colour-wash shader effect (coating type's colour)
+2. Type icon in the info panel updates with coating overlay
+3. Brief text: "[Target] is now coated with [Type]!"
+4. Coating badge appears in status strip
+
+CB REFERENCE: CB shows transmutation with a model colour change and brief
+animation. We match this exactly.
+
+===============================================================================
+6. Swap Panel (SwapPanel.cs)
+===============================================================================
+
+Opened from the Options column when the player chooses to swap.
+
+6.1 Layout
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ SWAP CHAINLING                                   â”‚
+â”‚                                                 â”‚
+â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”       â”‚
+â”‚ â”‚ [Sprite]         â”‚ â”‚ [Sprite]         â”‚       â”‚
+â”‚ â”‚ Validape â˜…3      â”‚ â”‚ Gilarime â˜…2      â”‚       â”‚
+â”‚ â”‚ HP: 180/200      â”‚ â”‚ HP: 95/210       â”‚       â”‚
+â”‚ â”‚ Type: Node       â”‚ â”‚ Type: Frozen     â”‚       â”‚
+â”‚ â”‚ AP: 7/10         â”‚ â”‚ AP: 4/10         â”‚       â”‚
+â”‚ â”‚ [Statuses: ...]  â”‚ â”‚ [Statuses: ...]  â”‚       â”‚
+â”‚ â”‚                  â”‚ â”‚                  â”‚       â”‚
+â”‚ â”‚ [SELECT]         â”‚ â”‚ [SELECT]         â”‚       â”‚
+â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜       â”‚
+â”‚                                                 â”‚
+â”‚ [CANCEL]                                        â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+6.2 Swap Rules Display
+
+- Greyed-out Chainlings that are KO'd (HP = 0) with "FAINTED" overlay
+- If a Chainling has "Immovable" status, show "(Cannot swap)" tag
+- Currently active Chainling is not shown in the swap list
+- Chemistry preview: hovering shows type matchup vs current enemies
+
+CB REFERENCE: CB shows a simple swap panel with Cassette thumbnails, HP,
+and type. We match this with additional AP and status information.
+
+===============================================================================
+7. Combat Log Panel (CombatLogPanel.cs)
+===============================================================================
+
+Toggleable panel for detailed combat information. Closed by default.
+
+7.1 Layout
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ COMBAT LOG                       [Filter â–¾] [X] â”‚
+â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”‚
+â”‚ Turn 3:                                         â”‚
+â”‚  âš” Kitsauto used Blade Flurry â†’ Enemy A        â”‚
+â”‚    Hit 1: 28 damage (crit!)                     â”‚
+â”‚    Hit 2: 22 damage                             â”‚
+â”‚    Hit 3: 25 damage                             â”‚
+â”‚    Total: 75 damage                             â”‚
+â”‚  âš— Chemistry: Bot â†’ Gas = Resisted (Ã—0.8)       â”‚
+â”‚  ðŸ“Š AP: Kitsauto 7â†’4 (-3)                      â”‚
+â”‚                                                 â”‚
+â”‚  âš” Enemy A used Gas Blast â†’ Kitsauto            â”‚
+â”‚    52 damage (disadvantage Ã—0.77)               â”‚
+â”‚  ðŸ“Š AP: Enemy A 6â†’4 (-2)                       â”‚
+â”‚                                                 â”‚
+â”‚  End of Turn:                                   â”‚
+â”‚    Rugged severity 2: Enemy A -12 HP            â”‚
+â”‚    AP regen: All +2                             â”‚
+â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”‚
+â”‚ [Export Log] [Detailed Mode â—»]                   â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+7.2 Log Entry Categories
+
+| Category   | Icon | Color   | Content                              |
+|------------|------|---------|--------------------------------------|
+| Action     | âš”    | White   | Move used, targets            |
+| Damage     | ðŸ’¥   | Red     | Damage dealt, hit/miss, crit         |
+| Chemistry  | âš—    | Purple  | Chemistry reactions, coatings        |
+| Status     | ðŸ”¶   | Orange  | Status applied/removed/expired       |
+| AP         | ðŸ“Š   | Cyan    | AP changes (cost, refund, regen)     |
+| Heal       | ðŸ’š   | Green   | HP restored                          |
+| Stage      | ðŸ“ˆ   | Yellow  | Stage changes                        |
+| System     | âš™    | Grey    | Turn start/end, swap, flee attempt   |
+| KO         | ðŸ’€   | Dark Red| Chainling fainted                    |
+
+7.3 Filters
+
+Toggle buttons for each category. All enabled by default.
+Filter state persists across turns.
+
+7.4 Detailed Mode
+
+When enabled, each log entry expands to show full resolution data:
+
+```
+âš” Kitsauto used Blade Flurry â†’ Enemy A
+  â”Œâ”€â”€ DETAILED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+  â”‚ Base Power: 30 Ã— 3 hits                                â”‚
+  â”‚ Atk Stat: 85 (MeleeAtk, stage +1, Ã—1.50)              â”‚
+  â”‚ Def Stat: 72 (MeleeDef, stage 0, Ã—1.00)               â”‚
+  â”‚ Level Multiplier: 1.25                                 â”‚
+  â”‚ Random Roll: 0.92                                      â”‚
+  â”‚ STAB: Ã—1.2 (Bot)                                       â”‚
+  â”‚ Chemistry: Ã—1.2 (advantage)                            â”‚
+  â”‚ Crit: Hit 1 = Ã—1.5, Hits 2-3 = Ã—1.0                   â”‚
+  â”‚ Modifiers: +12% power (Â§2.1-b)                         â”‚
+  â”‚ Hit 1: 28 | Hit 2: 22 | Hit 3: 25                     â”‚
+  â”‚ Total: 75 damage (after mitigation: Ã—0.85)             â”‚
+  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+Data source: DamageBreakdownEntry from Spec 07 Â§6.8
+
+7.5 Export
+
+"Export Log" button: serializes the full combat log to JSON format and
+copies to clipboard. This supports deterministic replay (Spec 07 Â§6.9).
+
+CB REFERENCE: CB does not have a combat log. This is a Chainbound addition
+for competitive play, debugging, and replay support.
+
+===============================================================================
+8. Popup & Notification System (CombatNotificationManager.cs)
+===============================================================================
+
+Floating notifications for important combat events.
+
+8.1 Notification Types
+
+| Type                | Position        | Duration | Style              |
+|---------------------|-----------------|----------|--------------------|
+| Effectiveness       | Above target    | 1.5s     | Bold, colour-coded |
+| Critical Hit        | Above target    | 1.0s     | Yellow, shaking    |
+| Status Applied      | Below target    | 2.0s     | Icon + name        |
+| Status Expired      | Below target    | 1.5s     | Faded icon + name  |
+| Chemistry Reaction  | Center screen   | 2.5s     | Full card popup    |
+| Coating Applied     | Above target    | 2.0s     | Type colour flash  |
+| AP Change           | Near AP display | 1.0s     | "+2 AP" / "-2 AP"  |
+| KO                  | Center screen   | 2.0s     | "FAINTED" banner   |
+| Recharge Ready      | On move  | 1.5s     | Glow + "READY"     |
+| Modifier Triggered  | On move  | 1.0s     | Badge flash        |
+| Turn Start          | Top center      | 1.0s     | "Turn [N]"         |
+
+8.2 Notification Queue
+
+Notifications are queued and displayed sequentially to avoid visual clutter:
+- Max 2 simultaneous notifications
+- Subsequent notifications wait 0.3s between each
+- Critical notifications (KO, Chemistry) override the queue
+
+===============================================================================
+9. Move Management Screen (MoveManagePanel.cs)
+===============================================================================
+
+Out-of-combat screen for equipping/unequipping moves and modifiers.
+Accessible from the party menu.
+
+9.1 Layout
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ INSCRIPTION MANAGEMENT â€” [Validape]                       [Back]       â”‚
+â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”‚
+â”‚                                                                       â”‚
+â”‚ EQUIPPED (8/10 slots)                                                  â”‚
+â”‚ â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”â”‚
+â”‚ â”‚ M1 â”‚ â”‚ M2 â”‚ â”‚ M3 â”‚ â”‚ M4 â”‚ â”‚ M5 â”‚ â”‚ M6 â”‚ â”‚ M7 â”‚ â”‚ M8 â”‚ â”‚ â–‘â–‘ â”‚ â”‚â–‘â–‘â”‚â”‚
+â”‚ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”˜â”‚
+â”‚                                                                       â”‚
+â”‚ â”€â”€â”€ INVENTORY â”€â”€ [Filter: All â–¾] [Sort: Type â–¾] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ â”‚
+â”‚ â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”             â”‚
+â”‚ â”‚ I1 â”‚ â”‚ I2 â”‚ â”‚ I3 â”‚ â”‚ I4 â”‚ â”‚ I5 â”‚ â”‚ I6 â”‚ â”‚ I7 â”‚ â”‚ I8 â”‚             â”‚
+â”‚ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜             â”‚
+â”‚ â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”             â”‚
+â”‚ â”‚ I9 â”‚ â”‚I10â”‚ â”‚I11â”‚ â”‚I12â”‚ â”‚I13â”‚ â”‚I14â”‚ â”‚I15â”‚ â”‚I16â”‚             â”‚
+â”‚ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”˜             â”‚
+â”‚                                    [Page 1/3 â—„ â–º]                     â”‚
+â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”‚
+â”‚ DETAIL PANEL (right side or bottom)                                    â”‚
+â”‚ [Full move detail + modifier management]                        â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+9.2 Equip Rules (enforced by UI)
+
+- Chainling can equip moves from:
+  - All Typeless moves
+  - All moves matching their type(s)
+  - Off-type moves in their species learnable pool
+  - Their exclusive moves (starters only)
+- Moves not in the equippable pool are greyed out with lock icon
+- Slot count is rebirth-based: 4 + rebirthCount, clamped to 4-9; see MOVE_LOADOUT_RULES_AND_UI_SPEC.md.
+- Modifier slot cost (AUG/TRX): UI shows effective slot count
+
+VALIDATION:
+- Cannot equip more than 2 stat-substitution modifiers per Chainling (Â§5.2)
+- Cannot equip forbidden modifier combinations (Spec 05 Â§8.2)
+- Rune moves: max 1 per Chainling, or 2 at rebirth 5.
+- Exclusive moves: only equippable by their designated species
+
+9.3 Modifier Management Sub-Panel
+
+When an move is selected for detail view:
+
+```
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ MODIFIERS for [Baseline Striker]                â”‚
+â”‚                                                 â”‚
+â”‚ Slot 1: [ðŸ”µ +12% power (Active)] [Remove]      â”‚
+â”‚ Slot 2: [ðŸŸ£ 15% AP refund (Active)] [Remove]   â”‚
+â”‚ Slot 3: [Empty â€” Drag modifier here]            â”‚
+â”‚                                                 â”‚
+â”‚ Available Modifiers:                            â”‚
+â”‚ [List of unattached modifiers, filterable]      â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+```
+
+- Drag-and-drop or click to attach/detach modifiers
+- Real-time validation: illegal combinations show warning icon
+- Modifier tooltips use format from Spec 07 Â§5.4
+
+CB REFERENCE: CB has a simple sticker management screen. We extend it with
+modifier management, which is more complex. The layout should feel clean
+despite the added complexity.
+
+===============================================================================
+10. Rarity Color System
+===============================================================================
+
+Consistent across all UI elements (move cards, modifier badges, items):
+
+| Rarity    | Color          | Hex     | UI Treatment                |
+|-----------|----------------|---------|------------------------------|
+| Common    | White/Grey     | #BDBDBD | No special treatment         |
+| Uncommon  | Green          | #4CAF50 | Subtle green border          |
+| Rare      | Blue           | #2196F3 | Blue border + soft glow      |
+| Epic      | Purple         | #9C27B0 | Purple border + glow         |
+| Legendary | Orange/Gold    | #FF9800 | Gold border + animated glow  |
+| Mythic    | Red/Crimson    | #F44336 | Red border + pulsing aura    |
+
+Card backgrounds also shift subtly toward the rarity colour.
+
+CB REFERENCE: CB uses a similar colour-coded rarity system for stickers.
+Our palette matches CB's general approach (white â†’ green â†’ blue â†’ purple â†’
+gold â†’ red progression).
+
+===============================================================================
+11. Data Structures â€” UI-Specific
+===============================================================================
+
+These extend the schemas defined in Spec 07 Â§5 with UI-specific fields.
+
+11.1 BattleStateUIData
+
+Master data object that the UI reads from to render the battle screen.
+Updated by the combat engine after each event.
+
+```
+BattleStateUIData {
+  turnNumber: int,
+  currentPhase: BattlePhase,     // Decision, Resolution, EndOfTurn
+  
+  // Chainling panels (up to 4)
+  allyPanels: ChainlingInfoPanelData[2],
+  enemyPanels: ChainlingInfoPanelData[2],
+  
+  // Action state (player only)
+  availableMoves: MoveCardUIState[],
+  selectedMove: MoveCardData?,
+  selectedTarget: int?,           // Target index
+  
+  // Resolution queue
+  actionQueue: ActionQueueEntry[],
+  currentActionIndex: int,
+  
+  // Notifications
+  pendingNotifications: NotificationData[],
+  
+  // Combat log
+  logEntries: CombatLogEntry[],
+  logFilterState: LogFilterState
+}
+```
+
+```
+enum BattlePhase {
+  Decision,      // Player choosing action
+  Resolution,    // Actions resolving in speed order
+  EndOfTurn,     // Status ticks, AP regen, duration decrement
+  BattleEnd      // Win/loss/flee
+}
+```
+
+```
+MoveCardUIState {
+  cardData: MoveCardData, // From Spec 07 Â§5.2
+  isAvailable: bool,             // Has enough AP and not recharging
+  isRecharging: bool,            // ConsumedStatus active
+  rechargeTurnsLeft: int?,       // If recharging
+  estimatedDamage: DamageRange?, // Against current target
+  chemAdvantage: ChemResult?     // Chemistry preview vs target
+}
+```
+
+```
+DamageRange {
+  min: int,
+  max: int,
+  isCritPossible: bool,
+  critMin: int?,
+  critMax: int?
+}
+
+enum ChemResult { Advantage, Disadvantage, Neutral }
+```
+
+11.2 ActionQueueEntry
+
+```
+ActionQueueEntry {
+  chainlingId: string,
+  moveId: string,
+  targetId: string?,
+  
+  // For display during resolution
+  attackerName: string,
+  moveName: string,
+  targetName: string?,
+  
+  // Post-resolution data (filled during resolution)
+  result: ActionResult?,
+  damageBreakdown: DamageBreakdownEntry?,
+  statusesApplied: StatusIconData[],
+  chemistryReaction: ChemistryReactionData?,
+  apChange: int?,
+  triggersFired: string[]         // Modifier triggers that activated
+}
+```
+
+```
+ChemistryReactionData {
+  attackerType: ChainlingType,
+  defenderType: ChainlingType,
+  resultStatus: string,           // "Firewalled", "Pumped", etc.
+  resultDuration: int?,
+  chemAdvantage: int,             // Net chemistry advantage count
+  chemDisadvantage: int
+}
+```
+
+11.3 CombatLogEntry
+
+```
+CombatLogEntry {
+  turnNumber: int,
+  timestamp: float,               // In-game time (for ordering)
+  category: LogCategory,          // Action, Damage, Chemistry, etc.
+  
+  summaryText: string,            // One-line summary
+  detailedText: string,           // Expanded detail (for Detailed Mode)
+  detailedData: string,           // JSON blob for export/replay
+  
+  icon: LogIcon,                  // Category icon
+  color: Color                    // Category colour
+}
+
+enum LogCategory {
+  Action, Damage, Chemistry, Status, AP, Heal, Stage, System, KO
+}
+```
+
+===============================================================================
+12. Animation & Timing Guidelines
+===============================================================================
+
+12.1 Turn Flow Timing
+
+| Phase                    | Duration | Notes                          |
+|--------------------------|----------|--------------------------------|
+| Decision phase           | Untimed  | Player decides at own pace     |
+| Turn order banner        | 1.5s     | Shows speed order, then fades  |
+| Per-action (normal)      | 2.0s     | Attack animation + result      |
+| Per-action (crit)        | 2.5s     | Extended with crit flash       |
+| Per-action (multi-hit)   | 0.5s/hit | Each hit rapid, total at end   |
+| Chemistry reaction popup | 2.5s     | Center screen card             |
+| Status apply animation   | 1.0s     | Icon appears + brief text      |
+| End of turn ticks        | 0.5s/ea  | DoT, AP regen, status expire   |
+| KO animation             | 3.0s     | Slow-motion + faint animation  |
+
+Total turn time (typical): 8-12s for 4 actions + resolution
+
+12.2 Animation Priority
+
+When multiple events happen simultaneously (e.g., damage + status apply + AP
+change), queue them:
+1. Damage number appears
+2. HP bar animates
+3. Status icon appears (0.3s delay)
+4. Chemistry reaction card (if applicable) (0.5s delay)
+5. AP change notification (after chemistry resolves)
+
+12.3 Speed Controls
+
+| Setting    | Multiplier | Use Case                    |
+|------------|------------|-----------------------------|
+| Normal     | 1.0x       | Default                     |
+| Fast       | 2.0x       | Experienced players         |
+| Instant    | Skip anim  | Testing / speedrun          |
+
+Player can toggle speed in Settings or via hotkey (Space to toggle).
+
+CB REFERENCE: CB has a similar speed-up option. Match the default pacing
+to CB's comfortable rhythm, with options to accelerate.
+
+===============================================================================
+13. Accessibility & Colour Blindness
+===============================================================================
+
+13.1 Design Rules
+
+- Colour is NEVER the sole differentiator for any information
+- All type icons have distinct shapes (not just colours)
+- Status icons have distinct shapes (not just colours)
+- HP bar: add percentage text alongside colour change
+- Chemistry effectiveness: text label always accompanies colour indicator
+- Rarity: border style varies (solid, dotted, dashed, double, animated)
+  in addition to colour
+- Modifier scope: icons (âš¡/âˆž) accompany colour coding
+
+13.2 Colour Blind Modes
+
+| Mode          | Adjustment                                    |
+|---------------|-----------------------------------------------|
+| Protanopia    | Redâ†’Orange, Greenâ†’Blue-Green                  |
+| Deuteranopia  | Greenâ†’Yellow, Redâ†’Orange                      |
+| Tritanopia    | Blueâ†’Cyan, Yellowâ†’Orange                      |
+| High Contrast | Increased border width, stronger glow effects |
+
+13.3 Text Scaling
+
+- All UI text supports 3 size presets: Small, Normal, Large
+- Move card text reflows at larger sizes
+- Tooltip text scales independently
+
+===============================================================================
+14. Screen Hierarchy & Navigation
+===============================================================================
+
+14.1 Battle Screen States
+
+```
+[BATTLE START]
+  â”‚
+  â”œâ”€â”€ Decision Phase
+  â”‚   â”œâ”€â”€ Action Panel (move grid visible)
+  â”‚   â”œâ”€â”€ Swap Panel (if Swap selected)
+  â”‚   â”œâ”€â”€ Item Panel (if Items selected)
+  â”‚   â””â”€â”€ [Confirm action â†’ Resolution Phase]
+  â”‚
+  â”œâ”€â”€ Resolution Phase
+  â”‚   â”œâ”€â”€ Turn Order Banner (1.5s)
+  â”‚   â”œâ”€â”€ Action Execution (per action)
+  â”‚   â”‚   â”œâ”€â”€ Attack Animation
+  â”‚   â”‚   â”œâ”€â”€ Damage / Effect Resolution
+  â”‚   â”‚   â”œâ”€â”€ Chemistry Reaction (if applicable)
+  â”‚   â”‚   â””â”€â”€ Status Application
+  â”‚   â””â”€â”€ [All actions resolved â†’ End of Turn]
+  â”‚
+  â”œâ”€â”€ End of Turn Phase
+  â”‚   â”œâ”€â”€ DoT / Regen ticks
+  â”‚   â”œâ”€â”€ Status duration decrement
+  â”‚   â”œâ”€â”€ AP regen (+2, capped at 10)
+  â”‚   â””â”€â”€ [â†’ Decision Phase (next turn)]
+  â”‚
+  â””â”€â”€ Battle End
+      â”œâ”€â”€ Win Screen (XP, drops, move rewards)
+      â”œâ”€â”€ Lose Screen (return to last save)
+      â””â”€â”€ Flee Success (return to overworld)
+```
+
+14.2 Input Mapping
+
+| Input          | Action (Decision Phase)        | Action (Resolution)    |
+|----------------|--------------------------------|------------------------|
+| Left Click     | Select move / target    | Skip animation         |
+| Right Click    | Cancel / deselect              | â€”                      |
+| Mouse Hover    | Show detail preview            | â€”                      |
+| Escape         | Cancel / open pause menu       | Open pause menu        |
+| Space          | Toggle animation speed         | Toggle animation speed |
+| S              | Open swap panel                | â€”                      |
+| L              | Toggle combat log              | Toggle combat log      |
+| 1-9, 0         | Quick-select move slot  | â€”                      |
+| Tab            | Cycle through targets          | â€”                      |
+
+===============================================================================
+15. Unity Component Hierarchy
+===============================================================================
+
+```
+BattleCanvas (Canvas, Screen Space - Overlay)
+â”œâ”€â”€ EnemyInfoBar
+â”‚   â”œâ”€â”€ EnemyPanel_0 (ChainlingInfoPanel)
+â”‚   â”‚   â”œâ”€â”€ TypeIcon
+â”‚   â”‚   â”œâ”€â”€ NameLabel
+â”‚   â”‚   â”œâ”€â”€ LevelLabel
+â”‚   â”‚   â”œâ”€â”€ HPBar (Slider + Fill Image + Text)
+â”‚   â”‚   â”œâ”€â”€ APPips (HorizontalLayoutGroup)
+â”‚   â”‚   â”œâ”€â”€ StatusIconStrip (HorizontalLayoutGroup)
+â”‚   â”‚   â”œâ”€â”€ CoatingBadge
+â”‚   â”‚   â””â”€â”€ StageArrows
+â”‚   â””â”€â”€ EnemyPanel_1 (ChainlingInfoPanel)
+â”‚       â””â”€â”€ [same structure]
+â”‚
+â”œâ”€â”€ AllyInfoBar
+â”‚   â”œâ”€â”€ AllyPanel_0 (ChainlingInfoPanel)
+â”‚   â”‚   â””â”€â”€ [same structure as EnemyPanel]
+â”‚   â””â”€â”€ AllyPanel_1 (ChainlingInfoPanel)
+â”‚       â””â”€â”€ [same structure]
+â”‚
+â”œâ”€â”€ ActionPanel
+â”‚   â”œâ”€â”€ MoveGrid (GridLayoutGroup)
+â”‚   â”‚   â”œâ”€â”€ MoveCard_0...15 (MoveCardUI)
+â”‚   â”‚   â”‚   â”œâ”€â”€ TypeColorBar (Image)
+â”‚   â”‚   â”‚   â”œâ”€â”€ Icon (Image)
+â”‚   â”‚   â”‚   â”œâ”€â”€ NameLabel (TextMeshPro)
+â”‚   â”‚   â”‚   â”œâ”€â”€ APPips (HorizontalLayoutGroup)
+â”‚   â”‚   â”‚   â”œâ”€â”€ TagBadges (HorizontalLayoutGroup)
+â”‚   â”‚   â”‚   â”œâ”€â”€ ModifierBadges (HorizontalLayoutGroup)
+â”‚   â”‚   â”‚   â””â”€â”€ StateOverlay (Image â€” for recharging/disabled)
+â”‚   â”‚   â””â”€â”€ EmptySlot_0...N (locked slot indicators)
+â”‚   â”œâ”€â”€ APMeterVertical (VerticalLayoutGroup)
+â”‚   â”‚   â””â”€â”€ APPip_0...9
+â”‚   â”œâ”€â”€ OptionsColumn (VerticalLayoutGroup)
+â”‚   â”‚   â”œâ”€â”€ SwapButton
+â”‚   â”‚   â”œâ”€â”€ ItemsButton
+â”‚   â”‚   â”œâ”€â”€ FleeButton
+â”‚   â”‚   â””â”€â”€ LogToggleButton
+â”‚   â”œâ”€â”€ CategoryFilters (HorizontalLayoutGroup)
+â”‚   â”‚   â””â”€â”€ FilterButton_All, FilterButton_DMG, etc.
+â”‚   â””â”€â”€ MoveDetailPreview (Panel)
+â”‚       â”œâ”€â”€ HeaderBar (Image)
+â”‚       â”œâ”€â”€ NameLabel
+â”‚       â”œâ”€â”€ DescriptionLabel
+â”‚       â”œâ”€â”€ StatsGrid (power, accuracy, AP, targeting)
+â”‚       â”œâ”€â”€ ModifierDisplay
+â”‚       â”œâ”€â”€ ChemistryPreview
+â”‚       â””â”€â”€ DamageEstimate
+â”‚
+â”œâ”€â”€ TargetingOverlay
+â”‚   â”œâ”€â”€ TargetHighlight_0...3
+â”‚   â””â”€â”€ ChemistryPreviewBadge
+â”‚
+â”œâ”€â”€ ResolutionDisplay
+â”‚   â”œâ”€â”€ TurnOrderBanner
+â”‚   â”œâ”€â”€ ActionExecutionPanel
+â”‚   â””â”€â”€ DamageNumberPool (pooled floating text objects)
+â”‚
+â”œâ”€â”€ CombatLogPanel
+â”‚   â”œâ”€â”€ LogHeader (title + filter bar + close button)
+â”‚   â”œâ”€â”€ LogScrollView
+â”‚   â”‚   â””â”€â”€ LogEntryPrefab (pooled)
+â”‚   â”œâ”€â”€ DetailedModeToggle
+â”‚   â””â”€â”€ ExportButton
+â”‚
+â”œâ”€â”€ SwapPanel
+â”‚   â”œâ”€â”€ ChainlingOption_0...N
+â”‚   â””â”€â”€ CancelButton
+â”‚
+â”œâ”€â”€ NotificationLayer
+â”‚   â””â”€â”€ NotificationPrefab (pooled)
+â”‚
+â””â”€â”€ PauseOverlay
+    â”œâ”€â”€ ResumeButton
+    â”œâ”€â”€ SettingsButton
+    â””â”€â”€ QuitButton
+```
+
+===============================================================================
+16. ScriptableObject Assets for UI
+===============================================================================
+
+The following ScriptableObjects drive UI configuration:
+
+```
+Assets/Data/UI/
+â”œâ”€â”€ TypeVisualConfig.asset         // 15 entries (14 types + typeless)
+â”‚   // TypeIcon, PrimaryColor, SecondaryColor, TypeName
+â”‚
+â”œâ”€â”€ RarityVisualConfig.asset       // 6 entries (Common â†’ Mythic)
+â”‚   // Color, BorderStyle, GlowEffect, AnimationProfile
+â”‚
+â”œâ”€â”€ StatusIconAtlas.asset          // ~40 entries (all statuses from 02A)
+â”‚   // StatusId, Icon, IsDebuff, DefaultTooltip
+â”‚
+â”œâ”€â”€ LogCategoryConfig.asset        // 9 entries (all log categories)
+â”‚   // CategoryId, Icon, DefaultColor, FilterLabel
+â”‚
+â”œâ”€â”€ AnimationTimingConfig.asset    // Timing values from Â§12.1
+â”‚   // Per-phase durations, speed multipliers
+â”‚
+â”œâ”€â”€ ColorBlindConfig.asset         // 4 entries (normal + 3 CB modes)
+â”‚   // Remapped colour palettes
+â”‚
+â””â”€â”€ UILayoutConfig.asset           // Grid sizes, panel positions, text sizes
+    // Responsive breakpoints for different resolutions
+```
+
+===============================================================================
+17. Implementation Notes
+===============================================================================
+
+17.1 Data Flow
+
+```
+CombatEngine (logic)
+    â”‚
+    â”œâ”€â”€ publishes â†’ CombatEvent (action, damage, status, etc.)
+    â”‚
+    â””â”€â”€ updates â†’ BattleStateUIData (master UI state)
+                      â”‚
+                      â””â”€â”€ read by â†’ All UI Components
+                                    (ChainlingInfoPanel, ActionPanel, etc.)
+```
+
+UI components NEVER modify combat state. They only READ from
+BattleStateUIData and WRITE player input to ActionInput.
+
+```
+ActionInput {
+  moveId: string?,
+  targetId: string?,
+  isSwap: bool,
+  swapTargetId: string?,
+  isFlee: bool
+}
+```
+
+17.2 Event-Driven Updates
+
+All UI updates are triggered by events, not polling:
+
+```
+CombatEventBus {
+  OnTurnStart(turnNumber: int)
+  OnActionResolved(entry: ActionQueueEntry)
+  OnDamageDealt(breakdown: DamageBreakdownEntry)
+  OnStatusApplied(target: string, status: StatusIconData)
+  OnStatusExpired(target: string, statusId: string)
+  OnChemistryReaction(reaction: ChemistryReactionData)
+  OnAPChanged(chainlingId: string, oldAP: int, newAP: int)
+  OnStageChanged(chainlingId: string, stat: string, oldStage: int, newStage: int)
+  OnChainlingKO(chainlingId: string, killerMoveId: string)
+  OnCoatingApplied(chainlingId: string, coatingType: ChainlingType)
+  OnCoatingExpired(chainlingId: string)
+  OnModifierTriggered(moveId: string, modifierSectionId: string)
+  OnRechargeComplete(chainlingId: string, moveId: string)
+  OnBattleEnd(result: BattleResult)
+}
+```
+
+17.3 Object Pooling
+
+The following UI elements should use object pooling for performance:
+- Floating damage numbers (pool size: 20)
+- Notification popups (pool size: 10)
+- Combat log entries (pool size: 100)
+- Status icons (pool size: 30)
+
+17.4 Resolution & Scaling
+
+- Target resolution: 1920Ã—1080 (16:9)
+- Support 16:10, 21:9 ultrawide (scale action panel width)
+- Scale factor: UI elements use CanvasScaler with "Scale With Screen Size"
+- Reference resolution: 1920Ã—1080
+- Match: Width & Height (0.5)
+
+===============================================================================
+18. Cross-References
+===============================================================================
+
+Related Specification Documents:
+- COMBAT_01_TypeChemistry_v1.1.txt â€” Type colour values, chemistry matrix
+- COMBAT_02A_StatusFrameworkAndCatalog_v1.2.txt â€” Status icon source data
+- COMBAT_02B_StatsStagesIVs_v1.2.txt â€” Stage display values, stat names
+- COMBAT_02C_ResolutionMath_v1.3.txt â€” AP system, damage formula (for previews)
+- COMBAT_03A_Moves_CoreFramework_v1.1.txt â€” Move categories, tags
+- COMBAT_03A1_Moves_BaselineList_v1.2.1.txt â€” Move catalog
+- COMBAT_04_AcquisitionRarity_v1.0.txt â€” Rarity colour tiers
+- COMBAT_05_MoveModifiers_v1.2.txt â€” Modifier badge display format
+- COMBAT_06_SpeciesMovePools_v1.2.txt â€” Species display data
+- COMBAT_07_ImplementationGuide_v1.0.txt â€” UI schemas (Â§5), testing plan (Â§6)
+
+===============================================================================
+19. Version History
+===============================================================================
+
+v1.0 â€” Initial Combat UI specification
+  - Complete battle screen layout with 5 visual layers
+  - ChainlingInfoPanel with HP, AP, status, coating, stage indicators
+  - Action Panel with move grid, AP meter, filters
+  - Targeting overlay with chemistry preview
+  - Resolution phase display with damage numbers and chemistry reactions
+  - Swap panel with type matchup preview
+  - Combat log panel with filtering and detailed mode
+  - Notification system with priority queue
+  - Move management screen with modifier sub-panel
+  - Rarity colour system consistent across all UI
+  - Data structures (BattleStateUIData, ActionQueueEntry, CombatLogEntry)
+  - Animation timing guidelines with speed controls
+  - Accessibility features (colour blind modes, text scaling)
+  - Full Unity component hierarchy
+  - ScriptableObject asset structure
+  - Event-driven UI architecture
+
+===============================================================================
+END

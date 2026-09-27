@@ -1,0 +1,199 @@
+NPC System Spec v1.1
+Scope
+
+Implement a comprehensive NPC system that:
+
+Replicates player 2.5D billboarded MeshRenderer visuals (Visual + Silhouette + Shadow).
+
+Integrates with the Sequence system (steps/labels/branching/checkpoints/failure policies). 
+
+SEQUENCE_AUTHORING_GUIDE
+
+Supports ambient autonomy (routes + low-frequency micro-wander + stochastic idle “blink” overlay).
+
+Supports narrative overrides with strict priority (claim/command/release; unpredictability suppression).
+
+Adds NPC_Follow (reusable for future Chainlings).
+
+Adds time-of-day gating via your existing time services.
+
+Adds “NPC Memory” (flags/counters/disposition) writable via Steps for reactive dialogue/quests.
+
+Prefab Hierarchy (Required)
+
+NPCPrefab
+
+NPCRoot (prefab root)
+
+Rigidbody + colliders (world collision + interaction trigger)
+
+NPCController (new)
+
+NPCMovementAgent (new)
+
+NPCSequencerBinding (new)
+
+NPCStateBlackboard (new; minimal typed vars)
+
+NPCMemoryComponent (new)
+
+Visual (child)
+
+MeshFilter + MeshRenderer
+
+MeshRendererNPCVisual (new; patterned after player visual)
+
+SpriteBillboard (reuse) 
+
+SpriteBillboard
+
+Silhouette (child)
+
+MeshFilter + MeshRenderer
+
+OcclusionSilhouette (reuse/adapt for NPC) 
+
+OcclusionSilhouette
+
+Shadow (child)
+
+MeshFilter + MeshRenderer
+
+Shadow caster reused/adapted from PlayerShadowCaster 
+
+PlayerShadowCaster
+
+Visual + Animation (Constrained)
+
+Supported locomotion states: Idle, Walk, Run (only).
+
+Directional sprite sequences: Down/Left/Right/Up (as you already do), but Blink is not used for Up.
+
+Blink Overlay (Final Rule)
+
+Idle breathing uses an 8-frame loop.
+
+Blink:
+
+Triggers only when current displayed Idle frame is index 0 (the 1st sprite).
+
+Blink replaces that single frame with a blink frame for the current facing direction:
+
+Blink_Down, Blink_Left, Blink_Right
+
+If facing Up: do nothing (skip blink)
+
+Blink is a one-shot overlay; after showing the blink frame briefly, resume the normal Idle loop.
+
+Blink is executed only while in Idle state (no blink during Walk/Run in v1.1).
+
+Autonomy: Routes + Micro-wander Bubble
+
+Create NPCRouteScheduleSO (new) and/or extend NPCRouteAsset with time-segment mapping:
+
+Per time segment (Day/Dusk/Night/Dawn), select:
+
+Route asset(s)
+
+Unpredictability knobs (blink rate, micro-wander chance, etc.)
+
+Micro-wander bubble:
+
+Low-frequency, checkpoint-local wander:
+
+small radius
+
+cooldown-based
+
+cancels immediately if narrative claims control (Hard) or suppressed mode is active.
+
+Time-of-day Integration
+
+NPC system must read time-of-day via ITimeOfDayService and respond to segment changes.
+Narrative may optionally pause/hold time using your existing handle patterns.
+
+Narrative Priority and Control
+
+Introduce an interrupt policy concept in NPCController:
+
+Normal: autonomy allowed (route + micro-wander + blink overlay eligible)
+
+Suppressed: autonomy allowed but micro-wander disabled and blink reduced/disabled
+
+Frozen: autonomy disabled; movement canceled
+
+Sequencer claiming model:
+
+Hard claim → Frozen
+
+Soft claim → Suppressed (finish current micro-action, then yield)
+
+Must be checkpoint/resume safe and deterministic when controlled by sequences. 
+
+SEQUENCE_AUTHORING_GUIDE
+
+NPC_Follow (Reusable)
+
+Implement a follow behavior using NPCMovementAgent + a lightweight steering loop:
+
+followDistance band
+
+repath interval
+
+timeout/duration
+
+Provide a sequencer step Step_NPC_Follow (async).
+
+NPC Memory
+
+Add NPCMemoryComponent:
+
+Disposition (int range, e.g., -100..100)
+
+Flags (string or enum keys)
+
+Counters (string or enum keys)
+
+Optional: last interaction time marker
+
+Memory mutations are done via Steps (deterministic, authored):
+
+Step_NPCMemory_SetFlag
+
+Step_NPCMemory_AddDisposition
+
+Step_NPCMemory_IncrementCounter
+
+Required Narrative Steps (v1.1)
+
+Step_NPC_ClaimControl
+
+Step_NPC_ReleaseControl
+
+Step_NPC_MoveTo
+
+Step_NPC_FaceTarget
+
+Step_NPC_SetAnimState (Idle/Walk/Run; primarily for forced idles)
+
+Step_NPC_EnableAutonomy
+
+Step_NPC_SetRouteSchedule or Step_NPC_SetRoute
+
+Step_NPC_WaitForInteraction
+
+Step_NPC_Follow
+
+Memory steps listed above
+
+(Optional) time steps that acquire/release hold/pause handles (if not already implemented)
+
+Deliverables
+
+NPC prefab template + example NPC “Townsperson_A”
+
+Route schedule assets demonstrating time gating
+
+Narrative steps above
+
+Setup guide (markdown): prefab wiring, route authoring, time gating, interaction→sequence binding, memory usage patterns

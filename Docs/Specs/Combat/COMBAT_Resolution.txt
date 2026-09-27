@@ -1,0 +1,217 @@
+COMBAT_02C_ResolutionMath_v1.3
+
+REVISION (v1.3 — AP per turn):
+- Baseline AP gain reduced from +3 to +2 per turn (Cassette Beasts alignment; AP management styles more effective)
+
+PROGRESSION ALIGNMENT (Economy v1 / XP spec):
+- Damage formula previously used (Level + 37) / 100. Use star-based scaling instead.
+- See COMBAT_Stats §5 and ECONOMY_01 for authoritative progression model.
+
+REVISION NOTES (v1.2 lockdown):
+- Defined explicit AP cap = 10
+- Added Recharge mechanic for inscription use-limits (ConsumedStatus approach)
+- Resolved ambiguity flagged in COMBAT_07 §1.3-A and §1.3-D
+
+0. Purpose
+Defines AP, hit, damage, crit, and chemistry multiplier integration.
+
+1. AP System (Locked)
+Baseline AP gain: +2 per turn at Start of Turn.
+AP manipulation is allowed and must be loggable.
+
+1.1 AP Cap (v1.2 — Defined)
+HARD CAP: 10 AP maximum per Chainling at any time.
+- AP gained beyond 10 is lost (not banked)
+- AP cap applies AFTER all gains/losses resolve for that phase
+- Turn Start: gain +2, clamp to 10
+- AP Reserve (Staked inscription): stores up to 5, releases next turn (still capped at 10)
+- Rationale: prevents infinite AP banking while allowing 5+ turns of saving (0→10 at +2/turn)
+
+1.2 Inscription Recharge Mechanic (v1.2 — Defined)
+Some inscriptions have limited use frequency (e.g., "usable once per 3 turns").
+These are NOT cooldowns — they use the ConsumedStatus system:
+
+RESOLUTION:
+1. Chainling uses a recharge-limited inscription
+2. Engine applies "Recharging" ConsumedStatus to that inscription instance
+3. Recharging has a duration (e.g., 3 turns); decrements at End of Turn
+4. While Recharging is active, that inscription cannot be selected
+5. Recharging expires → inscription becomes available again
+6. Switching out does NOT pause the recharge timer (it continues ticking)
+
+DATA STRUCTURE:
+```
+InscriptionRecharging {
+  inscriptionInstanceId: string,    // Which specific inscription is recharging
+  turnsRemaining: int,              // Decrements at End of Turn
+  triggerOnUse: bool                // Always true — applied when inscription used
+}
+```
+
+This approach keeps the engine purely status-driven with no separate cooldown
+timer system. All recharge state is observable in the combat log.
+
+INSCRIPTIONS USING RECHARGE:
+- Extend Protocol (Node): Recharging(3) — after use, 3 turns before reuse
+- AP Boost (Typeless): Recharging(3) — after use, 3 turns before reuse
+- Gecko Guard (Gilarime exclusive): once per battle — Recharging(999)
+- Fox Feint (Kitsauto exclusive): once per battle — Recharging(999)
+
+1.3 AP Cost Rules
+AP costs are defined per inscription and are immutable:
+- Damaging: 1-3 AP
+- Status/Utility: 0-2 AP
+- Support: 2-4 AP
+- Passive: 0 AP (always)
+- All-In (Meme exception): consumes ALL current AP (minimum 3 to use)
+
+2. Hit Check
+HitChance = (AttackerAcc / DefenderEva) * MoveAccuracy
+If RNG roll > HitChance => miss
+
+3. Damage Formula
+BaseDamage =
+  Power * (Atk / Def) * ProgressionDamageFactor
+  * Random(0.85–1.0) + additiveConstant
+
+ProgressionDamageFactor (damage pipeline):
+- Default = 1.0 for all battles (PvE and PvP baseline).
+- Optional per-move override via resolve profile tuning.
+
+Stat progression (authoritative; replaces legacy Level 1–100):
+- Stars (0–5) + rebirth (0–5) scale Atk/Def/HP via StatScaleMultiplier:
+  (1 + stars × 0.4) × (1 + rebirth × 0.1)
+- Legacy numeric level is deprecated; snapshot.level may migrate to stars once when stars == 0.
+
+Apply multipliers in order:
+1) Chemistry: 1.2^ChemAdv × 0.8^ChemDis using CURRENT HIT ONLY
+2) Crit: 1.5 if crit triggers
+
+NOTE: STAB removed. Type advantages come from chemistry only (COMBAT_01); no raw power bonus for same-type moves.
+
+Final damage = floor(result)
+
+4. Crit
+CritRate derived from base + modifiers.
+CritMultiplier default = 1.5
+
+5. Chemistry Scope (Hard Rule)
+ChemAdv/ChemDis counts ONLY ChemistryOnly outputs produced by the chemistry resolver for that hit.
+General statuses and stages do not contribute.
+
+6. Multi-Hit Resolution
+
+6.1 Multi-Hit Attacks
+Multi-hit inscriptions (e.g., Baseline Multi-Strike) resolve each hit independently:
+- Each hit performs its own hit check
+- Each hit triggers chemistry resolver separately
+- Each hit applies its own ChemAdv/ChemDis
+- Status applications are evaluated per hit
+
+6.2 Guard/Wall Break Mechanics
+Barriers and guard effects (General mitigation) are reduced or broken by multi-hit:
+- Each hit reduces guard/wall HP or stacks
+- Multi-hit is the primary counter to wall-heavy strategies
+- Guard effects specify their hit threshold in their definition
+
+6.3 Multi-Hit Logging
+Each hit in a multi-hit attack must be logged separately for replay determinism.
+
+7. Passive Damage Events
+
+7.1 When Passives Can Deal Damage
+Passives may trigger damage events under these conditions:
+- Explicit "on X, deal damage" clause in passive definition
+- Contact/recoil triggers (e.g., Backlash[Type] from chemistry)
+- Reactive triggers (e.g., Reactive Ping on enemy miss)
+
+7.2 Type Inheritance for Passive Damage
+- Typed passives: damage inherits the passive's type
+- Typeless passives: damage inherits user's current type(s) at runtime
+- Type inheritance follows same rules as typeless damaging inscriptions (see 03A Section 4.2)
+
+7.3 Chemistry on Passive Damage
+- Passive damage events that have a resolved type DO trigger chemistry
+- The chemistry resolver processes the passive damage event like any damaging hit
+- ChemAdv/ChemDis from passive damage is calculated for that event only
+
+7.4 Logging Requirements
+All passive damage events must be:
+- Deterministic given the same seed
+- Logged with source passive, resolved type, and damage
+- Distinguishable from inscription damage in combat log
+
+8. Mitigation Stacking
+
+8.1 Multiplicative Stacking
+Multiple damage mitigation sources stack multiplicatively:
+- Formula: FinalDamage = BaseDamage * (1 - Mit1) * (1 - Mit2) * ...
+- Example: 20% + 25% mitigation = 1 - (0.8 * 0.75) = 40% total reduction
+
+8.2 Mitigation Floor
+- Minimum damage dealt: 10% of original calculated damage
+- No combination of mitigation can reduce damage below this floor
+- Ensures chip damage always progresses the game
+
+8.3 Mitigation Sources
+Valid mitigation sources:
+- Resistance passives (type-based or conditional)
+- Guard/barrier effects (General statuses)
+- Defensive stage bonuses (calculated via stage multiplier, not flat mitigation)
+
+Note: Stage-based defense affects Atk/Def ratio, not mitigation percentage.
+
+8.4 Single-Source Cap
+No single mitigation source may exceed 30%.
+See COMBAT_02A Section 8 for full resistance rules.
+
+9. Turn Order — Priority Block (v1 Revisions)
+
+9.1 Phase Order
+Actions execute in three sequential blocks:
+  Phase 1 — Swap Phase: CombatActionType.Swap actions, sorted by speed
+  Phase 2 — Priority Block: Moves tagged PRIOR, sorted by speed
+  Phase 3 — Combat Phase: All remaining UseMove/Pass actions, sorted by speed
+
+Within each phase, ties are broken by:
+  1. Higher level
+  2. 50/50 RNG coin flip (logged for replay determinism)
+
+9.2 Priority Tag (PRIOR)
+Moves with the PRIOR tag resolve after swaps but before normal combat.
+This allows counterplay: a faster enemy with a PRIOR move can act before
+a slower ally's PRIOR move (e.g., a fast priority attack can hit before
+a slow position_swap completes).
+
+9.3 Forensic Logging
+TurnOrderComputedPayload logs all three phases: swapPhaseOrder,
+priorityBlockOrder, combatPhaseOrder, plus the final concatenated order.
+
+10. Barrier Resolution Pipeline (v1 Revisions)
+
+10.1 Damage Pipeline with Barriers
+After damage is calculated (Section 3) and before HP reduction:
+  1. Check bypass (Relay → Unsealed → modifier 4.3-b)
+  2. If bypass: skip barrier absorption entirely
+  3. If no bypass: call ApplyBarrierAbsorption
+     - Single-hit: damage fully absorbed, hit decremented
+     - Threshold: absorb up to remaining capacity
+  4. Calculate reflected damage = floor(absorbed * reflectPercent / 100)
+  5. Apply reflected damage to attacker (after mitigation floor)
+  6. Remaining damage applied to defender HP
+
+10.2 Damage Intercept (Redirect)
+Before barrier checks, if defender has DamageIntercept status
+and the attack is single-target:
+  1. Redirect damage to the interceptor Chainling
+  2. Consume the DamageIntercept status
+  3. Clear redirectInterceptor reference
+  4. Interceptor's barriers (if any) then process the redirected damage
+
+10.3 Barrier End-of-Turn
+At End of Turn, for each Chainling:
+  - Decrement turnsRemaining on all barriers
+  - Remove expired barriers (turnsRemaining <= 0)
+  - Reset apDonationUsedThisTurn flag
+
+END

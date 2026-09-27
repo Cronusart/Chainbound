@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e5f6c8726d54d74da9d9fd3139d03cc, type: 3}
+  m_Name: CameraProfile
+  m_EditorClassIdentifier: 
+  isOrthographic: 1
+  fieldOfView: 60
+  nearClipPlane: 0.01
+  farClipPlane: 1000
+  defaultZoom: 5
+  minZoom: 1
+  maxZoom: 10
+  pitchAngle: 45
+  followOffset: {x: 0, y: 10, z: -10}
+  followSmoothTime: 0.3
+  followSpeed: 2
+  useSmoothDamp: 1
+  followYAxis: 1
+  yAxisOffset: 25
+  yAxisSmoothTime: 0.2
+  minYPosition: -100
+  maxYPosition: 1000
+  yawRotateTime: 0.2
+  ambientMotionOnlyWhenFollowPaused: 1
+  ambientBobAmplitude: {x: 0, y: 0.25, z: 0}
+  ambientBobFrequency: 0.06
+  ambientZoomAmplitude: 2.5
+  ambientZoomFrequency: 0.08
+  zoomSmoothTime: 0.5
+  idleZoom: 4.5
+  walkZoom: 5
+  sprintZoom: 7
+  idleThreshold: 0.1
+  sprintThreshold: 2.5
+  useFlatAmbient: 1
+  ambientIntensity: 1

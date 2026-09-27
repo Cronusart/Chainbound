@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Jam — Wallet Bridge</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0f0f1a;
+            color: #e8e8f0;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border: 1px solid #2a2a3e;
+        }
+        h1 { font-size: 22px; margin-bottom: 4px; color: #fff; letter-spacing: 0.5px; }
+        .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .status.connecting { background: #1e1e30; color: #888; }
+        .status.ready { background: #162016; color: #4ade80; border: 1px solid #22543d; }
+        .status.connected { background: #162016; color: #4ade80; border: 1px solid #22543d; }
+        .status.error { background: #201616; color: #f87171; border: 1px solid #7f1d1d; }
+        .status.signing { background: #201e16; color: #facc15; border: 1px solid #713f12; }
+        .wallets { display: flex; flex-direction: column; gap: 10px; }
+        .wallet-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            background: #22223a;
+            border: 1px solid #33334e;
+            border-radius: 12px;
+            color: #e8e8f0;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .wallet-btn:hover {
+            background: #2e2e4a;
+            border-color: #5a5a7e;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .wallet-btn:active { transform: translateY(0); }
+        .wallet-btn .icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: #33334e;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .wallet-btn .icon img { width: 100%; height: 100%; object-fit: cover; }
+        .wallet-btn .name { flex: 1; text-align: left; font-weight: 500; }
+        .wallet-btn.test-wallet {
+            background: #1a1a2e;
+            border: 1px dashed #444;
+            color: #888;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        .wallet-btn.test-wallet:hover {
+            background: #22223a;
+            border-color: #666;
+            color: #aaa;
+        }
+        .separator {
+            display: flex; align-items: center; gap: 12px;
+            margin: 16px 0 8px;
+            color: #444; font-size: 12px;
+        }
+        .separator::before, .separator::after {
+            content: ''; flex: 1; height: 1px; background: #333;
+        }
+        .connected-info {
+            padding: 16px;
+            background: #162016;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #22543d;
+        }
+        .pubkey {
+            font-family: 'JetBrains Mono', 'Cascadia Code', 'Courier New', monospace;
+            font-size: 12px;
+            color: #4ade80;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+        .wallet-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+        .disconnect-btn {
+            padding: 10px 24px;
+            background: #7f1d1d;
+            border: 1px solid #991b1b;
+            border-radius: 8px;
+            color: #fca5a5;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .disconnect-btn:hover { background: #991b1b; color: #fff; }
+        .log {
+            margin-top: 20px;
+            padding: 10px 12px;
+            background: #111118;
+            border-radius: 8px;
+            max-height: 160px;
+            overflow-y: auto;
+            font-size: 11px;
+            text-align: left;
+            font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+            border: 1px solid #1e1e2e;
+        }
+        .log .entry { margin-bottom: 3px; line-height: 1.4; }
+        .log .info { color: #555; }
+        .log .success { color: #4ade80; }
+        .log .error { color: #f87171; }
+        .log .warn { color: #facc15; }
+        .no-wallets {
+            color: #666; font-size: 14px; padding: 20px; line-height: 1.6;
+        }
+        .no-wallets a { color: #ab9ff2; text-decoration: none; }
+        .no-wallets a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Signal Jam</h1>
+        <div class="subtitle">Desktop Wallet Bridge</div>
+        <div id="status" class="status connecting">Checking game connection...</div>
+        <div id="wallets" class="wallets" style="display:none;"></div>
+        <div id="connected-panel" style="display:none;">
+            <div class="connected-info">
+                <div class="wallet-label"><span id="wallet-name">Wallet</span></div>
+                <div id="connected-pubkey" class="pubkey"></div>
+            </div>
+            <button class="disconnect-btn" onclick="disconnectWallet()">Disconnect</button>
+        </div>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@1/lib/index.iife.min.js"
+            onerror="log('Failed to load @solana/web3.js from CDN. Signing will not work.','error')"></script>
+    <script>
+        /* ── Config ────────────────────────────────────────────────── */
+        var API = window.location.origin;
+        var connectedWallet = null;
+        var connectedProvider = null;
+        var pollTimer = null;
+        var alive = true;
+
+        /* ── Logging ───────────────────────────────────────────────── */
+        function log(msg, level) {
+            level = level || 'info';
+            var el = document.getElementById('log');
+            var d = document.createElement('div');
+            d.className = 'entry ' + level;
+            d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+            el.appendChild(d);
+            el.scrollTop = el.scrollHeight;
+        }
+
+        /* ── Status ────────────────────────────────────────────────── */
+        function setStatus(text, cls) {
+            var el = document.getElementById('status');
+            el.textContent = text;
+            el.className = 'status ' + cls;
+        }
+
+        /* ── API helpers ───────────────────────────────────────────── */
+        function apiGet(path) {
+            return fetch(API + path).then(function(r) { return r.json(); });
+        }
+        function apiPost(path, body) {
+            return fetch(API + path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).then(function(r) { return r.json(); });
+        }
+
+        /* ── Wallet Detection ──────────────────────────────────────── */
+        function detectWallets() {
+            var wallets = [];
+            var ph = (window.phantom && window.phantom.solana) || window.solana;
+            if (ph && ph.isPhantom) {
+                wallets.push({
+                    name: 'Phantom',
+                    provider: ph,
+                    icon: 'https://phantom.app/img/phantom-icon-purple.svg'
+                });
+            }
+            if (window.solflare && window.solflare.isSolflare) {
+                wallets.push({
+                    name: 'Solflare',
+                    provider: window.solflare,
+                    icon: 'https://solflare.com/favicon.ico'
+                });
+            }
+            if (window.backpack && window.backpack.isBackpack) {
+                wallets.push({
+                    name: 'Backpack',
+                    provider: window.backpack,
+                    icon: 'https://backpack.app/favicon.ico'
+                });
+            }
+            return wallets;
+        }
+
+        /* ── Render Wallet List ────────────────────────────────────── */
+        function showWallets() {
+            var container = document.getElementById('wallets');
+            container.innerHTML = '';
+            container.style.display = 'flex';
+            var wallets = detectWallets();
+
+            if (wallets.length === 0) {
+                container.innerHTML =
+                    '<div class="no-wallets">No Solana wallets detected.<br><br>' +
+                    'Install <a href="https://phantom.app" target="_blank">Phantom</a> or ' +
+                    '<a href="https://solflare.com" target="_blank">Solflare</a> browser extension.</div>';
+            } else {
+                wallets.forEach(function(w) {
+                    var btn = document.createElement('button');
+                    btn.className = 'wallet-btn';
+                    btn.innerHTML =
+                        '<span class="icon"><img src="' + w.icon + '" alt="" onerror="this.parentElement.textContent=\'W\'"></span>' +
+                        '<span class="name">' + w.name + '</span>';
+                    btn.onclick = function() { connectWallet(w); };
+                    container.appendChild(btn);
+                });
+            }
+
+            var sep = document.createElement('div');
+            sep.className = 'separator';
+            sep.textContent = 'or';
+            container.appendChild(sep);
+
+            var testBtn = document.createElement('button');
+            testBtn.className = 'wallet-btn test-wallet';
+            testBtn.innerHTML =
+                '<span class="icon" style="font-size:14px">K</span>' +
+                '<span class="name">Use Test Keypair (no browser wallet needed)</span>';
+            testBtn.onclick = function() { useTestWallet(); };
+            container.appendChild(testBtn);
+        }
+
+        /* ── Connect Wallet ────────────────────────────────────────── */
+        async function connectWallet(wallet) {
+            try {
+                setStatus('Connecting to ' + wallet.name + '...', 'connecting');
+                log('Requesting connection to ' + wallet.name + '...');
+
+                var resp = await wallet.provider.connect();
+                var publicKey = resp.publicKey.toString();
+
+                connectedWallet = wallet;
+                connectedProvider = wallet.provider;
+
+                log('Connected: ' + publicKey, 'success');
+                setStatus('Connected via ' + wallet.name, 'connected');
+
+                document.getElementById('wallets').style.display = 'none';
+                document.getElementById('connected-panel').style.display = 'block';
+                document.getElementById('wallet-name').textContent = wallet.name;
+                document.getElementById('connected-pubkey').textContent = publicKey;
+
+                await apiPost('/api/connect', { publicKey: publicKey, walletName: wallet.name });
+                log('Game notified.', 'success');
+
+                startPolling();
+            } catch (err) {
+                log('Connection failed: ' + err.message, 'error');
+                setStatus('Connection failed — try again', 'error');
+            }
+        }
+
+        /* ── Test Wallet ───────────────────────────────────────────── */
+        async function useTestWallet() {
+            log('Requesting editor test keypair...');
+            setStatus('Using test keypair...', 'connecting');
+            try {
+                await apiPost('/api/use-test-wallet', {});
+                setStatus('Test keypair sent to game. You may close this tab.', 'connected');
+                log('Done.', 'success');
+            } catch (err) {
+                log('Error: ' + err.message, 'error');
+            }
+        }
+
+        /* ── Disconnect ────────────────────────────────────────────── */
+        async function disconnectWallet() {
+            stopPolling();
+            try {
+                if (connectedProvider) await connectedProvider.disconnect();
+            } catch (e) {
+                log('Disconnect warning: ' + e.message, 'warn');
+            }
+            connectedWallet = null;
+            connectedProvider = null;
+
+            document.getElementById('wallets').style.display = 'flex';
+            document.getElementById('connected-panel').style.display = 'none';
+            setStatus('Select your wallet', 'ready');
+            showWallets();
+
+            try { await apiPost('/api/disconnect', {}); } catch(e) {}
+            log('Wallet disconnected.');
+        }
+
+        /* ── Polling for sign requests from Unity ──────────────────── */
+        function startPolling() {
+            stopPolling();
+            pollTimer = setInterval(pollPending, 500);
+        }
+
+        function stopPolling() {
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+
+        async function pollPending() {
+            if (!connectedProvider) return;
+            try {
+                var msg = await apiGet('/api/pending');
+                if (msg.type === 'sign_transaction') {
+                    await handleSignTransaction(msg);
+                } else if (msg.type === 'sign_message') {
+                    await handleSignMessage(msg);
+                }
+            } catch (e) {
+                /* server might be restarting */
+            }
+        }
+
+        /* ── Sign Transaction ──────────────────────────────────────── */
+        async function handleSignTransaction(msg) {
+            try {
+                setStatus('Approve transaction in ' + connectedWallet.name + '...', 'signing');
+                log('Sign transaction request (id: ' + msg.id + ')');
+
+                var raw = Uint8Array.from(atob(msg.payload), function(c) { return c.charCodeAt(0); });
+                var tx;
+                if (raw[0] & 0x80) {
+                    tx = solanaWeb3.VersionedTransaction.deserialize(raw);
+                } else {
+                    tx = solanaWeb3.Transaction.from(raw);
+                }
+
+                var signed = await connectedProvider.signTransaction(tx);
+                var signedBytes = signed.serialize();
+                var signedB64 = btoa(String.fromCharCode.apply(null, signedBytes));
+
+                await apiPost('/api/sign-result', {
+                    id: msg.id,
+                    type: 'transaction_signed',
+                    signedPayload: signedB64
+                });
+
+                setStatus('Connected via ' + connectedWallet.name, 'connected');
+                log('Transaction signed.', 'success');
+            } catch (err) {
+                await apiPost('/api/sign-result', {
+                    id: msg.id,
+                    type: 'error',
+                    message: err.message
+                });
+                setStatus('Connected via ' + connectedWallet.name, 'connected');
+                log('Sign rejected: ' + err.message, 'error');
+            }
+        }
+
+        /* ── Sign Message ──────────────────────────────────────────── */
+        async function handleSignMessage(msg) {
+            try {
+                setStatus('Approve message in ' + connectedWallet.name + '...', 'signing');
+                log('Sign message request (id: ' + msg.id + ')');
+
+                var raw = Uint8Array.from(atob(msg.payload), function(c) { return c.charCodeAt(0); });
+                var result = await connectedProvider.signMessage(raw, 'utf8');
+                var sig = result.signature || result;
+                var sigB64 = btoa(String.fromCharCode.apply(null, new Uint8Array(sig)));
+
+                await apiPost('/api/sign-result', {
+                    id: msg.id,
+                    type: 'message_signed',
+                    signature: sigB64
+                });
+
+                setStatus('Connected via ' + connectedWallet.name, 'connected');
+                log('Message signed.', 'success');
+            } catch (err) {
+                await apiPost('/api/sign-result', {
+                    id: msg.id,
+                    type: 'error',
+                    message: err.message
+                });
+                setStatus('Connected via ' + connectedWallet.name, 'connected');
+                log('Sign rejected: ' + err.message, 'error');
+            }
+        }
+
+        /* ── Init: verify game server is reachable ─────────────────── */
+        async function init() {
+            log('Checking game server...');
+            for (var attempt = 0; attempt < 20; attempt++) {
+                try {
+                    var resp = await fetch(API + '/api/pending');
+                    if (resp.ok) {
+                        log('Game server reachable.', 'success');
+                        setStatus('Select your wallet', 'ready');
+                        showWallets();
+                        return;
+                    }
+                } catch (e) { /* retry */ }
+                await new Promise(function(r) { setTimeout(r, 500); });
+            }
+            setStatus('Cannot reach game server. Is Unity running?', 'error');
+            log('Server unreachable after retries.', 'error');
+        }
+
+        window.addEventListener('load', function() {
+            setTimeout(init, 300);
+        });
+    </script>
+</body>
+</html>

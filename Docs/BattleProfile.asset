@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e5f6c8726d54d74da9d9fd3139d03cc, type: 3}
+  m_Name: BattleProfile
+  m_EditorClassIdentifier: 
+  isOrthographic: 0
+  fieldOfView: 37.4
+  nearClipPlane: 0.01
+  farClipPlane: 1000
+  defaultZoom: 4.5
+  minZoom: 4
+  maxZoom: 6
+  pitchAngle: 15
+  followOffset: {x: 0, y: -1, z: -60}
+  followSmoothTime: 0.2
+  followSpeed: 4
+  useSmoothDamp: 1
+  followYAxis: 0
+  yAxisOffset: 0
+  yAxisSmoothTime: 0.2
+  minYPosition: -100
+  maxYPosition: 1000
+  yawRotateTime: 0.2
+  zoomSmoothTime: 0.35
+  idleZoom: 4.5
+  walkZoom: 4.5
+  sprintZoom: 4.5
+  idleThreshold: 0.1
+  sprintThreshold: 2.5
+  useFlatAmbient: 0
+  ambientIntensity: 1

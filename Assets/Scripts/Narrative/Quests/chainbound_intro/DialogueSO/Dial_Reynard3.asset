@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f988bc0d55107749a911c0375bba164, type: 3}
+  m_Name: Dial_Reynard3
+  m_EditorClassIdentifier: 
+  lines:
+  - speakerName: Reynard
+    text: Evening, Doggo! Shops all shut down for the night
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 0}
+      targetSource: 0
+      npcId: reynard
+      targetTag: 
+  - speakerName: Reynard
+    text: Come find me at first light and I'll have a fresh pot brewing with your
+      name on it
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 0}
+      targetSource: 0
+      npcId: reynard
+      targetTag: 
+  autoAdvance: 0
+  autoAdvanceDelay: 2
+  allowSkip: 1
+  skipToEndOfLine: 1

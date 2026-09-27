@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d76499635d348f4fbc96229417ee9d5, type: 3}
+  m_Name: admiral_interaction_router
+  m_EditorClassIdentifier: 
+  slots:
+  - label: Chainbound Intro Active
+    profile: {fileID: 11400000, guid: 1655e40a2fcf9be49af5830a55115d0e, type: 2}
+    allowedLifecycleMask: 8
+  - label: Chainbound Intro Completed Starter Context
+    profile: {fileID: 11400000, guid: ae440000000000000000000000000044, type: 2}
+    allowedLifecycleMask: 16

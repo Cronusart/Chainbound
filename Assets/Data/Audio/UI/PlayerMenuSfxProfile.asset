@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b6f857e1bda45b8998d1d54d60172f2, type: 3}
+  m_Name: PlayerMenuSfxProfile
+  m_EditorClassIdentifier: 
+  menuOpen: {fileID: 11400000, guid: 1bb1988443efd204bb021d3c576ec5ea, type: 2}
+  menuClose: {fileID: 11400000, guid: 92732ffecdb51dc488869be20e54d361, type: 2}
+  buttonSwitch: {fileID: 11400000, guid: b486cb186a263804f95549d9527f2694, type: 2}
+  panelSwitch: {fileID: 11400000, guid: b486cb186a263804f95549d9527f2694, type: 2}
+  confirm: {fileID: 11400000, guid: a9c9624c73d92a845ae31b492640d190, type: 2}
+  cancel: {fileID: 11400000, guid: 9d538a01aebaf9146b972da1614f5966, type: 2}
+  invalid: {fileID: 11400000, guid: 9d538a01aebaf9146b972da1614f5966, type: 2}
+  carouselMove: {fileID: 11400000, guid: 05b6913aefbb2a145998495b6ab641ad, type: 2}
+  chainlingSelectFallback: {fileID: 11400000, guid: 6b74f58ea97db6543aa02164849fdc53, type: 2}

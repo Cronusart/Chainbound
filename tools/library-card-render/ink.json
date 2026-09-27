@@ -1,0 +1,61 @@
+{
+  "sage": [
+    84,
+    126,
+    100,
+    255
+  ],
+  "ink": [
+    55,
+    78,
+    74,
+    255
+  ],
+  "ink_ghost": [
+    84,
+    126,
+    100,
+    255
+  ],
+  "label": [
+    70,
+    86,
+    64,
+    255
+  ],
+  "mod_ghost": [
+    146,
+    169,
+    132,
+    160
+  ],
+  "edge_dilate": 3,
+  "edge_erode": 3,
+  "erode_passes": 1,
+  "noise_max": 45,
+  "speckle_chance": 0.1,
+  "speckle_punch_min": 215,
+  "speckle_punch_max": 255,
+  "density_amp": 0.5,
+  "density_x_scale": 0.032,
+  "density_y_scale": 0.064,
+  "shadow_offset": [
+    1,
+    1
+  ],
+  "shadow_alpha": 0.0,
+  "sticker_outline": [
+    245,
+    240,
+    228,
+    255
+  ],
+  "sticker_outline_px": 32,
+  "sticker_noise_max": 33,
+  "sticker_speckle": 0.33,
+  "sticker_shadow_offset": [
+    3,
+    4
+  ],
+  "sticker_shadow_alpha": 0.33
+}

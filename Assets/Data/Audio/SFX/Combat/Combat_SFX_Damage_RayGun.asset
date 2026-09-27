@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e411382a9c8eba546a30b4ce6573732f, type: 3}
+  m_Name: Combat_SFX_Damage_RayGun
+  m_EditorClassIdentifier: 
+  id: Combat_SFX_Damage_RayGun
+  clips:
+  - {fileID: 8300000, guid: d7c97e354b001d44287c9e824ee2a1b7, type: 3}
+  outputBus: 0
+  loop: 0
+  volumeMin: 1
+  volumeMax: 1
+  pitchMin: 1
+  pitchMax: 1
+  is3D: 0
+  spatialBlend: 1
+  minDistance: 1
+  maxDistance: 500
+  polyphonyKey: 
+  maxInstances: 0
+  cooldownSeconds: 0
+

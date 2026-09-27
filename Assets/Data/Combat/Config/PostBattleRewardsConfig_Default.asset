@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0566dda6b18bc394db020ef09d2c602f, type: 3}
+  m_Name: PostBattleRewardsConfig_Default
+  m_EditorClassIdentifier: 
+  configVersion: 3
+  koXpStandard: 20
+  koXpElite: 45
+  koXpBoss: 90
+  completionBonusStandard: 20
+  completionBonusElite: 40
+  completionBonusBoss: 80
+  ramStandard: 3
+  ramElite: 15
+  ramBoss: 50
+  activeXpShare: 1
+  benchXpShare: 0.5
+  kodReceivesXp: 1
+  capturedReceivesXp: 0
+  defeatGrantsRewards: 0
+  defeatRamPenaltyFlat: 5
+  defeatRamPenaltyPerPlayerLevel: 0
+  defeatRevivesKoChainlings: 1
+  defeatKoRespawnHpFraction: 0.5
+  progressionRewardTables: {fileID: 0}

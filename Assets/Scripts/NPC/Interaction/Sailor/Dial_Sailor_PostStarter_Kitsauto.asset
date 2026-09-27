@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f988bc0d55107749a911c0375bba164, type: 3}
+  m_Name: Dial_Sailor_PostStarter_Kitsauto
+  m_EditorClassIdentifier: 
+  speakerNpcId: sailor
+  playerFacingPolicy: 1
+  lines:
+  - speakerName: Sailor
+    text: Kitsauto. Fast steel, no wasted motion. It lives on openings other fighters are too slow to see. The Colosseum will decide whether you can keep pace.
+    typeSpeed: 65
+    soundEvent: {fileID: 0}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 1, g: 1, b: 1, a: 1}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: sailor
+      targetTag: 
+    choices:
+    - label: Colosseum?
+      value: ask_colosseum
+      endDialogue: 0
+    - label: Understood.
+      value: leave
+      endDialogue: 1
+  - speakerName: Sailor
+    text: The Colosseum draws Chainling trainers from every rough corner. They test their grit against one another there. The ones who endure come back sharper.
+    typeSpeed: 65
+    soundEvent: {fileID: 0}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 1, g: 1, b: 1, a: 1}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: sailor
+      targetTag: 
+  - speakerName: Sailor
+    text: When you're ready to be measured, find me. I know the crossing.
+    typeSpeed: 65
+    soundEvent: {fileID: 0}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 1, g: 1, b: 1, a: 1}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: sailor
+      targetTag: 
+  autoAdvance: 0
+  autoAdvanceDelay: 2
+  allowSkip: 1
+  skipToEndOfLine: 1

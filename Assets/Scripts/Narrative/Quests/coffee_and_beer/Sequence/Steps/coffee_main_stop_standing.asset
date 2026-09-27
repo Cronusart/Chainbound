@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ee1d919f16ae54d8e83a85dd25c8af, type: 3}
+  m_Name: coffee_main_stop_standing
+  m_EditorClassIdentifier: 
+  stepName: coffee_main_stop_standing
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 1cd9af84-ae86-49f4-98e5-41d19ac15034
+  trackId: standing_leftover
+  stopMode: 0

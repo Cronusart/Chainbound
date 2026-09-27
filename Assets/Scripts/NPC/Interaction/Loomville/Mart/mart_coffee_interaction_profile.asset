@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b8700e866f11944f836c258d6049e3a, type: 3}
+  m_Name: mart_coffee_interaction_profile
+  m_EditorClassIdentifier: 
+  questDefinition: {fileID: 11400000, guid: e4f5a6b7c8d9012a3b4c5d6e7f8091a2, type: 2}
+  questId: 
+  rules:
+  - label: "after leftover \u2014 loading the truck"
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: talk_to_mart
+    objectiveComparison: 1
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: 7d783d3e8472aed4abf8cee1c530d5de, type: 2}
+    useDialogueCamera: 1
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  - label: "after Reynard \u2014 still packing"
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: talk_to_reynard
+    objectiveComparison: 1
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: a186a6e722c2b7c46a4bdaa656889765, type: 2}
+    useDialogueCamera: 1
+    triggerId:
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  inactiveDialogue: {fileID: 11400000, guid: a186a6e722c2b7c46a4bdaa656889765, type: 2}
+  inactiveTriggerId: 
+  inactiveNpcBehavior:
+    mode: 1
+    behaviorOverride: {fileID: 0}
+  activeFallbackDialogue: {fileID: 11400000, guid: a186a6e722c2b7c46a4bdaa656889765, type: 2}
+  activeFallbackTriggerId: 
+  activeFallbackNpcBehavior:
+    mode: 1
+    behaviorOverride: {fileID: 0}
+  designerNotes: Packing until the town-exit intercept. That intercept is the only
+    leftover speech and the only shop unlock. After it, Mart stays to load the
+    truck until the player enters the store.
+  activateQuestOnInactiveInteract: 0
+  completeObjectiveOnActivate: 

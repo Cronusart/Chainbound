@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fca774587e661aa4688485a5df0464f3, type: 3}
+  m_Name: DefaultTypographyPreset
+  m_EditorClassIdentifier: 
+  palette: {fileID: 11400000, guid: a930c3ad1e4402447804c57a8f832512, type: 2}
+  fontAsset: {fileID: 0}
+  materialPreset: {fileID: 0}
+  materialAssignment: 0
+  faceColorSlot: 1
+  customFaceColor: {r: 1, g: 1, b: 1, a: 1}
+  faceColorTint: {r: 1, g: 1, b: 1, a: 1}
+  applyFaceColorToTextColor: 1
+  driveOutlineFromPalette: 1
+  outlineColorSlot: 6
+  customOutlineColor: {r: 0, g: 0, b: 0, a: 1}
+  outlineWidth: 0.2
+  driveUnderlayFromPalette: 0
+  underlayColorSlot: 4
+  customUnderlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  underlayOffset: {x: 0, y: -0.4}
+  underlayDilate: 0.1
+  underlaySoftness: 0.35
+  driveGlowFromPalette: 0
+  glowColorSlot: 4
+  customGlowColor: {r: 1, g: 1, b: 1, a: 1}
+  glowPower: 0.35
+  fontSizeMultiplier: 1
+  transformScaleMultiplier: 1
+  useVertexGradient: 0
+  vertexGradientTopSlot: 1
+  vertexGradientBottomSlot: 3
+  customVertexGradientTop: {r: 1, g: 1, b: 1, a: 1}
+  customVertexGradientBottom: {r: 1, g: 1, b: 1, a: 1}
+  animatePalettePulse: 0
+  materialPropertyOverrides: []

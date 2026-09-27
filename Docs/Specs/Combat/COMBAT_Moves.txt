@@ -1,0 +1,195 @@
+COMBAT_03A_Moves_CoreFramework_v1.1
+
+0. Purpose & Scope
+Defines move structure, slot rules, equip rules, and constraints.
+Excludes: numeric tuning, modifiers, final move lists.
+
+1. Slot System (Locked)
+SUPERSEDED: See MOVE_LOADOUT_RULES_AND_UI_SPEC.md.
+Current runtime uses rebirth-based capacity: 4 + rebirthCount, clamped to 4-9.
+Stars and evolution stage do not increase move slots.
+Slot-consuming modifiers are defined in COMBAT_05_MoveModifiers_v1.1.txt; capped by rules.
+
+2. Categories
+Damaging (Melee/Ranged)
+Status/Utility
+Support (subset of Status/Utility)
+Passive
+
+3. Equip Eligibility (Authoritative)
+A Chainling may equip from:
+(A) its type pool(s),
+(B) its species-specific pool,
+(C) typeless pool.
+
+4. Typeless vs Typed
+4.1 Typed damaging moves:
+- have explicit type
+- trigger chemistry on hit via chemistry resolver
+
+4.2 Typeless moves:
+- Non-damaging typeless moves do not trigger chemistry.
+- Typeless DAMAGING moves resolve their type at runtime:
+  AttackTypeResolved = user’s current type(s) (or a defined selection rule if dual-type).
+  They trigger chemistry exactly like typed damaging moves.
+
+5. Chemistry-Only Outputs (Hard Constraint)
+Any status/effect marked ChemistryOnly in the Status Catalog:
+- may ONLY be produced by the chemistry resolver on damaging hit
+- must NOT be directly applied by moves or passives
+
+6. Intrinsic Properties (Immutable)
+Moves have fixed:
+- Power
+- AP Cost
+- Accuracy
+- Targeting
+- Base type (if typed)
+
+Rarity affects availability/complexity only, not raw scaling.
+
+6.1 Rarity Semantics (Clarified)
+Rarity tiers indicate complexity and availability, NOT power:
+
+Common: Single-purpose, straightforward execution
+- Example: "Deal damage" or "Buff self +1 stage"
+
+Uncommon: Reliable or slightly conditional
+- Example: "Deal damage; 25% chance to lower target's Def by 1 stage"
+
+Rare: Conditional or dual-purpose
+- Example: "If target is debuffed, deal bonus damage"
+
+Epic: Multi-condition or stat substitution
+- Example: "If HP < 50%, gain +2 stages and heal; otherwise, deal damage"
+
+Legendary: Rule exceptions with constraints
+- Example: "Ignore type chemistry disadvantage for this hit"
+
+Mythic: Unique behaviors with meaningful downsides
+- Example: "Deal massive damage but skip your next turn"
+
+Key principle: A Common move at max evolution should remain competitive with Epic moves in raw output. Epic moves offer flexibility, not superiority.
+
+7. Logging Requirement
+All moves and passive triggers must be deterministic and fully loggable.
+
+8. Future Extensions
+
+8.1 Species-Specific Moves (Defined)
+Species move pools are defined in COMBAT_06_SpeciesMovePools_v1.2.txt:
+- Species-exclusive moves (starters only: Validape, Gilarime, Kitsauto)
+- Curated learnable pools from existing baseline moves
+- Off-type access rules for thematic fit
+
+Species-specific moves supplement type pools and typeless pools, not replace them.
+Reference: COMBAT_06_SpeciesMovePools_v1.2.txt
+
+8.2 Modifier Layer (Spec 05)
+Move modifiers/enhancements are excluded from this spec.
+See COMBAT_05_MoveModifiers_v1.1.txt for:
+- Modifier categories (POT, EFF, AUG, TRX, TRG, SYN) referenced by §IDs
+- Stacking rules and forbidden combinations
+- Slot cost adjustments for AUG/TRX modifiers
+
+9. Wall/Barrier Interactions
+
+9.1 Barrier Mechanics
+Barriers and guard effects are General statuses that provide damage mitigation:
+- Barriers have a duration OR a hit/damage threshold
+- Multi-hit attacks are effective against barriers (each hit counts)
+- See COMBAT_02C Section 6 for multi-hit resolution rules
+
+9.2 Barrier Categories
+- Single-hit barriers: Block next incoming hit entirely, then expire
+  (hitsRemaining = N; each incoming hit consumes 1)
+- Damage-threshold barriers: Absorb X damage before breaking
+  (damageThreshold = X; incoming damage reduces remaining capacity)
+- Duration barriers: Reduce damage by % for N turns
+  (handled by existing MitigationSource system)
+
+9.3 Wall Move Design
+Support moves that create barriers should:
+- Specify barrier type (single-hit, threshold, duration)
+- Have clear break conditions logged
+- Be counterable by multi-hit strategies
+
+9.4 Barrier Bypass (v1 Revisions)
+Three bypass sources exist, checked in this priority order:
+1. **Relay** (General ConsumedStatus): Full bypass for next hit; consumed on use
+2. **Unsealed** (General DurationStatus, 2 turns): 50% chance per hit to bypass
+   single-hit barriers
+3. **Modifier 4.3-b** (move modifier): First hit of the move bypasses barriers
+
+When bypass triggers, the barrier is NOT consumed — the hit passes through cleanly.
+
+9.5 Barrier Reflection
+Barriers may define a reflectPercent (0-100). When a barrier absorbs damage,
+the attacker receives floor(absorbed * reflectPercent / 100) as typeless recoil.
+
+10. Support Move Families (v1 Revisions)
+
+10.1 AP Transfer Moves
+Tag: APMAN | SUP. Transfer AP between allies.
+- ap_donation: Transfer 2 AP from self to partner; once per turn per user
+- ap_redistribution: Move up to 2 AP from one ally to another
+- ap_router (Node): Transfer up to 2 AP between any two allies
+Restriction: apDonationUsedThisTurn flag prevents multiple donations per turn.
+
+10.2 Damage Redirect Moves
+Tag: SUP. Redirect incoming attacks to self.
+- damage_intercept: Redirect next single-target attack on ally to self
+  (applies DamageIntercept consumed status + sets redirectInterceptor reference)
+- signal_redirect (Node): Redirect next hit on ally to self; +1 Def stage
+Resolution: When a single-target attack hits a target with DamageIntercept,
+damage is redirected to the interceptor instead. DamageIntercept is consumed.
+
+10.3 Buff/Debuff Transfer Moves
+Tag: SUP. Move status effects between Chainlings.
+- effect_relay: Move 1 General debuff from ally to self; cleanse if none found
+- relay_packet (Node): Move 1 General buff or debuff between allies
+Only General-origin, non-Consumed statuses are eligible for transfer.
+
+10.4 Position Swap
+Tag: UTIL | SUP | PRIOR. Swap field positions with partner.
+- position_swap: Swap active slot indices; does not trigger exit/entry effects
+  Priority tag ensures it resolves before normal combat moves.
+  Slot-based targeting persists after swap (enemies still target the slot, not the
+  Chainling that was there).
+
+11. Healing Moves (v1 Revisions)
+
+11.1 Percentage-Based Healing
+Healing moves may define healPercentMaxHP (integer 0-100):
+- When non-zero, heal amount = floor(target.EffectiveMaxHP * healPercentMaxHP / 100)
+- Minimum heal amount: 1 HP
+- Falls back to flat basePower healing if healPercentMaxHP is 0
+
+11.2 Terminology
+- "Partner" = the other active ally on the field (2v2 format)
+- "Team" = self + partner + bench (all owned Chainlings)
+See _LEGEND.md Ally Terminology section for full definitions.
+
+12. Type Move Design Guidelines
+(See COMBAT_TypeProfiles.md for full playstyle context)
+
+When generating or extending type pools, moves should primarily reinforce
+the type's listed keywords. Off-theme moves (1-2 max per typed pool) are
+acceptable for flexible builds but must not redefine the type's identity.
+
+Node    — SUP majority; APMAN; AOE buff/heal; redirect. Avoid: direct debuff.
+Gas     — APMAN; volatile self-trade; Bridging setup. Avoid: pure defense.
+Block   — Barriers; defense ramp; grounding/slow. Avoid: speed or burst moves.
+Encrypted — AP drain; debuff immunity; cipher effects. Avoid: direct DoT.
+Burned  — DoT; burn coatings; atk debuffs; rug mechanics. Avoid: healing/sustain.
+Frozen  — Speed debuffs; Jam; asset lock; stall. Avoid: high-damage burst.
+Forked  — AoE DMG; chain split; speed burst; recoil tradeoff. Avoid: sustain.
+Mined   — Physical ramp; conditional damage; FOMO scaling. Avoid: team support.
+Staked  — Siphon; evasion; leech; patience passives. Avoid: aggressive burst.
+Compressed — Precision; Jam; evasion; AP efficiency. Avoid: AoE.
+Bot     — Multi-thread DMG; automated debuffs; AP denial. Avoid: healing/setup.
+Glitched — Random/chaotic; exploit setups; def corruption. Avoid: reliable buffs.
+Shard   — Single-target precision; partition/field effects. Avoid: AoE spam.
+Meme    — High-risk/high-reward; random outcomes; all-in. Avoid: consistent reliable effects.
+
+END

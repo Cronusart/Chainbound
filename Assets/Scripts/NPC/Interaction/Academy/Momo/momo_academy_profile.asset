@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b8700e866f11944f836c258d6049e3a, type: 3}
+  m_Name: momo_academy_profile
+  m_EditorClassIdentifier: 
+  questDefinition: {fileID: 11400000, guid: 015cc1a15e789b648bd1f011f84db266, type: 2}
+  questId: 
+  rules:
+  - label: academy introduction
+    lifecycleScope: 1
+    lifecycleMask: 28
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: c5111b00d592bd1499abda85bd6fbffe, type: 2}
+    useDialogueCamera: 0
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  inactiveDialogue: {fileID: 11400000, guid: c5111b00d592bd1499abda85bd6fbffe, type: 2}
+  inactiveTriggerId: 
+  inactiveNpcBehavior:
+    mode: 1
+    behaviorOverride: {fileID: 0}
+  activeFallbackDialogue: {fileID: 11400000, guid: c5111b00d592bd1499abda85bd6fbffe, type: 2}
+  activeFallbackTriggerId: 
+  activeFallbackNpcBehavior:
+    mode: 1
+    behaviorOverride: {fileID: 0}
+  designerNotes: Momo's repeatable Academy introduction; available across intro quest
+    lifecycle states.
+  activateQuestOnInactiveInteract: 0
+  completeObjectiveOnActivate: 

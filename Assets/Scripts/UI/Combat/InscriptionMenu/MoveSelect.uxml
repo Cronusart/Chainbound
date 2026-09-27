@@ -1,0 +1,35 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:Style src="MoveSelect.uss" />
+
+  <!-- Full-screen overlay for PvP move selection -->
+  <ui:VisualElement name="MoveSelectRoot" class="move-select-root move-select--hidden" picking-mode="Ignore">
+
+    <!-- Backdrop -->
+    <ui:VisualElement name="MoveBackdrop" class="move-backdrop" picking-mode="Ignore" />
+
+    <!-- Timer bar at top -->
+    <ui:VisualElement name="TimerBarContainer" class="timer-bar-container">
+      <ui:VisualElement name="TimerBarFill" class="timer-bar-fill" />
+    </ui:VisualElement>
+    <ui:Label name="TimerText" class="timer-text" text="30s" />
+
+    <!-- Header -->
+    <ui:Label name="MoveHeader" class="move-header" text="SELECT YOUR REWARD" />
+
+    <!-- Card Grid -->
+    <ui:VisualElement name="CardGrid" class="card-grid">
+      <!-- Cards populated at runtime -->
+    </ui:VisualElement>
+
+    <!-- Footer prompt -->
+    <ui:Label name="MoveFooter" class="move-footer" text="Press Confirm to claim" />
+
+    <!-- Result display (shown after selection) -->
+    <ui:VisualElement name="SelectionResult" class="selection-result selection-result--hidden">
+      <ui:Label name="ResultTitle" class="result-title" text="" />
+      <ui:Label name="ResultBody" class="result-body" text="" />
+      <ui:Label name="ResultContinue" class="result-continue" text="Press Confirm to continue" />
+    </ui:VisualElement>
+
+  </ui:VisualElement>
+</ui:UXML>

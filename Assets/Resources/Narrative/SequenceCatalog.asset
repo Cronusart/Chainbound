@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae130000000000000000000000000003, type: 3}
+  m_Name: SequenceCatalog
+  m_EditorClassIdentifier: 
+  sequences:
+  - {fileID: 11400000, guid: b9c754deab6c5344386d6e56fe8cf25e, type: 2}
+  - {fileID: 11400000, guid: 388f85ddeaf3bc24ea16be529d5765f9, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0301, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0302, type: 2}

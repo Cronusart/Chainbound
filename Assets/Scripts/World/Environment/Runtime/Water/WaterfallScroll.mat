@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: WaterfallScroll
+  m_Shader: {fileID: 4800000, guid: 9f3e2c1a8b764d0e9a5c4f2b1d8e7c6a, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _PIXEL_SNAP
+  - _USE_OBJECT_SPACE_UVS
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 7ac98ebbae23fea4fa9c38f6507d9ccb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AmbientStrength: 0.94
+    - _Cull: 0
+    - _Cutoff: 1
+    - _DirectionalStrength: 0
+    - _PixelSnap: 1
+    - _ReceiveLighting: 0
+    - _ScrollSpeed: 1
+    - _TreatWhiteAsClear: 0
+    - _UseObjectSpaceUVs: 1
+    - _WhiteClip: 1
+    m_Colors:
+    - _Color: {r: 0.59607846, g: 0.878278, b: 1, a: 1}
+    - _UvOffset: {r: 0, g: 0, b: 0, a: 0}
+    - _UvTileSize: {r: 40, g: 20, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

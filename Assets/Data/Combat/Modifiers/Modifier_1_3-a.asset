@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3072466885a48fb47bf11038812c96c2, type: 3}
+  m_Name: Modifier_1_3-a
+  m_EditorClassIdentifier: 
+  sectionId: 1.3-a
+  displayName: First Dibs
+  effectDescription: "{n}% chance to act first within speed tier"
+  category: 2
+  scope: 0
+  minimumRarity: 1
+  effectMin: 5
+  effectMax: 12
+  weight: 1
+  allowedCategories: 020000000300000004000000
+  forbiddenCombinations: 
+  - 1.1-a
+  - 1.2-a
+  - 1.3-b
+  - 4.3-a
+  - 4.3-b
+  slotCostIncrease: 0
+  powerCap: 0
+  apCostCap: 0
+  forbiddenTags: 
+  - PRIOR
+  slotType: 1
+  isTypeInfusion: 0
+  isStatSubstitution: 0
+  substitutionStat: 1
+  triggerCondition: 0
+  lowHpThresholdPercent: 30
+  triggerChance: 0
+  designNotes: 

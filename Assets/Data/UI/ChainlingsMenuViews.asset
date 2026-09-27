@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d75601d85af50c4ab493c8abb731c6d, type: 3}
+  m_Name: ChainlingsMenuViews
+  m_EditorClassIdentifier: 
+  partyViewPrefab: {fileID: 8134083909277725796, guid: 4db73edbf69ad594e8e6ede147b8ab63, type: 3}
+  partyColumnShellPrefab: {fileID: 275401813490261918, guid: 8f6c038079b2fa64596d3a99c13d9b74, type: 3}
+  partySlotViewPrefab: {fileID: 8832476516541648432, guid: c9c9f42f6fa044d6a18b54c1dc2fe3aa, type: 3}
+  detailViewPrefab: {fileID: 8843033668398946530, guid: 5ea6c6cbf9ca95c4db467a6dd664fe21, type: 3}
+  cardViewPrefab: {fileID: 1636399649124807043, guid: ff227692f0fcd8e46bfd19cd062b3187, type: 3}

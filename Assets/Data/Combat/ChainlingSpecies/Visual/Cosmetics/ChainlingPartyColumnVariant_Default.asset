@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4e8c1d92f6b4a8e9c3d7b1e5f0a2c4d, type: 3}
+  m_Name: ChainlingPartyColumnVariant_Default
+  m_EditorClassIdentifier: 
+  id: default
+  displayName: Default Party Column
+  speciesScope: 
+  visualVariantScope: 
+  staticCardFrameSprite: {fileID: 0}
+  cardFrameSequence:
+    frames: []
+  cardFrameFps: 8
+  cardFrameLoop: 1
+  backgroundSprite: {fileID: 0}
+  overrideBackgroundColor: 0
+  backgroundColorTint: {r: 0.07, g: 0.095, b: 0.14, a: 0.92}
+  infoPanelBackgroundSprite: {fileID: 0}
+  useEmptyTint: 1
+  emptyTintColor: {r: 0.07, g: 0.095, b: 0.14, a: 1}
+  emptyTintAlpha: 0.55
+  selectionOutlineSprite: {fileID: 0}
+  selectionOutlineSequence:
+    frames: []
+  selectionOutlineFps: 10
+  selectionOutlineLoop: 1
+  selectionOutlineInset: {x: -10, y: -4, z: -10, w: -4}
+  overrideSelectionOutlineColor: 0
+  selectionOutlineColor: {r: 0.2, g: 0.85, b: 0.75, a: 0.95}

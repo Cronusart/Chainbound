@@ -1,0 +1,342 @@
+COMBAT_BalanceReview_Final_v1.3
+
+===============================================================================
+FINAL BALANCE REVIEW — BASELINE INSCRIPTIONS
+===============================================================================
+
+Review Date: Final v1.3 Audit (Post Type Profiles & Move Rebalance)
+Total Inscriptions: 175 (44 typeless / 131 typed)
+Distribution: 32% DMG | 42% UTIL | 13% SUP | 13% PAS
+
+===============================================================================
+1. MULTI-HIT MOVE AUDIT
+===============================================================================
+
+Requirement: Multi-hit moves must have lowered per-hit power (20-40) and appropriate AP costs.
+
+| Move              | Type       | Power  | Hits  | AP | Status  | Notes                           |
+|-------------------|------------|--------|-------|----|---------|---------------------------------|
+| Baseline Barrage  | Typeless   | 13     | 2-3   | 2  | ✓ PASS  | AOE spread, appropriate power   |
+| Baseline Multi    | Typeless   | 10     | 2-5   | 3  | ✓ PASS  | Wall-breaker, low per-hit       |
+| Combustive Shift  | Gas        | 30     | 2     | 2  | ✓ PASS  | Fixed 2 hits, conditional bonus |
+| Stone Barrage     | Block      | 20     | 2-3   | 3  | ✓ PASS  | Speed debuff capped at -2       |
+| Cipher Burst      | Encrypted  | 30     | 2-3   | 3  | ✓ PASS  | Buff negation utility           |
+| Cinder Burst      | Burned     | 25     | 2-4   | 3  | ✓ PASS  | Atk debuff capped               |
+| Frost Shards      | Frozen     | 17     | 2-4   | 3  | ✓ PASS  | Speed debuff per hit            |
+| Chain Fork        | Forked     | 17     | 2-4   | 3  | ✓ PASS  | Capped at 4 hits (fixed)        |
+| Pickaxe Flurry    | Mined      | 20     | 2-4   | 3  | ✓ PASS  | Atk buff capped at +2           |
+| Interest Strike   | Staked     | 25     | 2-3   | 3  | ✓ PASS  | AP gain capped at 2             |
+| Compression Burst | Compressed | 30     | 2     | 3  | ✓ PASS  | Fixed 2 hits (fixed)            |
+| Zipped Strikes    | Compressed | 35     | 2     | 2  | ✓ PASS  | Fixed 2 hits, Speed buff        |
+| Multi-Thread Shot | Bot        | 17     | 2-3   | 2  | ✓ PASS  | AP gain 10% per hit             |
+| Glitch Barrage    | Glitched   | 20     | 2-4   | 3  | ✓ PASS  | Chaotic targeting               |
+| Shard Scatter     | Shard      | 25     | 2-3   | 3  | ✓ PASS  | AOE Eva debuff                  |
+| Lucky Scatter     | Meme       | 25     | 1-4   | 3  | ✓ PASS  | Capped at 4 hits (fixed)        |
+| Blade Flurry      | Bot        | 25     | 3     | 2  | ✓ PASS  | Kitsauto exclusive              |
+
+VERDICT: ALL 17 multi-hit moves comply with power/AP guidelines.
+Average per-hit power: ~22 (typeless 10-13; typed 17-35)
+All variable-hit moves capped at 4-5 maximum hits.
+
+===============================================================================
+2. PASSIVE RESISTANCE AUDIT
+===============================================================================
+
+Requirement: Passive mitigation must not exceed 25-30% unconditional, 40% conditional.
+Reference: Cassette Beasts "Hardback" passive = type-specific 25% + minor Def.
+
+| Passive           | Type       | Mitigation | Condition           | Status  |
+|-------------------|------------|------------|---------------------|---------|
+| Defensive Reflex  | Typeless   | 20%        | On hit received     | ✓ PASS  |
+| Guard Posture     | Typeless   | 25%        | Next hit only       | ✓ PASS  |
+| Immutable Ledger  | Block      | 20%        | On hit received     | ✓ PASS  |
+| Firewall Passive  | Encrypted  | 25%        | vs Projectile only  | ✓ PASS  |
+| Ash Guard         | Burned     | 20%        | Ally targeted       | ✓ PASS  |
+| Ice Wall          | Frozen     | 25%        | 1 turn, conditional | ✓ PASS  |
+| Compound Guard    | Staked     | 20%        | Ally + Def stage    | ✓ PASS  |
+| Blockade          | Block      | 25%        | 2 turns or 2 hits   | ✓ PASS  |
+| Barrier Wall      | Typeless   | 25%        | 2 turns or 2 hits   | ✓ PASS  |
+| Shattered Armor   | Shard      | 25%        | Super-effective only| ✓ PASS  |
+| Vapor Barrier     | Gas        | 100%*      | 1 hit only          | ✓ PASS  |
+| Lattice Guard     | Shard      | 40 dmg cap | Flat absorption     | ✓ PASS  |
+
+*Vapor Barrier blocks 1 hit completely but is consumed; this is acceptable as a one-time shield.
+
+VERDICT: All mitigation values within CB-comparable standards.
+Maximum unconditional: 25%
+Maximum conditional: 25% (super-effective trigger)
+No passive grants >30% unconditional mitigation.
+
+===============================================================================
+3. MEME HIGH-RISK/HIGH-REWARD AUDIT
+===============================================================================
+
+Requirement: Meme moves must have soft-fail outcomes, not crippling penalties.
+
+| Move             | Risk                  | Reward                | Soft-Fail?  |
+|------------------|-----------------------|-----------------------|-------------|
+| Viral Surge      | 50% lose 1 AP         | 50% gain +2 AP        | ✓ YES       |
+|                  |                       | Always +1 random stat | Guaranteed minimum |
+| Dice Roll        | 30% debuff foe        | 40% heal, 30% AP gift | ✓ YES       |
+|                  | (not self-harm)       |                       | No self-penalty |
+| Jackpot Shot     | 25% x0.5 damage       | 25% x2 damage         | ✓ YES       |
+|                  |                       | 50% normal            | Median is average |
+| All-In           | 25-50% recoil         | 130 power, AP refund  | ✓ YES       |
+|                  | Non-lethal (floor 1HP)|                       | Cannot KO self |
+| Wildcard Swap    | May swap good buff    | May gain good buff    | ✓ YES       |
+|                  |                       |                       | Zero-sum exchange |
+| Double-or-Nothing| 40% lose 1 AP         | 60% gain +1 AP        | ✓ YES       |
+|                  | Floor 0 AP            | Drain immunity on loss| Positive EV |
+| Meme Momentum    | Miss = -1 AP          | Crit = +1 AP          | ⚠ WATCH     |
+|                  | (Mythic rarity)       |                       | High skill floor |
+| Hype Train       | Resets on miss        | +20%/hit (cap +100%)  | ✓ YES       |
+|                  |                       |                       | Low floor, high ceiling |
+| Lucky Scatter    | 1-4 hits variance     | Each hit 25% buff     | ✓ YES       |
+|                  |                       |                       | Minimum 1 hit guaranteed |
+
+VERDICT: All Meme moves have acceptable risk/reward profiles.
+- NO move can cause instant death to user
+- All-In is non-lethal (floor 1 HP)
+- Double-or-Nothing has positive expected value (60/40 split)
+- Meme Momentum is Mythic (very rare) and skill-dependent
+
+RECOMMENDATION: Meme Momentum could add "floor 0 AP" clause for safety.
+
+===============================================================================
+4. CHEMISTRY-ONLY COMPLIANCE AUDIT
+===============================================================================
+
+Requirement: No inscription may directly apply ChemistryOnly statuses.
+
+ChemistryOnly Statuses (FORBIDDEN for direct application):
+Pumped, Drained, Rugged, Overclocked, Leaked, Defueled, Jammed, Slowed,
+Shattered, FOMO, Siphoned, Anchored, Amplified, Dusted, Backlash[Type],
+Corroded, Drip, Reinforced, Firewall, Splinter, [Type] Coating,
+Hyped [Type] Coating, Cascade Failure, Isolated.
+
+Legacy ChemistryOnly IDs are migration/read compatibility only.
+
+FULL AUDIT PERFORMED:
+- Searched all 175 inscriptions for forbidden status names
+- Result: ZERO direct applications found
+
+General Statuses Used (ALLOWED):
+Gas Spike, FUD, Encrypted Seal, Burned Tokens, Frozen Assets, Overleveraged,
+51% Attacked, MEV Extracted, Bot Swarm, Shard Partition, Thread Lock
+
+VERDICT: ✓ FULL COMPLIANCE — No ChemistryOnly status violations.
+
+===============================================================================
+5. TYPELESS vs TYPED POWER AUDIT (Two-Tier System v1.3)
+===============================================================================
+
+Requirement: Two-tier power scale for early-game pacing and typed differentiation.
+Target: Typeless common ~5-7 hit KO at 0 stars; typed moves retain meaningful chemistry advantage.
+
+POWER CAP TABLE (Post-Rebalance):
+| Category                            | Power Range   | Expected KO Turns (0 stars) |
+|------------------------------------|---------------|-----------------------------|
+| Typeless Common — single hit       | 20-40         | 5-7 hits                    |
+| Typeless Common — multi-hit/hit    | 10-15         | 5-7 hits (aggregate)        |
+| Typeless Common — AoE single hit   | 20-30         | 5-7 hits                    |
+| Typed Common — single hit          | 50-100        | 2-4 hits (no chemistry)     |
+| Typed Common — multi-hit/hit       | 15-25         | 3-5 hits                    |
+| Typed Uncommon/Rare — single hit   | 65-100        | 2-4 hits                    |
+| Exclusive/Signature moves         | 85-100        | 2-3 hits                    |
+| Meme All-In (all-AP + recoil)      | 130           | 1-2 hits (high risk)        |
+
+TYPELESS DAMAGING MOVES (Post-Rebalance):
+| Move             | Power | Status  |
+|------------------|-------|---------|
+| Baseline Striker | 40    | ✓ PASS  |
+| Baseline Slam    | 40    | ✓ PASS  |
+| Baseline Jab     | 20    | ✓ PASS  | (1 AP priority)
+| Baseline Shot    | 35    | ✓ PASS  |
+| Baseline Snipe   | 40    | ✓ PASS  |
+| Baseline Volley  | 20    | ✓ PASS  | (AOE)
+| Baseline Blast   | 30    | ✓ PASS  | (AOE)
+| Baseline Barrage | 13x3  | ✓ PASS  | (multi-hit)
+| Baseline Thrust  | 35    | ✓ PASS  |
+| Baseline Multi   | 10x5  | ✓ PASS  | (multi-hit)
+
+Highest single-hit typeless power: 40 ✓
+
+TYPED DAMAGING MOVES (sample, Post-Rebalance):
+| Move             | Type       | Power | Status  |
+|------------------|------------|-------|---------|
+| Coordinated Shot | Node       | 85    | ✓ PASS  |
+| Volatile Shot    | Gas        | 95    | ✓ PASS  |
+| Solid Strike     | Block      | 85    | ✓ PASS  |
+| Cipher Shot      | Encrypted  | 85    | ✓ PASS  |
+| Finish Burn      | Burned     | 85    | ✓ PASS  | (+50% conditional)
+| Frost Shot       | Frozen     | 85    | ✓ PASS  |
+| Recoil Strike    | Forked     | 100   | ✓ PASS  | (15% recoil)
+| Deep Dig         | Mined      | 95    | ✓ PASS  |
+| Stake Strike     | Staked     | 85    | ✓ PASS  |
+| Precision Strike | Compressed | 85    | ✓ PASS  |
+| Automation Burst | Bot        | 50    | ✓ PASS  | (AOE)
+| Bug Payoff       | Glitched   | 85    | ✓ PASS  | (+50% conditional)
+| Partition Shot   | Shard      | 85    | ✓ PASS  |
+| All-In           | Meme       | 130   | ✓ PASS  | (ALL AP cost)
+
+VERDICT: Two-tier power scaling enforced.
+- Typeless common cap: 40 (5-7 hit KO target at 0 stars)
+- Typed standard: 50-100 (meaningful chemistry differentiation)
+- All-In (130) appropriately gated by ALL AP cost + recoil
+
+NODE GAP RESOLUTION:
+Node previously had no defined chemistry counter. Locked PvP adjustment added:
+Glitched -> Node: Corroded x2 (network exploit erodes defense).
+See COMBAT_Chemistry.txt §8 and COMBAT_Interaction_Matrix_v0.csv.
+
+===============================================================================
+6. BUILD DIVERSITY ANALYSIS
+===============================================================================
+
+Max-evolved Chainling: 16 slots
+Available inscriptions: 175 total
+
+SLOT COMPOSITION FOR A SINGLE-TYPE CHAINLING:
+- Type pool: ~9-10 inscriptions
+- Typeless pool: 44 inscriptions
+- Total available: ~53-54 inscriptions
+
+Can fill 16 slots? YES (3x coverage)
+Overlap risk? LOW (no duplicate equip rule)
+
+ARCHETYPE VIABILITY CHECK:
+
+| Archetype       | Required Moves              | Available | Viable? |
+|-----------------|-----------------------------|-----------| --------|
+| Burst DPS       | High power, priority, crit  | 15+       | ✓ YES   |
+| Tank/Stall      | Mitigation, heal, barriers  | 18+       | ✓ YES   |
+| AP Control      | AP drain, denial, generation| 35+       | ✓ YES   |
+| Speed Control   | Speed buffs/debuffs, prio   | 12+       | ✓ YES   |
+| Debuff Stacker  | Multi-debuff, extend, payoff| 25+       | ✓ YES   |
+| Team Support    | Heals, buffs, redirects     | 22        | ✓ YES   |
+| Hybrid Attacker | Mix of DMG + UTIL           | 130+      | ✓ YES   |
+
+CATEGORY GAP ANALYSIS:
+
+| Category      | Count | Slots Needed | Gap?       |
+|---------------|-------|--------------|------------|
+| Damaging      | 56    | 4-6          | None       |
+| Utility       | 74    | 4-8          | None       |
+| Support       | 22    | 2-4          | ⚠ THIN     |
+| Passive       | 23    | 2-4          | None       |
+| Healing       | 7     | 2-3          | ⚠ THIN     |
+
+IDENTIFIED GAPS:
+1. Support moves (22) — Adequate but concentrated in few types
+2. Healing moves (7 total) — Most are typeless; typed healing sparse
+3. Triggered heals — Only Emergency Recovery, Compound Returns
+4. Miss-punish moves — Only Network Response, Reactive Ping
+5. Low-HP triggers — Only Emergency Recovery, Crystal Focus, Recursive Backup
+
+RECOMMENDATIONS FOR GAP FILLING (see Section 7):
+- Add 2-3 typed healing moves to types lacking support (Forked, Mined, Bot, Glitched, Meme)
+- Add 1-2 more miss-punish inscriptions
+- Add 1-2 more low-HP threshold triggers
+
+===============================================================================
+7. RECOMMENDED ADDITIONS (Category Gaps)
+===============================================================================
+
+HEALING GAP FILLS (5 new moves):
+
+1. Forked - "Surge Recovery" [SUP]
+   [2 AP] — Heal self 15% MaxHP; if Speed > target's: heal additional 10%
+   Rationale: Forked lacks any healing; ties to speed identity.
+
+2. Mined - "Ore Restoration" [SUP]  
+   [2 AP] — Heal ally 20% MaxHP; +5% per debuff removed from ally
+   Rationale: Mined lacks support; ties to extraction theme.
+
+3. Bot - "Self-Repair Protocol" [UTIL]
+   [1 AP] — Heal 15% MaxHP at end of turn if no damage dealt this turn
+   Rationale: Bot lacks self-sustain; fits automation patience theme.
+
+4. Glitched - "Error Correction" [SUP]
+   [2 AP] — Heal ally 15% MaxHP; 50% chance to remove or apply random debuff
+   Rationale: Glitched lacks support; maintains chaos theme.
+
+5. Meme - "Meme Magic" [SUP]
+   [2 AP] — 50% heal ally 30% MaxHP; 50% heal self 15% MaxHP
+   Rationale: Meme lacks support; high variance fits identity.
+
+TRIGGERED MOVE GAP FILLS (3 new moves):
+
+6. Typeless - "Spite Counter" [PAS][TRIG]
+   On receiving debuff: 25% chance to apply same debuff to attacker
+   Rationale: More debuff punishment options.
+
+7. Typeless - "Desperation Surge" [PAS][TRIG]
+   When HP drops below 33%: +2 Atk stages, +1 AP (once per battle)
+   Rationale: Low-HP aggression option.
+
+8. Typeless - "Momentum Shift" [UTIL][TRIG]
+   [1 AP] — If you were hit last turn: +2 Speed, +1 Atk stages
+   Rationale: Reactive tempo swing.
+
+===============================================================================
+8. COMPETITIVE BENCHMARKING (vs Cassette Beasts)
+===============================================================================
+
+CB POPULAR STRATEGIES MAPPED TO CHAINBOUND:
+
+| CB Strategy          | CB Moves                | Chainbound Equivalent       |
+|----------------------|-------------------------|-----------------------------|
+| Status Cycling       | Poison + Burn stacking  | Debuff Script + Script Loop |
+| AP Denial            | Stunlock combos         | Thread Lock + Memory Leak   |
+| Wall Breaking        | Multi-hit stickers      | All 17 multi-hit moves      |
+| Speed Control        | Haste/Slow effects      | Frozen type kit             |
+| Buff Transfer        | Relay stickers          | Relay Packet, Effect Relay  |
+| Heal Loop            | Regen + barriers        | Sustain Regen + barriers    |
+| High-Risk Burst      | Gambit stickers         | Meme type kit               |
+
+CB UNDERUSED MECHANICS TO REIMAGINE:
+
+1. Random-Effect Moves — Already covered by Glitched + Meme types
+2. Delayed-Action Moves — Could add "next turn" effects:
+   - "Scheduled Strike" — Deals damage at end of NEXT turn (ignores barriers)
+   - "Time Bomb" — Apply status that deals damage after 2 turns
+
+3. Position-Based Effects — CB doesn't emphasize this; opportunity:
+   - "Frontline Bonus" — +damage if in front slot
+   - "Backline Cover" — +mitigation if in back slot
+
+4. Combo Finishers — CB has sticker synergies; consider:
+   - "Execution" — +100% damage if target has 3+ debuffs (already Bug Payoff)
+   - "Perfect Strike" — Guaranteed crit if all stats are buffed
+
+===============================================================================
+9. FINAL VERDICT
+===============================================================================
+
+BALANCE STATUS: ✓ APPROVED FOR PRODUCTION
+
+All core requirements met:
+✓ Multi-hit moves properly power-capped
+✓ Passive resistances within 25-30% bounds
+✓ Meme moves have soft-fail mechanics
+✓ No ChemistryOnly status violations
+✓ Typeless/Typed power scaling enforced
+✓ Build diversity supports all major archetypes
+
+MINOR GAPS IDENTIFIED:
+- Healing moves thin (7 total)
+- Some types lack support options
+- Miss-punish and low-HP triggers limited
+
+RECOMMENDATIONS:
+1. Add 5-8 gap-fill inscriptions (see Section 7)
+2. Add "floor 0 AP" clause to Meme Momentum for safety
+3. Consider delayed-action moves for future expansion
+
+READY FOR:
+- Inscription Modifiers Spec (Spec 05)
+- Species-Specific Pools Design
+- Competitive Testing Phase
+
+===============================================================================
+END OF BALANCE REVIEW

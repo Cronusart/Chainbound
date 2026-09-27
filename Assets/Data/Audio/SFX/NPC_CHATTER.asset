@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e411382a9c8eba546a30b4ce6573732f, type: 3}
+  m_Name: NPC_CHATTER
+  m_EditorClassIdentifier: 
+  id: 
+  clips:
+  - {fileID: 8300000, guid: 6b5b33f6f79ec3745aa50d47ecb3a1ec, type: 3}
+  - {fileID: 8300000, guid: f05d00d78a6f0944d8e12fad5b4f5086, type: 3}
+  - {fileID: 8300000, guid: 518e908acb3b8c9439fca114c035e15f, type: 3}
+  - {fileID: 8300000, guid: da47d44b1867ed44fbd022bce813b37a, type: 3}
+  outputBus: 0
+  loop: 1
+  volumeMin: 0.27
+  volumeMax: 0.28
+  pitchMin: 0.85
+  pitchMax: 1.05
+  is3D: 0
+  spatialBlend: 1
+  minDistance: 1
+  maxDistance: 500
+  polyphonyKey: 
+  maxInstances: 0
+  cooldownSeconds: 0

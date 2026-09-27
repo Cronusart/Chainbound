@@ -1,0 +1,2 @@
+-keep class com.signaljam.solana.mwa.** { *; }
+-keep interface com.signaljam.solana.mwa.** { *; }

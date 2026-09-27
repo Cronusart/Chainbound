@@ -1,0 +1,36 @@
+{
+  "name": "Baseline Shot",
+  "symbol": "CBMOVE",
+  "description": "Chainbound Stamped move. Library card art. Off-chain display metadata; on-chain authority remains Core cb.* attributes.",
+  "image": "https://jhzqcbrzkausrrtcavuu.supabase.co/storage/v1/object/public/chainbound-ownership-metadata/stamped/smoke_market_1024.png",
+  "attributes": [
+    { "trait_type": "move_id", "value": "baseline_shot" },
+    { "trait_type": "type", "value": "Staked" },
+    { "trait_type": "power", "value": "35" },
+    { "trait_type": "accuracy", "value": "100" },
+    { "trait_type": "mod_1", "value": "Overclock" },
+    { "trait_type": "mod_2", "value": "" },
+    { "trait_type": "rolled_by", "value": "mando" },
+    { "trait_type": "stamped_by", "value": "7xK1...pQ9s" }
+  ],
+  "properties": {
+    "category": "image",
+    "files": [
+      {
+        "uri": "https://jhzqcbrzkausrrtcavuu.supabase.co/storage/v1/object/public/chainbound-ownership-metadata/stamped/smoke_front_1mod.png",
+        "type": "image/png",
+        "note": "1280x640 inventory master"
+      },
+      {
+        "uri": "https://jhzqcbrzkausrrtcavuu.supabase.co/storage/v1/object/public/chainbound-ownership-metadata/stamped/smoke_square_1280.png",
+        "type": "image/png",
+        "note": "1280x1280 wallet square"
+      },
+      {
+        "uri": "https://jhzqcbrzkausrrtcavuu.supabase.co/storage/v1/object/public/chainbound-ownership-metadata/stamped/smoke_market_1024.png",
+        "type": "image/png",
+        "note": "1024x1024 marketplace image"
+      }
+    ]
+  }
+}

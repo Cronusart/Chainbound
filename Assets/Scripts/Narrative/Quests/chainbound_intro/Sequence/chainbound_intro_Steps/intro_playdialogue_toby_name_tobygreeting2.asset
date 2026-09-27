@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c98dc1b7c8af7d458c8defe1829276d, type: 3}
+  m_Name: intro_playdialogue_toby_name_tobygreeting2
+  m_EditorClassIdentifier: 
+  stepName: intro_playdialogue_toby_greet2
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: ba39bc6a-20cf-48ed-8a96-193dca32b964
+  dialogueSequence: {fileID: 11400000, guid: 5fc5c980aa1f1ee498caf4e5490039a9, type: 2}
+  lockInputDuringDialogue: 1
+  useSpeakerCameraBridge: 1
+  persistSpeakerCameraAfterDialogue: 0

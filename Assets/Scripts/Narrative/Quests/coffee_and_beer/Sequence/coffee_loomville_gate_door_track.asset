@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_loomville_gate_door_track
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_loomville_gate_door_track
+  startCheckpointId: 
+  safeResumeLabel: door_loop
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 0
+  autoStartQuestId: 
+  autoStartLifecycleMask: 0
+  autoStartSkipWorldFlagKey: 
+  steps:
+  - {fileID: 11400000, guid: a9d5c28905933ec4198e9a0fd6ee2b87, type: 2}
+  - {fileID: 11400000, guid: 5297372c4621c7449b4bd048e005a81b, type: 2}
+  - {fileID: 11400000, guid: a27e1dbf7c379b14993e44d3fb8242a7, type: 2}
+  - {fileID: 11400000, guid: fc2d079a138324943ab92125e7771d03, type: 2}
+  - {fileID: 11400000, guid: 3eceb0ce5b5c33040a92dc76db9c1967, type: 2}
+  - {fileID: 11400000, guid: 121b713db12c5a14e9adf56cb401f905, type: 2}
+  - {fileID: 11400000, guid: 63b9cce1b512e4244b864b339e3929b3, type: 2}

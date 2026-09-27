@@ -1,0 +1,21 @@
+{
+  "moveId": "self_repair_protocol",
+  "moveName": "Self-Repair Protocol",
+  "moveRarity": "Uncommon",
+  "typeId": "None",
+  "typeIconPath": "Assets/Sprites/UI/typeless.png",
+  "category": "utility",
+  "power": 0,
+  "accuracy": 0,
+  "effectLine": "Immediate self-repair: heal 15% MaxHP.",
+  "mods": [],
+  "provenance": {
+    "rolledBy": "mando",
+    "owners": ["mando"],
+    "events": [
+      { "type": "rolled", "actor": "mando", "at": "2026-09-21T00:00:00Z" }
+    ]
+  },
+  "variant": "library_card_v1",
+  "side": "front"
+}

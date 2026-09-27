@@ -1,0 +1,23 @@
+{
+    "name": "SignalJam.UI.MenuNavigation",
+    "rootNamespace": "SignalJam.UI.MenuNavigation",
+    "references": [
+        "Chainbound.Combat.Core",
+        "Chainbound.Combat.Runtime",
+        "Chainbound.World.TimeOfDay",
+        "SignalJam.UI.MobileControls",
+        "SignalJam.VisualFx",
+        "DG.Tweening.Modules",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

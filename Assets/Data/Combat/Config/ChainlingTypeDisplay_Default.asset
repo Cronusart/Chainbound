@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a88bab87775546629154b6895e3605c1, type: 3}
+  m_Name: ChainlingTypeDisplay_Default
+  m_EditorClassIdentifier: 
+  entries:
+  - type: 1
+    displayName: Node
+    shortDescription: Stable and resilient. Anchors the network and holds the line.
+    badgeColor: {r: 0.2, g: 0.57, b: 0.9, a: 1}
+  - type: 2
+    displayName: Gas
+    shortDescription: Volatile and quick. Builds pressure for explosive turns.
+    badgeColor: {r: 0.96, g: 0.64, b: 0.18, a: 1}
+  - type: 3
+    displayName: Block
+    shortDescription: Heavy and structured. Wins by absorbing hits and standing firm.
+    badgeColor: {r: 0.44, g: 0.53, b: 0.71, a: 1}
+  - type: 4
+    displayName: Encrypted
+    shortDescription: Secretive and slippery. Hard to read, harder to pin down.
+    badgeColor: {r: 0.35, g: 0.3, b: 0.73, a: 1}
+  - type: 5
+    displayName: Burned
+    shortDescription: Hot and aggressive. Trades safety for raw damage output.
+    badgeColor: {r: 0.86, g: 0.27, b: 0.18, a: 1}
+  - type: 6
+    displayName: Frozen
+    shortDescription: Cold and controlling. Slows momentum and locks options down.
+    badgeColor: {r: 0.39, g: 0.82, b: 0.96, a: 1}
+  - type: 7
+    displayName: Forked
+    shortDescription: Adaptive and split-minded. Thrives when the battle branches.
+    badgeColor: {r: 0.61, g: 0.44, b: 0.89, a: 1}
+  - type: 8
+    displayName: Mined
+    shortDescription: Patient and industrious. Turns steady effort into long-term value.
+    badgeColor: {r: 0.73, g: 0.54, b: 0.2, a: 1}
+  - type: 9
+    displayName: Staked
+    shortDescription: Committed and durable. Gains strength by staying in play.
+    badgeColor: {r: 0.17, g: 0.66, b: 0.42, a: 1}
+  - type: 10
+    displayName: Compressed
+    shortDescription: Dense and efficient. Packs impact into small, precise windows.
+    badgeColor: {r: 0.28, g: 0.71, b: 0.66, a: 1}
+  - type: 11
+    displayName: Bot
+    shortDescription: Relentless and systematic. Pressures opponents through routine.
+    badgeColor: {r: 0.66, g: 0.69, b: 0.76, a: 1}
+  - type: 12
+    displayName: Glitched
+    shortDescription: Chaotic and unstable. Breaks patterns and creates strange openings.
+    badgeColor: {r: 0.9, g: 0.2, b: 0.56, a: 1}
+  - type: 13
+    displayName: Shard
+    shortDescription: Sharp and fragmentary. Excels at piercing weak points.
+    badgeColor: {r: 0.82, g: 0.8, b: 0.9, a: 1}
+  - type: 14
+    displayName: Meme
+    shortDescription: Wild and infectious. Wins through momentum, surprise, and style.
+    badgeColor: {r: 0.97, g: 0.48, b: 0.69, a: 1}

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c98dc1b7c8af7d458c8defe1829276d, type: 3}
+  m_Name: intro_playdial_ledge
+  m_EditorClassIdentifier: 
+  stepName: intro_playdial_ledge
+  enableDebugLogs: 0
+  executeOnce: 1
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: c1148dcc-d355-4dbd-88ed-955bfd59aa4b
+  dialogueSequence: {fileID: 11400000, guid: 3ce7a9e448c288040b0741f304ae1749, type: 2}
+  lockInputDuringDialogue: 1
+  useSpeakerCameraBridge: 0

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chainbound.local/schema/library_card_render_input.json",
+  "title": "LibraryCardRenderInput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "moveId",
+    "moveName",
+    "typeId",
+    "typeIconPath",
+    "category",
+    "mods",
+    "provenance",
+    "variant"
+  ],
+  "properties": {
+    "moveId": { "type": "string", "minLength": 1 },
+    "moveName": { "type": "string", "minLength": 1 },
+    "typeId": { "type": "string", "minLength": 1, "description": "ChainlingType name, e.g. Staked, or None for typeless." },
+    "typeIconPath": { "type": "string", "minLength": 1 },
+    "category": { "type": "string", "enum": ["attack", "passive", "utility"] },
+    "power": { "type": "number" },
+    "accuracy": { "type": "number", "description": "0 or omitted means AUTO for attack cards." },
+    "effectLine": { "type": "string", "description": "ROLE/EFFECT copy for passive/utility; from FormatPowerOrEffectLabel." },
+    "mods": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slot", "id", "displayName"],
+        "properties": {
+          "slot": { "type": "integer", "enum": [1, 2] },
+          "id": { "type": "string" },
+          "displayName": { "type": "string" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rolledBy", "owners", "events"],
+      "properties": {
+        "rolledBy": { "type": "string" },
+        "stampedBy": { "type": "string" },
+        "owners": { "type": "array", "items": { "type": "string" } },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "actor", "at"],
+            "properties": {
+              "type": { "type": "string", "enum": ["rolled", "stamped", "transferred", "bound"] },
+              "actor": { "type": "string" },
+              "at": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "variant": { "type": "string", "minLength": 1, "description": "bodyTemplateId, e.g. library_card_v1" },
+    "side": { "type": "string", "enum": ["front", "back"], "default": "front" }
+  }
+}

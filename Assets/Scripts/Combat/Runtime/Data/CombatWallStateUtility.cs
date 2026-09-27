@@ -1,0 +1,152 @@
+using System;
+
+namespace Chainbound.Combat
+{
+    public static class CombatWallStateUtility
+    {
+        public static bool HasActiveWallState(ChainlingInstance chainling)
+        {
+            if (chainling == null)
+                return false;
+
+            if (CountActiveBarriers(chainling) > 0)
+                return true;
+
+            if (chainling.mitigationSources == null)
+                return false;
+
+            for (int i = 0; i < chainling.mitigationSources.Count; i++)
+            {
+                MitigationSource source = chainling.mitigationSources[i];
+                if (!IsActiveMitigation(source))
+                    continue;
+                if (IsWallTag(source.sourceTag) || IsWallTag(source.stackKey))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static int CountActiveBarriers(ChainlingInstance chainling)
+        {
+            if (chainling == null || chainling.barriers == null)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < chainling.barriers.Count; i++)
+            {
+                if (IsActiveBarrier(chainling.barriers[i]))
+                    count++;
+            }
+
+            return count;
+        }
+
+        public static string ResolveLatestWallSourceTag(ChainlingInstance chainling)
+        {
+            if (chainling == null)
+                return string.Empty;
+
+            if (chainling.mitigationSources != null)
+            {
+                for (int i = chainling.mitigationSources.Count - 1; i >= 0; i--)
+                {
+                    MitigationSource source = chainling.mitigationSources[i];
+                    if (!IsActiveMitigation(source))
+                        continue;
+                    if (!IsWallTag(source.sourceTag) && !IsWallTag(source.stackKey))
+                        continue;
+
+                    if (!string.IsNullOrWhiteSpace(source.sourceTag))
+                        return source.sourceTag.Trim();
+                    if (!string.IsNullOrWhiteSpace(source.stackKey))
+                        return source.stackKey.Trim();
+                }
+            }
+
+            if (chainling.barriers != null)
+            {
+                for (int i = chainling.barriers.Count - 1; i >= 0; i--)
+                {
+                    BarrierInstance barrier = chainling.barriers[i];
+                    if (!IsActiveBarrier(barrier))
+                        continue;
+                    if (!string.IsNullOrWhiteSpace(barrier.sourceTag))
+                        return barrier.sourceTag.Trim();
+                }
+            }
+
+            return string.Empty;
+        }
+
+        public static bool MoveDefinitionPlacesWall(MoveDefinitionSO definition)
+        {
+            if (definition == null)
+                return false;
+
+            if (definition.utilityEffects != null)
+            {
+                for (int i = 0; i < definition.utilityEffects.Count; i++)
+                {
+                    UtilityEffectPayload effect = definition.utilityEffects[i];
+                    if (effect == null)
+                        continue;
+                    if (effect.effectType == UtilityEffectType.MitigationWindow ||
+                        effect.effectType == UtilityEffectType.FullAbsorbBarrier ||
+                        effect.effectType == UtilityEffectType.DamageThresholdBarrier)
+                        return true;
+                }
+            }
+
+            if (definition.tags != null)
+            {
+                for (int i = 0; i < definition.tags.Count; i++)
+                {
+                    string tag = definition.tags[i];
+                    if (string.Equals(tag, "WALL", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(tag, "FULL_ABSORB_WALL", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool IsWallTag(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            return value.IndexOf("wall", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   value.IndexOf("barrier", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsActiveMitigation(MitigationSource source)
+        {
+            if (source == null)
+                return false;
+            if (source.turnsRemaining <= 0)
+                return false;
+            if (source.hitsRemaining == 0)
+                return false;
+            return source.mitigation > 0f;
+        }
+
+        private static bool IsActiveBarrier(BarrierInstance barrier)
+        {
+            return IsActiveBarrierPublic(barrier);
+        }
+
+        public static bool IsActiveBarrierPublic(BarrierInstance barrier)
+        {
+            if (barrier == null)
+                return false;
+            if (barrier.turnsRemaining == 0)
+                return false;
+            if (barrier.barrierType == BarrierType.SingleHit)
+                return barrier.hitsRemaining != 0;
+            if (barrier.barrierType == BarrierType.DamageThreshold)
+                return barrier.damageThreshold <= 0 || barrier.damageAbsorbed < barrier.damageThreshold;
+            return true;
+        }
+    }
+}

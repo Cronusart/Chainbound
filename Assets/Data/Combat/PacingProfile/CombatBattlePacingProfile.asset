@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e7481628e1adf4988c432f990defbf, type: 3}
+  m_Name: CombatBattlePacingProfile
+  m_EditorClassIdentifier: 
+  postSelectionConfirmDelay: 0.35
+  minStepDelay: 0.15
+  turnEndDelay: 0.4
+  moveAnnounceHold: 0.22
+  utilityCastHold: 0.33
+  damageHold: 0.25
+  healHold: 0.25
+  missDodgeHold: 0.25
+  apFeedbackHold: 0.33
+  statusLabelHold: 0.35
+  stageLabelHold: 0.35
+  passiveLabelHold: 0.35
+  modifierLabelHold: 0.35
+  noApHold: 0.4
+  barrierBlockedHold: 0.4
+  barrierRaisedHold: 0.35
+  swapSettleDelay: 1
+  faintPostImpactDelay: 0.25
+  showMoveCostApFeedback: 0
+  turnStartApGrantHold: 0.75
+  turnStartApOutlineFlashHoldScale: 0.75
+  batchTurnStartApHudRefresh: 1
+  apGainColor: {r: 0.56078434, g: 0.972549, b: 0.8862745, a: 0.95}
+  apDrainColor: {r: 0.9098039, g: 0.23137255, b: 0.23137255, a: 0.95}
+  apBlockedColor: {r: 0.55, g: 0.55, b: 0.65, a: 0.95}
+  buffColor: {r: 0.11764706, g: 0.7372549, b: 0.4509804, a: 0.95}
+  debuffColor: {r: 0.5647059, g: 0.36862746, b: 0.6627451, a: 0.95}
+  cleanseColor: {r: 0.56078434, g: 0.827451, b: 1, a: 0.95}
+  immuneColor: {r: 0.60784316, g: 0.67058825, b: 0.69803923, a: 0.95}
+  wallColor: {r: 0.8117647, g: 0.39607844, b: 0.49803922, a: 0.95}
+  wallBrokenColor: {r: 0.7019608, g: 0.21960784, b: 0.19215687, a: 0.95}
+  neutralLabelColor: {r: 1, g: 1, b: 1, a: 0.95}
+  outlineFlashWidthPixels: 1.2
+  outlineFlashSoftness: 0.45
+  outlineFlashFadeInSeconds: 0.12
+  outlineFlashFadeOutSeconds: 0.33

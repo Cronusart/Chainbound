@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27c97883930a49cfa762fac465f924c7, type: 3}
+  m_Name: intro_commit_starter_chainling
+  m_EditorClassIdentifier: 
+  stepName: intro_commit_starter_chainling
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 8bd5a6e9-9cae-4951-a0de-131df0671e56
+  useContextStarter: 1
+  starterVariable: starterSelected
+  displayNameVariable: starter_display_name
+  supabaseConfig: {fileID: 11400000, guid: ade43a952186e6e4cb200c77d99919b7, type: 2}

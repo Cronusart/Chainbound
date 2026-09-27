@@ -1,0 +1,146 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Validape
+  m_EditorClassIdentifier: 
+  speciesId: validape
+  displayName: Validape
+  description: It lives in noisy troops and never travels far from its kin. A blow
+    from its hammer is said to lift the spirits of every ape nearby.
+  primaryType: 1
+  secondaryType: 0
+  baseMaxHP: 127
+  baseMeleeAtk: 65
+  baseMeleeDef: 55
+  baseRangedAtk: 50
+  baseRangedDef: 55
+  baseSpeed: 55
+  maxEvolutionStages: 3
+  learnableMoves:
+  - {fileID: 11400000, guid: 57e0428359025ce4bbaf8a020a507ea4, type: 2}
+  - {fileID: 11400000, guid: fba942bbe71d8184a8c75e4bf92c2347, type: 2}
+  - {fileID: 11400000, guid: 89c3635410a3fe140a6491d4014241f4, type: 2}
+  - {fileID: 11400000, guid: 150004659b89d6e4b87e19ec416edeb5, type: 2}
+  - {fileID: 11400000, guid: 8296777aaecbac2429fb74a436115177, type: 2}
+  - {fileID: 11400000, guid: 104017aa41792f240bc50bdf8a9e310a, type: 2}
+  - {fileID: 11400000, guid: 8ba9f3a0ca92c8e41a545987f5e408a1, type: 2}
+  - {fileID: 11400000, guid: ad0ae5da05049a644a4dd59c640ec04d, type: 2}
+  - {fileID: 11400000, guid: 782a85b0f1c3aee4099628e14ec1b696, type: 2}
+  - {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
+  - {fileID: 11400000, guid: 5b9121e2417cdd840b4faf4ffdb81726, type: 2}
+  - {fileID: 11400000, guid: 537ae5c494b86374fa8371efddb763f2, type: 2}
+  - {fileID: 11400000, guid: a282430fa0d5eb7418f15ea92f87c0c1, type: 2}
+  - {fileID: 11400000, guid: 3d3ef18886f407040bc30e525abd4ab9, type: 2}
+  - {fileID: 11400000, guid: 48bc36ea910de11498e6ee165a662632, type: 2}
+  learnLevels: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  exclusiveMoves:
+  - {fileID: 11400000, guid: 3d3ef18886f407040bc30e525abd4ab9, type: 2}
+  - {fileID: 11400000, guid: 48bc36ea910de11498e6ee165a662632, type: 2}
+  flagshipMove: {fileID: 11400000, guid: 3d3ef18886f407040bc30e525abd4ab9, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 57e0428359025ce4bbaf8a020a507ea4, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: fba942bbe71d8184a8c75e4bf92c2347, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 89c3635410a3fe140a6491d4014241f4, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 150004659b89d6e4b87e19ec416edeb5, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 8296777aaecbac2429fb74a436115177, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 104017aa41792f240bc50bdf8a9e310a, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 8ba9f3a0ca92c8e41a545987f5e408a1, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: ad0ae5da05049a644a4dd59c640ec04d, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 782a85b0f1c3aee4099628e14ec1b696, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 5b9121e2417cdd840b4faf4ffdb81726, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 537ae5c494b86374fa8371efddb763f2, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: a282430fa0d5eb7418f15ea92f87c0c1, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 3d3ef18886f407040bc30e525abd4ab9, type: 2}
+    weight: 10
+    poolTag: 1
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 48bc36ea910de11498e6ee165a662632, type: 2}
+    weight: 10
+    poolTag: 1
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 1
+  defaultCaptureProfile: 1
+  combatRoleOverride: 7
+  designNotes: 'Starter. Exclusive moves: Validape Slam, Extend Protocol (Spec 06
+    v1.2).'

@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8fd18dff18841638ace5c2ece0a54e0, type: 3}
+  m_Name: BattleIntroVfx_Narrative
+  m_EditorClassIdentifier: 
+  panelTint: {r: 0.075, g: 0.06, b: 0.12, a: 0.96}
+  accentColor: {r: 0.78, g: 0.62, b: 1, a: 1}
+  textColor: {r: 0.98, g: 0.95, b: 1, a: 1}
+  textOutlineColor: {r: 0.04, g: 0, b: 0.09, a: 1}
+  textOutlineWidth: 0.17
+  anticipationDuration: 0.08
+  anticipationScale: 0.96
+  entryDuration: 0.24
+  entryEase: 27
+  entryOffset: {x: 0, y: -34}
+  overshootScale: 1.06
+  settleDuration: 0.12
+  settleEase: 6
+  holdDuration: 1.1
+  exitDuration: 0.18
+  exitEase: 8
+  exitOffset: {x: 0, y: 22}
+  bannerGlintFrames: []
+  bannerGlintFps: 12
+  bannerGlintDuration: 0.38
+  bannerGlintWidth: 106
+  bannerGlintColor: {r: 0.85, g: 0.72, b: 1, a: 0.56}
+  textPunchDuration: 0.24
+  textPunchScale: 0.16
+  textPunchStagger: 0.012
+  enableTextGlint: 1
+  textGlintDelay: 0.05
+  textGlintDuration: 0.36
+  textGlintWidth: 118
+  textGlintColor: {r: 1, g: 0.92, b: 1, a: 0.7}
+  enablePixelBurst: 1
+  pixelSweepPreset: {fileID: 11400000, guid: 7c9d4418e52c4fdba6b7134d2e851f92, type: 2}
+  pixelBurstColor: {r: 0.78, g: 0.62, b: 1, a: 1}
+  pixelBurstCount: 8
+  pixelBurstLifetime: 0.26
+  pixelBurstSpeed: 58
+  enableScreenPulse: 0
+  screenPulseColor: {r: 0.78, g: 0.62, b: 1, a: 0.06}
+  screenPulseDuration: 0.2

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a641389dfeefcb45b9da27d275eb49a, type: 3}
+  m_Name: intro_setquestobjective_jumpledge
+  m_EditorClassIdentifier: 
+  stepName: complete_jump_ledge
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 81eb1788-2833-4405-b08e-6d22869eed50
+  questId: chainbound_intro
+  objectiveId: jump_off_ledge
+  completeObjective: 1
+  addAmount: 1
+  autoCompleteQuest: 0

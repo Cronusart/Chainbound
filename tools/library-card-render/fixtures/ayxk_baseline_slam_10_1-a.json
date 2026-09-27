@@ -1,0 +1,44 @@
+﻿{
+    "moveName":  "Body Check",
+    "category":  "attack",
+    "typeIconPath":  "Assets/Sprites/UI/typeless.png",
+    "moveId":  "baseline_slam",
+    "variant":  "library_card_v1",
+    "mods":  [
+                 {
+                     "id":  "10.1-a",
+                     "effectValueLocked":  false,
+                     "effectUnit":  "%",
+                     "effectNoun":  "crit equalization",
+                     "effectValue":  50,
+                     "rarity":  "Rare",
+                     "effectDescription":  "Crit chance = 50% minus current crit% (inversely scales)",
+                     "slot":  1,
+                     "displayName":  "Equalizer"
+                 }
+             ],
+    "moveRarity":  "Common",
+    "provenance":  {
+                       "rolledBy":  "9zMw…VHUj",
+                       "events":  [
+                                      {
+                                          "actor":  "9zMw…VHUj",
+                                          "type":  "rolled",
+                                          "at":  "2026-09-26T10:00:00Z"
+                                      },
+                                      {
+                                          "actor":  "9zMw…VHUj",
+                                          "type":  "stamped",
+                                          "at":  "2026-09-26T10:38:50Z"
+                                      }
+                                  ],
+                       "stampedBy":  "9zMw…VHUj",
+                       "owners":  [
+                                      "9zMw…VHUj"
+                                  ]
+                   },
+    "power":  40,
+    "accuracy":  85,
+    "side":  "front",
+    "typeId":  "None"
+}

@@ -1,0 +1,23 @@
+{
+    "name": "SignalJam.UI.MenuNavigation.Editor",
+    "rootNamespace": "SignalJam.UI.MenuNavigation.Editor",
+    "references": [
+        "SignalJam.UI.MenuNavigation",
+        "Chainbound.Combat.Runtime",
+        "SignalJam.VisualFx",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

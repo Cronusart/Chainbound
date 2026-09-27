@@ -1,0 +1,311 @@
+# Signal Jam — New Game Intro Sequence Spec (v0.1)
+
+## Purpose
+Implement a clean, data-driven “New Game” onboarding sequence that spans multiple scenes (Bedroom → Loomville → Solana Labs), uses short monologues/dialogue beats, camera shots, movement locks, triggers, and a single “first save” moment tied to wallet after the player confirms their name.
+
+This spec focuses only on the systems needed to scaffold and execute the sequence without boxing us into hard-coded one-offs.
+
+---
+
+## Non-Goals (Explicitly Deferred)
+- Main Menu UI/UX (wallet connect, new/continue selection) beyond minimal stubs.
+- Full wallet integration + persistent save schema (we’ll define interfaces/hooks only).
+- Full encounter/battle/capture implementation (we’ll stub the first forced-run encounter and later random encounters).
+- Full quest UI and journal (we’ll implement a minimal quest state + event hooks).
+- Cinemachine Timeline cutscenes (optional later). For now, use a lightweight camera shot controller.
+
+---
+
+## High-Level Sequence (New Game Path)
+### Scene 0: Intro Cutscene (.mp4)
+1. Play video (skippable).
+2. On finish/skip → load Bedroom scene.
+
+### Scene 1: Bedroom (Wake-up)
+1. Spawn player in bedroom.
+2. Camera starts zoomed-in on player, then zooms out to full room (wake shot).
+3. Monologue: 2–3 dialogue boxes (“where am I?”).
+4. After monologue complete: enable player movement + interactions.
+5. Exit door trigger loads Loomville.
+
+### Scene 2: Loomville (Tutorial beats)
+1. On entering: show 1–3 monologue messages (movement locked).
+2. When player moves beyond a distance threshold from the house:
+   - Trigger scripted first encounter (forced outcome: RUN).
+3. Post-escape messages + camera pan to a “retreat ledge” target.
+4. Ledge hop triggers another zone; show message + camera pan to Solana Labs target.
+5. Player reaches Solana Labs and enters.
+
+### Scene 3: Solana Labs (Professor + Starter selection + First Save + Quest)
+1. Dialogue with professor (multi-line, blocking).
+2. Professor asks for player name (from name tag) → player input text.
+3. **First Save Gate**: only after name confirmation do we commit a saved profile tied to wallet.
+4. Professor directs player to select 1 of 3 starter Chainlings (ledger objects).
+5. Professor grants starter and gives first quest: “2 coffees + 1 beer from market.”
+6. Sequence ends; normal gameplay loop begins (exploration + quest + encounters).
+
+---
+
+## Primary Systems (Build These)
+### 1) Sequence Orchestration System (Core)
+**Goal:** A reusable way to author and run scripted sequences across scenes without hard-coding everything into scene-specific scripts.
+
+**Recommended approach**
+- A lightweight **SequenceRunner** that runs a list of “Steps” (ScriptableObject-driven).
+- Steps are discrete actions: LockInput, PlayDialogue, PlayCameraShot, WaitForTrigger, LoadScene, etc.
+- Each step reports completion asynchronously (Coroutine/UniTask pattern).
+
+**Key requirements**
+- Supports cross-scene continuation (persist sequence state or re-enter via “sequence checkpoint”).
+- Supports step parameters editable in inspector (no magic values in code).
+- Has robust “skip” and “resume” semantics where appropriate (video skip, dialogue skip, etc.).
+
+**Deliverables**
+- `SequenceRunner` (MonoBehaviour singleton or scene service)
+- `SequenceAsset` (ScriptableObject) = ordered list of steps
+- Step base type + concrete step implementations (see “Step Library” below)
+
+---
+
+### 2) Dialogue/Monologue System (Blocking, Data-Driven)
+**Goal:** Minimal but scalable dialogue system for monologue and NPC conversations.
+
+**Key requirements**
+- ScriptableObject-driven: text content, type speed, input to advance, optional speaker name.
+- “Blocking mode” that locks player movement while dialogue is active.
+- Emits events: OnDialogueStarted, OnLineShown, OnDialogueComplete.
+- Supports name input prompt step (text entry UI) and returns result to sequence state.
+
+**Deliverables**
+- `DialogueSequenceSO` + `DialogueLine`
+- `DialogueUIController`
+- `DialogueService` (API used by steps)
+- `NameInputUI` + `NameInputResult`
+
+---
+
+### 3) Player Input Lock / Gameplay Mode Gate
+**Goal:** Centralized control of player input enabling/disabling so cutscenes/dialogue don’t fight each other.
+
+**Key requirements**
+- Token-based lock system (stackable):
+  - `AcquireLock(reason)` returns handle; handle dispose releases.
+- Supports separate channels (optional):
+  - Movement lock, Interaction lock, Full lock.
+- Integrates with PlayerInput / custom controller.
+
+**Deliverables**
+- `InputLockService`
+- Integration in player controller: reads lock state before moving/interacting
+
+---
+
+### 4) Camera Shot System (Cinematic Zoom/Pan, Then Release)
+**Goal:** Play simple camera shots during intro beats (zoom in/out, pan to target), then return control to normal follow camera.
+
+**Key requirements**
+- Shot presets authored in inspector/ScriptableObject:
+  - duration, easing, ortho size/FOV, offset, look target, optional hold.
+- API supports:
+  - Focus on target Transform
+  - Zoom to size
+  - Pan to world point/target
+  - Restore follow camera
+
+**Deliverables**
+- `CameraShotController`
+- `CameraShotPresetSO`
+- Sequence steps: `Step_PlayCameraShot`, `Step_RestoreCameraFollow`
+
+---
+
+### 5) Scene Transition & Spawn System (Deterministic New Game Flow)
+**Goal:** Load scenes with fade and spawn player at correct entry points.
+
+**Key requirements**
+- `SceneTransitionManager` with fade in/out + async load.
+- “Spawn points” by ID in each scene; player spawns by requested ID.
+- Persist minimal “SequenceState” across scenes:
+  - current sequence id, checkpoint id, key variables (playerName, starterPicked, etc.)
+
+**Deliverables**
+- `SceneTransitionManager`
+- `SpawnPoint` component (string id)
+- `SpawnService` (spawns player at id)
+- `SequenceState` (persisted in DontDestroyOnLoad service)
+
+---
+
+### 6) Trigger & Proximity Event System (Distance/Area Gates)
+**Goal:** Trigger tutorial beats when player crosses thresholds.
+
+**Key requirements**
+- Trigger zones by collider OR distance-from-point check.
+- Each trigger fires once and is “armable” by sequences.
+- Supports referencing in sequence steps (WaitForTrigger, WaitForDistanceFrom).
+
+**Deliverables**
+- `SequenceTrigger` (collider trigger with id)
+- `DistanceTrigger` (point + radius + once)
+- Sequence steps: `Step_WaitForTrigger`, `Step_WaitForDistance`
+
+---
+
+### 7) Encounter Stubs (Forced Run + Later Hook)
+**Goal:** Support the planned first encounter as a scripted beat even though battle scene is not built.
+
+**Key requirements**
+- A stub “EncounterService” that can:
+  - StartEncounter(encounterId)
+  - Return outcome (ForcedRun, etc.)
+- For now, implement a placeholder UI prompt and immediate return outcome.
+
+**Deliverables**
+- `EncounterService` (stub)
+- Sequence step: `Step_StartEncounter`
+- Outcome enum: `EncounterOutcome { ForcedRun, Win, Lose, Capture }`
+
+---
+
+### 8) Save/Wallet Gate (Interface + First Save Checkpoint)
+**Goal:** Enforce “no save until name entered” and establish hooks for wallet-based saving later.
+
+**Key requirements**
+- `ISaveService` interface with:
+  - `bool HasProfile()`
+  - `void CommitNewProfile(ProfileData data)` (first save)
+  - `void SaveCheckpoint(CheckpointData data)` (future)
+- For now, implement local stub service; later wire to wallet.
+- Sequence enforces:
+  - If game exits before name step completes → no commit.
+  - After name confirmed → commit profile.
+
+**Deliverables**
+- `ISaveService` + `LocalSaveServiceStub`
+- Data models: `ProfileData` (playerName, timestamp, walletId placeholder)
+- Sequence step: `Step_CommitFirstSave`
+
+---
+
+### 9) Starter Selection System (3 Ledgers → Choose One)
+**Goal:** Simple interactable selection step with clear extensibility.
+
+**Key requirements**
+- 3 ledger objects in scene with `StarterOption` component (id + Chainling reference).
+- UI prompts: “Pick one” then confirm.
+- Sequence receives selected starter id and stores in state.
+
+**Deliverables**
+- `StarterOption` component
+- `StarterSelectionUI`
+- Sequence step: `Step_SelectStarterChainling`
+
+---
+
+### 10) Minimal Quest State (Coffee + Beer Task)
+**Goal:** Create the first quest as a state flag + objective counters (no full quest journal yet).
+
+**Key requirements**
+- Quest state stored in a `QuestService`:
+  - `StartQuest(questId)`
+  - `SetObjectiveProgress(objectiveId, amount)`
+  - `CompleteQuest(questId)`
+- Triggers/shops can call progress updates later.
+- For now, start quest at end of professor dialogue.
+
+**Deliverables**
+- `QuestService` (minimal)
+- Data: `QuestDefinitionSO` + objectives
+- Sequence step: `Step_StartQuest`
+
+---
+
+## Step Library (Sequence Steps to Implement)
+1. `Step_PlayVideoCutscene` (mp4, skippable)
+2. `Step_LoadScene` (with spawn id)
+3. `Step_LockInput` / `Step_UnlockInput` (token-based)
+4. `Step_PlayCameraShot` (zoom/pan)
+5. `Step_RestoreCameraFollow`
+6. `Step_PlayDialogue` (blocking)
+7. `Step_PromptNameInput` (returns playerName)
+8. `Step_WaitForTrigger`
+9. `Step_WaitForDistanceFrom` (point + radius)
+10. `Step_StartEncounter` (stub; forced run)
+11. `Step_CommitFirstSave` (after name confirmed)
+12. `Step_SelectStarterChainling`
+13. `Step_StartQuest`
+
+---
+
+## Data & Configuration (Inspector/ScriptableObjects)
+### Required ScriptableObjects
+- `SequenceAsset`: list of steps + step configs
+- `DialogueSequenceSO`: lines + type speed + optional voice/sfx hooks later
+- `CameraShotPresetSO`: zoom/pan timings
+- `QuestDefinitionSO`: quest id + objectives
+
+### Scene Authored Objects
+- Bedroom:
+  - SpawnPoint: `bedroom_start`
+  - Trigger: `bedroom_exit_door`
+- Loomville:
+  - SpawnPoint: `loomville_from_bedroom`
+  - DistanceTrigger: `leave_house_radius`
+  - Trigger: `ledge_drop_zone`
+  - Trigger/Point: `solana_labs_focus_target`
+  - Trigger: `enter_solana_labs`
+- Solana Labs:
+  - SpawnPoint: `labs_entry`
+  - Professor interact or auto-start dialogue zone
+  - 3 Starter ledgers with `StarterOption`
+
+---
+
+## Sequence Assets (What We Will Author)
+### Sequence: `NewGame_Intro`
+**Segments**
+1. PlayCutscene → Load Bedroom
+2. Bedroom WakeShot → Monologue → Enable Control → Wait for Exit Door → Load Loomville
+3. Loomville Entry Monologue → Wait distance from house → Forced Run Encounter → Post messages + camera pan → Ledge drop → Message + camera pan labs → Enter labs
+4. Professor Dialogue → Name input → CommitFirstSave → Starter selection → Quest assignment → End
+
+**Notes**
+- Keep text lengths small and editable.
+- Each dialogue beat uses `DialogueSequenceSO` so type speed and content are inspector-configurable.
+
+---
+
+## Integration Points (Future-Proofing)
+- Save service is an interface so wallet integration can replace stub without refactor.
+- Encounter service is an interface so combat scene implementation can replace stub.
+- Quest service can grow into a full journal without rewriting the intro flow.
+- Camera shots can later be replaced with Cinemachine Timeline while keeping step APIs stable.
+
+---
+
+## Pitfalls to Avoid
+- Do not hard-code scene names and object references in scattered scripts.
+  - Use IDs (spawn ids, trigger ids, sequence ids).
+- Do not directly disable PlayerInput from multiple systems.
+  - Use a single InputLockService.
+- Do not bake the intro into scene-specific monobehaviours.
+  - Keep logic in SequenceRunner + configurable steps.
+
+---
+
+## Plan Mode Task List (Sequential)
+1. Implement `InputLockService` (token-based) + integrate with player controller
+2. Implement `DialogueService` + `DialogueUIController` + `DialogueSequenceSO`
+3. Implement `CameraShotController` + `CameraShotPresetSO` (DOTween-friendly)
+4. Implement `SceneTransitionManager` + `SpawnPoint` + `SpawnService`
+5. Implement `SequenceRunner` + `SequenceAsset` + step framework
+6. Implement core steps: LockInput, PlayDialogue, PlayCameraShot, LoadScene, WaitForTrigger/Distance
+7. Implement cutscene step: `Step_PlayVideoCutscene` (skippable)
+8. Implement encounter stub service + `Step_StartEncounter` (forced run)
+9. Implement name input UI + save interface + `Step_CommitFirstSave`
+10. Implement starter selection components + step
+11. Implement minimal quest service + `Step_StartQuest`
+12. Author `NewGame_Intro` SequenceAsset and wire scene IDs/triggers
+13. Playtest end-to-end and add debug overlay (current step, locks, time)
+
+---

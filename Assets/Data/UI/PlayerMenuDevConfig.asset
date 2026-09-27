@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f4e9a2c1d8b4036a5e2c9f81b4d6e03, type: 3}
+  m_Name: PlayerMenuDevConfig
+  m_EditorClassIdentifier: 
+  chainlingsDataSource: 0
+  bypassAvailabilityGate: 0
+  harnessSeed: 1776
+  generatedRosterSize: 9
+  generatedPartySize: 3
+  generatedMoveInventorySize: 30
+  regenerateHarnessOnEnable: 1
+  unlockAllCosmetics: 1
+  includeCycleReadyChainling: 1
+  allowEntangledVariants: 1

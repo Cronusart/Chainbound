@@ -1,0 +1,21 @@
+{
+    "name": "Chainbound.Combat.Editor",
+    "rootNamespace": "Chainbound.Combat.Editor",
+    "references": [
+        "Chainbound.Combat.Core",
+        "Chainbound.Combat.Runtime",
+        "SignalJam.AudioData",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

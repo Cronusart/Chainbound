@@ -1,0 +1,189 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa9e6f2834a7462bae50e81489cc0311, type: 3}
+  m_Name: IntroSpriteCinematic_PostName
+  m_EditorClassIdentifier: 
+  shots:
+  - shotId: computer_launch_token
+    composition: 1
+    background: {fileID: 0}
+    foreground: {fileID: 0}
+    frames:
+    - {fileID: 21300000, guid: e5de1e6693b9d0346a027263dabca311, type: 3}
+    - {fileID: 21300000, guid: 43da5a2d9355095408d3a86730364371, type: 3}
+    - {fileID: 21300000, guid: 4fcc03eebaf0342419315d893fb9bddc, type: 3}
+    - {fileID: 21300000, guid: 2747114a29677714f8223f72b64e8c4e, type: 3}
+    - {fileID: 21300000, guid: 8ec1fa1d6a984f942abeac90d0042b0c, type: 3}
+    - {fileID: 21300000, guid: ea8ff4d12ffaadb47868166a8a18d4c3, type: 3}
+    - {fileID: 21300000, guid: 669ff13cbbe891342b2ec40a63f1009f, type: 3}
+    - {fileID: 21300000, guid: 40ea16ac799dc724c9c04247c95225de, type: 3}
+    - {fileID: 21300000, guid: 3fd3dd19aa803294d9e4ba5bd9fd1271, type: 3}
+    - {fileID: 21300000, guid: 8a0ac6d69c767d647af3aa1ad732e666, type: 3}
+    - {fileID: 21300000, guid: daf174ff06aede34495dcee74a611fe4, type: 3}
+    - {fileID: 21300000, guid: 36dbd71efef309942908bbffef2da2a3, type: 3}
+    - {fileID: 21300000, guid: 23bba39ed31b24041a4d4dd854a6cf39, type: 3}
+    - {fileID: 21300000, guid: d9c931cf56e060642ac393dc0c5a4532, type: 3}
+    - {fileID: 21300000, guid: 2bc7fec7f5c16a94fb7b11f4ae325cc8, type: 3}
+    - {fileID: 21300000, guid: 71213cf2b77013d4a957f2f5b57330c5, type: 3}
+    - {fileID: 21300000, guid: cd23eebe7045b564ead45d98d2f1f6e0, type: 3}
+    - {fileID: 21300000, guid: 3c68433d3fc4ff34b8edb4714a8d319d, type: 3}
+    - {fileID: 21300000, guid: c4e3b5ff287ab2d48a46ef1a2d466a74, type: 3}
+    - {fileID: 21300000, guid: f45d89340cfbed441b9f5b6d283790b8, type: 3}
+    - {fileID: 21300000, guid: 7dc919cfb41e6004fb051365011d321f, type: 3}
+    - {fileID: 21300000, guid: 11f78eefb3cc3804ebaf9e95d6ca0f93, type: 3}
+    - {fileID: 21300000, guid: d5ad794bd00c8604cbcfb01626e65289, type: 3}
+    - {fileID: 21300000, guid: 45fa8e99f65c4ed4dabb98e28c06f9c1, type: 3}
+    - {fileID: 21300000, guid: 1f3a4bc993eac064ba42b9bbfaba5d10, type: 3}
+    - {fileID: 21300000, guid: 7f6e79560559cda478a58c2ad781f250, type: 3}
+    - {fileID: 21300000, guid: 71e9743158239ea4f885679549d5f4da, type: 3}
+    - {fileID: 21300000, guid: ab65ac0f1af7f5148a0cb93aa23127e7, type: 3}
+    - {fileID: 21300000, guid: ed87eaf8b4aa62f428ec93af9857af1a, type: 3}
+    - {fileID: 21300000, guid: 221de67d9ca53aa48b49ea420616e11f, type: 3}
+    - {fileID: 21300000, guid: 7b4ee77d17eb4a341b4338b5840caa9c, type: 3}
+    - {fileID: 21300000, guid: 6fea78c116166014797e0793b0812121, type: 3}
+    - {fileID: 21300000, guid: 7377641f9b6623b49b7eb61f96c4e9ff, type: 3}
+    - {fileID: 21300000, guid: e08ed26473e767147a612cbf8df904ba, type: 3}
+    - {fileID: 21300000, guid: f2d7e07fbdf0fa84980b6f478f930987, type: 3}
+    framesPerSecond: 12
+    holdLastFrameSeconds: 0.15
+    fadeToBlackSeconds: 0.25
+    blackHoldSeconds: 0.1
+    remainBlackAfterShot: 0
+    startScale: 1.1
+    endScale: 1.1
+    remainLastFrameVisible: 0
+    enableCoinNameMirror: 0
+    nameHandoffScale: 1.6
+    nameHandoffOffsetY: 100
+    nameHandoffDurationSeconds: 0.35
+    cameraFlash: 0
+    flashRiseSeconds: 0.08
+    flashHoldSeconds: 0.12
+    flashFadeSeconds: 0.35
+    markerFrame: -1
+    chromaticAberrationPeak: 0.8
+    markerEffectRampSeconds: 0.8
+    enableCreepEffects: 0
+    creepChromaticPeak: 0.9
+    audioCue: {fileID: 0}
+    frameAudioCues:
+    - frameIndex: 24
+      soundEvent: {fileID: 11400000, guid: 0f4d2b5e7a9c6143d6e8f0a2b4c53744, type: 2}
+      stopFrameIndex: 0
+      stopFadeSeconds: 0
+    fadeMenuMusicSeconds: 0
+  - shotId: dog_bed_sleep
+    composition: 1
+    background: {fileID: 0}
+    foreground: {fileID: 0}
+    frames:
+    - {fileID: 21300000, guid: e34aecd60bce6144da6706187a913d21, type: 3}
+    - {fileID: 21300000, guid: 30e4f9b462418544a8fc82204f218431, type: 3}
+    - {fileID: 21300000, guid: 47e8f7a2a6122ab438676f13233b0670, type: 3}
+    - {fileID: 21300000, guid: d428a935a8753b14b9ebeaaef191571d, type: 3}
+    - {fileID: 21300000, guid: dd421059fff57d949a7fc6945475e63d, type: 3}
+    - {fileID: 21300000, guid: 0ccc1e209cf863743932c5409be9dfa8, type: 3}
+    - {fileID: 21300000, guid: 18ff32da12c3be143a66462336b6bb58, type: 3}
+    - {fileID: 21300000, guid: e382f36a24c840444b198ca7b0da2ae7, type: 3}
+    - {fileID: 21300000, guid: 2c7306dacec0755498e78b8cacfacd9b, type: 3}
+    - {fileID: 21300000, guid: f681162c04cecb34db1886d8313df5bd, type: 3}
+    - {fileID: 21300000, guid: 5c9899826f11e9849bc102bf25b57a0c, type: 3}
+    - {fileID: 21300000, guid: 2adfe79547e596843add6fff24e8fa84, type: 3}
+    - {fileID: 21300000, guid: 8b752382b187dad43b560b607840cd79, type: 3}
+    - {fileID: 21300000, guid: f5d1912b43b42e844909eb7880f023f1, type: 3}
+    - {fileID: 21300000, guid: 1d9655a1cdc1a024bb0a6683faf46566, type: 3}
+    - {fileID: 21300000, guid: 4eb8169899e733341a38d10bcee0b893, type: 3}
+    - {fileID: 21300000, guid: f70cfa719e5ae5e409640566fee4a79c, type: 3}
+    - {fileID: 21300000, guid: aafd1473d3a9d9242b6705628c4fcabc, type: 3}
+    - {fileID: 21300000, guid: 0fca05135ec1d5a43b12a8ea04ba91b8, type: 3}
+    - {fileID: 21300000, guid: 7cc78762afd1dba42a0c8ed078c2b026, type: 3}
+    - {fileID: 21300000, guid: 8cd11e0239e38de4ea4ace1221f08f26, type: 3}
+    - {fileID: 21300000, guid: 7dd8a15c3a2f9014baca2629b92a2171, type: 3}
+    - {fileID: 21300000, guid: 6f6a761885cbfc64cb6c66f2030bcad2, type: 3}
+    - {fileID: 21300000, guid: 49e764896963fd0409785ab4d14fa8aa, type: 3}
+    - {fileID: 21300000, guid: 090556eda8962214e914bbc627ee83c6, type: 3}
+    - {fileID: 21300000, guid: fe9210169137b7847bcdaa2ca9a81f8d, type: 3}
+    - {fileID: 21300000, guid: 26084a66c18b1454fa06b438aab43727, type: 3}
+    - {fileID: 21300000, guid: d7b2c5a77150a8b47a2076774212587e, type: 3}
+    - {fileID: 21300000, guid: 5cda3aeafc654d74aa271823a6bb5aa5, type: 3}
+    - {fileID: 21300000, guid: 32a012cf89f588746870b6fc92ac8636, type: 3}
+    - {fileID: 21300000, guid: 8232ca50fa164d047898cc1f2cfb7e46, type: 3}
+    - {fileID: 21300000, guid: f0ab53b776167f5418ebbbeed025115f, type: 3}
+    - {fileID: 21300000, guid: 272a5d9cbf907cb4baee74a8875dee7e, type: 3}
+    - {fileID: 21300000, guid: 1e5cce5e52da6df49a1e1060505f5785, type: 3}
+    - {fileID: 21300000, guid: f34a95b8e114d944ea09083a4ebe051d, type: 3}
+    - {fileID: 21300000, guid: dd20383296353014f929b83c2a5a875d, type: 3}
+    - {fileID: 21300000, guid: 39d6496a602ae474ba80921c8b1b7183, type: 3}
+    - {fileID: 21300000, guid: 6873bdb13e1e0454c85a14aeb7045758, type: 3}
+    - {fileID: 21300000, guid: 4c759dc6c160c85468f10b9f1533de4e, type: 3}
+    - {fileID: 21300000, guid: 14a049726124737468f828d95accb037, type: 3}
+    - {fileID: 21300000, guid: fce93413c288b57428bbd01d45cf96a1, type: 3}
+    - {fileID: 21300000, guid: d0c97d17e4b6c8f4fb0ba9b917d116d3, type: 3}
+    - {fileID: 21300000, guid: cf03d76b605911e4baccca16d537d1f5, type: 3}
+    - {fileID: 21300000, guid: 75d5d12114ef74546a9510c47ddc3ae6, type: 3}
+    - {fileID: 21300000, guid: 859dc93539db945449a9fe922a2e5853, type: 3}
+    - {fileID: 21300000, guid: 5302c8da18b281843a8b348e758d8c6a, type: 3}
+    - {fileID: 21300000, guid: 8538caee5e48d7e409937514ab1b6ab6, type: 3}
+    - {fileID: 21300000, guid: a8195893238011d48b12e68d106854f8, type: 3}
+    - {fileID: 21300000, guid: 44028ec06c8d2974e8665fba0e75011b, type: 3}
+    - {fileID: 21300000, guid: 7145a9acdeeaa0a499632ed448bf4c1b, type: 3}
+    - {fileID: 21300000, guid: b6983b7e15705bc499b31bb2d08b46ad, type: 3}
+    - {fileID: 21300000, guid: d0bed3befb3f0d14a85c8bf9133fc0cb, type: 3}
+    - {fileID: 21300000, guid: f7b2ca351f5110448a4abd40321a1443, type: 3}
+    - {fileID: 21300000, guid: 4bab34134e8537b4ebe8201145182015, type: 3}
+    - {fileID: 21300000, guid: 51b53e8bd66fa0f4dadb35c31f7f4637, type: 3}
+    - {fileID: 21300000, guid: 022be608e0daf7b48869c1e9df40b265, type: 3}
+    - {fileID: 21300000, guid: ad7157f9edec9a04da9c79f7b645d4d3, type: 3}
+    - {fileID: 21300000, guid: bf08a01c61b2eb5419d61378c39afe97, type: 3}
+    - {fileID: 21300000, guid: 960663a2e7af07b4e89d025b829bb590, type: 3}
+    - {fileID: 21300000, guid: b7d8a788ef6382a458f4260f14ae7147, type: 3}
+    - {fileID: 21300000, guid: ec4268d54499ba74a96b8d09897bcedf, type: 3}
+    - {fileID: 21300000, guid: 9c6b0336221ba3f439980885514172c3, type: 3}
+    - {fileID: 21300000, guid: 70fe15c1d78171046b0d2499caa307b6, type: 3}
+    - {fileID: 21300000, guid: cb020e3091cb10840ac0a1458e40d07a, type: 3}
+    - {fileID: 21300000, guid: 4f96d9d057ea71449b9b7d6d64eeac89, type: 3}
+    - {fileID: 21300000, guid: d800d216b045e6742912eff652e55853, type: 3}
+    - {fileID: 21300000, guid: c95ff65df37e80341a50297213cd1a73, type: 3}
+    - {fileID: 21300000, guid: 213405ca4e60f514a966856c7461f449, type: 3}
+    - {fileID: 21300000, guid: c8713d548cc8de14f89527aa5f58a1e5, type: 3}
+    - {fileID: 21300000, guid: f02ad423b5b5c594f8d93994484b8bec, type: 3}
+    framesPerSecond: 12
+    holdLastFrameSeconds: 0.6
+    fadeToBlackSeconds: 0.8
+    blackHoldSeconds: 0.25
+    remainBlackAfterShot: 1
+    startScale: 1.1
+    endScale: 1.45
+    remainLastFrameVisible: 0
+    enableCoinNameMirror: 0
+    nameHandoffScale: 1.6
+    nameHandoffOffsetY: 100
+    nameHandoffDurationSeconds: 0.35
+    cameraFlash: 0
+    flashRiseSeconds: 0.08
+    flashHoldSeconds: 0.12
+    flashFadeSeconds: 0.35
+    markerFrame: -1
+    chromaticAberrationPeak: 0.8
+    markerEffectRampSeconds: 0.8
+    enableCreepEffects: 1
+    creepChromaticPeak: 1
+    audioCue: {fileID: 0}
+    frameAudioCues: []
+    fadeMenuMusicSeconds: 1
+  allowSkip: 0
+  markIntroCinematicComplete: 1
+  continueFromHeldFrame: 1
+  coinNameFieldPrefab: {fileID: 0}
+  skipAvailableAfterSeconds: 1.5
+  holdToSkipSeconds: 0.75
+  skipFadeToBlackSeconds: 0.25

@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fca774587e661aa4688485a5df0464f3, type: 3}
+  m_Name: Typography_cycle_v
+  m_EditorClassIdentifier: 
+  palette: {fileID: 11400000, guid: 8d211ca063d9e144882a193835e91754, type: 2}
+  fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
+  materialPreset: {fileID: 2100000, guid: eb89a5e02a8fd4144b97e84454395290, type: 2}
+  materialAssignment: 1
+  faceColorSlot: 1
+  customFaceColor: {r: 1, g: 1, b: 1, a: 1}
+  faceColorTint: {r: 1, g: 1, b: 1, a: 1}
+  applyFaceColorToTextColor: 0
+  driveOutlineFromPalette: 1
+  outlineColorMode: 1
+  outlineColorSlot: 6
+  customOutlineColor: {r: 0.12, g: 0.05, b: 0.22, a: 1}
+  outlineWidth: 0.125
+  driveUnderlayFromPalette: 1
+  underlayColorMode: 1
+  underlayColorSlot: 1
+  customUnderlayColor: {r: 0.078431375, g: 0.9490196, b: 0.5803922, a: 0.3}
+  underlayOffset: {x: 0, y: -0.34}
+  underlayDilate: 0.186
+  underlaySoftness: 0.755
+  driveGlowFromPalette: 1
+  glowColorMode: 2
+  glowColorSlot: 4
+  customGlowColor: {r: 0.08, g: 0.95, b: 0.58, a: 0.39215687}
+  glowPower: 0.703
+  fontSizeMultiplier: 1
+  transformScaleMultiplier: 1
+  useVertexGradient: 1
+  gradientScope: 1
+  vertexGradientMode: 1
+  vertexGradientStartSlot: 1
+  vertexGradientEndSlot: 3
+  customVertexGradientStart: {r: 0.6, g: 0.27, b: 1, a: 1}
+  customVertexGradientEnd: {r: 0.08, g: 0.95, b: 0.58, a: 1}
+  vertexGradientTopSlot: 1
+  vertexGradientBottomSlot: 3
+  customVertexGradientTop: {r: 0.6, g: 0.27, b: 1, a: 1}
+  customVertexGradientBottom: {r: 0.08, g: 0.95, b: 0.58, a: 1}
+  animatePalettePulse: 1
+  pulseIntensityMin: 0.4
+  pulseIntensityMax: 1.85
+  pulseGlowOuter: 1
+  animateGradientShimmer: 1
+  gradientShimmerSpeed: 0.1
+  gradientShimmerUseUnscaledTime: 1
+  materialPropertyOverrides: []

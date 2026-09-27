@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05915b6a98db78844a2e9132309af117, type: 3}
+  m_Name: IntroFirstCreature_Encounter
+  m_EditorClassIdentifier: 
+  roster:
+  - speciesId: kreechank
+    displayName: Kreechank
+    stars: 3
+    rebirthCount: 0
+    evolutionStage: 1
+    moveIds:
+    - baseline_jab
+    - automation_burst
+    modifier1SectionIds: []
+    modifier2SectionIds: []
+    ivMaxHP: 0
+    ivMeleeAtk: 0
+    ivMeleeDef: 0
+    ivRangedAtk: 0
+    ivRangedDef: 0
+    ivSpeed: 0
+  teamName: Wild
+  aiPersonality: 1
+  difficulty: 0
+  bossIntroDialogueAsset: {fileID: 11400000, guid: adbec72238171a9439a94797d4eaf796, type: 2}
+  hideCombatUI: 1
+  uiPresentationMode: 0
+  introPresentation: {fileID: 11400000, guid: 6406ca81fad167f47b66145a17b25436, type: 2}
+  skipManualTurnAfterIntro: 1

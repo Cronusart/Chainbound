@@ -1,0 +1,167 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &100000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 100001}
+  - component: {fileID: 100002}
+  - component: {fileID: 100003}
+  - component: {fileID: 100004}
+  - component: {fileID: 100005}
+  m_Layer: 5
+  m_Name: HudCard
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &100001
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 420, y: 170}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &100002
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000}
+  m_CullTransparentMesh: 1
+--- !u!114 &100003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.06, g: 0.09, b: 0.12, a: 0.86}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &100004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f1d0ca55de8478b99f408957b786301, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activePulseTarget: {fileID: 100001}
+  targetPulseTarget: {fileID: 100001}
+  activePulseScale: 1.05
+  targetPulseScale: 1.05
+  pulseUpDuration: 0.5
+  pulseDownDuration: 0.75
+  targetPulseHold: 0.075
+  pulseEaseOut: 3
+  pulseEaseIn: 4
+  useUnscaledTime: 1
+  uiAnimTuning: {fileID: 0}
+--- !u!114 &100005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6d838ec80314d0b93e7abdb5f833101, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  backgroundImage: {fileID: 100003}
+  nameText: {fileID: 0}
+  typeIconImage: {fileID: 0}
+  hpBackImage: {fileID: 0}
+  hpLagFillImage: {fileID: 0}
+  hpFillImage: {fileID: 0}
+  hpFrameOverlayImage: {fileID: 0}
+  captureLowHpMarkerImage: {fileID: 0}
+  captureLowHpLabel: {fileID: 0}
+  hpText: {fileID: 0}
+  apPipRoot: {fileID: 0}
+  apPipTemplate: {fileID: 0}
+  starBarRoot: {fileID: 0}
+  statusIconRoot: {fileID: 0}
+  emptyLabel: {fileID: 0}
+  activeTurnOutline: {fileID: 0}
+  targetOutline: {fileID: 0}
+  activePulseTarget: {fileID: 100001}
+  targetPulseTarget: {fileID: 100001}
+  canvasGroup: {fileID: 0}
+  hudAnimator: {fileID: 100004}
+  backgroundState: {fileID: 0}
+  autoBuildIfMissing: 1
+  defaultMaxApPips: 10
+  koAlpha: 0.45
+  hpHighColor: {r: 0.2, g: 0.8, b: 0.4, a: 1}
+  hpLowColor: {r: 0.86, g: 0.24, b: 0.2, a: 1}
+  hpDamageLagColor: {r: 1, g: 0.78, b: 0.32, a: 0.65}
+  hpDamageLagDelay: 0.1
+  hpDamageLagDuration: 0.28
+  hpDamageLagEase: 9
+  apPipActiveSprite: {fileID: 0}
+  apPipInactiveSprite: {fileID: 0}
+  apPipSpacing: 16
+  apPipSize: 14
+  apPipOnColor: {r: 0.16, g: 0.76, b: 0.98, a: 1}
+  apPipOffColor: {r: 0.24, g: 0.24, b: 0.24, a: 0.75}
+  activeOutlineColor: {r: 0.95, g: 0.89, b: 0.22, a: 1}
+  targetOutlineColor: {r: 0.95, g: 0.33, b: 0.33, a: 1}
+  apGrantBounceDuration: 0.25
+  apGrantBounceScale: 1.15
+  apGrantFadeDuration: 0.2
+  shakeTarget: {fileID: 0}
+  damageShakeIntensity: 6
+  damageShakeDuration: 0.18
+  damageShakeVibrato: 25
+  healAscendDistance: 8
+  healAscendDuration: 0.35
+  healPulseScale: 1.03
+  starSprite: {fileID: 0}
+  starSpacing: 4
+  starIconSize: 16
+  starBarBackgroundSprite: {fileID: 0}

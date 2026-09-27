@@ -1,0 +1,131 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Dd]ist/
+[Ll]ogs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# Unity / IDE generated files
+*.csproj
+*.unityproj
+*.sln.docstates
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.vs/
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backend / JS / tooling outputs
+**/node_modules/
+**/.pnpm-store/
+**/.npm/
+**/.yarn/
+**/.turbo/
+**/.vercel/
+**/.next/
+**/coverage/
+**/dist/
+**/build/
+backend/chainbound_game/target/
+backend/chainbound_game/test-ledger/
+Supabase/.temp/
+
+# Secrets and private credentials
+**/.env
+**/.env.*
+!**/.env.example
+**/id.json
+**/keypair.json
+**/*.pem
+**/*.p12
+**/*.keystore
+**/*secret*
+**/*key*
+!**/*.cs
+!**/*.ts
+!**/*.tsx
+!**/*.js
+!**/*.jsx
+!**/*.shader
+!**/*.hlsl
+!**/*.cginc
+!**/*.asmdef
+!**/*.meta
+!**/*.prefab
+!**/*.asset
+!**/*.unity
+!**/*.md
+!**/*.txt
+
+# Runtime local config (keep only samples in git)
+Assets/StreamingAssets/Config.json
+Config.json
+!**/Config.sample.json
+
+# Public repo exclusions / internal working material
+.cursor/
+AGENTS.md
+mcp.json
+debug.log
+Assets/Data/Combat/Logs/
+CombatUIResidueReport.md
+Docs/Architecture/*.plan.md*
+Docs/Architecture/*Handoff*
+Docs/Architecture/Target Arrows and Chemistry Adv Task*
+Docs/COMBAT_FORENSIC_LOGGING_PR_NOTES.md*
+Docs/Guides/MAIN_MENU_SOLANA_WALLET_SETUP_NOTES.md*
+Docs/Guides/SETUP_NOTES.md*
+Docs/SECURITY_AUDIT.md*
+backend/chainbound_game/.git/
+backend/chainbound_game/.anchor/
+
+# Local Python / tool virtualenvs
+.venv/
+.venv-*/
+venv/
+**/__pycache__/
+*.pyc
+
+# Scratch ops / gate resume scripts (not for judges)
+.tmp-*/
+.tmp-*
+*.tmp
+Temp_*.log
+
+# Agent / sandbox working dirs (local only)
+.agents/
+.utmp/
+.codex/
+.sand/
+
+# Dead / duplicate trees
+Quarantine/
+Signal%20Jam/
+%USERPROFILE%.keystores/
+*.keystores/
+
+# Mobile / package binaries if they land outside Builds/
+*.apk
+*.aab
+*.ipa
+
+# WSL / editor noise
+*.swp
+*~

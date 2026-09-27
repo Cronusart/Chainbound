@@ -1,0 +1,147 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d8431163239fd64285bd41bb687ccec, type: 3}
+  m_Name: Move_ore_restoration
+  m_EditorClassIdentifier: 
+  moveId: ore_restoration
+  displayName: Ore Restoration
+  description: Heal ally 20% MaxHP and cleanse up to 1 General debuff.
+  category: 3
+  baseType: 8
+  rarity: 1
+  targeting: 2
+  contactType: 2
+  power: 0
+  apCost: 2
+  accuracy: 0
+  hitCountMin: 1
+  hitCountMax: 1
+  rechargeTurns: 0
+  statusEffects: []
+  stageChanges: []
+  tags:
+  - SUP
+  selectionPolicy: 0
+  activeConditionType: 0
+  activeConditionThresholdPercent: 0
+  utilityEffects:
+  - effectType: 12
+    magnitude: 1
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: 
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 2
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
+  resolveProfile:
+    primaryTiming: 1
+    utilityExecutionTiming: 0
+    conditionalEffectPolicy: 0
+    resolveConditions: []
+    requireAllResolveConditions: 1
+    applyStatusEffectsOnMiss: 0
+    applyStageChangesOnMiss: 0
+    applyHealingOnDamagingMoves: 0
+    hitCount:
+      forceMinimumHits: 0
+      forceMaximumHits: 0
+      flatHitBonus: 0
+      maxTotalHitsCap: 0
+    accuracy:
+      forceHit: 0
+      forceMiss: 0
+      accuracyMultiplier: 1
+      accuracyBonusPercent: 0
+      ignoreEvasionStages: 0
+      minHitChance: 0
+      maxHitChance: 1
+    crit:
+      suppressCrits: 0
+      forceCrit: 0
+      baseCritChanceOverride: 0
+      critChancePerStagePercent: 0.02
+      critChanceBonusPercent: 0
+      critChanceMultiplier: 1
+      critDamageMultiplierOverride: 0
+      critDamageMultiplierBonus: 0
+      minCritChance: 0
+      maxCritChance: 1
+    damage:
+      flatPowerBonus: 0
+      powerMultiplier: 1
+      preMitigationDamageMultiplier: 1
+      preMitigationFlatBonus: 0
+      finalDamageMultiplier: 1
+      finalDamageFlatBonus: 0
+      minimumFinalDamage: 1
+      useCustomRandomRollRange: 0
+      randomRollMin: 0.85
+      randomRollMax: 1
+      useCustomProgressionDamageFactor: 0
+      customProgressionDamageFactor: 1
+      additiveDamageConstant: 1
+      ignoreMitigation: 0
+      overrideMitigationFloor: 0
+      mitigationFloorOverride: 0.1
+      consumeNextMoveDamageStatuses: 1
+      staggeredDamageMultiplier: 0.9
+      surgingDamageMultiplier: 1.25
+      amplifiedDamageMultiplier: 2
+      exploitMarkDamageMultiplier: 1.15
+      overrideAttackStat: 0
+      attackStatOverride: 1
+      overrideDefenseStat: 0
+      defenseStatOverride: 2
+    conditionalDamage:
+      multiplier: 1
+      conditions: []
+      requireAllConditions: 1
+      useScalingCondition: 0
+      scalingCondition:
+        subject: 0
+        conditionType: 0
+        threshold: 0
+        statusId: 0
+        stat: 0
+        comparisonStat: 0
+      bonusMultiplierPerCount: 0
+      maxMultiplier: 0
+      randomMultipliers: []
+  triggerCondition: 0
+  hpThresholdPercent: 0
+  triggerOncePerBattle: 0
+  healPercentMaxHP: 20
+  hpCostPercent: 0
+  presentationTrack: {fileID: 0}
+  wallPresentation:
+    wallSprite: {fileID: 0}
+    wallMaterial: {fileID: 0}
+    wallSpriteScale: {x: 0, y: 0}
+    wallTint: {r: 0, g: 0, b: 0, a: 0}
+  castSound: {fileID: 0}
+  releaseSound: {fileID: 0}
+  travelSound: {fileID: 0}
+  impactAccentSound: {fileID: 0}
+  designNotes: 

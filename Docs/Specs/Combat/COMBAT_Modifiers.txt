@@ -1,0 +1,402 @@
+COMBAT_05_MoveModifiers_v1.1
+
+REVISION NOTES (consistency pass):
+- Removed all modifier names; entries now describe effect only
+- Added section-based IDs for internal cross-referencing
+- Replaced "damage shield" with "mitigation" (02A compliance)
+- Updated forbidden combinations table to use effect descriptions
+- Updated UI display format for nameless modifiers
+- Confirmed all effects reference only 02A-defined statuses/mechanics
+- Purged all remaining AP cost reduction / cooldown language
+
+===============================================================================
+0. Purpose
+===============================================================================
+
+This specification defines move modifiers — attributes that can be applied
+to baseline moves to alter their behavior, damage type, stat scaling,
+hit count, or other properties.
+
+NAMING CONVENTION (v1.1):
+Modifiers do NOT have display names. In-game, rarity is communicated via UI
+colour coding (see Section 11.2). This spec uses section-based IDs (e.g., §2.1-a)
+for internal cross-referencing only; these IDs are NOT shown to the player.
+
+IMPORTANT (v1.1):
+- AP cost reduction modifiers are BANNED. AP cost is tied to inherent power.
+- The move system does not use cooldowns. No modifier may reference them.
+- All modifiers must declare Active or Passive scope (see Section 1.3).
+- Effect values use ranges where possible; fixed values reserved for caps only.
+
+DESIGN PRINCIPLES:
+- Modifiers add build depth without invalidating baseline moves
+- Rarity gates power; higher rarity = more impactful modifiers
+- Stacking rules prevent broken combinations
+- Modifiers are ADDITIVE to baseline, never replacing core function
+- Drop rates tie into Acquisition Spec (04)
+- No modifier may bypass chemistry trigger rules or force direct chemistry statuses
+
+CROSS-REFERENCES:
+- COMBAT_02A_StatusFrameworkAndCatalog_v1.1.txt (status definitions)
+- COMBAT_03A_Moves_CoreFramework_v1.1.txt (base move rules)
+- COMBAT_03A1_Moves_BaselineList_v1.2.txt (move definitions)
+- COMBAT_Rarity.txt (drop rates, acquisition methods)
+- COMBAT_Species.txt (species-specific pools)
+
+===============================================================================
+1. Modifier Categories
+===============================================================================
+
+1.1 Category Overview
+
+| Category      | Code | Effect Type                              | Slot Cost | Scope        |
+|---------------|------|------------------------------------------|-----------|--------------|
+| Potency       | POT  | Numeric bonuses (power, accuracy, crit)  | 0         | Active       |
+| Efficiency    | EFF  | AP refund chance, bonus action rolls     | 0         | Active       |
+| Augmentation  | AUG  | Extra hits, priority                     | 1         | Active       |
+| Transmutation | TRX  | Type change, stat substitution           | 1         | Active       |
+| Trigger       | TRG  | Conditional effects, on-hit bonuses      | 0         | Active       |
+| Synergy       | SYN  | Team-based or combo-based effects        | 0         | Active/Vary  |
+
+SLOT COST: Some powerful modifiers consume an extra move slot when equipped.
+A Chainling with 16 slots equipping 2 AUG modifiers effectively has 14 move slots.
+
+1.2 Modifier Rarity Tiers
+
+| Tier      | Effect Potency    | Baseline Vending Weight |
+|-----------|-------------------|-------------------------|
+| Common    | Minor (+5-10%)    | 45%                     |
+| Uncommon  | Moderate (+10-15%)| 30%                     |
+| Rare      | Notable (+15-25%) | 17.5%                   |
+| Epic      | Major (+25-35%)   | 5%                      |
+| Legendary | Signature effect  | 2%                      |
+| Mythic    | Build-defining    | 0.5%                    |
+
+NOTE:
+- Modifiers do not drop directly from star-up or mastery.
+- Entangled affects ordinal farming, not modifier odds directly.
+- Event-limited modifiers may use a separate distribution skew (see Section 9.2).
+
+1.3 Active vs Passive Scope
+
+Every modifier must declare one of two scopes:
+
+| Scope   | Meaning                                             | Frequency   |
+|---------|-----------------------------------------------------|-------------|
+| Active  | Applies ONLY to the move it is attached to   | Most common |
+| Passive | Applies globally to the Chainling as a permanent aura | Rare       |
+
+RULES:
+- Most modifiers are Active (per-move).
+- Passive modifiers should be low-impact or have meaningful tradeoffs.
+- Each modifier entry in this spec includes its scope in the Scope column.
+- Active modifiers only fire when the attached move is used.
+- Passive modifiers are always on while the modified move is equipped.
+
+[DATA MIGRATED] → See Docs/Specs/Combat/Data/Modifiers.csv (expanded live set)
+Refer to Data/_LEGEND.md for column definitions and enum values.
+Current CSV schema includes: PowerCap, APCostCap, ForbiddenTags, and SlotType.
+
+===============================================================================
+8. Stacking and Combination Rules
+===============================================================================
+
+8.1 Global Stacking Limits
+
+| Rule                                           | Limit                    |
+|------------------------------------------------|--------------------------|
+| Total modifiers per move                | 3 maximum                |
+| Power modifiers (§2.1) per move         | 1 maximum                |
+| Accuracy modifiers (§2.2) per move      | 1 maximum                |
+| Crit modifiers (§2.3) per move          | 1 maximum                |
+| AP refund modifiers (§3.1) per move     | 1 maximum                |
+| Bonus action modifiers (§3.2) per move  | 1 maximum                |
+| Slot-consuming modifiers (AUG/TRX) per inscrip.| 1 maximum               |
+| On-hit triggers (§6.1) per move         | 2 maximum                |
+| On-crit triggers (§6.2) per move        | 1 maximum                |
+| Conditional triggers (§6.3) per move    | 2 maximum                |
+| On-swap-in modifiers (§6.4.1) per Chainling    | 1 maximum (global)       |
+| On-swap-out modifiers (§6.4.2) per Chainling   | 1 maximum (global)       |
+| Stat substitution (§5.2) per Chainling         | 2 maximum (global)       |
+
+8.2 Forbidden Combinations
+
+The following modifier combinations are INVALID on the same move:
+
+| Modifier A                     | Modifier B                      | Reason                           |
+|--------------------------------|---------------------------------|----------------------------------|
+| Any AUG (§4)                   | Any TRX (§5)                    | Cannot stack slot-cost modifiers |
+|                                |                                 | on the same move          |
+| Multi-hit §4.1-a               | AOE bounce §4.2-a               | Cannot combine multi-hit + AOE   |
+| Bonus action repeat §3.2-a     | Any other §3.2 bonus action     | Only one bonus action per move   |
+| On-crit +25% power §6.2-c      | Any other §6.2 on-crit          | Exclusive on-crit trigger        |
+| Type infusion §5.1-a           | Second type infusion §5.1-a     | Only one type change per move    |
+| Any on-swap-in §6.4.1         | Any other on-swap-in §6.4.1    | Only one swap-in modifier per    |
+|                                |                                 | Chainling                         |
+| Any on-swap-out §6.4.2        | Any other on-swap-out §6.4.2   | Only one swap-out modifier per   |
+|                                |                                 | Chainling                         |
+
+NOTE: AUG + TRX are forbidden on the SAME move only. A Chainling may have
+one move with an AUG modifier and a different move with a TRX modifier.
+Slot costs are tracked per move.
+
+8.3 Modifier Inheritance
+
+- Modifiers apply to the specific move instance, not globally
+- If an move is replaced, modifiers are lost
+- Modifiers cannot be transferred between moves
+- Duplicate moves with different modifiers are considered unique
+
+===============================================================================
+9. Acquisition and Drop Rates
+===============================================================================
+
+9.1 Modifier Drop Sources
+
+| Source                  | Base Chance | Notes                           |
+|-------------------------|-------------|----------------------------------|
+| Standard Vending        | 100%        | Primary modifier source          |
+| Event Rewards           | Varies      | Event-specific or limited mods   |
+| Achievement Unlocks     | 100%        | Specific curated reward path     |
+
+9.2 Rarity Distribution (when modifier drops)
+
+| Tier      | Standard Vending | Event / Limited |
+|-----------|------------------|-----------------|
+| Common    | 45%              | 0%              |
+| Uncommon  | 30%              | 0%              |
+| Rare      | 17.5%            | 60%             |
+| Epic      | 5%               | 30%             |
+| Legendary | 2%               | 8%              |
+| Mythic    | 0.5%             | 2%              |
+
+9.3 Entangled Interaction
+
+Entangled (bootleg) Chainlings do NOT receive direct modifier-rate bonuses.
+
+Entangled affects modifier acquisition indirectly by:
+- improving ordinal farming odds
+- improving ordinal rarity outcomes
+- making premium source moves more likely before vending is used
+
+===============================================================================
+10. Special Modifier Sets
+===============================================================================
+
+[DATA MIGRATED] → See Docs/Specs/Combat/Data/Modifiers.csv (expanded live set)
+Refer to Data/_LEGEND.md for column definitions and enum values.
+
+===============================================================================
+11. UI and Display
+===============================================================================
+
+11.1 Modifier Display Format
+
+Modifiers do not have display names. They are represented in the UI as:
+- Effect-description icons/badges attached to the move card
+- Colour-coded by rarity (see §11.2)
+- Hoverable for full tooltip
+
+Display format:
+[Move Name] + [Effect Icon 1] + [Effect Icon 2] + [Effect Icon 3]
+
+Example: "Baseline Striker" with three coloured modifier badges indicating
++12-18% power (blue/Rare), heal 10-15% on hit (blue/Rare), and
++25-35% dmg if target HP < 50% (blue/Rare).
+
+11.2 Color Coding by Rarity
+
+| Rarity    | Color    | Hex Code  |
+|-----------|----------|-----------|
+| Common    | Gray     | #9E9E9E   |
+| Uncommon  | Green    | #4CAF50   |
+| Rare      | Blue     | #2196F3   |
+| Epic      | Purple   | #9C27B0   |
+| Legendary | Orange   | #FF9800   |
+| Mythic    | Red/Gold | #F44336   |
+
+11.3 Tooltip Information
+
+Modifier tooltips must display:
+- Rarity tier (colour-coded)
+- Effect description (with range if applicable)
+- Scope (Active or Passive)
+- Restrictions (if any)
+- Stacking category (e.g., "Power — 1 per move")
+- Source (how to obtain: Vending / Event / Achievement)
+
+===============================================================================
+12. Compliance Verification (Internal Reference)
+===============================================================================
+
+12.1 Status Catalog Cross-Check (02A Compliance)
+
+All modifier effects have been verified against COMBAT_02A v1.1:
+
+| Modifier Effect                  | 02A Reference                          | Status   |
+|----------------------------------|----------------------------------------|----------|
+| HP recovery (§6.1-a, §6.1-d)    | General mechanic; not a named status   | PASS     |
+| AP drain on hit (§6.1-b)        | Aligns with MEV Extracted (General)    | PASS     |
+| Power reduction (§6.1-c)        | Temporary debuff; not a named status   | PASS     |
+| +1 AP on crit (§6.2-a)          | AP change (02C §1)                     | PASS     |
+| -2 Def stages (§6.2-b)          | Stage change (02B §3, range -6 to +6) | PASS     |
+| +25% power next move (§6.2-c)   | Temporary buff; not a named status     | PASS     |
+| Mitigation (§6.3-c, §7.1-b)     | Within 30% cap (02A §8.1)             | PASS     |
+| +1 random stat stage (§7.1-c)   | Stage change + equal probability (02A §7.3) | PASS |
+| Self-damage 5% MaxHP (§10.1-d)  | DoT mechanic (02A §7.5 pattern)        | PASS     |
+| All stat stage boost (§10.1-d)   | Stage changes (02B §3)                 | PASS     |
+| Swap mitigation (§6.4-a, §6.4-d, §6.4-g) | Within 30% cap (02A §8.1)         | PASS     |
+| Swap AP gain (§6.4-b, §6.4-f, §6.4-e) | AP change (02C §1)                  | PASS     |
+| Swap stat stage (§6.4-c, §6.4-i) | Stage change (02B §3)                  | PASS     |
+| Swap accuracy (§6.4-h)           | Accuracy buff (02C §2)                 | PASS     |
+
+No modifier directly applies any ChemistryOnly status (02A §6.1).
+Type infusion (§5.1-a) changes the move's type for chemistry resolution at the
+engine level — it does NOT directly apply a chemistry status.
+Bonus actions (§3.2) trigger full resolution which may produce chemistry outputs
+via the engine's type interaction resolver — this is intended behaviour.
+
+VERDICT: COMPLIANT — All modifiers obey chemistry trigger rules and reference
+only defined mechanics from Specs 02A, 02B, and 02C.
+
+12.2 Constraint Verification
+
+| Constraint                                    | Check                    | Status |
+|-----------------------------------------------|--------------------------|--------|
+| No AP cost reduction modifiers                | §3 — only refund/bonus   | PASS   |
+| No cooldown modifiers or references           | Full-text search clean   | PASS   |
+| No dual-type infusion                         | §5.1 — single type only  | PASS   |
+| Multi-hit limited to +1 on [MULTI] only       | §4.1 — confirmed         | PASS   |
+| Stat substitution global cap                  | §5.2 — 2 per Chainling  | PASS   |
+| Mitigation within 30% single-source cap       | §6.3-c (25%), §7.1-b (18%) | PASS |
+| Active/Passive scope on every modifier        | All tables include Scope | PASS   |
+| Effect ranges (not fixed) where appropriate   | Verified per section     | PASS   |
+| High-impact mods at Epic+ rarity              | §5.2, §6.3-d confirmed  | PASS   |
+
+===============================================================================
+13. Modifier Count Summary
+===============================================================================
+
+| Category         | Section | Count | Rarity Range        |
+|------------------|---------|-------|---------------------|
+| POT — Power      | §2.1    | 5     | Common – Legendary  |
+| POT — Accuracy   | §2.2    | 4     | Common – Epic       |
+| POT — Crit       | §2.3    | 5     | Common – Legendary  |
+| EFF — AP Refund  | §3.1    | 3     | Common – Rare       |
+| EFF — Bonus Act. | §3.2    | 3     | Rare – Legendary    |
+| AUG — Multi-Hit  | §4.1    | 1     | Rare                |
+| AUG — AOE        | §4.2    | 1     | Epic                |
+| AUG — Priority   | §4.3    | 2     | Epic – Legendary    |
+| TRX — Infusion   | §5.1    | 1*    | Rare (* x14 types)  |
+| TRX — Stat Sub   | §5.2    | 4     | Epic – Mythic       |
+| TRG — On-Hit     | §6.1    | 4     | Uncommon – Rare     |
+| TRG — On-Crit    | §6.2    | 3     | Rare – Legendary    |
+| TRG — Conditional| §6.3    | 5     | Rare – Epic         |
+| TRG — Swap       | §6.4    | 9     | Common – Epic       |
+| SYN — Team       | §7.1    | 4     | Uncommon – Epic     |
+| SYN — Combo      | §7.2    | 3     | Uncommon – Epic     |
+| Special — Entgl. | §10.1   | 4     | Rare – Mythic       |
+| Special — Event  | §10.2   | 3     | N/A (event-only)    |
+|------------------|---------|-------|---------------------|
+| TOTAL            |         | 64    | (+ 13 type variants)|
+
+===============================================================================
+14. Cross-References
+===============================================================================
+
+Related Specification Documents:
+- COMBAT_01_TypeChemistry_v1.1.txt — Type interactions
+- COMBAT_02A_StatusFrameworkAndCatalog_v1.1.txt — Status definitions
+- COMBAT_02B_StatsStagesIVs_v1.1.txt — Stat system and stages
+- COMBAT_02C_ResolutionMath_v1.1.txt — Damage calculations
+- COMBAT_03A_Moves_CoreFramework_v1.1.txt — Base move rules
+- COMBAT_03A1_Moves_BaselineList_v1.2.txt — Move list
+- COMBAT_04_AcquisitionRarity_v1.0.txt — Drop rates
+- COMBAT_06_SpeciesMovePools_v1.2.txt — Species pools
+
+===============================================================================
+15. Version History
+===============================================================================
+
+v1.2 — Modifier system expansion
+  - ADDED: INIT modifier category and initiative slot-type rules
+  - ADDED: Schema columns PowerCap, APCostCap, ForbiddenTags, SlotType
+  - ADDED: Tactical trigger families (OnKO / OnEscape) and loadout guardrails
+  - ADDED: Targeting, barrier, status, chemistry, and action-economy extensions
+  - CLARIFIED: Validation is data-driven via catalog + rule checks
+
+v1.1 rev.2 — Swap modifiers
+  - ADDED: §6.4 Swap Trigger Modifiers (On Swap In / On Swap Out)
+  - ADDED: OnSwapIn and OnSwapOut trigger conditions
+  - ADDED: 9 swap modifiers (§6.4-a through §6.4-i)
+  - ADDED: Stacking rules (1 swap-in, 1 swap-out per Chainling)
+  - ADDED: Forbidden combinations for swap modifier stacking
+  - ADDED: Compliance verification for swap modifier effects
+
+v1.0 — Initial specification
+  - Defined 6 modifier categories (POT, EFF, AUG, TRX, TRG, SYN)
+  - Established rarity brackets with effect potency scaling
+  - Created stacking rules to prevent broken combinations
+  - Defined acquisition tied to Spec 04 framework
+  - Added Entangled-exclusive and Event-exclusive modifiers
+  - Established slot cost system for powerful modifiers
+
+v1.1 — Major redesign
+  - REMOVED: All AP cost reduction modifiers
+  - REMOVED: All cooldown modifiers — cooldowns do not exist
+  - ADDED: AP Refund modifiers with % chance mechanic
+  - ADDED: Bonus Action modifiers inspired by Cassette Beasts
+  - CHANGED: Multi-hit modifiers restricted to +1 hit on [MULTI] moves only
+  - REMOVED: Broad AOE conversion; replaced with restricted single-bounce
+  - CHANGED: Type Infusion now allowed on typed damaging moves (not just typeless)
+  - REMOVED: Dual Infusion — no dual-typing on moves
+  - REMOVED: Swingy on-hit stat triggers
+  - ADDED: Meaningful on-hit triggers (lifesteal, AP drain, power reduction)
+  - CHANGED: Auto-crit on-crit trigger replaced by +25% power next move
+  - CHANGED: Conditional triggers redesigned for situational awareness
+  - ADDED: Active/Passive scope labels to all modifiers
+  - CHANGED: Fixed percentages converted to ranges where appropriate
+  - UPDATED: Stacking rules and forbidden combinations for new modifier set
+  - ADDED: Compliance verification section
+
+v1.1 rev.1 — Consistency pass
+  - REMOVED: All modifier display names; entries identified by effect only
+  - ADDED: Section-based IDs (§x.y-z) for internal cross-referencing
+  - FIXED: "damage shield" → "mitigation" (02A §8 compliance)
+  - ADDED: Effect compliance notes per trigger section (02A/02B/02C references)
+  - ADDED: Status catalog cross-check table (Section 12.1)
+  - ADDED: Constraint verification table (Section 12.2)
+  - ADDED: Modifier count summary (Section 13)
+  - UPDATED: UI display format for nameless modifiers (effect icons, not labels)
+  - CLARIFIED: §10.1-d stat stage boost excludes MaxHP (HP has no stages)
+  - CLARIFIED: §5.2 global cap enforcement details
+
+===============================================================================
+AMBIGUITY NOTES — ALL RESOLVED (v1.2 lockdown)
+===============================================================================
+
+1. §6.1-c (power reduction on next move):
+   ✓ RESOLVED — "Staggered" added to 02A v1.2 §6.3 as:
+   "Staggered | General | Consumed | Next move -10% power | 1"
+   Engine applies Staggered status on trigger; damage formula checks for it.
+
+2. §6.2-c (next move +25% power):
+   ✓ RESOLVED — "Surging" added to 02A v1.2 §6.3 as:
+   "Surging | General | Consumed | Next move +25% power | 1"
+   Engine applies Surging status on trigger; damage formula checks for it.
+
+3. §6.3-d (power buff after ally KO):
+   ✓ RESOLVED — Engine requirement documented. The combat resolution pipeline
+   MUST support mid-turn event callbacks for KO events. Implementation:
+   - CombatEventBus.OnChainlingKO(chainlingId, killerMoveId)
+   - All equipped modifiers with KO triggers subscribe to this event
+   - Trigger resolution happens BEFORE the next action in the turn
+   This is an engine-level requirement, not a spec change.
+
+4. §10.1-d (all stat stages +30-40%):
+   ✓ RESOLVED — Clarified as "+3 to +4 stages" (FLAT STAGE BOOST, not
+   percentage). Applies to 5 stats: MeleeAtk, MeleeDef, RangedAtk, RangedDef,
+   Speed. MaxHP excluded (no stages). Table entry updated in §10.1.
+
+===============================================================================
+END

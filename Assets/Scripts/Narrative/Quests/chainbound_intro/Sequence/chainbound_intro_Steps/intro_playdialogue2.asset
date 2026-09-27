@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c98dc1b7c8af7d458c8defe1829276d, type: 3}
+  m_Name: intro_playdialogue2
+  m_EditorClassIdentifier: 
+  stepName: intro_playdial_cpuredirect
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 8114b1a9-0fe6-429b-a1dc-d9fe356c5aed
+  dialogueSequence: {fileID: 11400000, guid: a31df66e31ba0e74389a448f4b54d37f, type: 2}
+  lockInputDuringDialogue: 1
+  useSpeakerCameraBridge: 0

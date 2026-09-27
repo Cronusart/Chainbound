@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1407371d73398f34698de67689a8d545, type: 3}
+  m_Name: intro_disable_loomville_house_transition
+  m_EditorClassIdentifier: 
+  stepName: intro_disable_loomville_house_transition
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 3e4f7d50-fa79-41c2-ab0d-7751c2db9c72
+  gameObjectName: TransitionTrigger
+  enable: 0
+  additionalTargets:
+  - gameObjectName: playerhouse_door
+    enable: 0
+  includeInactive: 1
+  persistAcrossSceneLoads: 1
+  persistAsProfileWorldFlag: 1

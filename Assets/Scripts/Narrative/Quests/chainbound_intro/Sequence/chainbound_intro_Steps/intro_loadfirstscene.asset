@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19f9ccdc9e700ba4eb0e6e5907c0341f, type: 3}
+  m_Name: intro_loadfirstscene
+  m_EditorClassIdentifier: 
+  stepName: intro_loadfirstscene
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 3b058fc9-6875-4382-978a-e52b31f42a5a
+  sceneName: player_room
+  spawnId: player_room_start
+  transitionStyle: 0

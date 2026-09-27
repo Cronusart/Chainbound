@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1407371d73398f34698de67689a8d545, type: 3}
+  m_Name: intro_releaseintrobarriers
+  m_EditorClassIdentifier: 
+  stepName: intro_releaseintrobarriers
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 8d1c3e57-9a42-4b6f-b0e8-5c7a19d24f16
+  gameObjectName: Intro_Collider1
+  enable: 0
+  additionalTargets:
+  - gameObjectName: Intro_Collider2
+    enable: 0
+    stateIdOverride: 
+  - gameObjectName: Intro_Collider3
+    enable: 0
+    stateIdOverride: 
+  - gameObjectName: Intro_Collider4
+    enable: 0
+    stateIdOverride: 
+  - gameObjectName: Intro_Collider5
+    enable: 0
+    stateIdOverride: 
+  - gameObjectName: playerhouse_door
+    enable: 1
+    stateIdOverride: 
+  - gameObjectName: TransitionTrigger
+    enable: 1
+    stateIdOverride: 
+  includeInactive: 1
+  persistAcrossSceneLoads: 1
+  allowMissingWhenPersisting: 1
+  stateIdOverride: 
+  persistAsProfileWorldFlag: 1

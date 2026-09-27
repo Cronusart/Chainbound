@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b8700e866f11944f836c258d6049e3a, type: 3}
+  m_Name: chainbound_intro_profile
+  m_EditorClassIdentifier: 
+  questDefinition: {fileID: 11400000, guid: 015cc1a15e789b648bd1f011f84db266, type: 2}
+  questId: chainbound_intro
+  rules:
+  - label: before visiting lab
+    objectiveId: go_to_loom_lab
+    objectiveComparison: 2
+    objectiveValue: 0
+    flagPredicates: []
+    counterPredicates: []
+    dialogue: {fileID: 11400000, guid: fb05f56aad36a0d42b5258ff2004a102, type: 2}
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  inactiveDialogue: {fileID: 0}
+  inactiveTriggerId: 
+  inactiveNpcBehavior:
+    mode: 1
+    behaviorOverride: {fileID: 0}
+  activeFallbackDialogue: {fileID: 11400000, guid: fb05f56aad36a0d42b5258ff2004a102, type: 2}
+  activeFallbackTriggerId: chainbound_intro
+  activeFallbackNpcBehavior:
+    mode: 1
+    behaviorOverride: {fileID: 0}
+  designerNotes: Loomville Admiral interaction fallback for the active chainbound
+    intro quest.

@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02a89a4af31c49e7bd4c7ec5126c3b54, type: 3}
+  m_Name: Player_Room
+  m_EditorClassIdentifier: 
+  id: player_room
+  introClip: {fileID: 8300000, guid: 9ae8c4d90cb9e3246a4feeb659404d35, type: 3}
+  loopClip: {fileID: 8300000, guid: 734b450b8c78e644dbfc3bb4d49b6fb6, type: 3}
+  defaultTransitionSeconds: 1
+  volumeDb: -11

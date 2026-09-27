@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ca34155710fec447ac2ffa38a08aa4d, type: 3}
+  m_Name: DefaultAuraPreset
+  m_EditorClassIdentifier: 
+  palette: {fileID: 11400000, guid: a930c3ad1e4402447804c57a8f832512, type: 2}
+  auraPrefab: {fileID: 0}
+  attachMode: 0
+  localPosition: {x: 0, y: 0, z: 0}
+  localEulerAngles: {x: 0, y: 0, z: 0}
+  localScale: {x: 1, y: 1, z: 1}
+  inheritTargetLossyScale: 0
+  preserveAuthoringModules: 1
+  startColorSlot: 1
+  customStartColor: {r: 1, g: 1, b: 1, a: 1}
+  startColorTint: {r: 1, g: 1, b: 1, a: 1}
+  driveColorOverLifetime: 0
+  colorOverLifetimeSlot: 4
+  customColorOverLifetime: {r: 1, g: 1, b: 1, a: 1}
+  colorOverLifetimeAlpha: 0.35
+  startSizeMultiplier: 1
+  startSpeedMultiplier: 1
+  lifetimeMultiplier: 1
+  emissionRateMultiplier: 1
+  shapeScaleMultiplier: 1
+  maxParticlesOverride: 0
+  loop: 1
+  playOnApply: 1
+  simulationSpace: 0
+  rendererMaterialOverride: {fileID: 0}
+  sortingLayerName: 
+  sortingOrder: 0
+  animateIntensityFromPalettePulse: 0
+  pulseEmissionMultiplier: 1

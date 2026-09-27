@@ -1,0 +1,46 @@
+{
+  "moveId": "conductive_counter",
+  "moveName": "Conductive Counter",
+  "moveRarity": "Legendary",
+  "typeId": "None",
+  "typeIconPath": "Assets/Sprites/UI/typeless.png",
+  "category": "passive",
+  "power": 0,
+  "accuracy": 0,
+  "effectLine": "On contact hit, counter 10% damage and gain +1 AP.",
+  "mods": [
+    {
+      "slot": 1,
+      "id": "2.1-a",
+      "displayName": "Overclock",
+      "effectDescription": "+5-8% base power",
+      "effectValue": 6,
+      "effectValueLocked": true,
+      "effectUnit": "%",
+      "effectNoun": "base power",
+      "rarity": "Rare"
+    },
+    {
+      "slot": 2,
+      "id": "2.2-a",
+      "displayName": "Deadeye",
+      "effectDescription": "+5-7% accuracy",
+      "effectValue": 7,
+      "effectValueLocked": true,
+      "effectUnit": "%",
+      "effectNoun": "accuracy",
+      "rarity": "Mythic"
+    }
+  ],
+  "provenance": {
+    "rolledBy": "mando",
+    "stampedBy": "7xK1...pQ9s",
+    "owners": ["mando", "7xK1...pQ9s"],
+    "events": [
+      { "type": "rolled", "actor": "mando", "at": "2026-09-21T00:00:00Z" },
+      { "type": "stamped", "actor": "7xK1...pQ9s", "at": "2026-09-21T01:00:00Z" }
+    ]
+  },
+  "variant": "library_card_v1",
+  "side": "front"
+}

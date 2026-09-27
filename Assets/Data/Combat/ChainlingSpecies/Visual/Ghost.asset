@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eaf81ad1c3ed874f92ba7c3910d8b7d, type: 3}
+  m_Name: Ghost
+  m_EditorClassIdentifier: 
+  speciesId: ghost
+  displayName: '   '
+  idleSequence:
+    sprites:
+    - {fileID: 21300000, guid: d8f342b09824b324ea3e85df18f150a5, type: 3}
+  meleeAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: d8f342b09824b324ea3e85df18f150a5, type: 3}
+  rangedAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: d8f342b09824b324ea3e85df18f150a5, type: 3}
+  hitSequence:
+    sprites:
+    - {fileID: 21300000, guid: d8f342b09824b324ea3e85df18f150a5, type: 3}
+  idleFPS: 4
+  meleeAttackFPS: 12
+  rangedAttackFPS: 10
+  hitFPS: 8
+  spriteSize: {x: 5, y: 5}
+  portrait: {fileID: 0}

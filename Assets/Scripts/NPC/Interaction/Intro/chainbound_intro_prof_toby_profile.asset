@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b8700e866f11944f836c258d6049e3a, type: 3}
+  m_Name: chainbound_intro_prof_toby_profile
+  m_EditorClassIdentifier: 
+  questDefinition: {fileID: 11400000, guid: 015cc1a15e789b648bd1f011f84db266, type: 2}
+  questId: 
+  rules:
+  - label: prompt to choose starter
+    objectiveId: choose_starter
+    objectiveComparison: 2
+    objectiveValue: 0
+    sequenceProgressPredicates:
+    - sequenceId: chainbound_intro_sequence
+      label: choosestarter
+      comparison: 1
+    flagPredicates: []
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: 9a8b7c6d5e4f30129876543210abcdef, type: 2}
+    triggerId: 
+    npcBehavior:
+      mode: 0
+      behaviorOverride: {fileID: 0}
+  - label: 
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    flagPredicates: []
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 0}
+    triggerId: prof_toby_event
+    npcBehavior:
+      mode: 0
+      behaviorOverride: {fileID: 0}
+  inactiveDialogue: {fileID: 0}
+  inactiveTriggerId: 
+  inactiveNpcBehavior:
+    mode: 0
+    behaviorOverride: {fileID: 0}
+  activeFallbackDialogue: {fileID: 0}
+  activeFallbackTriggerId: prof_toby_event
+  activeFallbackNpcBehavior:
+    mode: 0
+    behaviorOverride: {fileID: 0}
+  designerNotes: Loom lab interaction that advances the active chainbound intro flow.

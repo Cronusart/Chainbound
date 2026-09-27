@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f988bc0d55107749a911c0375bba164, type: 3}
+  m_Name: Dial_SanctuaryWake_Defeat_03
+  m_EditorClassIdentifier: 
+  speakerNpcId: 
+  playerFacingPolicy: 0
+  lines:
+  - speakerName: 
+    text: Nothing is wasted. Stand up. Begin again.
+    typeSpeed: 42
+    soundEvent: {fileID: 0}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 0}
+      targetSource: 0
+      npcId: 
+      targetTag: 
+    choices: []
+  autoAdvance: 1
+  autoAdvanceDelay: 2.2
+  allowSkip: 1
+  skipToEndOfLine: 1

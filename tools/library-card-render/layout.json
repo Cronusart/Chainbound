@@ -1,0 +1,55 @@
+{
+  "type_inner": [
+    88,
+    88,
+    232,
+    232
+  ],
+  "name_origin": [
+    310,
+    120
+  ],
+  "stats_y": 230,
+  "stats_power_x": 320,
+  "stats_accuracy_x": 835,
+  "mod_x": 135,
+  "mod1_y": 364,
+  "mod2_y": 482,
+  "mod_slot_baked_x": 280,
+  "mod_slot_baked_y": 448,
+  "name_font_size": 72,
+  "name_max_width": 920,
+  "label_font_size": 28,
+  "value_font_size": 48,
+  "mod_font_size": 38,
+  "mod_ghost_font_size": 30,
+  "effect_font_size": 36,
+  "effect_max_lines": 2,
+  "effect_line_height": 42,
+  "back_origin_x": 160,
+  "back_origin_y": 86,
+  "back_font_size": 26,
+  "back_line_step": 58,
+  "stats_gap": "      ",
+  "stats_font_size": 40,
+  "mod_box_pad_x": 28,
+  "mod_box_pad_y": 20,
+  "mod_box_min_width": 1000,
+  "mod_box_stroke": 4,
+  "rotations": {
+    "name": 1,
+    "stats": -0.88,
+    "mod1": -0.55,
+    "mod2": 1.6,
+    "type_icon": -2.4,
+    "back": 0.5
+  },
+  "rarity_wells": {
+    "move": [932, 546, 972, 587],
+    "mod1": [1054, 551, 1094, 589],
+    "mod2": [1170, 554, 1210, 592]
+  },
+  "rarity_dot_inset": 8,
+  "effect_origin": [190, 468],
+  "effect_font_size_card": 28
+}

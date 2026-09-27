@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eaf81ad1c3ed874f92ba7c3910d8b7d, type: 3}
+  m_Name: Visual_Gilarime
+  m_EditorClassIdentifier: 
+  speciesId: gilarime
+  displayName: Gilarime
+  idleSequence:
+    sprites:
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: 6582c19fa6b57b5468be755ad69bd2b7, type: 3}
+    - {fileID: 21300000, guid: 28dcd31aa12b6f74c9cb12e3ce596d36, type: 3}
+    - {fileID: 21300000, guid: a3f555d647fc06547875d76304369550, type: 3}
+    - {fileID: 21300000, guid: fb8fc32c60efcc64ebeb714e35e7890f, type: 3}
+    - {fileID: 21300000, guid: 1edcd049254f82b4f961eff7f828c1fd, type: 3}
+    - {fileID: 21300000, guid: 1d4abf5630dd0a840a67f94ca761d007, type: 3}
+  meleeAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+  rangedAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+  hitSequence:
+    sprites:
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+    - {fileID: 21300000, guid: e75c97bd69a962940a1fc9a671894acf, type: 3}
+  idleFPS: 8
+  meleeAttackFPS: 8
+  rangedAttackFPS: 8
+  hitFPS: 8
+  spriteSize: {x: 5, y: 5}
+  presentationTrack: {fileID: 11400000, guid: 22474b2e7df45d7489ccfb9a83c1d961, type: 2}
+  anchorOffsets: []
+  spawnSound: {fileID: 11400000, guid: 5351507b702461842b25c914d4e602d8, type: 2}
+  swapInSound: {fileID: 11400000, guid: 5351507b702461842b25c914d4e602d8, type: 2}
+  meleeAttackFallbackSound: {fileID: 0}
+  rangedAttackFallbackSound: {fileID: 0}
+  hitReactionSound: {fileID: 0}
+  koSound: {fileID: 0}
+  glitchInSequence:
+    sprites: []
+  glitchOutSequence:
+    sprites: []
+  glitchInFPS: 10
+  glitchOutFPS: 10
+  portrait: {fileID: 0}
+  useCustomActionOutlineColor: 0
+  actionOutlineColor: {r: 0.15, g: 0.8, b: 1, a: 0.8}

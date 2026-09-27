@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f4611560e0c4f14aa484ad001130d02, type: 3}
+  m_Name: CombatNarration_Default
+  m_EditorClassIdentifier: 
+  speakerLabel: BATTLE LINK
+  advanceMode: 0
+  charactersPerSecond: 60
+  actionLeadSeconds: 0.22
+  primaryResolutionSeconds: 0.7
+  consequenceSeconds: 0.55
+  moveTemplate: '{actor} used {move}!'
+  multiHitMoveTemplate: '{actor} used {move}...'
+  priorityMoveTemplate: '{actor} struck first with priority {move}!'
+  swapStartTemplate: '{actor} is switching out!'
+  actionFailedTemplate: '{actor} could not use {move}.'
+  passTemplate: '{actor} passed.'
+  genericActionTemplate: '{actor} acted.'
+  damageTemplate: '{target} took {amount} damage.'
+  multiHitDamageTemplate: '{target} was hit {hits} times for {amount} damage!'
+  damageKoTemplate: '{target} took {amount} damage and was knocked out!'
+  multiHitDamageKoTemplate: '{target} was hit {hits} times for {amount} damage and was knocked out!'
+  criticalPrefix: 'Critical hit! '
+  healTemplate: '{target} recovered {amount} HP.'
+  missTemplate: "{actor}'s attack missed {target}."
+  dodgeTemplate: '{target} dodged the attack.'
+  barrierTemplate: "{target}'s barrier blocked the attack."
+  koTemplate: '{target} was knocked out!'
+  swapResultTemplate: '{target} entered the battle.'
+  statusAppliedTemplate: '{target} became {status}.'
+  statusRefreshedTemplate: "{target}'s {status} was refreshed."
+  statusImmuneTemplate: '{target} resisted {status}.'
+  statusCleansedTemplate: '{target} was cleansed of {status}.'
+  statusExpiredTemplate: "{target}'s {status} ended."
+  stageChangedTemplate: "{target}'s {stat} changed by {amount}."
+  passiveTemplate: "{actor}'s passive activated."
+  modifierTemplate: A combat modifier changed the outcome.
+  apBlockedTemplate: '{target} could not gain AP.'
+  apStolenTemplate: '{target} lost {amount} AP.'
+  rechargingTemplate: '{move} began recharging.'
+  bonusActionTemplate: '{actor} gained another action.'
+  victoryTemplate: 'Victory! Your team won in {turns} turns.'
+  defeatTemplate: 'Defeat. The opposing team won in {turns} turns.'
+  drawTemplate: 'The battle ended in a draw after {turns} turns.'
+  fledTemplate: Your team withdrew from battle.
+  eventRules: []

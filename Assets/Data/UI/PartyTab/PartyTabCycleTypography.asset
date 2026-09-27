@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72790610fd0c4980947eecb7b371dd50, type: 3}
+  m_Name: PartyTabCycleTypography
+  m_EditorClassIdentifier: 
+  variantCatalog: {fileID: 11400000, guid: 0c675056f0581934f8a13f6bb06cbc99, type: 2}
+  tierStyles:
+  - labelColor: {r: 0.86, g: 0.93, b: 1, a: 1}
+    filledPipColor: {r: 0.66, g: 0.82, b: 1, a: 1}
+    emptyPipColor: {r: 0.33, g: 0.4, b: 0.5, a: 0.72}
+    labelScale: 1
+    pipScale: 1
+    font: {fileID: 0}
+    fontMaterial: {fileID: 0}
+  - labelColor: {r: 0.74, g: 0.98, b: 0.9, a: 1}
+    filledPipColor: {r: 0.38, g: 0.98, b: 0.78, a: 1}
+    emptyPipColor: {r: 0.3, g: 0.42, b: 0.44, a: 0.72}
+    labelScale: 1.02
+    pipScale: 1.02
+    font: {fileID: 0}
+    fontMaterial: {fileID: 0}
+  - labelColor: {r: 1, g: 0.92, b: 0.6, a: 1}
+    filledPipColor: {r: 1, g: 0.72, b: 0.28, a: 1}
+    emptyPipColor: {r: 0.46, g: 0.39, b: 0.27, a: 0.72}
+    labelScale: 1.05
+    pipScale: 1.05
+    font: {fileID: 0}
+    fontMaterial: {fileID: 0}
+  - labelColor: {r: 1, g: 0.7, b: 0.86, a: 1}
+    filledPipColor: {r: 1, g: 0.42, b: 0.68, a: 1}
+    emptyPipColor: {r: 0.46, g: 0.3, b: 0.39, a: 0.72}
+    labelScale: 1.08
+    pipScale: 1.07
+    font: {fileID: 0}
+    fontMaterial: {fileID: 0}
+  - labelColor: {r: 0.92, g: 0.86, b: 1, a: 1}
+    filledPipColor: {r: 0.72, g: 0.52, b: 1, a: 1}
+    emptyPipColor: {r: 0.38, g: 0.32, b: 0.48, a: 0.72}
+    labelScale: 1.12
+    pipScale: 1.1
+    font: {fileID: 0}
+    fontMaterial: {fileID: 0}

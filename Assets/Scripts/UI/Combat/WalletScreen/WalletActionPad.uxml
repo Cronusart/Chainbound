@@ -1,0 +1,29 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Scripts/UI/Combat/WalletScreen/WalletActionPad.uss?fileID=7433441132597879392&amp;guid=bf100a3e6e5971e42b5f05c2661d1b74&amp;type=3#WalletActionPad" />
+    <ui:VisualElement name="WalletActionPadRoot" picking-mode="Ignore" class="wallet-screen">
+        <ui:Image name="Scanlines" picking-mode="Ignore" class="scanlines" style="background-color: rgba(0, 0, 0, 0); background-image: url(&quot;project://database/Assets/Sprites/Combat/BattleDevice/SCANLINE_FRAME_B.png?fileID=2800000&amp;guid=73ef39ff417e8c9469c434323861c30f&amp;type=3#SCANLINE_FRAME_B&quot;);" />
+        <ui:Image name="Overlay" picking-mode="Ignore" class="overlay" style="background-color: rgba(146, 169, 146, 0.25); background-image: url(&quot;project://database/Assets/Sprites/Combat/BattleDevice/Wallet_RT.png?fileID=2800000&amp;guid=2484db45999de66439c95a3d4ef7c362&amp;type=3#Wallet_RT&quot;); -unity-background-image-tint-color: rgb(255, 255, 255);" />
+        <ui:VisualElement name="ActionsRow" class="actions-row">
+            <ui:VisualElement name="Action_Fight" class="action action--fight" style="background-color: rgba(95, 118, 101, 0);">
+                <ui:VisualElement class="selector" />
+                <ui:Label text="FIGHT" class="action-label" style="-unity-font-definition: url(&quot;project://database/Assets/Sprites/UI/PixeloidSans.otf?fileID=12800000&amp;guid=f6f1115896f7a7746b0b13414d78c400&amp;type=3#PixeloidSans&quot;);" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Action_Flee" class="action action--flee" style="background-color: rgba(95, 118, 101, 0);">
+                <ui:VisualElement class="selector" />
+                <ui:Label text="FLEE" class="action-label" style="-unity-font-definition: url(&quot;project://database/Assets/Sprites/UI/PixeloidSans.otf?fileID=12800000&amp;guid=f6f1115896f7a7746b0b13414d78c400&amp;type=3#PixeloidSans&quot;);" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Action_Swap" class="action action--swap" style="background-color: rgba(95, 118, 101, 0);">
+                <ui:VisualElement class="selector" />
+                <ui:Label text="SWAP" class="action-label" style="-unity-font-definition: url(&quot;project://database/Assets/Sprites/UI/PixeloidSans.otf?fileID=12800000&amp;guid=f6f1115896f7a7746b0b13414d78c400&amp;type=3#PixeloidSans&quot;);" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Action_Item" class="action action--item" style="background-color: rgba(95, 118, 101, 0);">
+                <ui:VisualElement class="selector" />
+                <ui:Label text="!!!" class="action-label" style="-unity-font-definition: url(&quot;project://database/Assets/Sprites/UI/PixeloidSans.otf?fileID=12800000&amp;guid=f6f1115896f7a7746b0b13414d78c400&amp;type=3#PixeloidSans&quot;); width: 26px; -unity-text-align: middle-center;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="Action_Mint" class="action action--mint" style="opacity: 1; background-color: rgba(95, 118, 101, 0); width: 76px;">
+                <ui:VisualElement class="selector" style="opacity: 1; -unity-text-align: upper-center;" />
+                <ui:Label text="CAPTURE" class="action-label" style="-unity-font-definition: url(&quot;project://database/Assets/Sprites/UI/PixeloidSans.otf?fileID=12800000&amp;guid=f6f1115896f7a7746b0b13414d78c400&amp;type=3#PixeloidSans&quot;); background-color: rgba(0, 0, 0, 0); -unity-text-align: middle-center; width: 68px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

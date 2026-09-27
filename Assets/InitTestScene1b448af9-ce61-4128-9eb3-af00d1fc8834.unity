@@ -1,0 +1,715 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!29 &1
+OcclusionCullingSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_OcclusionBakeSettings:
+    smallestOccluder: 5
+    smallestHole: 0.25
+    backfaceThreshold: 100
+  m_SceneGUID: 00000000000000000000000000000000
+  m_OcclusionCullingData: {fileID: 0}
+--- !u!104 &2
+RenderSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 10
+  m_Fog: 0
+  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  m_FogMode: 3
+  m_FogDensity: 0.01
+  m_LinearFogStart: 0
+  m_LinearFogEnd: 300
+  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
+  m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
+  m_AmbientIntensity: 1
+  m_AmbientMode: 0
+  m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
+  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_HaloStrength: 0.5
+  m_FlareStrength: 1
+  m_FlareFadeSpeed: 3
+  m_HaloTexture: {fileID: 0}
+  m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
+  m_DefaultReflectionMode: 0
+  m_DefaultReflectionResolution: 128
+  m_ReflectionBounces: 1
+  m_ReflectionIntensity: 1
+  m_CustomReflection: {fileID: 0}
+  m_Sun: {fileID: 0}
+  m_UseRadianceAmbientProbe: 0
+--- !u!157 &3
+LightmapSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 13
+  m_BakeOnSceneLoad: 0
+  m_GISettings:
+    serializedVersion: 2
+    m_BounceScale: 1
+    m_IndirectOutputScale: 1
+    m_AlbedoBoost: 1
+    m_EnvironmentLightingMode: 0
+    m_EnableBakedLightmaps: 1
+    m_EnableRealtimeLightmaps: 0
+  m_LightmapEditorSettings:
+    serializedVersion: 12
+    m_Resolution: 2
+    m_BakeResolution: 40
+    m_AtlasSize: 1024
+    m_AO: 0
+    m_AOMaxDistance: 1
+    m_CompAOExponent: 1
+    m_CompAOExponentDirect: 0
+    m_ExtractAmbientOcclusion: 0
+    m_Padding: 2
+    m_LightmapParameters: {fileID: 0}
+    m_LightmapsBakeMode: 1
+    m_TextureCompression: 1
+    m_ReflectionCompression: 2
+    m_MixedBakeMode: 2
+    m_BakeBackend: 1
+    m_PVRSampling: 1
+    m_PVRDirectSampleCount: 32
+    m_PVRSampleCount: 512
+    m_PVRBounces: 2
+    m_PVREnvironmentSampleCount: 256
+    m_PVREnvironmentReferencePointCount: 2048
+    m_PVRFilteringMode: 1
+    m_PVRDenoiserTypeDirect: 1
+    m_PVRDenoiserTypeIndirect: 1
+    m_PVRDenoiserTypeAO: 1
+    m_PVRFilterTypeDirect: 0
+    m_PVRFilterTypeIndirect: 0
+    m_PVRFilterTypeAO: 0
+    m_PVREnvironmentMIS: 1
+    m_PVRCulling: 1
+    m_PVRFilteringGaussRadiusDirect: 1
+    m_PVRFilteringGaussRadiusIndirect: 1
+    m_PVRFilteringGaussRadiusAO: 1
+    m_PVRFilteringAtrousPositionSigmaDirect: 0.5
+    m_PVRFilteringAtrousPositionSigmaIndirect: 2
+    m_PVRFilteringAtrousPositionSigmaAO: 1
+    m_ExportTrainingData: 0
+    m_TrainingDataDestination: TrainingData
+    m_LightProbeSampleCountMultiplier: 4
+  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}
+  m_LightingSettings: {fileID: 0}
+--- !u!196 &4
+NavMeshSettings:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_BuildSettings:
+    serializedVersion: 3
+    agentTypeID: 0
+    agentRadius: 0.5
+    agentHeight: 2
+    agentSlope: 45
+    agentClimb: 0.4
+    ledgeDropHeight: 0
+    maxJumpAcrossDistance: 0
+    minRegionArea: 2
+    manualCellSize: 0
+    cellSize: 0.16666667
+    manualTileSize: 0
+    tileSize: 256
+    buildHeightMesh: 0
+    maxJobWorkers: 0
+    preserveTilesOutsideBounds: 0
+    debug:
+      m_Flags: 0
+  m_NavMeshData: {fileID: 0}
+--- !u!1 &1622128160
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1622128162}
+  - component: {fileID: 1622128161}
+  m_Layer: 0
+  m_Name: Code-based tests runner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1622128161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622128160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 102e512f651ee834f951a2516c1ea3b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_AssembliesWithTests:
+  - Chainbound.Combat.Tests
+  - Unity.InputSystem.TestFramework
+  - Unity.PerformanceTesting
+  - UnityEngine.TestRunner
+  testStartedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  testFinishedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  runStartedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  runFinishedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  settings:
+    filters:
+    - testMode: 4
+      assemblyNames: []
+      groupNames: []
+      categoryNames: []
+      testNames:
+      - Chainbound.Combat.Tests.AccountLinkPolicyTests.IdentityLinkBlocksDifferentProfileCollision
+      - Chainbound.Combat.Tests.AccountLinkPolicyTests.WalletLinkAllowsCurrentProfileWhenNoActiveCollisionExists
+      - Chainbound.Combat.Tests.AccountLinkPolicyTests.WalletLinkBlocksDifferentProfileCollision
+      - Chainbound.Combat.Tests.AccountLinkPolicyTests.WalletLinkRequiresExplicitConsent
+      - Chainbound.Combat.Tests.AccountRestorePolicyTests.EditorUsesPlatformIdentityWhenAMockCanRestore
+      - Chainbound.Combat.Tests.AccountRestorePolicyTests.GooglePlayDoesNotFallBackToWalletWhenIdentityCannotRestore
+      - Chainbound.Combat.Tests.AccountRestorePolicyTests.GooglePlayUsesPlatformIdentityWhenItCanRestore
+      - Chainbound.Combat.Tests.AccountRestorePolicyTests.IosUsesPlatformIdentityWhenItCanRestore
+      - Chainbound.Combat.Tests.AccountRestorePolicyTests.SolanaDappStoreAlwaysUsesWalletWhenAvailable
+      - Chainbound.Combat.Tests.AccountRestorePolicyTests.SolanaDappStoreReportsNoneWhenWalletIsUnavailable
+      - Chainbound.Combat.Tests.BattleDefeatRamPenaltyTests.Calculate_CaptureTerminal_DoesNotApplyPenaltyAndStillCalculates
+      - Chainbound.Combat.Tests.BattleDefeatRamPenaltyTests.Calculate_FleeOrDraw_NeverAppliesPenalty
+      - Chainbound.Combat.Tests.BattleDefeatRamPenaltyTests.Calculate_PveLoss_AppliesFlatPenaltyWithoutRewards
+      - Chainbound.Combat.Tests.BattleDefeatRamPenaltyTests.Calculate_PveLoss_UsesLevelScalingWhenEnabled
+      - Chainbound.Combat.Tests.BattleDefeatRecoveryTests.ApplyToPveDefeat_ClampsPositiveFractionToLivingHp
+      - Chainbound.Combat.Tests.BattleDefeatRecoveryTests.ApplyToPveDefeat_DoesNotReviveOutsideAnOrdinaryPveLoss(PvE,0,False)
+      - Chainbound.Combat.Tests.BattleDefeatRecoveryTests.ApplyToPveDefeat_DoesNotReviveOutsideAnOrdinaryPveLoss(PvE,-2,False)
+      - Chainbound.Combat.Tests.BattleDefeatRecoveryTests.ApplyToPveDefeat_DoesNotReviveOutsideAnOrdinaryPveLoss(PvE,1,True)
+      - Chainbound.Combat.Tests.BattleDefeatRecoveryTests.ApplyToPveDefeat_DoesNotReviveOutsideAnOrdinaryPveLoss(PvP,1,False)
+      - Chainbound.Combat.Tests.BattleDefeatRecoveryTests.ApplyToPveDefeat_RevivesOnlyKoParticipantsAtHalfBattleMaxHp
+      - Chainbound.Combat.Tests.BattleDefeatRecoveryTests.ApplyToPveDefeat_ZeroRecoveryFractionDoesNotRevive
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.Colorize_WrapsTraitWords
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.EntangledColor_UsesTypeDisplayFallback
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.FromChainling_ReadsMutatedFromAuraAndVariantFromSkin
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.Labels_AreConfigurable
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.Pvp_IgnoresWildTraits
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.Trainer_UsesTeamToken
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.TraitOrder_IsConfigurable
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.WildBase_KeepsExistingCopy
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.WildDual_StacksPerCreature
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.WildStacked_UsesMutatedEntangledNameVariantOrder
+      - Chainbound.Combat.Tests.BattleIntroCopyFormatterTests.WildVariant_AppendsVariantAfterName
+      - Chainbound.Combat.Tests.BattleIntroVfxProfileTests.PresentationAllowsPlayerSpawnAdvanceOverride
+      - Chainbound.Combat.Tests.BattleIntroVfxProfileTests.PresentationUsesSpawnAdvanceDelayAsPlayerFallback
+      - Chainbound.Combat.Tests.BattleIntroVfxProfileTests.RequestContextExtractsLeadSpeciesActiveSpeciesAndEntangledFlag
+      - Chainbound.Combat.Tests.BattleIntroVfxProfileTests.ResolverUsesBossEntangledPvpDefaultCategoryOrder
+      - Chainbound.Combat.Tests.BattleIntroVfxProfileTests.ResolverUsesExactVariantBeforeSpeciesAndCategoryProfiles
+      - Chainbound.Combat.Tests.BattleIntroVfxProfileTests.ResolverUsesSpeciesOverrideBeforeCategoryProfiles
+      - Chainbound.Combat.Tests.BattleOutcomePresentationTests.Flee_IsWithdrawnAndSkipsRewards
+      - Chainbound.Combat.Tests.BattleOutcomePresentationTests.KoAfterPriorCapture_IsVictoryWithCaptureFlag
+      - Chainbound.Combat.Tests.BattleOutcomePresentationTests.LastWildCapture_IsCaptureNotDraw
+      - Chainbound.Combat.Tests.BattleOutcomePresentationTests.PlayerLoss_IsDefeat
+      - Chainbound.Combat.Tests.BattleOutcomePresentationTests.ResolveCapturedDisplayName_UsesCaptureRecords
+      - Chainbound.Combat.Tests.BattleOutcomePresentationTests.TrueDraw_IsDraw
+      - Chainbound.Combat.Tests.CaptureCoreTests.AlertnessRaisesMotionButDoesNotShortenFutureTimer
+      - Chainbound.Combat.Tests.CaptureCoreTests.EmptyMeterAndLockRemoveTheTargetButTimeoutDoesNot
+      - Chainbound.Combat.Tests.CaptureCoreTests.FullBandReachesLockWithoutSecondaryProbabilityRoll
+      - Chainbound.Combat.Tests.CaptureCoreTests.GearOrbAndDifferentBoostTiersStackLinearly
+      - Chainbound.Combat.Tests.CaptureCoreTests.HpCliffAppliesImmediatelyAboveLowHpThreshold
+      - Chainbound.Combat.Tests.CaptureCoreTests.InvalidBalanceValuesNormalizeToTechnicalSafetyBounds
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(-10,1)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(-4,1)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(-3,2)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(-2,2)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(-1,3)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(1,3)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(2,4)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(3,4)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(4,5)
+      - Chainbound.Combat.Tests.CaptureCoreTests.IvGradeBoundariesAreStable(10,5)
+      - Chainbound.Combat.Tests.CaptureCoreTests.LegacyRateMapsToProfileInsteadOfProbability(70,Calm)
+      - Chainbound.Combat.Tests.CaptureCoreTests.LegacyRateMapsToProfileInsteadOfProbability(69,Standard)
+      - Chainbound.Combat.Tests.CaptureCoreTests.LegacyRateMapsToProfileInsteadOfProbability(40,Standard)
+      - Chainbound.Combat.Tests.CaptureCoreTests.LegacyRateMapsToProfileInsteadOfProbability(39,Volatile)
+      - Chainbound.Combat.Tests.CaptureCoreTests.LegacyRateMapsToProfileInsteadOfProbability(20,Volatile)
+      - Chainbound.Combat.Tests.CaptureCoreTests.LegacyRateMapsToProfileInsteadOfProbability(19,Extreme)
+      - Chainbound.Combat.Tests.CaptureCoreTests.LockMeterPitchRisesFromEscapeToLock
+      - Chainbound.Combat.Tests.CaptureCoreTests.LowHpThresholdHasNoResistanceButFullHpAppliesConfiguredResistance
+      - Chainbound.Combat.Tests.CaptureCoreTests.MutatedTraitAddsMotionAndSpikeChanceWithoutChangingTimer
+      - Chainbound.Combat.Tests.CaptureCoreTests.OrbProfilesApplyTheirFixedTradeoffsWithoutProbability
+      - Chainbound.Combat.Tests.CaptureCoreTests.PolicyDefaultsToLivingActiveWildTargetsOnly
+      - Chainbound.Combat.Tests.CaptureCoreTests.PositiveIvCaptureBonusCapsAtFivePerNonHpStat
+      - Chainbound.Combat.Tests.CaptureCoreTests.ReenteringBandDropsOppositeRemainderAndAppliesLockOnTheNextTick
+      - Chainbound.Combat.Tests.CaptureCoreTests.SameSeedAndInputStreamProduceGoldenIdenticalState
+      - Chainbound.Combat.Tests.CaptureCoreTests.ScannerHigherRatingIsDeterministicSupersetAndNeverIncludesMaxHp
+      - Chainbound.Combat.Tests.CaptureCoreTests.SpeciesCaptureProfileOverridesLegacyRateMapper
+      - Chainbound.Combat.Tests.CaptureCoreTests.TimerExpiresWithoutPrefillingEscape
+      - Chainbound.Combat.Tests.CaptureResultCopyTests.FormatBattleReportCaptureLine_IncludesKindAndDuration
+      - Chainbound.Combat.Tests.CaptureResultCopyTests.FormatCapturedSubject_IncludesMutatedEntangledAndVariant
+      - Chainbound.Combat.Tests.CaptureResultCopyTests.FormatCapturedSubject_UsesWildSpeciesName
+      - Chainbound.Combat.Tests.CaptureResultCopyTests.FormatPrompt_ReplacesSubjectToken
+      - Chainbound.Combat.Tests.CaptureResultCopyTests.ResolveFailureCopy_UsesBoardThenFallback
+      - Chainbound.Combat.Tests.ChainlingAttributeDisplayUtilityTests.BuildBreakdownSections_ShowBaseIvCycleAutoAndPick
+      - Chainbound.Combat.Tests.ChainlingAttributeDisplayUtilityTests.BuildCatalogRadarRange_UsesFlatCeilAndQuarterFloor_IgnoresZeroBases
+      - Chainbound.Combat.Tests.ChainlingAttributeDisplayUtilityTests.BuildMaxHp_AppliesAutoAndPickFlats
+      - Chainbound.Combat.Tests.ChainlingAttributeDisplayUtilityTests.BuildPartyRadarAxes_CatalogNormalize_HigherTotalHigherFill
+      - Chainbound.Combat.Tests.ChainlingAttributeDisplayUtilityTests.BuildPartyRadarAxes_UsesVisualVertexOrder
+      - Chainbound.Combat.Tests.ChainlingAttributeDisplayUtilityTests.BuildPartyStatValues_UsesCycleFlats
+      - Chainbound.Combat.Tests.ChainlingAttributeDisplayUtilityTests.ComputeRadarRim_UsesIvMaxPlusCycleAutoAndAllPicks
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.InvalidOrSkippedNameUsesSpeciesFallback
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.SanitizeRemovesInvalidCharactersAndCollapsesSpaces
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.ValidatesCanonicalNameRules("Validape",True)
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.ValidatesCanonicalNameRules("O'Byte",True)
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.ValidatesCanonicalNameRules("Signal-Fox",True)
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.ValidatesCanonicalNameRules("A",False)
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.ValidatesCanonicalNameRules("Two 
+        Spaces",False)
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.ValidatesCanonicalNameRules("Bad_Name",False)
+      - Chainbound.Combat.Tests.ChainlingDisplayNameRulesTests.ValidatesCanonicalNameRules("ThirteenCharsX",False)
+      - Chainbound.Combat.Tests.ChainlingHpPersistenceTests.BuildRequest_DefeatParticipant_PersistsZeroHp
+      - Chainbound.Combat.Tests.ChainlingHpPersistenceTests.BuildRequest_MergesBenchedParticipantHpWithoutContributions
+      - Chainbound.Combat.Tests.ChainlingHpPersistenceTests.BuildRequest_RecoveredDefeatParticipant_PersistsRecoveryHp
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.InfoPanelViewContentGroupTargetsViewsRoot
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnShellApplierApplyAndRestore
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnShellAppliesPaletteColorsFromPrimaryType
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnShellDualTypeUsesPrimaryType
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnShellEmptyHidesCardChrome
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnShellEmptyUsesNeutralPaletteColors
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnShellFilledShowsCardChrome
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnShellMissingPaletteFallsBackToTypeDisplayColor
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnShellMissingTypeEntryFallsBackToTypeDisplayColor
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnVariantDoesNotOverwriteInfoPanelBackground
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.PartyColumnVariantDoesNotOverwriteTypeBackgroundOrPedestalTint
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.ResolverFallsBackToDefaultPartyColumnVariant
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.ResolverReturnsPartyColumnVariantFromIdentityDatabase
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.ValidateOwnedCosmeticsRejectsUnownedPartyColumnId
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.VisualIdentityCloneAndNormalizePreservesPartyColumnVariantId
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.VisualIdentityMutationPatchesPartyColumnVariantInRosterCache
+      - Chainbound.Combat.Tests.ChainlingPartyColumnVariantTests.VisualIdentitySaveCloneUsesPartyColumnFallback
+      - Chainbound.Combat.Tests.ChainlingPartyNavigationControllerTests.CancelFromViewEditingReturnsToViewSection
+      - Chainbound.Combat.Tests.ChainlingPartyNavigationControllerTests.CancelPeelsPhasesBeforeHub
+      - Chainbound.Combat.Tests.ChainlingPartyNavigationControllerTests.ColumnEditingMovesSelectedSlot
+      - Chainbound.Combat.Tests.ChainlingPartyNavigationControllerTests.RightAndLeftSwapBetweenViewAndPartySections
+      - Chainbound.Combat.Tests.ChainlingPartyNavigationControllerTests.SubmitFromColumnEditingRequestsDetail
+      - Chainbound.Combat.Tests.ChainlingPartyNavigationControllerTests.SubmitGatesEditingPhases
+      - Chainbound.Combat.Tests.ChainlingPartyNavigationControllerTests.ViewEditingDelegatesMoveSubmitAndCancel
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildDrillDown_AttributesView_ProducesFiveSections
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildDrillDown_StatsView_UnlocksFirstBloodBadge
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_AttributesView_ExposesRadarAxes
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_EmptySlot_IsEmptyWithoutDrillDown
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_EntryView_EmptyFlagship_UsesEmptySignatureRow
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_EntryView_FillsSignatureFromFlagshipMove
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_EntryView_PopulatesRoleDescriptionAndStarterEncounters
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_FilledColumn_ProducesVitalsFromPersistedHp
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_GeneralView_ExposesStarCount
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_GeneralView_FormatsMaxCycleAtRebirthCap
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_GeneralView_ProducesXpBarFill
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_GeneralView_ResolvesArchiveAndEntangledState
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_LoadoutView_FormatsIdleLoopAndFlourish
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_LoadoutView_ShowsLookCardOnly
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_MovesView_UsesEquippedOnlyRowsAndRebirthCap
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_StatsView_ReadsPveServiceRecord
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.BuildSummary_UnsyncedHp_UsesFullMaxInVitals
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.FormatPreferredTypeValue_JoinsSecondaryWithoutEntangledPrefix
+      - Chainbound.Combat.Tests.ChainlingPartyReadModelTests.ViewModeLabels_DetailDisplaysAsEntry
+      - Chainbound.Combat.Tests.ChainlingPartyViewRailTests.CarouselMoveLiveUpdatesActiveMode
+      - Chainbound.Combat.Tests.ChainlingPartyViewRailTests.CarouselMoveWrapsVertically
+      - Chainbound.Combat.Tests.ChainlingPartyViewRailTests.ConfirmCarouselClosesWithoutRevertingPreview
+      - Chainbound.Combat.Tests.ChainlingPartyViewRailTests.DefaultsToGeneralAndOpensCarouselCentered
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.ChainlingInstance_UsesCycleFlats_NotStarScale
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.ChemistryDamageMultiplier_UsesOnePointTwoAndZeroPointEight
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.ComputeProgressedStat_Cycle1_AutoPlusMaxHpPick
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.CycleAutoFlat_AddsOneCombatAndFivePercentMaxHpPerRebirth
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.CyclePickFlat_AppliesOneCombatOrFivePercentMaxHpPerAllocationPoint
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.ProgressionDamageFactor_HonorsMoveOverride
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.ProgressionDamageFactor_IsFlatOneByDefault
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.ProgressionTieBreakScore_FavorsStarsThenRebirth
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.ResolveSnapshotProgression_MigratesLegacyLevelWhenStarsUnset
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.ResolveSnapshotProgression_PrefersExplicitStars
+      - Chainbound.Combat.Tests.ChainlingProgressionAndChemistryTests.StatScaleMultiplier_IsAlwaysOne_UnderCycleFlats
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.BuildSummaryPreview_UsesMasterySuffixAtMaxStar
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.GrantService_DistinctMilestonesCanAwardDuplicateInventoryCopies
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.GrantService_ExcludesOwnedMovesWhenConfigured
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.GrantService_PersistsSuccessfulStarRolls
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.GrantService_ZeroPercentGateRecordsNoFolioWithoutPersistence
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.PoolResolver_AppliesEventMultiplierAndGateBonus
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.PreviewUtility_OwnedMovesRemainEligibleAndReportCopyCount
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.PreviewUtility_UsesGateTimesNormalizedWeight
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.PreviewUtility_UsesMasteryGateAtMaxStar
+      - Chainbound.Combat.Tests.ChainlingProgressionGrantTests.RewardCalculator_DerivesStarsCrossedFromMasteryXp
+      - Chainbound.Combat.Tests.ChainlingPveStatsAggregatorTests.AggregateCombatStats_AttributesPveEventTotals
+      - Chainbound.Combat.Tests.ChainlingPveStatsAggregatorTests.AggregateCombatStats_SkipsPvPResults
+      - Chainbound.Combat.Tests.ChainlingPveStatsAggregatorTests.BuildOutcomeBundle_DoesNotGrantVictoryForFlee
+      - Chainbound.Combat.Tests.ChainlingPveStatsAggregatorTests.BuildOutcomeBundle_MergesRewardsAndVictoryCredit
+      - Chainbound.Combat.Tests.ChainlingRosterHpHydrationTests.BuildTeamFromParty_AppliesPersistedCurrentHp
+      - Chainbound.Combat.Tests.ChainlingRosterHpMutationTests.PatchRosterFromParticipants_UpdatesMatchingSnapshot
+      - Chainbound.Combat.Tests.ChainlingsMenuTestHarnessTests.EquipMoveAsync_ClearingSlotRefreshesSnapshotMoveIds
+      - Chainbound.Combat.Tests.ChainlingsMenuTestHarnessTests.RegenerateTestRoster_SeedsPartySnapshotsWithEquippedMoves
+      - Chainbound.Combat.Tests.ChainlingsMenuTestHarnessTests.RegenerateTestRoster_SeedsXpProgressAndPersistedHpVariation
+      - Chainbound.Combat.Tests.ChainlingVitalsUtilityTests.BuildDisplay_PartialHp_ComputesFillRatio
+      - Chainbound.Combat.Tests.ChainlingVitalsUtilityTests.ResolveEffectiveCurrentHp_AboveMax_ClampsToMax
+      - Chainbound.Combat.Tests.ChainlingVitalsUtilityTests.ResolveEffectiveCurrentHp_Unsynced_ReturnsMaxHp
+      - Chainbound.Combat.Tests.ChainlingVitalsUtilityTests.ResolveEffectiveCurrentHp_Zero_IsFainted
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.ApprovedBootstrapAndPositionInstructionsAreAllowed("create_profile")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.ApprovedBootstrapAndPositionInstructionsAreAllowed("create_move_vault")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.ApprovedBootstrapAndPositionInstructionsAreAllowed("initialize_chainling_vault")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.ApprovedBootstrapAndPositionInstructionsAreAllowed("initialize_equipped_registry")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.ApprovedBootstrapAndPositionInstructionsAreAllowed("update_position")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("update_wins_losses")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("add_ordinal")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("add_chainling_from_capture")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("create_chainling")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("spend_ram")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("burn_ordinal_for_ram")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("set_equipped_move")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("mint_move")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("vending")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("vrf")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("ranked_wager")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed("")
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.EconomicAndUnlistedInstructionsFailClosed(null)
+      - Chainbound.Combat.Tests.ClosedBetaFeaturePolicyTests.InstructionNamesAreCaseSensitive
+      - Chainbound.Combat.Tests.CombatActionSelectorBridgeTests.BackRewindAtFirstSlotDoesNotQueuePass
+      - Chainbound.Combat.Tests.CombatActionSelectorBridgeTests.BackRewindClearsQueuedActionForRewoundToSlot
+      - Chainbound.Combat.Tests.CombatBattleSfxCatalogTests.ImpactPhaseAccentVolumeScale_DucksWhenOutcomeImpactAuthored
+      - Chainbound.Combat.Tests.CombatBattleSfxCatalogTests.ImpactPhaseAccentVolumeScale_UsesCatalogLeverValue
+      - Chainbound.Combat.Tests.CombatBattleSfxCatalogTests.MissingStatusEntryFallsBackSafelyByStatusDefinition
+      - Chainbound.Combat.Tests.CombatBattleSfxCatalogTests.PostBattleStingerResolvesFromResultState
+      - Chainbound.Combat.Tests.CombatBattleSfxCatalogTests.StatusSpecificAppliedSoundBeatsBuffFallback
+      - Chainbound.Combat.Tests.CombatBattleSfxCatalogTests.StatusSpecificCleanseSoundBeatsGlobalCleanseFallback
+      - Chainbound.Combat.Tests.CombatBattleSfxCatalogTests.TurnStartApBatchPlaysOneCatalogSound
+      - Chainbound.Combat.Tests.CombatCaptureTurnTests.CaptureActionResolvesAfterAllCombatRegardlessOfSpeed
+      - Chainbound.Combat.Tests.CombatCaptureTurnTests.CaptureIsCancelledWhenRecorderIsKoedDuringCombat
+      - Chainbound.Combat.Tests.CombatCaptureTurnTests.CaptureIsCancelledWhenRecorderSkipsTheAction
+      - Chainbound.Combat.Tests.CombatCaptureTurnTests.CaptureIsCancelledWhenTargetIsKoedDuringCombat
+      - Chainbound.Combat.Tests.CombatCaptureTurnTests.EligibleCaptureLeavesPendingAttemptWithLiveHp
+      - Chainbound.Combat.Tests.CombatCaptureTurnTests.SecondQueuedCaptureIsNormalizedToPass
+      - Chainbound.Combat.Tests.CombatChemistryMatrixPassTests.RedesignMatrixUsesNewChemistryKitAndRejectsDeprecatedAuthors
+      - Chainbound.Combat.Tests.CombatChemistryMatrixPassTests.V1DirectionsHaveNoMutualAdvantagesAndExcludeMeme
+      - Chainbound.Combat.Tests.CombatChemistryMatrixPassTests.V1DirectionsKeepReadableCryptoTriangles
+      - Chainbound.Combat.Tests.CombatChemistryMatrixPassTests.V1DirectionsMatchKeyRoleCounts
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.CascadeTriggersAtThreeAndForensicPayloadTracksCounterReset
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.DefueledRemovesOneHarmfulChemistryStatusFromSelf
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.DualTypeChemistryCollapsesToFlatRelationAndPrimaryReaction
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.FirewallMitigatesProjectileButNotMeleeAndKeepsChemistryApplication
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.IdenticalChemistrySeedsProduceIdenticalOutcomesAndForensicRolls
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.IsolatedRejectsAllySupportButLeavesTargetUnchanged
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.RuggedEscalatesAndCapsWhileDripAndFomoTickOnce
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.RuggedReapplicationRefreshesWithoutIncreasingSeverity
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.ShatteredUsesCurrentHpChipMinimumOneAndDoesNotExecute
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.SlowedAppliesSpeedPenaltyAndDoesNotSkipActions
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.SplinterSingleTargetFallbackDealsFifteenPercentMoreAndIsConsumed
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.SplinterSpreadsAtSixtyFivePercentAndIsConsumed
+      - Chainbound.Combat.Tests.CombatChemistryReactionRedesignTests.SuppressedRepeatReactionStillReturnsDamageRelation
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.CombatVisualUsesBodyOverrideForDurationMarkerAndClear
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.HudCardVariantResetsOnKoHiddenAndEmpty
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.ResolverFindsCosmeticAnimationStylesFromIdentityDatabase
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.ResolverUsesVisualVariantAndVariantScopedCosmetics
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.SequenceResolverPrefersProfileAlternateForEquippedStyle
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.SequenceResolverUsesKoFallbackToProfileSwapOut
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.SpawnAndKoFxCanCarryOptionalBodyClips
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.VisualIdentityCloneAndNormalizePreservesAnimationStyleIds
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.VisualIdentityMutationPatchesRosterSnapshotCache
+      - Chainbound.Combat.Tests.CombatCosmeticAnimationTests.VisualIdentitySaveClonePreservesVariantCosmeticIdsAndUsesHudCardFallback
+      - Chainbound.Combat.Tests.CombatIvRangeTests.NewFactoryRollsStayWithinLockedIvRange
+      - Chainbound.Combat.Tests.CombatIvRangeTests.SnapshotCopyClampsToLockedIvRangeWithoutMutatingSource
+      - Chainbound.Combat.Tests.CombatKoAttributionTests.DirectAttackKoIncludesSourceAndMoveIds
+      - Chainbound.Combat.Tests.CombatKoAttributionTests.DirectAttackKoWithBenchAutoSwapIncludesIncomingIds
+      - Chainbound.Combat.Tests.CombatKoAttributionTests.LogKoWithoutSourceLeavesAttributionEmpty
+      - Chainbound.Combat.Tests.CombatMoveResolveProfileTests.AccuracyAndCritCanBeForcedFromResolveProfile
+      - Chainbound.Combat.Tests.CombatMoveResolveProfileTests.CombatFactoryCopiesResolveProfileFromMoveDefinition
+      - Chainbound.Combat.Tests.CombatMoveResolveProfileTests.DamageCalculatorUsesMoveAuthoredFormulaTuning
+      - Chainbound.Combat.Tests.CombatMoveResolveProfileTests.DamagingMoveExecutesMoveAuthoredUtilityAtResolveTime
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_AggregatesMultipleTargetsWithoutLosingEitherOutcome
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_FormatsActionAndAggregatesMultiHitKo
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_FormatsBrokenWallAbsorption
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_FormatsFullWallBlockWithAbsorbedAmount
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_FormatsMultiHitResolutionWithExclamation
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_FormatsPriorityMoveActionLine
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_FormatsWallMitigationBeforeResidualDamage
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_PassUsesLoggedReadableMessage
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_RespectsTranscriptOnlyDeliveryOverride
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_SeparatesPrimaryAndConsequencePages
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_StatusInterruptedTurnIsStillRegistered
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_SwapRegistersOutgoingAndIncomingChainlings
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeAction_UsesAuthoredTemplatesAndTokenValues
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeBattleResult_CaptureTerminal_IsNotDraw
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeBattleResult_FallsBackWithoutProfile
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ComposeBattleResult_VictoryAfterCapture_NamesRecordedChainling
+      - Chainbound.Combat.Tests.CombatNarrationComposerTests.ReplayTranscript_AssignsStableGlobalOrdering
+      - Chainbound.Combat.Tests.CombatNarrationNamingTests.EntangledOpponent_UsesEntangledPrefix
+      - Chainbound.Combat.Tests.CombatNarrationNamingTests.LocalPlayerTeam_UsesBareDisplayName
+      - Chainbound.Combat.Tests.CombatNarrationNamingTests.PvpOpponentNamedPlayer_UsesEnemyPrefix
+      - Chainbound.Combat.Tests.CombatNarrationNamingTests.WildOpponent_KeepsWildPrefix
+      - Chainbound.Combat.Tests.CombatNarrationPresentationTests.DialogueView_ConfirmCompletesRevealBeforeAdvancing
+      - Chainbound.Combat.Tests.CombatNarrationPresentationTests.DialogueView_EventSystemPointerClick_CommitsChoice
+      - Chainbound.Combat.Tests.CombatNarrationPresentationTests.DialogueView_PointerButtonClick_CommitsChoice
+      - Chainbound.Combat.Tests.CombatNarrationPresentationTests.DialogueView_SelectedChoiceSubmit_CommitsSelectedIndex
+      - Chainbound.Combat.Tests.CombatNarrationPresentationTests.NarrationBox_AutomaticallyCompletesZeroHoldPage
+      - Chainbound.Combat.Tests.CombatNarrationPresentationTests.Typewriter_CompletesImmediatelyWhenSpeedIsInstant
+      - Chainbound.Combat.Tests.CombatNarrationPresentationTests.Typewriter_DoesNotAdvanceWhenFrameIsFasterThanGlyphDelay
+      - Chainbound.Combat.Tests.CombatNarrationPresentationTests.Typewriter_RevealsMultipleCharactersWhenFrameIsSlowerThanGlyphDelay
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.AmountScaleUtilityInterpolatesBetweenConfiguredThresholds
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.AmountScaleUtilityUsesProfileFontSizeWhenLegacyBoundsAreStale
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.LegacyMapperMapsNumericAndImpactCategories
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.MotionResolverMigratesLegacyMotionModeWhenRootLayersUnset
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.MotionResolverMirrorsChainlingRelativeOffsets
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.MotionResolverPrefersExplicitRootLayersOverLegacyMotionMode
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.PlayRequestFactoriesCaptureLabelAndAmountModes
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.PopupFacingSignFollowsChainlingFlipX
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.PopupProfileDefaultsAreReadable
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.PopupWorldPositionFallsBackToImpactThenSlotWithoutCameraFocus
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.PopupWorldPositionPrefersPopUpAnchorOverCameraFocus
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.ProfileDefaultsCoverWallMitigationFeedbackCategories
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.ProfileDefaultsEnableAmountScalingForDamageAndHeal
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.ProfileDefaultsUseComposableRootMotionLayers
+      - Chainbound.Combat.Tests.CombatPopupVisualTests.VisualCatalogResolvesCategoryAndFallback
+      - Chainbound.Combat.Tests.CombatPostBattleRouterCapturePersistTests.CaptureTerminal_PersistsInsteadOfSkipping
+      - Chainbound.Combat.Tests.CombatPostFxVolumeControllerTests.ForceClearZerosWeightWithoutTouchingBaselineVolume
+      - Chainbound.Combat.Tests.CombatPostFxVolumeControllerTests.IdleWeightIsZeroAndDoesNotTouchBaselineVolume
+      - Chainbound.Combat.Tests.CombatPostFxVolumeControllerTests.OwnedVolumeIsForcedOntoVolumeLayer
+      - Chainbound.Combat.Tests.CombatPostFxVolumeControllerTests.PhaseConfig_IsUsableWithPostFxCueOnly
+      - Chainbound.Combat.Tests.CombatPostFxVolumeControllerTests.PlayRaisesWeightThenReturnsToZero
+      - Chainbound.Combat.Tests.CombatPostFxVolumeControllerTests.ReplaceLatestCueEndsAtZeroWeight
+      - Chainbound.Combat.Tests.CombatPresentationAudioTests.SoundOnlyPhaseHonorsSpawnDelay
+      - Chainbound.Combat.Tests.CombatPresentationAudioTests.SoundOnlyPhaseIsUsableWithoutPrefab
+      - Chainbound.Combat.Tests.CombatPresentationAudioTests.WallCatalogFallsBackToDefaultWhenMaterialCueSlotEmpty
+      - Chainbound.Combat.Tests.CombatPresentationAudioTests.WallCatalogSupportsEveryLifecycleCue
+      - Chainbound.Combat.Tests.CombatPresentationAudioTests.WallCatalogUsesCaseInsensitiveIdAndDefaultFallback
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.BankedApReturnsAtNextTurnStartWithBonus
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.ConditionalDamageUsesFinalRedirectedDefender
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.DataDrivenTurnStartAndKoPassivesExecuteUtilityPayloads
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.EndOfTurnStatusKoTriggersDataDrivenOnKoPassive
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.FieldEntryEffectFiresOnVoluntarySwapAndExpires
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.GlitchedMindChoosesALegalActionInsteadOfDroppingTheTurn
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.IncomingHitWindowDodgesCountersAndIsConsumed
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.RandomStageOpcodeIsSeedDeterministic
+      - Chainbound.Combat.Tests.CombatResolverSevenBucketsTests.ResolveConditionCountsUseLiveTeamAndStatusCatalog
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.ApDonationTransfersPaidCostToActivePartnerSlot
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.ApServiceBlocksThreadLockGainsAndLogsBlockedGain
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.ApServiceTagsGainRefundStealAndBlockedSources
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.ApServiceTagsMoveCostAndDrainSourcesSeparately
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.ApServiceTagsTurnRegenSourceForBaselineApGrant
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.BattlePacingProfileDefaultsAreReadable
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.BenchPausesStatusDurationUntilSwapIn
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.FrozenAssetsBlocksVoluntarySwapButImmovableDoesNot
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.NextMoveApSurchargeAppliesToSelectionCost
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.PassiveDisplayStateReflectsThresholdsAndUsedState
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.RandomEnemySelectsBothLivingOpposingActivesAcrossSeeds
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.ResolverRechecksApAfterEarlierDrainAndFailsSelectedMove
+      - Chainbound.Combat.Tests.CombatRuntimeFixTests.TwoTurnRechargeTicksOncePerActiveEndOfTurn
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.AuthoredImpactAndMissTakePrecedenceWithoutCatalog
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.BlockReplacesHitForSameTarget
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.CritUsesCritSoundAndFallsBackToHit
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.CritWindupClampsAtZeroForZeroAndShortDelays
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.CritWindupPrecedesDelayedImpact
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.KoPlaysAfterImpactNotBefore
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.MaterialWallBlockOverridesGenericBlock
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.MissDodgeAndBlockDoNotPlayCritWindupOrLegacyAccent
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.MissingFallbackFieldsNeverThrow
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.MixedHitMissBatchResolvesEachTargetOutcome
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.MultiTargetBatchAppliesVolumeScale
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.PlaySpawnUsesGlitchInCatalogFallback
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.StatusAfterDamageIsDelayedAfterImpact
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.StatusImmuneReplacesAppliedForSameTarget
+      - Chainbound.Combat.Tests.CombatSfxOrchestratorTests.WallCueDeduplicatesByEventTargetSourceAndCue
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_AppliesPhaseScaleCurveOverConfiguredDuration
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_ExplicitCanvasSizeKeepsFrameScaleStable
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_FitEffectLifetimeToTravelIncludesFinalFrameInterval
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_FitFrameSpanToTravelArrivesOnFinalUniqueFrame
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_MirrorXFlipsRootWithoutChangingOtherScaleAxes
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_MirrorXSurvivesTravelScaleUpdates
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_PreserveAuthoredHeightUsesEachSpriteAspect
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_SeparatesSpriteFrameSpanFromEffectLifetime
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_SpriteSizeDefinesAspectReferenceEnvelope
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_TravelInterpolatesCurveArcAndScaleInWorldSpace
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_TravelUsesSnapshotOrFollowEndpointAsConfigured
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatMoveVfx_WritesAnimatedSourceIntoConfiguredMaterialSlot
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.CombatVfxLibrary_ComposesWorldAndPhaseScaleMultipliers
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.PhaseConfig_CloneCopiesPhaseScaleCurve
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.PhaseConfig_CloneCopiesTravelWithoutSharingNestedAuthoringData
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.PhaseConfig_ResolvesOnlyItsEnabledPrefab
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.PixelBattleSourceTextureUtility_PreservesExplicitCanvasAndFullFrameUv
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.Preset_SourceOverrideIsOptIn
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.Preset_StyleOnlyApplicationPreservesRendererSourceTexture
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.TravelTimingResolver_ConstantSpeedScalesWithResolvedPathLength
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.TravelTimingResolver_IncludesProgressProfileAndArcInPathLength
+      - Chainbound.Combat.Tests.CombatVFXLibraryPhaseTests.TravelTimingResolver_PreservesExistingDurationModes
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.ChemistryAdvantageDoesNotBypassReflectingBarrier
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.DamageThresholdBarrierReflectAndAbsorptionAreLoggedOnDamage
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.EncryptedSealBlocksChemistryDebuff
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.MoveDefinitionPlacesWallFromUtilityEffectsAndTags
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.PayloadRoundTripPreservesModeAndOneBasedHitIndex
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.PercentMitigationWallLogsAbsorbedDamageOnMitigatedHit
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.ReflectKoStopsRemainingMultiHitDamageEvents
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.ResolverLogsFullBlockPayloadOnBarrierBlocked
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.ResolverLogsRelayBypassPayloadOnDamage
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.ResolverLogsWallExpiredWhenTimerRemovesLastWallWithoutDamage
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.ResolverSequencesFourHitMoveAgainstTwoHitWall
+      - Chainbound.Combat.Tests.CombatWallInterceptTests.WallHitRetaliationDrainsAttackerApOnBarrierBlock
+      - Chainbound.Combat.Tests.CombatWallPopupLabelTests.FormattersHandlePercentMitigationAndBlockHits
+      - Chainbound.Combat.Tests.CombatWallPopupLabelTests.ResolveRaiseLabelsFromMoveUtilitiesFormatsMitigationReflectAndDebuff
+      - Chainbound.Combat.Tests.CoreBagItemInventoryParserTests.FailedPayload_SurfacesWalletErrorInsteadOfSilentEmptyBag
+      - Chainbound.Combat.Tests.CoreBagItemInventoryParserTests.GuestPayload_WithoutWallet_ParsesProfileStacksIntoCategories
+      - Chainbound.Combat.Tests.DefenseBalanceSystemsTests.AddBarrier_ReplacesPriorBarrierWhenExclusive
+      - Chainbound.Combat.Tests.DefenseBalanceSystemsTests.CycleHp_UsesFivePercentOfSpeciesBase
+      - Chainbound.Combat.Tests.DefenseBalanceSystemsTests.Mitigation_MultiSourceProduct_StacksWithoutPerSourceThirtyCap
+      - Chainbound.Combat.Tests.DefenseBalanceSystemsTests.Mitigation_SingleSourceAboveLegacyCap_IsNotClampedToThirtyPercent
+      - Chainbound.Combat.Tests.DefenseBalanceSystemsTests.MitigationConstants_UncappedWithFloor
+      - Chainbound.Combat.Tests.DefenseBalanceSystemsTests.OnHitLifesteal_FamilySection_HealsAttacker
+      - Chainbound.Combat.Tests.DefenseBalanceSystemsTests.PassiveMaxHpUtility_SumsAndClampsPercentBonus
+      - Chainbound.Combat.Tests.DeterministicVrfServiceTests.FulfilledRequestCanBeConsumedExactlyOnce
+      - Chainbound.Combat.Tests.DeterministicVrfServiceTests.PhaseOneEconomyDefaultsRemainPinned
+      - Chainbound.Combat.Tests.DeterministicVrfServiceTests.SameSeedAndContextProduceSameBytes
+      - Chainbound.Combat.Tests.DevCandyMachineInventoryTests.GetKnown_FailsWithoutEnoughRam
+      - Chainbound.Combat.Tests.DevCandyMachineInventoryTests.GetKnown_SpendsRamAndAddsKnown
+      - Chainbound.Combat.Tests.DevCandyMachineInventoryTests.GrantRamAndKnown_AreLocalOnly
+      - Chainbound.Combat.Tests.DevCandyMachineInventoryTests.Stamp_ConsumesKnownAndAttachesModifiers
+      - Chainbound.Combat.Tests.EfficiencyRefundModifierTests.GuaranteedRefundEmitsRefundPayloadOnlyWhenRefundApplies
+      - Chainbound.Combat.Tests.EncounterFleePolicyTests.Evaluate_BossEncounter_LocksPlayerFleeByDefault
+      - Chainbound.Combat.Tests.EncounterFleePolicyTests.Evaluate_ExplicitEncounterPolicy_OverridesDifficultyDefault
+      - Chainbound.Combat.Tests.EncounterFleePolicyTests.Evaluate_Pvp_AlwaysRejectsPlayerFlee
+      - Chainbound.Combat.Tests.EncounterFleePolicyTests.Evaluate_StandardEncounter_AllowsPlayerFlee
+      - Chainbound.Combat.Tests.FavorServiceTests.CaptureRate_FavorAddsSoftBonus
+      - Chainbound.Combat.Tests.FavorServiceTests.FavorConfig_SoftCurveIsDiminishing
+      - Chainbound.Combat.Tests.FavorServiceTests.FavorService_RefreshOnlyAndTicksDown
+      - Chainbound.Combat.Tests.FavorServiceTests.WildRoller_CanBumpLowestIvWithFavor
+      - Chainbound.Combat.Tests.FieldItemHealUtilityTests.PartyHeal_SkipsFullAndFainted
+      - Chainbound.Combat.Tests.FieldItemHealUtilityTests.Revive_OnlyWhenFainted
+      - Chainbound.Combat.Tests.FieldItemHealUtilityTests.SingleHeal_RaisesHpAndRejectsFull
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.BattleIntroCopy_CreateRuntimeDefault_UsesStackedWildTemplate
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.ChainlingRecovery_Defaults_UseBoundedTenPercentTicks_AndHashAllLevers
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.ChainlingRecovery_DisabledOrZeroRate_DoesNotProduceHealing
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.ModifierBalanceOverlay_ResolveMethods_OverrideEffectRangeAndWeight
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.PostBattleRewards_CreateRuntimeDefault_DisablesCapturedAndDefeatRewards
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.ProgressionCycleGrants_UsePercentAndFlatFromConfig
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.ResolverConfig_CreateRuntimeDefault_MatchesCombatConstants
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.ResolverConfigHash_IsDeterministic_AndChangesWhenFieldChanges
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.RulesetEligibility_BannedMoveRejects_AndAllowedTypeFilterWorks
+      - Chainbound.Combat.Tests.LeverBoardSystemTests.VendingRarityThresholds_Economy01_EndAtBasisPoints_AndCommonIsLargest
+      - Chainbound.Combat.Tests.ManualProviderParityTests.Builder_CyclePicksContributeToMaxHpViaProgressionConfig
+      - Chainbound.Combat.Tests.ManualProviderParityTests.Builder_TruncatesExcessCyclePicks
+      - Chainbound.Combat.Tests.ManualProviderParityTests.Builder_WritesCyclePicksAndHonorsZeroIvs
+      - Chainbound.Combat.Tests.ManualProviderParityTests.RosterSlotUtility_EmptySnapshotUsesOnlyAuthoredInitialLoadout
+      - Chainbound.Combat.Tests.ManualProviderParityTests.RosterSlotUtility_HonorsAllZeroAuthoredIvs
+      - Chainbound.Combat.Tests.ManualProviderParityTests.SpeciesDefinition_BaseCombatStatTotal_ExcludesMaxHp
+      - Chainbound.Combat.Tests.ModifierOutcomePayloadTests.EventRoundTripsStructuredPayload
+      - Chainbound.Combat.Tests.MoveLoadoutSlotRulesTests.ChainlingLoadout_AllowsMultipleStampedMoves
+      - Chainbound.Combat.Tests.MoveLoadoutSlotRulesTests.ChainlingLoadout_RejectsThirdPassive
+      - Chainbound.Combat.Tests.MoveLoadoutSlotRulesTests.CombatFactory_KeepsMoreThanFourMovesWhenRebirthAllows
+      - Chainbound.Combat.Tests.MoveLoadoutSlotRulesTests.ResolveMaxMoveSlots_UsesRebirthFormula
+      - Chainbound.Combat.Tests.MoveLoadoutSlotRulesTests.ShouldScrollMoveList_OnlyAfterFourVisibleRows
+      - Chainbound.Combat.Tests.OwnershipDasProxyClientTests.ParseAsset_AcceptsPinnedCoreCollection
+      - Chainbound.Combat.Tests.OwnershipDasProxyClientTests.ParseAsset_RejectsWrongCollectionAuthority
+      - Chainbound.Combat.Tests.OwnershipDasProxyClientTests.ParseCollectionPage_DropsMalformedAndWrongCollectionAssets
+      - Chainbound.Combat.Tests.OwnershipDasProxyClientTests.ParseCollectionPage_RejectsServerLimitAboveFifty
+      - Chainbound.Combat.Tests.OwnershipDasProxyClientTests.ReadError_ReturnsOnlyStableProxyCode
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.ConfirmedStampReceiptRemovesKnownWithoutWaitingForInventoryRefresh
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.DevicePlayersNeverResolveToLocalPreview
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.FailedStampKeepsKnown
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.GetKnownDoesNotRequireWallet
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.PendingStampKeepsKnownAndCanSettleWithoutAnotherSignature
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.RefreshHydratesKnownStampedAndRamTogether
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.StoredLegacyValuesMapOnlyToKnownOrStamped
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.UntrustedPayloadIsDroppedAndDoesNotConsumeKnownCache
+      - Chainbound.Combat.Tests.OwnershipSpineServiceTests.VerifiedCoreRecord_WithCategoryIllegalModifier_IsDropped
+      - Chainbound.Combat.Tests.PassAModifierResolverTests.EmptyBenchSlots_CountPartyBenchNotMoveSlots
+      - Chainbound.Combat.Tests.PassAModifierResolverTests.FirstDibs_GrantsPriorityChance
+      - Chainbound.Combat.Tests.PassAModifierResolverTests.IgnoreWalls_BypassesFirstHitBarrier
+      - Chainbound.Combat.Tests.PassAModifierResolverTests.PatchKit_HealsSelfOnUse
+      - Chainbound.Combat.Tests.PlatformCapabilitiesAndCommerceTests.GooglePlayCapabilitiesExposePlayIdentityAndBilling
+      - Chainbound.Combat.Tests.PlatformCapabilitiesAndCommerceTests.IosCapabilitiesDoNotAssumeSeedVaultTransport
+      - Chainbound.Combat.Tests.PlatformCapabilitiesAndCommerceTests.RewardGrantMapsToEntitlementLedgerRequest
+      - Chainbound.Combat.Tests.PlatformCapabilitiesAndCommerceTests.SolanaDappStoreCapabilitiesPreferSeedVaultAndCryptoCommerce
+      - Chainbound.Combat.Tests.PlayerItemCatalogSeedTests.CategoryKeys_ParseLegacyClarityAsFavor
+      - Chainbound.Combat.Tests.PlayerItemCatalogSeedTests.CreateStack_CopiesCategoryAndOwnershipFromSeed
+      - Chainbound.Combat.Tests.PlayerItemCatalogSeedTests.Harness_SeedsBagInventoryWithCoreBackedArchiveTools
+      - Chainbound.Combat.Tests.PlayerItemCatalogSeedTests.Seed_ContainsFieldCaptureFavorBinderyAndArchiveItems
+      - Chainbound.Combat.Tests.PotencyModifierMomentTests.PowerModifierEmitsPayloadAfterDamageProof
+      - Chainbound.Combat.Tests.SpeciesCombatRoleResolverTests.FormatLabel_CoversV1Set
+      - Chainbound.Combat.Tests.SpeciesCombatRoleResolverTests.Resolve_Balanced_WhenNoAxisDominates
+      - Chainbound.Combat.Tests.SpeciesCombatRoleResolverTests.Resolve_MeleeStriker_FromOffenseDominantBaseStats
+      - Chainbound.Combat.Tests.SpeciesCombatRoleResolverTests.Resolve_OverrideWinsOverBaseStats
+      - Chainbound.Combat.Tests.SpeciesCombatRoleResolverTests.Resolve_Speed_FromSpeedDominantBaseStats
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.IsEntangled_UsesSnapshotFlagOnly
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.MutationAndVariantAndEntangled_CanStack
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.Normalize_DoesNotRewriteSkinIdWhenEntangled
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.Normalize_LegacyEntangledSkinBecomesBase
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.Normalize_NonBodySentinelsBecomeBase
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.VariantTierMultipliers_ScaleRareWeights
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.VisualDatabase_CollectsBodyVariantIdsFromSetThenFlatEntries
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.VisualDatabase_ResolvesVariantTimesTypeWithFallback
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.WildRoller_EntangledPicksTypeFromPool
+      - Chainbound.Combat.Tests.SpeciesVisualHierarchyTests.WildVariantRoller_PreservesSkinWhenEntangled
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.DevInventory_UsesValidationAndLocksEffectValue
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.DifferentSeeds_CanProduceDifferentLockedValuesWithinInclusiveRange
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.EmptyEligiblePool_FailsClearlyWithoutIllegalFallback
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.IllegalHosts_AreRejectedByCentralValidation
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.InvalidAttemptBudget_FailsClearly
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.PassA_IllegalHosts_AreRejected
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.PersistedLockedValue_BecomesRuntimeModifierValue
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.RevealFormatter_SubstitutesLockedTokenN
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.RevealFormatter_UsesLockedValueInsteadOfRawRange
+      - Chainbound.Combat.Tests.StampModifierPipelineTests.SameSeed_ProducesSameModifierAndLockedValue
+      - Chainbound.Combat.Tests.StubPlayerItemInventoryTests.Grant_BackpackSeed_InsertsOnceThenAlreadyClaimed
+      - Chainbound.Combat.Tests.StubPlayerItemInventoryTests.Grant_UnknownSpawn_Fails
+      - Chainbound.Combat.Tests.StubPlayerItemUseFieldHealTests.UseFavorBoost_SetsScoreWithoutTarget
+      - Chainbound.Combat.Tests.StubPlayerItemUseFieldHealTests.UseTonic_HealsDamagedPartyMemberAndConsumesStack
+      - Chainbound.Combat.Tests.SwapAndKoModifierOutcomeTests.OnKoModifierEmitsKoPayload
+      - Chainbound.Combat.Tests.SwapAndKoModifierOutcomeTests.SwapInModifierEmitsSwapPayloadAnchoredToIncomingTarget
+      - Chainbound.Combat.Tests.SynergyModifierResolverTests.AllyFirstDamagingMoveEnablesComboPowerPayload
+      - Chainbound.Combat.Tests.TransmutationStatSubTests.SpeedSubstitutionUsesSpeedAndEmitsStatPayload
+      - Chainbound.Combat.Tests.TurnActionLedgerTests.BeginTurnRollsMissesAndClearsCurrentTurnState
+      - Chainbound.Combat.Tests.TurnActionLedgerTests.TracksAllyDamageAndAllyKoByTeam
+      - Chainbound.Combat.Tests.TypeIconPaletteTests.FormatTypeName_LabelsNoneAsTypeless
+      - Chainbound.Combat.Tests.TypeIconPaletteTests.GetIcon_DoesNotUseTypelessIconForMissingConcreteType
+      - Chainbound.Combat.Tests.TypeIconPaletteTests.GetIcon_ReturnsTypelessIconForNone
+      - Chainbound.Combat.Tests.VerifiedWalletLinkFlowTests.ConnectWalletAndResolveSession_AcceptsWalletOwnedRecoveredProfile
+      - Chainbound.Combat.Tests.VerifiedWalletLinkFlowTests.ConnectWalletAndResolveSession_ConnectsSignsAndPersistsVerifiedWallet
+      - Chainbound.Combat.Tests.VerifiedWalletLinkFlowTests.ConnectWalletAndResolveSession_RejectsNonEd25519SignatureLength
+      - Chainbound.Combat.Tests.VerifiedWalletLinkFlowTests.ConnectWalletAndResolveSession_WrongWalletPreservesLinkedIdentityAndClearsAdapter
+      - Chainbound.Combat.Tests.VerifiedWalletLinkFlowTests.Disconnect_PreservesBackendLinkAndClearsProof
+      - Chainbound.Combat.Tests.VerifiedWalletLinkFlowTests.LinkConnectedWallet_UsesServerNonceAndVerifiedEndpoint
+      - Chainbound.Combat.Tests.WalletOperationGuardTests.DuplicateSessionService_DoesNotReplaceVerifiedProfileAuthority
+      - Chainbound.Combat.Tests.WalletOperationGuardTests.FreshVerifiedSession_SuppressesCoordinatorPrompt
+      - Chainbound.Combat.Tests.WalletOperationGuardTests.MarkDisconnected_PreservesPersistentWalletLink
+      - Chainbound.Combat.Tests.WalletOperationGuardTests.OwnershipCancellation_BlocksOnlyRequestedOperation
+      synchronousOnly: 0
+    sceneBased: 0
+    originalScene: 
+    bootstrapScene: 
+    orderedTestNames: []
+    featureFlags:
+      fileCleanUpCheck: 0
+      requiresSplashScreen: 0
+      strictDomainReload: 0
+      disableNestedEnumeratorBugfix: 0
+    retryCount: 0
+    repeatCount: 0
+    automated: 0
+    randomOrderSeed: 0
+--- !u!4 &1622128162
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622128160}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1660057539 &9223372036854775807
+SceneRoots:
+  m_ObjectHideFlags: 0
+  m_Roots:
+  - {fileID: 1622128162}

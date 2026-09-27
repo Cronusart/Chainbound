@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be322cbc9d7f3174bb2f3fd837ed032f, type: 3}
+  m_Name: CombatResolverConfig_Default
+  m_EditorClassIdentifier: 
+  configVersion: 2
+  apPerTurn: 2
+  apCap: 10
+  randomRollMin: 0.85
+  randomRollMax: 1
+  critMultiplierDefault: 1.5
+  progressionDamageFactor: 1
+  chemistryAdvantageFactor: 1.2
+  chemistryDisadvantageFactor: 0.8
+  enableStab: 0
+  stabMultiplier: 1.2
+  stageMin: -6
+  stageMax: 6
+  stageActiveChangeCap: 2
+  mitigationSingleSourceCap: 1
+  mitigationFloor: 0.1
+  exclusiveBarriersAndWalls: 1
+  maxPassiveMaxHpBonusPercent: 0.5
+  rektLoseActionChance: 0.25
+  glitchedMindMisactChance: 0.5
+  slowedLoseActionChance: 0.25
+  firewallProjectileMitigation: 0.3
+  slowedSpeedStages: -2
+  shatteredDefenseStages: -1
+  shatteredCurrentHpDamage: 0.08
+  dripHealPercentMaxHp: 0.06
+  cascadeFailureMaxHpDamage: 0.25
+  splinterDamageMultiplier: 0.65
+  splinterSingleTargetDamageMultiplier: 1.15
+  ruggedTickCap: 15
+  fomoSelfDotPercent: 0.0625
+  turnActionTimeLimitSeconds: 0

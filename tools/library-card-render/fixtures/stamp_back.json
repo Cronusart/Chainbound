@@ -1,0 +1,23 @@
+{
+  "moveId": "baseline_shot",
+  "moveName": "Pulse Shot",
+  "typeId": "None",
+  "typeIconPath": "Assets/Sprites/UI/typeless.png",
+  "category": "attack",
+  "power": 35,
+  "accuracy": 95,
+  "mods": [
+    { "slot": 1, "id": "2.1-a", "displayName": "Overclock" }
+  ],
+  "provenance": {
+    "rolledBy": "mando",
+    "stampedBy": "7xK1...pQ9s",
+    "owners": ["mando", "7xK1...pQ9s"],
+    "events": [
+      { "type": "rolled", "actor": "mando", "at": "2026-09-21T00:00:00Z" },
+      { "type": "stamped", "actor": "7xK1...pQ9s", "at": "2026-09-21T01:00:00Z" }
+    ]
+  },
+  "variant": "library_card_v1",
+  "side": "back"
+}

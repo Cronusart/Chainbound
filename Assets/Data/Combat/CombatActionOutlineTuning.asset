@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9df32b3d48cb4beea1e23c366eccb62d, type: 3}
+  m_Name: CombatActionOutlineTuning
+  m_EditorClassIdentifier: 
+  defaultOutlineColor: {r: 0.9843137, g: 1, b: 0.5254902, a: 0.6862745}
+  defaultOutlineWidthPixels: 0.8
+  defaultOutlineSoftness: 0.85
+  fadeInSeconds: 0.08
+  fadeOutSeconds: 0.11

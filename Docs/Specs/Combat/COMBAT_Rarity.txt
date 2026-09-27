@@ -1,0 +1,328 @@
+COMBAT_04_AcquisitionRarity_v1.1
+
+REVISION NOTES:
+- Player-facing tier copy: see Docs/Specs/Combat/MOVE_TIER_PLAYER_FACING_v1.md (Known / Stamped / Bound)
+- Terminology aligned to ordinal / inscription / rune model
+- Entangled bonus clarified to affect ordinal rarity, not vending odds
+- Vending weights aligned to current economy spec
+- Slot progression moved from evolution stages to star progression
+- Duplicate move rule changed from zero duplicates to max 2 copies per Chainling
+- Mythic equip caps removed; competitive rune cap added instead
+- Exclusive move rules updated to source-species acquisition plus same-type equip
+- Secondary type references removed from pool eligibility
+
+===============================================================================
+0. Purpose
+===============================================================================
+
+This specification defines how players acquire ordinals and inscriptions,
+how rarity tiers are distributed, and how move slots scale with Chainling
+star progression.
+
+DESIGN PRINCIPLES:
+- Rarity affects complexity and availability, not raw power
+- All rarity tiers should remain viable in competitive play
+- Entangled Chainlings improve ordinal rarity outcomes, not vending odds
+- Event and limited moves follow the same power rules as baseline content
+
+TERMINOLOGY:
+- Ordinal = move with 0 modifiers
+- Inscription = ordinal with 1 modifier
+- Rune = move with 2 modifiers
+- Level-up and mastery primarily produce ordinals
+- Vending primarily produces inscriptions by rolling modifiers onto ordinals
+
+CROSS-REFERENCES:
+- COMBAT_03A_Moves_CoreFramework_v1.1.txt
+- COMBAT_03A1_Moves_BaselineList_v1.2.txt
+- COMBAT_05_MoveModifiers_v1.1.txt
+- COMBAT_Species.txt
+
+===============================================================================
+1. Rarity Tiers
+===============================================================================
+
+1.1 Tier Definitions
+
+| Tier      | Code | Description                                        |
+|-----------|------|----------------------------------------------------|
+| Common    | C    | Simple, straightforward effects                    |
+| Uncommon  | U    | Slightly more complex, minor conditional effects   |
+| Rare      | R    | Meaningful conditional effects                     |
+| Epic      | E    | High complexity, notable build hooks               |
+| Legendary | L    | Signature-level mechanical interactions            |
+| Mythic    | M    | Extremely rare, volatile or build-defining effects |
+
+1.2 Pool Composition Targets
+
+The overall move pool should approximately follow:
+- Common: 30%
+- Uncommon: 25%
+- Rare: 22%
+- Epic: 13%
+- Legendary: 7%
+- Mythic: 3%
+
+NOTE: These are pool composition targets, not reward odds.
+
+1.3 Category Guidelines
+
+| Category       | Typical Rarity Range | Notes                          |
+|----------------|----------------------|--------------------------------|
+| Damaging       | C - R                | More complex damage -> rarer   |
+| Status/Utility | C - E                | Complexity drives rarity       |
+| Support        | U - L                | Team-wide effects -> rarer     |
+| Passive        | R - M                | Permanent effects merit rarity |
+
+RULE: Stat substitution moves require Epic+ rarity.
+RULE: AP refund modifiers are capped at Rare tier.
+RULE: Global field effects require Rare+ rarity.
+
+===============================================================================
+2. Acquisition Methods
+===============================================================================
+
+2.1 Star-Up Ordinal Rewards
+
+When a Chainling gains a star, roll for an ordinal from that Chainling's source pool.
+
+STANDARD CHAINLING:
+- Star 1: 10%
+- Star 2: 20%
+- Star 3: 30%
+- Star 4: 40%
+- Star 5: 50%
+
+ENTANGLED CHAINLING:
+- Star 1: 15%
+- Star 2: 25%
+- Star 3: 35%
+- Star 4: 45%
+- Star 5: 55%
+
+Ordinal source resolution:
+1. Primary type pool
+2. Typeless pool
+3. Any documented species-specific pool additions
+
+2.2 Vending Machines
+
+Baseline vending uses one standard machine.
+
+RULES:
+- Cost: 75 RAM + 1 ordinal
+- Result: 1 inscription with 1 rolled modifier
+- Uses fixed vending rarity weights from Section 3.3
+- Does not use Entangled rates
+- Uses VRF where implemented
+- Modifier rerolls are a separate rare-consumable system, not baseline vending
+
+2.3 Daily Market / Event Shop
+
+DAILY MARKET:
+- Refreshes every 12 hours
+- Offers starter-friendly typeless ordinals
+- Focuses on Common and Uncommon ordinals
+- Does not sell finished inscriptions in the baseline market
+
+EVENT SHOP:
+- Can offer event-exclusive or limited moves
+- Can offer cosmetics or reroll-related items
+- Must not grant raw power advantage over permanent content
+
+2.4 Other Acquisition Sources (Future)
+
+Possible future sources:
+- PvP ranked rewards
+- Achievement unlocks
+- Trading
+- Additional event reward paths
+
+===============================================================================
+3. Drop Rate Tables
+===============================================================================
+
+3.1 Standard Chainling Ordinal Rarity Weights
+
+| Rarity    | Drop Chance |
+|-----------|-------------|
+| Common    | 35%         |
+| Uncommon  | 25%         |
+| Rare      | 17.5%       |
+| Epic      | 10%         |
+| Legendary | 7.5%        |
+| Mythic    | 5%          |
+
+3.2 Entangled Chainling Ordinal Rarity Weights
+
+| Rarity    | Drop Chance |
+|-----------|-------------|
+| Common    | 25%         |
+| Uncommon  | 20%         |
+| Rare      | 20%         |
+| Epic      | 15%         |
+| Legendary | 12.5%       |
+| Mythic    | 7.5%        |
+
+NOTE: Entangled Chainlings improve ordinal rarity outcomes only.
+
+3.3 Vending Machine Modifier Rarity Weights
+
+| Rarity    | Drop Chance |
+|-----------|-------------|
+| Common    | 45%         |
+| Uncommon  | 30%         |
+| Rare      | 17.5%       |
+| Epic      | 5%          |
+| Legendary | 2%          |
+| Mythic    | 0.5%        |
+
+NOTE: These weights must match the economy spec and vending implementation.
+
+3.4 Event / Limited Move Rarity Guidance
+
+Event and limited moves should stay mostly in the Rare / Epic band.
+Recommended distribution when an event move is rolled:
+- Rare: 60%
+- Epic: 30%
+- Legendary: 8%
+- Mythic: 2%
+
+===============================================================================
+4. Slot Progression
+===============================================================================
+
+4.1 Base Slots by Star Count
+
+SUPERSEDED: Current runtime and UI use rebirth-based move loadout rules.
+See MOVE_LOADOUT_RULES_AND_UI_SPEC.md. The old star table below is retained
+only as historical context and must not be used for implementation.
+
+| Star Count | Move Slots |
+|------------|------------|
+| 0 stars    | 6 slots    |
+| 1 star     | 8 slots    |
+| 2 stars    | 10 slots   |
+| 3 stars    | 12 slots   |
+| 4 stars    | 14 slots   |
+| 5 stars    | 16 slots   |
+
+FORMULA: Slots = 6 + (2 x StarCount)
+CAP: 16 slots at 5 stars.
+
+4.2 Slot Allocation Rules
+
+- All slots can hold any move the Chainling is eligible for.
+- No slot is restricted by category or rarity.
+- Duplicate moves are allowed, but only up to 2 copies of the same move.
+- Passive moves count toward the slot total.
+
+4.3 Slot Unlocking
+
+- Slots unlock automatically on star-up.
+- Evolution is still conceptual and does not currently drive slot growth.
+
+4.4 Rune Limits
+
+Mythic rarity does not have a global equip cap.
+Rune usage is now a global loadout cap, not only a competitive cap.
+See MOVE_LOADOUT_RULES_AND_UI_SPEC.md.
+
+| Rule                          | Limit                         |
+|-------------------------------|-------------------------------|
+| Rune-tier moves per Chainling | 1, or 2 at rebirth 5          |
+| Rune-tier moves in PvE        | Same cap as all modes         |
+
+4.5 Rarity and Slot Interaction
+
+Rarity does not affect slot consumption.
+Slot cost comes from specific modifiers only.
+
+AUGMENTATION / TRANSMUTATION RULE:
+- Some modifiers consume +1 slot when applied.
+- This is a modifier property, not a rarity property.
+- UI must display effective slot usage clearly.
+
+4.6 Exclusive And Limited Move Rules
+
+- Exclusive and limited-event moves count toward normal slot totals.
+- Any Chainling matching the move's current type may equip the move.
+- Only the designated source species can acquire an exclusive move via star-up or mastery.
+- If the source species is Entangled, the exclusive move inherits that Entangled type.
+- Only exclusive and limited-event moves may be permanently learned / locked.
+- Non-exclusive, non-limited moves remain freely removable.
+- Current shipped content only includes starter exclusives, but the system allows future event-based exclusives.
+
+===============================================================================
+5. Move Pool Rules
+===============================================================================
+
+5.1 Type Pool Eligibility
+
+A Chainling can equip moves from:
+1. Its primary type pool
+2. The typeless pool
+3. Any documented off-type exceptions
+4. Any eligible exclusive or limited moves whose current type matches the Chainling
+
+5.2 Species Pool Eligibility
+
+A species may have:
+- 1-2 source-exclusive moves
+- 1-3 off-type exceptions that fit theme and mechanics
+
+EXCLUSIVE RULES:
+- The source species is the only species that can roll the exclusive move.
+- Once acquired, any matching-type Chainling may equip it.
+- Entangled source species convert the exclusive move to the Entangled type for acquisition and equip checks.
+- Current shipped exclusives belong only to starters.
+- Future event-based exclusives are allowed by design.
+
+OFF-TYPE RULES:
+- Must fit species lore or morphology.
+- Must not break chemistry restrictions.
+- Must be documented in the species spec.
+
+5.3 Meme Type Exception
+
+Meme-type Chainlings can equip any typed move in addition to:
+- All Meme moves
+- All Typeless moves
+
+5.4 Pool Restrictions
+
+- Exclusive moves are source-species locked for acquisition, not for equip.
+- Event and limited moves may have time-based availability windows.
+- Some moves may require achievements to unlock.
+- Rune-tier competitive limits are enforced separately from rarity.
+
+===============================================================================
+6. Cross-References
+===============================================================================
+
+Related Specification Documents:
+- COMBAT_01_TypeChemistry_v1.1.txt
+- COMBAT_02A_StatusFrameworkAndCatalog_v1.1.txt
+- COMBAT_02B_StatsStagesIVs_v1.1.txt
+- COMBAT_02C_ResolutionMath_v1.1.txt
+- COMBAT_03A_Moves_CoreFramework_v1.1.txt
+- COMBAT_03A1_Moves_BaselineList_v1.2.txt
+- COMBAT_05_MoveModifiers_v1.1.txt
+- COMBAT_Species.txt
+
+===============================================================================
+7. Version History
+===============================================================================
+
+v1.1
+- Clarified ordinal / inscription / rune terminology
+- Clarified Entangled affects ordinal rarity only
+- Aligned vending rarity weights with economy spec
+- Replaced evolution-based slot progression with star-based slot progression
+- Allowed duplicate moves up to 2 copies
+- Replaced mythic caps with competitive rune cap
+- Updated exclusive move rules to source-species acquisition plus same-type equip
+- Removed secondary type assumptions from pool eligibility
+
+v1.0
+- Initial acquisition and rarity framework

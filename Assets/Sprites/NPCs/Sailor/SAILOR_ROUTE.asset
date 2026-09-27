@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 397fd74934ba2104fb18b34650d8bf7f, type: 3}
+  m_Name: SAILOR_ROUTE
+  m_EditorClassIdentifier: 
+  nodes:
+  - nodeId: sailor_post_a
+    waypointId: sailor_post_a
+    waitTimeRange: {x: 0, y: 0}
+    useWeightedNext: 0
+    weightedNext: []
+    microWanderOverride:
+      enabled: 0
+      radius: 1.5
+      intervalRange: {x: 2, y: 5}
+      dwellRange: {x: 1, y: 3}
+      maxStepsPerWait: 5
+  - nodeId: sailor_post_b
+    waypointId: sailor_post_b
+    waitTimeRange: {x: 0, y: 0}
+    useWeightedNext: 0
+    weightedNext: []
+    microWanderOverride:
+      enabled: 0
+      radius: 1.5
+      intervalRange: {x: 2, y: 5}
+      dwellRange: {x: 1, y: 3}
+      maxStepsPerWait: 5
+  defaultWaitTimeRange: {x: 15, y: 30}
+  loopRoute: 1
+  randomizeNextNode: 1
+  preventImmediateBacktrack: 1
+  defaultMicroWander:
+    enabled: 1
+    radius: 4
+    intervalRange: {x: 4, y: 8}
+    dwellRange: {x: 4, y: 8}
+    maxStepsPerWait: 5
+  speedMultiplier: 1
+  legacyWaypointIds: []
+  legacyWaitTime: 30

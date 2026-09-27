@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cba2cbe95b6e0c14590828a68db02374, type: 3}
+  m_Name: DefaultVisualTierProfile
+  m_EditorClassIdentifier: 
+  tierId: tier_0
+  displayName: Tier 0
+  sharedPalette: {fileID: 11400000, guid: a930c3ad1e4402447804c57a8f832512, type: 2}
+  typographyPreset: {fileID: 11400000, guid: bc61f870561f74b45811a6b887822486, type: 2}
+  meshPreset: {fileID: 11400000, guid: 81c39ae726e0748498598a601b6f5227, type: 2}
+  auraPreset: {fileID: 11400000, guid: 2190209deb7de9a449aa20d642ab8dee, type: 2}

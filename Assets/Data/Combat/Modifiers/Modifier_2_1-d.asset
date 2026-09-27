@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3072466885a48fb47bf11038812c96c2, type: 3}
+  m_Name: Modifier_2_1-d
+  m_EditorClassIdentifier: 
+  sectionId: 2.1-d
+  displayName: Meltdown
+  effectDescription: +18-25% base power
+  category: 0
+  scope: 0
+  minimumRarity: 3
+  effectMin: 18
+  effectMax: 25
+  allowedCategories: 0000000001000000
+  forbiddenCombinations: []
+  slotCostIncrease: 0
+  powerCap: 0
+  apCostCap: 0
+  forbiddenTags: []
+  slotType: 0
+  isTypeInfusion: 0
+  isStatSubstitution: 0
+  substitutionStat: 1
+  triggerCondition: 0
+  lowHpThresholdPercent: 30
+  triggerChance: 0
+  designNotes: 

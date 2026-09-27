@@ -1,0 +1,130 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Snek
+  m_EditorClassIdentifier: 
+  speciesId: snek
+  displayName: Snek
+  description: Majestic serpent guardian. Speedy ranged support that heals allies
+    and drains foes over time.
+  primaryType: 9
+  secondaryType: 0
+  baseMaxHP: 90
+  baseMeleeAtk: 28
+  baseMeleeDef: 58
+  baseRangedAtk: 55
+  baseRangedDef: 52
+  baseSpeed: 57
+  maxEvolutionStages: 1
+  learnableMoves:
+  - {fileID: 11400000, guid: 9a098dcd2dece13429ce3dd20174b5e3, type: 2}
+  - {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+  - {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
+  - {fileID: 11400000, guid: 8bebb9f65226c5a41820524f15497550, type: 2}
+  - {fileID: 11400000, guid: 13aca51cf10e14d448312f3ae955f983, type: 2}
+  - {fileID: 11400000, guid: 8af178c3d5523b64889a45fd2ff7f41d, type: 2}
+  - {fileID: 11400000, guid: f81a67d06401abf40801b15eef4e88a3, type: 2}
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  - {fileID: 11400000, guid: a282430fa0d5eb7418f15ea92f87c0c1, type: 2}
+  - {fileID: 11400000, guid: 3c7f5e89bf323804c8e13e965e35d6dc, type: 2}
+  - {fileID: 11400000, guid: ab771cef5015ba94e892a385f10a944d, type: 2}
+  - {fileID: 11400000, guid: 48dba9d18e9bfb14a8199b54f5f0193f, type: 2}
+  - {fileID: 11400000, guid: 3f4b63353209ed54090eada861357e09, type: 2}
+  learnLevels: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  exclusiveMoves: []
+  flagshipMove: {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+  initialMoves: []
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 9a098dcd2dece13429ce3dd20174b5e3, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 8bebb9f65226c5a41820524f15497550, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 13aca51cf10e14d448312f3ae955f983, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 8af178c3d5523b64889a45fd2ff7f41d, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f81a67d06401abf40801b15eef4e88a3, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: a282430fa0d5eb7418f15ea92f87c0c1, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 3c7f5e89bf323804c8e13e965e35d6dc, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: ab771cef5015ba94e892a385f10a944d, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 48dba9d18e9bfb14a8199b54f5f0193f, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 3f4b63353209ed54090eada861357e09, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 0
+  defaultCaptureProfile: 1
+  combatRoleOverride: 7
+  designNotes: "Wild catch. Staked ranged support. Off-type deep_reap (Mined) for
+    baseline ranged lifesteal \u2014 Staked pool has no native drain DMG. Total base
+    stats: 340."

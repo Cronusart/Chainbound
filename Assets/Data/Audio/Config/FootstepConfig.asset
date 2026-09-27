@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43584c0c73290b74cba2041511eeeb34, type: 3}
+  m_Name: FootstepConfig
+  m_EditorClassIdentifier: 
+  surfaceFootsteps:
+  - surfaceType: 0
+    soundEvent: {fileID: 11400000, guid: 72c433361f4e4a04490b6ec263a793d1, type: 2}
+    walkInterval: 0.26
+    runInterval: 0.16
+    pitch: 1
+    usePitchVariation: 1
+  - surfaceType: 4
+    soundEvent: {fileID: 11400000, guid: 626b4a0a972f38943a93b53e518a98f2, type: 2}
+    walkInterval: 0.26
+    runInterval: 0.16
+    pitch: 1
+    usePitchVariation: 1
+  - surfaceType: 3
+    soundEvent: {fileID: 11400000, guid: 34d7f0f9f73d5d748820e1c317062fd7, type: 2}
+    walkInterval: 0.26
+    runInterval: 0.16
+    pitch: 1
+    usePitchVariation: 1
+  - surfaceType: 2
+    soundEvent: {fileID: 11400000, guid: 31f339c6bf7733a488b1a5d40e028407, type: 2}
+    walkInterval: 0.26
+    runInterval: 0.16
+    pitch: 1
+    usePitchVariation: 1
+  - surfaceType: 1
+    soundEvent: {fileID: 11400000, guid: 0f9c1dd3dcc45754b9b77a536cd811c2, type: 2}
+    walkInterval: 0.26
+    runInterval: 0.16
+    pitch: 1
+    usePitchVariation: 1
+  layerToSurface: 08000000080000000800000008000000080000000800000008000000080000000800000008000000080000000000000008000000080000000800000003000000040000000200000001000000
+  defaultSurfaceType: 0
+  stopFadeOutSeconds: 0.1

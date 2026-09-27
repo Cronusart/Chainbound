@@ -1,0 +1,136 @@
+{
+    "configVersion": 1,
+    "configHash": "195a3215ca8cbdbf12974e6e869d30c4eaaae4a0ad17b8ff3871177cbe91b4ce",
+    "balance": {
+        "tickRate": 30,
+        "standardTimerMilliseconds": 25000,
+        "baseBandHeightBasisPoints": 2400,
+        "lockMovementBasisPointsPerSecond": 1250,
+        "escapeMovementBasisPointsPerSecond": 800,
+        "lowHpThresholdBasisPoints": 1500,
+        "hpAboveThresholdFloorBasisPoints": 5000,
+        "hpResistanceCurveMilli": 1000,
+        "fullHpVelocityBonusBasisPoints": 7500,
+        "fullHpAccelerationBonusBasisPoints": 9000,
+        "fullHpTimerPenaltyBasisPoints": 4000,
+        "positiveIvMotionBonusMaximumBasisPoints": 2000,
+        "alertnessVelocityBasisPoints": 1000,
+        "alertnessAccelerationBasisPoints": 1200,
+        "alertnessSpikeAmplitudeBasisPoints": 1000,
+        "maximumAttemptMilliseconds": 600000,
+        "bandLiftAccelerationUnitsPerSecondSquared": 18000,
+        "bandGravityUnitsPerSecondSquared": 14000,
+        "bandDragBasisPointsPerSecond": 2200,
+        "bandMaximumSpeedUnitsPerSecond": 8000,
+        "bandEdgeBounceBasisPoints": 2500,
+        "traceAccelerationUnitsPerSecondSquared": 12000,
+        "traceMaximumSpeedUnitsPerSecond": 6500,
+        "traceMeanReversionUnitsPerSecondSquared": 8000,
+        "traceEdgeBounceBasisPoints": 6500,
+        "spikeChanceBasisPointsPerTick": 65,
+        "spikeVelocityImpulseUnitsPerSecond": 2400,
+        "mutatedMotionBasisPoints": 1500,
+        "entangledMotionBasisPoints": 2000,
+        "traitSpikeChancePerMotionBasisPoints": 4000,
+        "variantRarityMotionBasisPoints": [
+            0,
+            500,
+            1200,
+            2000,
+            3000,
+            4500
+        ],
+        "mutationRarityMotionBasisPoints": [
+            0,
+            400,
+            800,
+            1500,
+            2500,
+            4000
+        ],
+        "profiles": [
+            {
+                "profileId": "calm",
+                "difficulty": 0,
+                "motionMultiplierBasisPoints": 7500,
+                "timerMultiplierBasisPoints": 11500,
+                "spikeChanceMultiplierBasisPoints": 7500
+            },
+            {
+                "profileId": "extreme",
+                "difficulty": 3,
+                "motionMultiplierBasisPoints": 16000,
+                "timerMultiplierBasisPoints": 6500,
+                "spikeChanceMultiplierBasisPoints": 16000
+            },
+            {
+                "profileId": "standard",
+                "difficulty": 1,
+                "motionMultiplierBasisPoints": 10000,
+                "timerMultiplierBasisPoints": 10000,
+                "spikeChanceMultiplierBasisPoints": 10000
+            },
+            {
+                "profileId": "volatile",
+                "difficulty": 2,
+                "motionMultiplierBasisPoints": 13000,
+                "timerMultiplierBasisPoints": 8750,
+                "spikeChanceMultiplierBasisPoints": 13000
+            }
+        ]
+    },
+    "entangledTypes": [
+        {
+            "typeId": "node",
+            "weight": 1
+        },
+        {
+            "typeId": "gas",
+            "weight": 1
+        },
+        {
+            "typeId": "block",
+            "weight": 1
+        },
+        {
+            "typeId": "encrypted",
+            "weight": 1
+        },
+        {
+            "typeId": "burned",
+            "weight": 1
+        },
+        {
+            "typeId": "frozen",
+            "weight": 1
+        },
+        {
+            "typeId": "forked",
+            "weight": 1
+        },
+        {
+            "typeId": "mined",
+            "weight": 1
+        },
+        {
+            "typeId": "staked",
+            "weight": 1
+        },
+        {
+            "typeId": "compressed",
+            "weight": 1
+        },
+        {
+            "typeId": "bot",
+            "weight": 1
+        },
+        {
+            "typeId": "glitched",
+            "weight": 1
+        },
+        {
+            "typeId": "shard",
+            "weight": 1
+        }
+    ]
+}

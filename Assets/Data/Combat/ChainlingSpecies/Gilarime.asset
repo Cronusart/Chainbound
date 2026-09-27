@@ -1,0 +1,140 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Gilarime
+  m_EditorClassIdentifier: 
+  speciesId: gilarime
+  displayName: Gilarime
+  description: Its hide stays ice-cold even under fire. Abandoned nests are often
+    found with a Gilarime still standing watch, raygun trained on the dark.
+  primaryType: 6
+  secondaryType: 0
+  baseMaxHP: 132
+  baseMeleeAtk: 50
+  baseMeleeDef: 65
+  baseRangedAtk: 60
+  baseRangedDef: 55
+  baseSpeed: 45
+  maxEvolutionStages: 3
+  learnableMoves:
+  - {fileID: 11400000, guid: 5cc708803c6bda14792d714b1168b357, type: 2}
+  - {fileID: 11400000, guid: d644ba00faec83b438636fbaadb257a2, type: 2}
+  - {fileID: 11400000, guid: f00e5eddec7a86540b9d14dd31ec4ab1, type: 2}
+  - {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
+  - {fileID: 11400000, guid: 76af410d87a59c344ae85a1814cf2eee, type: 2}
+  - {fileID: 11400000, guid: 8b6f4b2aedcc534408a96b246c242fc5, type: 2}
+  - {fileID: 11400000, guid: a69ac457dddf4e846a6f786d6a3dbf3c, type: 2}
+  - {fileID: 11400000, guid: cfe63cbbaa8e52943b474b4edce895f4, type: 2}
+  - {fileID: 11400000, guid: 17da5768d0a988649a1adf046972cd46, type: 2}
+  - {fileID: 11400000, guid: 5876169bfa266bf41b876bd8f3149a1e, type: 2}
+  - {fileID: 11400000, guid: 07f1911b3a623cd4d81319de8a57b603, type: 2}
+  - {fileID: 11400000, guid: a38fdcf34d3968941a08b99d1c607be1, type: 2}
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  - {fileID: 11400000, guid: 9fe98046216cb2e48825d0fcc6f550b1, type: 2}
+  - {fileID: 11400000, guid: 501c886e99237f849ba2c638dff36442, type: 2}
+  learnLevels: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  exclusiveMoves:
+  - {fileID: 11400000, guid: 9fe98046216cb2e48825d0fcc6f550b1, type: 2}
+  - {fileID: 11400000, guid: 501c886e99237f849ba2c638dff36442, type: 2}
+  flagshipMove: {fileID: 11400000, guid: 9fe98046216cb2e48825d0fcc6f550b1, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 5cc708803c6bda14792d714b1168b357, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: d644ba00faec83b438636fbaadb257a2, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f00e5eddec7a86540b9d14dd31ec4ab1, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 76af410d87a59c344ae85a1814cf2eee, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 8b6f4b2aedcc534408a96b246c242fc5, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: a69ac457dddf4e846a6f786d6a3dbf3c, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: cfe63cbbaa8e52943b474b4edce895f4, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 17da5768d0a988649a1adf046972cd46, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 5876169bfa266bf41b876bd8f3149a1e, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 07f1911b3a623cd4d81319de8a57b603, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: a38fdcf34d3968941a08b99d1c607be1, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 9fe98046216cb2e48825d0fcc6f550b1, type: 2}
+    weight: 10
+    poolTag: 1
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 501c886e99237f849ba2c638dff36442, type: 2}
+    weight: 10
+    poolTag: 1
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 1
+  defaultCaptureProfile: 1
+  combatRoleOverride: 4
+  designNotes: 'Starter. Exclusive moves: Gecko Guard (once per battle). Spec 06
+    v1.2.'

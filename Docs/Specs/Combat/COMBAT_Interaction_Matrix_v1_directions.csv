@@ -1,0 +1,16 @@
+Core Interaction Matrix v1 Directions,,,,,,,,,,,,,,
+Attacker / Defender,Node,Gas,Block,Encrypted,Burned,Frozen,Forked,Mined,Staked,Compressed,Bot,Glitched,Shard,Meme
+Node,-,-,-,-,-,ADV,ADV,ADV,-,ADV,-,-,-,-
+Gas,ADV,-,ADV,-,-,-,-,-,ADV,-,ADV,-,-,-
+Block,-,-,-,-,ADV,-,ADV,-,-,-,-,-,ADV,-
+Encrypted,-,ADV,-,-,ADV,ADV,-,-,-,-,ADV,-,-,-
+Burned,-,ADV,-,-,-,ADV,-,ADV,ADV,ADV,ADV,-,ADV,-
+Frozen,-,ADV,-,-,-,-,-,-,ADV,-,ADV,ADV,ADV,-
+Forked,-,-,-,-,ADV,-,-,ADV,-,-,ADV,ADV,-,-
+Mined,-,ADV,ADV,ADV,-,ADV,-,-,ADV,-,-,-,-,-
+Staked,-,-,-,-,-,-,ADV,-,-,ADV,-,-,ADV,-
+Compressed,-,-,ADV,ADV,-,ADV,-,-,-,-,-,-,-,-
+Bot,ADV,-,ADV,-,-,-,-,ADV,ADV,-,-,ADV,-,-
+Glitched,ADV,-,ADV,ADV,ADV,-,-,-,-,-,-,-,-,-
+Shard,ADV,-,-,ADV,-,-,ADV,ADV,-,ADV,-,ADV,-,-
+Meme,-,-,-,-,-,-,-,-,-,-,-,-,-,-

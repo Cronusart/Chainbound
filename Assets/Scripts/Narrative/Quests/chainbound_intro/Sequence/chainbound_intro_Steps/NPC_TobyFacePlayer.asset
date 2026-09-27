@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 857290d702fad5d4a90e6256b854d6e0, type: 3}
+  m_Name: NPC_TobyFacePlayer
+  m_EditorClassIdentifier: 
+  stepName: toby_faceplayer
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 85bc1242-1bc3-4a4f-bade-c73d82e6c150
+  npcId: prof_toby
+  targetType: 0
+  targetId: 
+  directionPreset: 6

@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eaf81ad1c3ed874f92ba7c3910d8b7d, type: 3}
+  m_Name: Visual_CofiLootwak
+  m_EditorClassIdentifier: 
+  speciesId: cofi_lootwak
+  displayName: Cofi Lootwak
+  idleSequence:
+    sprites:
+    - {fileID: 21300000, guid: 85ead7f548f723d4b86d13ef2f9b70bb, type: 3}
+    - {fileID: 21300000, guid: dd34f9889c0f194449186627a5aa04f4, type: 3}
+    - {fileID: 21300000, guid: 5fe3dee0dbce49a42b4031b14c9014e5, type: 3}
+    - {fileID: 21300000, guid: 90b7ef04e03fab24d9050ec34efc2cc7, type: 3}
+    - {fileID: 21300000, guid: 59466e5837d979744ae387eef4a1ac29, type: 3}
+    - {fileID: 21300000, guid: 95eb3b67c85623d4d8968930c6a34902, type: 3}
+    - {fileID: 21300000, guid: 3a59d8da5ddf8b243b4d3b7965f42fcf, type: 3}
+  idleFPS: 8
+  meleeAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: 90b7ef04e03fab24d9050ec34efc2cc7, type: 3}
+    - {fileID: 21300000, guid: 59466e5837d979744ae387eef4a1ac29, type: 3}
+    - {fileID: 21300000, guid: 95eb3b67c85623d4d8968930c6a34902, type: 3}
+    - {fileID: 21300000, guid: 3a59d8da5ddf8b243b4d3b7965f42fcf, type: 3}
+  meleeAttackFPS: 10
+  rangedAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: 90b7ef04e03fab24d9050ec34efc2cc7, type: 3}
+    - {fileID: 21300000, guid: 59466e5837d979744ae387eef4a1ac29, type: 3}
+    - {fileID: 21300000, guid: 95eb3b67c85623d4d8968930c6a34902, type: 3}
+    - {fileID: 21300000, guid: 3a59d8da5ddf8b243b4d3b7965f42fcf, type: 3}
+  rangedAttackFPS: 10
+  hitSequence:
+    sprites:
+    - {fileID: 21300000, guid: 5fe3dee0dbce49a42b4031b14c9014e5, type: 3}
+    - {fileID: 21300000, guid: 85ead7f548f723d4b86d13ef2f9b70bb, type: 3}
+  hitFPS: 8
+  swapInSequence:
+    sprites:
+    - {fileID: 21300000, guid: 85ead7f548f723d4b86d13ef2f9b70bb, type: 3}
+    - {fileID: 21300000, guid: dd34f9889c0f194449186627a5aa04f4, type: 3}
+    - {fileID: 21300000, guid: 5fe3dee0dbce49a42b4031b14c9014e5, type: 3}
+    - {fileID: 21300000, guid: 90b7ef04e03fab24d9050ec34efc2cc7, type: 3}
+    - {fileID: 21300000, guid: 59466e5837d979744ae387eef4a1ac29, type: 3}
+    - {fileID: 21300000, guid: 95eb3b67c85623d4d8968930c6a34902, type: 3}
+    - {fileID: 21300000, guid: 3a59d8da5ddf8b243b4d3b7965f42fcf, type: 3}
+  swapInFPS: 10
+  swapOutSequence:
+    sprites:
+    - {fileID: 21300000, guid: 3a59d8da5ddf8b243b4d3b7965f42fcf, type: 3}
+    - {fileID: 21300000, guid: 95eb3b67c85623d4d8968930c6a34902, type: 3}
+    - {fileID: 21300000, guid: 85ead7f548f723d4b86d13ef2f9b70bb, type: 3}
+  swapOutFPS: 10
+  koSequence:
+    sprites:
+    - {fileID: 21300000, guid: 5fe3dee0dbce49a42b4031b14c9014e5, type: 3}
+    - {fileID: 21300000, guid: dd34f9889c0f194449186627a5aa04f4, type: 3}
+    - {fileID: 21300000, guid: 85ead7f548f723d4b86d13ef2f9b70bb, type: 3}
+  koFPS: 8
+  animationAlternates: []
+  spriteSize: {x: 5, y: 5}
+  useSpritePivot: 1
+  spritePivotWorldOffset: {x: 0, y: 0}
+  presentationTrack: {fileID: 0}
+  anchorOffsets: []
+  spawnSound: {fileID: 11400000, guid: 3a1abd27f366d6846a82fe08406ad425, type: 2}
+  swapInSound: {fileID: 11400000, guid: 3a1abd27f366d6846a82fe08406ad425, type: 2}
+  meleeAttackFallbackSound: {fileID: 0}
+  rangedAttackFallbackSound: {fileID: 0}
+  hitReactionSound: {fileID: 0}
+  koSound: {fileID: 0}
+  portrait: {fileID: 21300000, guid: 85ead7f548f723d4b86d13ef2f9b70bb, type: 3}
+  useCustomActionOutlineColor: 1
+  actionOutlineColor: {r: 0.55, g: 0.32, b: 0.12, a: 0.8}

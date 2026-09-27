@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Chainbound — Phantom challenge signer</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+    textarea { width: 100%; min-height: 160px; font-family: ui-monospace, monospace; }
+    input, button { font-size: 1rem; margin: 0.35rem 0; }
+    code, pre { background: #f4f4f5; padding: 0.2rem 0.35rem; border-radius: 4px; }
+    pre { padding: 0.75rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    .ok { color: #066; } .err { color: #a00; }
+  </style>
+</head>
+<body>
+  <h1>Phantom challenge signer</h1>
+  <p>Paste the <strong>exact</strong> contents of <code>Logs/wallet-link-challenge-message.txt</code>, connect Phantom, sign, then copy the signature into the WSL verify prompt.</p>
+  <p>Expected wallet: <code>23TQmb6Ss9KZp9ThpxFiGRPwBrjD2vqAFtTP6ZFeR7Bt</code></p>
+
+  <label>Challenge message</label>
+  <textarea id="msg" placeholder="Paste challenge message here"></textarea>
+
+  <div>
+    <button id="connect">1. Connect Phantom</button>
+    <button id="sign" disabled>2. Sign message</button>
+  </div>
+  <p id="wallet"></p>
+  <p id="status"></p>
+
+  <label>Signature (base58) — paste this at the WSL <code>Signature:</code> prompt</label>
+  <pre id="sig">(none yet)</pre>
+  <button id="copy" disabled>Copy signature</button>
+
+  <script type="module">
+    // Minimal base58 encode for 64-byte signatures
+    const ALPH = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    function b58encode(bytes) {
+      let zeros = 0;
+      while (zeros < bytes.length && bytes[zeros] === 0) zeros++;
+      const size = Math.ceil(bytes.length * 138 / 100) + 1;
+      const b = new Uint8Array(size);
+      let length = 0;
+      for (let i = zeros; i < bytes.length; i++) {
+        let carry = bytes[i];
+        let j = size - 1;
+        for (; carry !== 0 || j >= size - length; j--) {
+          carry += 256 * b[j];
+          b[j] = carry % 58;
+          carry = (carry / 58) | 0;
+        }
+        length = size - 1 - j;
+      }
+      let out = "1".repeat(zeros);
+      for (let i = size - length; i < size; i++) out += ALPH[b[i]];
+      return out;
+    }
+
+    const $ = (id) => document.getElementById(id);
+    const status = (t, ok) => { $("status").textContent = t; $("status").className = ok ? "ok" : "err"; };
+
+    function provider() {
+      const p = window.phantom?.solana || window.solana;
+      if (!p?.isPhantom) throw new Error("Phantom not found. Open this page in a desktop browser with Phantom installed.");
+      return p;
+    }
+
+    $("connect").onclick = async () => {
+      try {
+        const p = provider();
+        const res = await p.connect();
+        const pk = res.publicKey.toString();
+        $("wallet").textContent = "Connected: " + pk;
+        if (pk !== "23TQmb6Ss9KZp9ThpxFiGRPwBrjD2vqAFtTP6ZFeR7Bt") {
+          status("Wrong wallet connected. Switch Phantom to 23TQ…R7Bt, then connect again.", false);
+          $("sign").disabled = true;
+          return;
+        }
+        status("Correct wallet connected.", true);
+        $("sign").disabled = false;
+      } catch (e) {
+        status(String(e.message || e), false);
+      }
+    };
+
+    $("sign").onclick = async () => {
+      try {
+        const message = $("msg").value;
+        if (!message) throw new Error("Paste the challenge message first.");
+        // Keep exact bytes, including newlines — do not trim.
+        const encoded = new TextEncoder().encode(message);
+        const p = provider();
+        const { signature } = await p.signMessage(encoded, "utf8");
+        const b58 = b58encode(signature instanceof Uint8Array ? signature : new Uint8Array(signature));
+        $("sig").textContent = b58;
+        $("copy").disabled = false;
+        status("Signed. Copy the signature into the WSL verify prompt.", true);
+      } catch (e) {
+        status(String(e.message || e), false);
+      }
+    };
+
+    $("copy").onclick = async () => {
+      await navigator.clipboard.writeText($("sig").textContent.trim());
+      status("Copied to clipboard.", true);
+    };
+  </script>
+</body>
+</html>

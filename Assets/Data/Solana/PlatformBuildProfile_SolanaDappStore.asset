@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 766e68db6f23eaa48a8a92a52708ba53, type: 3}
+  m_Name: PlatformBuildProfile_SolanaDappStore
+  m_EditorClassIdentifier: 
+  buildPlatform: 3
+  capabilities:
+    supportsGooglePlayIdentity: 0
+    supportsAppleIdentity: 0
+    supportsPlayBilling: 0
+    supportsAppleIAP: 0
+    supportsSolanaWallet: 1
+    supportsSeedVault: 1
+    supportsRewardedAds: 0
+    supportsOnChainMinting: 1
+    supportsExternalWalletOnly: 1
+    supportsExperimentalCryptoCommerce: 1
+  backendEnvironment: production
+  walletForwardStart: 0

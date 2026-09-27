@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c8a1f2e9b3d47a6a5e8c1d0f7b2e934, type: 3}
+  m_Name: PartyTabMotionProfile
+  m_EditorClassIdentifier: 
+  screenEnterDuration: 0.12
+  screenEnterStagger: 0.04
+  screenEnterStartScale: 0.99
+  screenEnterProgressDuration: 0.46
+  visualStageFocusScale: 1.08
+  focusedColumnScale: 1
+  unfocusedColumnScale: 0.93
+  focusedVisualStageScale: 1
+  unfocusedVisualStageScale: 0.885
+  visualStageFocusInDuration: 0.24
+  visualStageFocusOutDuration: 0.2
+  normalScaleOvershoot: 0.05
+  normalScaleOvershootDuration: 0.14
+  normalScaleSettleDuration: 0.2
+  unfocusedInfoPanelAlpha: 0.72
+  columnSelectionPunchStrength: 0.08
+  columnSelectionPunchDuration: 0.22
+  columnSelectionPunchVibrato: 8
+  viewPanelFadeDuration: 0.12
+  hpFillDuration: 0.2
+  hpLabelPunchStrength: 0.15
+  hpLabelPunchDuration: 0.15
+  faintedColorDuration: 0.2
+  healthyHpColor: {r: 0.22, g: 0.78, b: 0.34, a: 1}
+  faintedHpColor: {r: 0.45, g: 0.12, b: 0.12, a: 1}
+  mutedHpColor: {r: 0.18, g: 0.22, b: 0.2, a: 1}
+  viewRailOpenDuration: 0.15
+  viewRailRowStagger: 0.04
+  buttonFocusScale: 1.06
+  buttonPressScale: 0.95
+  buttonPressDuration: 0.08

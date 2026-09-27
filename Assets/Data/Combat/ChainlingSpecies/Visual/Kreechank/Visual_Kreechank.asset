@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eaf81ad1c3ed874f92ba7c3910d8b7d, type: 3}
+  m_Name: Visual_Kreechank
+  m_EditorClassIdentifier: 
+  speciesId: kreechank
+  displayName: Kreechank
+  idleSequence:
+    sprites:
+    - {fileID: 21300000, guid: 5c1b371afb695264eb55c07baaec1176, type: 3}
+    - {fileID: 21300000, guid: 8cd9481a8a82555478e32098a16e9784, type: 3}
+    - {fileID: 21300000, guid: 5d51814bb2fc68348a7ec6269e113853, type: 3}
+    - {fileID: 21300000, guid: 1c4bfb227e7ec08468f8ce7958aa5f5a, type: 3}
+    - {fileID: 21300000, guid: d7f43318e9b75c94693b1223dbde5ae0, type: 3}
+    - {fileID: 21300000, guid: c0989012d8b49ec42ae59ff0c741c1eb, type: 3}
+    - {fileID: 21300000, guid: dfb4bb5420b8f5f49bfd59041fc1117c, type: 3}
+  meleeAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: 5c1b371afb695264eb55c07baaec1176, type: 3}
+  rangedAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: 5c1b371afb695264eb55c07baaec1176, type: 3}
+  hitSequence:
+    sprites:
+    - {fileID: 21300000, guid: 5c1b371afb695264eb55c07baaec1176, type: 3}
+  idleFPS: 8
+  meleeAttackFPS: 8
+  rangedAttackFPS: 8
+  hitFPS: 8
+  spriteSize: {x: 5, y: 5}
+  presentationTrack: {fileID: 11400000, guid: 0afa80b8bc196f344bf8e4db7ab67c90, type: 2}
+  anchorOffsets: []
+  spawnSound: {fileID: 11400000, guid: 3a1abd27f366d6846a82fe08406ad425, type: 2}
+  swapInSound: {fileID: 11400000, guid: 3a1abd27f366d6846a82fe08406ad425, type: 2}
+  meleeAttackFallbackSound: {fileID: 0}
+  rangedAttackFallbackSound: {fileID: 0}
+  hitReactionSound: {fileID: 0}
+  koSound: {fileID: 0}
+  glitchInSequence:
+    sprites:
+    - {fileID: 21300000, guid: 26995a5d62055de42a0a7bac54c4de48, type: 3}
+    - {fileID: 21300000, guid: baf0a1dcc8ed1c84fbf744d1ab0c69d5, type: 3}
+    - {fileID: 21300000, guid: 89975861640dc0f4b9f2133d7109bf0b, type: 3}
+    - {fileID: 21300000, guid: 5f56c45749dab004ca75c39f31a43615, type: 3}
+    - {fileID: 21300000, guid: 4049efdc0ac380a4996f7500a991c384, type: 3}
+  glitchOutSequence:
+    sprites: []
+  glitchInFPS: 8
+  glitchOutFPS: 8
+  portrait: {fileID: 0}
+  useCustomActionOutlineColor: 0
+  actionOutlineColor: {r: 0.15, g: 0.8, b: 1, a: 0.8}

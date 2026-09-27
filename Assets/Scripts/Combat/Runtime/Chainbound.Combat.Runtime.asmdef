@@ -1,0 +1,26 @@
+{
+    "name": "Chainbound.Combat.Runtime",
+    "rootNamespace": "Chainbound.Combat",
+    "references": [
+        "Chainbound.Combat.Core",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "DG.Tweening.Modules",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Chainbound.World.TimeOfDay",
+        "SignalJam.UI.MobileControls",
+        "SignalJam.UI.VisualFX",
+        "SignalJam.VisualFx",
+        "SignalJam.AudioData"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

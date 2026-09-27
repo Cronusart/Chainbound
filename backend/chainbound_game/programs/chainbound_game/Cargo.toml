@@ -1,0 +1,30 @@
+[package]
+name = "chainbound_game"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "chainbound_game"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+
+[dependencies]
+anchor-lang = "0.32.1"
+ephemeral-rollups-sdk = { git = "https://github.com/magicblock-labs/ephemeral-rollups-sdk", rev = "60761a7f76b3b417496d4a5fcca8412e35d44f5b", features = ["anchor-compat"] }
+mpl-core = { version = "=0.11.1", default-features = false }
+
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

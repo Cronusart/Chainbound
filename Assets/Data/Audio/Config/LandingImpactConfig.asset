@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5d40caa4e08d62439b22491544681ea, type: 3}
+  m_Name: LandingImpactConfig
+  m_EditorClassIdentifier: 
+  surfaceLandings:
+  - surfaceType: 0
+    soundEvent: {fileID: 11400000, guid: dc9a25625d442f24eb8429af9bcb65b6, type: 2}
+    useCustomVolumeRange: 0
+    minVolume: 0
+    maxVolume: 0
+  - surfaceType: 1
+    soundEvent: {fileID: 11400000, guid: de1e258de67c3964f894126c6eca273c, type: 2}
+    useCustomVolumeRange: 0
+    minVolume: 0
+    maxVolume: 0
+  - surfaceType: 3
+    soundEvent: {fileID: 11400000, guid: 133926f9d3e1438468f1cbf4d174432e, type: 2}
+    useCustomVolumeRange: 0
+    minVolume: 0
+    maxVolume: 0
+  - surfaceType: 4
+    soundEvent: {fileID: 11400000, guid: 9a19760fe41538e4a9aa22f92b3e968a, type: 2}
+    useCustomVolumeRange: 0
+    minVolume: 0
+    maxVolume: 0
+  - surfaceType: 2
+    soundEvent: {fileID: 11400000, guid: a26905d04631bf84e895eb7e8f42bd82, type: 2}
+    useCustomVolumeRange: 0
+    minVolume: 0
+    maxVolume: 0
+  defaultLandingSound: {fileID: 11400000, guid: dc9a25625d442f24eb8429af9bcb65b6, type: 2}
+  minFallHeightForSound: 0.4
+  maxFallHeightForSound: 30
+  globalMinVolume: 0.08
+  globalMaxVolume: 0.8
+  volumeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 1
+      outSlope: 1
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 1
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

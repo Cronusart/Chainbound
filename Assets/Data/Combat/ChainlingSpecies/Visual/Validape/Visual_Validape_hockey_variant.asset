@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eaf81ad1c3ed874f92ba7c3910d8b7d, type: 3}
+  m_Name: Visual_Validape_hockey_variant
+  m_EditorClassIdentifier: 
+  speciesId: validape
+  displayName: Validape Hockey
+  idleSequence:
+    sprites:
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 3fe32a547e4978d429dadd27a0c4293b, type: 3}
+    - {fileID: 21300000, guid: 51db17d600e964c49bfa4e91d4f01aae, type: 3}
+    - {fileID: 21300000, guid: c15a46e80e776ef4f984c18f41aad25d, type: 3}
+    - {fileID: 21300000, guid: 432ba0000e4320b4d94bda4a7edf667b, type: 3}
+    - {fileID: 21300000, guid: e4b7627d06ffdde4ea9838b765e0ff9d, type: 3}
+    - {fileID: 21300000, guid: b33b2bfa1b7e4fa40aea5af5053010bf, type: 3}
+  idleFPS: 8
+  meleeAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+  meleeAttackFPS: 8
+  rangedAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+  rangedAttackFPS: 8
+  hitSequence:
+    sprites:
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+    - {fileID: 21300000, guid: 9c9c7921f1f9c82429a35cb0a3d66ee8, type: 3}
+  hitFPS: 8
+  swapInSequence:
+    sprites: []
+  swapInFPS: 8
+  swapOutSequence:
+    sprites: []
+  swapOutFPS: 8
+  koSequence:
+    sprites: []
+  koFPS: 8
+  animationAlternates: []
+  spriteSize: {x: 5, y: 5}
+  useSpritePivot: 1
+  spritePivotWorldOffset: {x: 0, y: 0}
+  presentationTrack: {fileID: 0}
+  anchorOffsets: []
+  spawnSound: {fileID: 11400000, guid: 079d4f9013a33414ea66a5f59a97fc8d, type: 2}
+  swapInSound: {fileID: 11400000, guid: 079d4f9013a33414ea66a5f59a97fc8d, type: 2}
+  meleeAttackFallbackSound: {fileID: 0}
+  rangedAttackFallbackSound: {fileID: 0}
+  hitReactionSound: {fileID: 0}
+  koSound: {fileID: 0}
+  portrait: {fileID: 0}
+  useCustomActionOutlineColor: 0
+  actionOutlineColor: {r: 0.15, g: 0.8, b: 1, a: 0.8}

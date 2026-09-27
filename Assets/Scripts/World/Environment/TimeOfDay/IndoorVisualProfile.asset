@@ -1,0 +1,171 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3dd946761fd6464a88d20c7bd3094ac, type: 3}
+  m_Name: IndoorVisualProfile
+  m_EditorClassIdentifier: 
+  disableFogIndoors: 1
+  useTimeBasedIndoorLighting: 1
+  indoorAmbientColor: {r: 0.5303026, g: 0.5303026, b: 0.690566, a: 1}
+  indoorAmbientIntensity: 1.104
+  indoorAmbientColorOverTime:
+    serializedVersion: 2
+    key0: {r: 0.3, g: 0.3, b: 0.4, a: 1}
+    key1: {r: 0.7433963, g: 0.59892493, b: 0.65578866, a: 1}
+    key2: {r: 0.9547169, g: 0.7691776, b: 0.7880102, a: 0}
+    key3: {r: 0.74509805, g: 0.6, b: 0.65882355, a: 0}
+    key4: {r: 0.3, g: 0.3, b: 0.4, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 16384
+    ctime2: 32768
+    ctime3: 49151
+    ctime4: 65535
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 5
+    m_NumAlphaKeys: 2
+  indoorAmbientIntensityOverTime:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0.027430266
+      value: 0.8706746
+      inSlope: 0.21017952
+      outSlope: 0.21017952
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 1
+    - serializedVersion: 3
+      time: 0.17658368
+      value: 0.9209976
+      inSlope: 0.6
+      outSlope: 0.6
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.5142764
+      value: 1.0040505
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.8563535
+      value: 0.9202538
+      inSlope: -0.6
+      outSlope: -0.6
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1.0274303
+      value: 0.8706746
+      inSlope: -0.21023749
+      outSlope: -0.21023749
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.9550169
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  indoorDirectionalColor: {r: 0.97735846, g: 0.8824256, b: 0.7947952, a: 1}
+  indoorDirectionalIntensity: 1.45
+  indoorDirectionalColorOverTime:
+    serializedVersion: 2
+    key0: {r: 0.6, g: 0.65, b: 0.8, a: 1}
+    key1: {r: 1, g: 0.85, b: 0.7, a: 1}
+    key2: {r: 1, g: 0.98, b: 0.92, a: 0}
+    key3: {r: 1, g: 0.8, b: 0.65, a: 0}
+    key4: {r: 0.6, g: 0.65, b: 0.8, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 18119
+    ctime2: 29067
+    ctime3: 38473
+    ctime4: 65535
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 5
+    m_NumAlphaKeys: 2
+  indoorDirectionalIntensityOverTime:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0.005005598
+      value: 0.6370781
+      inSlope: 0.36467052
+      outSlope: 0.36467052
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.25116637
+    - serializedVersion: 3
+      time: 0.51152205
+      value: 0.90334547
+      inSlope: 0.018733742
+      outSlope: 0.018733742
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.99035704
+      value: 0.6370781
+      inSlope: -0.39219916
+      outSlope: -0.39219916
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.3177271
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  useSceneAuthoredRotation: 1
+  indoorDirectionalRotation: {x: 142.9, y: 38.5, z: 22.5}
+  indoorShadowStrength: 0.25
+  disableOutdoorSunIndoors: 1
+  useIndoorURPVolume: 0
+  indoorVolumeProfile: {fileID: 11400000, guid: fee8bffbbdc5d4147bc47cab6cf27dbf, type: 2}
+  indoorVolumeWeight: 1

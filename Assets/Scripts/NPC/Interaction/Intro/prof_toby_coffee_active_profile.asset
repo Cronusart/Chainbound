@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b8700e866f11944f836c258d6049e3a, type: 3}
+  m_Name: prof_toby_coffee_active_profile
+  m_EditorClassIdentifier: 
+  questDefinition: {fileID: 11400000, guid: e4f5a6b7c8d9012a3b4c5d6e7f8091a2, type: 2}
+  questId: 
+  rules: []
+  inactiveDialogue: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0002, type: 2}
+  inactiveTriggerId: 
+  inactiveNpcBehavior:
+    mode: 0
+    behaviorOverride: {fileID: 0}
+  activeFallbackDialogue: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0002, type: 2}
+  activeFallbackTriggerId: 
+  activeFallbackNpcBehavior:
+    mode: 0
+    behaviorOverride: {fileID: 0}
+  designerNotes: While coffee_and_beer is Active, Toby nags the player to keep moving on his order.
+  activateQuestOnInactiveInteract: 0
+  completeObjectiveOnActivate: 

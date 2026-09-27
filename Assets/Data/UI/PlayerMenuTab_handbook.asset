@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a67f1cf929458b4aa62dfe8caf389db, type: 3}
+  m_Name: PlayerMenuTab_handbook
+  m_EditorClassIdentifier: 
+  tabId: handbook
+  displayName: Handbook
+  description: Battle mechanics, moves, and unlocked guide chapters.
+  icon: {fileID: 0}
+  lockRule: 1
+  lockedLabel: Big Brain Book
+  accentColor: {r: 1, g: 0.4, b: 0.55, a: 1}

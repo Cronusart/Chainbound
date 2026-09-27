@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3aeed0cb36e39342a2e466f000b0706, type: 3}
+  m_Name: intro_set_intro_complete
+  m_EditorClassIdentifier: 
+  stepName: intro_set_intro_complete
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 152332d2-e477-4bff-9dc7-a2bc56641a54
+  supabaseConfig: {fileID: 11400000, guid: ade43a952186e6e4cb200c77d99919b7, type: 2}
+  introQuestId: chainbound_intro

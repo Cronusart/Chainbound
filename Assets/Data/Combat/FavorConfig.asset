@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 970f438374095f64c9910abd67ef7412, type: 3}
+  m_Name: FavorConfig
+  m_EditorClassIdentifier: 
+  referenceScore: 100
+  softCurveK: 100
+  encounterRarityBiasMax: 0.35
+  captureProbabilityBonusMax: 0.08
+  ivLowestBumpChanceMax: 0.45
+  rareConsumableBaseChance: 0.01
+  rareConsumableFavorBonusMax: 0.01
+  rareConsumableItemIds:
+  - favor_boost_s
+  - chainling_update

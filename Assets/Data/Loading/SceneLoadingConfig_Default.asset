@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67613befe8cb41e49f1300c37c8d2e02, type: 3}
+  m_Name: SceneLoadingConfig_Default
+  m_EditorClassIdentifier: 
+  startupSceneId: main_menu
+  startupStyle: 0
+  recoverySceneId: main_menu
+  defaultStyle: 1
+  destinationRules:
+  - sceneId: main_menu
+    style: 0
+  - sceneId: Loomville
+    style: 0
+  overworldStreamingConfig: {fileID: 11400000, guid: b8fa85788167454d9615b9f9884ec040, type: 2}
+  fullMinimumDisplaySeconds: 2.75
+  quickMinimumDisplaySeconds: 0.8
+  fadeInSeconds: 0.2
+  fadeOutSeconds: 0.4
+  postLoadFadeOutDelaySeconds: 0.3
+  stillLoadingMessageSeconds: 8
+  fullLoadingPriority: 2
+  quickLoadingPriority: 1
+  warmupTaskTimeoutSeconds: 10
+  warmupBatchSize: 32

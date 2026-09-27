@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c98dc1b7c8af7d458c8defe1829276d, type: 3}
+  m_Name: intro_playdialogue4
+  m_EditorClassIdentifier: 
+  stepName: intro_playdial_admiral1
+  enableDebugLogs: 0
+  executeOnce: 1
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: eff537f0-a1d3-4e9d-9178-e2e5caadc51c
+  dialogueSequence: {fileID: 11400000, guid: 92c27cc392f1dcc46b79cc55c3d76fcb, type: 2}
+  lockInputDuringDialogue: 1
+  useSpeakerCameraBridge: 1

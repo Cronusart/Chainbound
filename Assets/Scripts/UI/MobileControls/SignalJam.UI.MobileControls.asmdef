@@ -1,0 +1,18 @@
+{
+    "name": "SignalJam.UI.MobileControls",
+    "rootNamespace": "SignalJam.UI.MobileControls",
+    "references": [
+        "Unity.InputSystem",
+        "UnityEngine.UI",
+        "PSG1"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

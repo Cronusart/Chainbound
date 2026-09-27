@@ -1,0 +1,16 @@
+Core Interaction Matrix v2,,,,,,,,,,,,,,
+Attacker / Defender,Node,Gas,Block,Encrypted,Burned,Frozen,Forked,Mined,Staked,Compressed,Bot,Glitched,Shard,Meme
+Node,-,-,-,-,-,Anchor,Slashed,Slashed,-,Anchor,-,-,-,FOMO
+Gas,Congested,-,Congested,-,-,-,-,-,Overclocked,-,Congested,-,-,FOMO
+Block,-,-,-,-,Firewall,-,Liquid,-,-,-,-,-,Firewall,FOMO
+Encrypted,-,Anon,-,-,Dusted,Dusted,-,-,-,-,Anon,-,-,FOMO
+Burned,-,Rugged,-,-,-,Rugged,-,Rugged,Rugged,Rugged,Firewall,-,Firewall,FOMO
+Frozen,-,Latency,-,-,-,-,-,-,Latency,-,Latency,Overclocked  ,Outage,FOMO
+Forked,-,-,-,-,Bridge,-,-,Bridge,-,-,Dusted,Pumped,-,FOMO
+Mined,-,Pumped,Outage,Pumped,-,Pumped,-,-,Outage,-,-,-,-,FOMO
+Staked,-,-,-,-,-,-,Liquid,-,-,Liquid,-,-,Drained,FOMO
+Compressed,-,-,FOMO,FOMO,-,Dusted,-,-,-,-,-,-,-,FOMO
+Bot,Congested,-,Drained,-,-,-,-,Drained,Virus,-,-,Virus,-,FOMO
+Glitched,Slashed,-,Shattered,Shattered,Outage,-,-,-,-,-,-,-,-,FOMO
+Shard,Shattered,-,-,FOMO,-,-,Shattered,FOMO,-,Shattered,-,Shattered,-,FOMO
+Meme,Hyped,Hyped,Hyped,Hyped,Hyped,Hyped,Hyped,Hyped,Hyped,Hyped,Hyped,Hyped,Hyped,-

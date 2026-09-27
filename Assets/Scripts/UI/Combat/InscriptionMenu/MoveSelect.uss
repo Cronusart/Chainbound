@@ -1,0 +1,192 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   MoveSelect.uss — PvP move selection overlay
+   Designed for PSG1 aspect ratio 1.148.
+   Consistent with CombatBattle.uss / CombatOutcome.uss palette.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Root ─────────────────────────────────────────────────────────── */
+.move-select-root {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    flex-direction: column;
+    align-items: center;
+    padding: 3% 4%;
+}
+
+.move-select--hidden {
+    display: none;
+}
+
+.move-select--visible {
+    display: flex;
+}
+
+/* ── Backdrop ─────────────────────────────────────────────────────── */
+.move-backdrop {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(5, 8, 14, 0.92);
+}
+
+/* ── Timer Bar ────────────────────────────────────────────────────── */
+.timer-bar-container {
+    width: 90%;
+    height: 6px;
+    background-color: rgba(40, 44, 52, 0.9);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4%;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+.timer-bar-fill {
+    height: 100%;
+    width: 100%;
+    background-color: #ffd166;
+    border-radius: 3px;
+    transition-property: width;
+    transition-duration: 1s;
+    transition-timing-function: linear;
+}
+
+.timer-text {
+    font-size: 11px;
+    color: #ffd166;
+    -unity-text-align: middle-center;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+/* ── Header ───────────────────────────────────────────────────────── */
+.move-header {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: #e8ecef;
+    -unity-text-align: middle-center;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+/* ── Card Grid ────────────────────────────────────────────────────── */
+.card-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+    max-width: 100%;
+    padding: 2%;
+}
+
+/* ── Individual Card ──────────────────────────────────────────────── */
+.move-card {
+    width: 72px;
+    height: 96px;
+    border-radius: 6px;
+    background-color: rgba(30, 36, 48, 0.9);
+    border-width: 2px;
+    border-color: rgba(100, 160, 255, 0.2);
+    justify-content: center;
+    align-items: center;
+    transition-property: border-color, scale;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out;
+}
+
+.move-card--selected {
+    border-color: #ffd166;
+    scale: 1.08 1.08;
+}
+
+.move-card--claimed {
+    background-color: rgba(80, 180, 100, 0.3);
+    border-color: #4caf50;
+}
+
+.move-card--taken {
+    background-color: rgba(220, 60, 60, 0.3);
+    border-color: #ef4444;
+    opacity: 0.6;
+}
+
+.move-card__icon {
+    font-size: 28px;
+    color: #8fa2b2;
+    -unity-text-align: middle-center;
+}
+
+.move-card__label {
+    font-size: 9px;
+    color: #8fa2b2;
+    -unity-text-align: middle-center;
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 64px;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+.move-footer {
+    font-size: 12px;
+    color: #8fa2b2;
+    -unity-text-align: middle-center;
+    margin-top: 8px;
+    flex-shrink: 0;
+}
+
+/* ── Selection Result Overlay ─────────────────────────────────────── */
+.selection-result {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(5, 8, 14, 0.88);
+    padding: 8%;
+}
+
+.selection-result--hidden {
+    display: none;
+}
+
+.selection-result--visible {
+    display: flex;
+}
+
+.result-title {
+    font-size: 16px;
+    unity-font-style: bold;
+    color: #e8ecef;
+    -unity-text-align: middle-center;
+    margin-bottom: 8px;
+}
+
+.result-body {
+    font-size: 12px;
+    color: #8fa2b2;
+    -unity-text-align: middle-center;
+    margin-bottom: 20px;
+    white-space: normal;
+}
+
+.result-continue {
+    font-size: 13px;
+    unity-font-style: bold;
+    color: #ffd166;
+    -unity-text-align: middle-center;
+    padding: 6px 20px;
+    background-color: rgba(10, 14, 20, 0.7);
+    border-radius: 8px;
+}

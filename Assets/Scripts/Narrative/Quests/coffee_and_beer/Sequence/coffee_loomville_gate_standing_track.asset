@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_loomville_gate_standing_track
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_loomville_gate_standing_track
+  startCheckpointId: 
+  safeResumeLabel: 
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 0
+  autoStartQuestId: 
+  autoStartLifecycleMask: 0
+  autoStartSkipWorldFlagKey: 
+  steps:
+  - {fileID: 11400000, guid: 14ffba47eb9ba424ab12984223333b4c, type: 2}
+  - {fileID: 11400000, guid: 83829d1c3527d734aa03118974880851, type: 2}
+  - {fileID: 11400000, guid: 16d2ba8631d46244090f1bd040763623, type: 2}
+  - {fileID: 11400000, guid: 7c91e4a2b6d84f0c9e3a1b5d8c0f2468, type: 2}
+  - {fileID: 11400000, guid: e3c27f87f4322d844b81fabb96eeede9, type: 2}

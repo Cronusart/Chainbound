@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e8485cebc7505c498cbb0d88dd10c7e, type: 3}
+  m_Name: CombatPopupVisual_Heal
+  m_EditorClassIdentifier: 
+  showText: 1
+  showSprite: 0
+  billboardToCamera: 1
+  fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
+  textMaterialPreset: {fileID: -494342321409102770, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
+  fontSize: 11
+  textColor: {r: 0.26, g: 1, b: 0.56, a: 1}
+  textOutlineColor: {r: 0, g: 0, b: 0, a: 1}
+  textOutlineWidth: 0
+  textAlignment: 512
+  textLocalOffset: {x: 0, y: 0, z: 0}
+  textLocalScale: {x: 1, y: 1, z: 1}
+  sprite: {fileID: 0}
+  spriteMaterial: {fileID: 0}
+  spriteColor: {r: 1, g: 1, b: 1, a: 1}
+  spriteLocalOffset: {x: 0, y: 0, z: 0}
+  spriteLocalScale: {x: 1, y: 1, z: 1}
+  spriteSortingOrder: 120
+  spriteColorPropertyName: _Color
+  worldYOffset: 0
+  duration: 1.1
+  startDelay: 0
+  holdBeforeFade: 0.08
+  useUnscaledTime: 1
+  motionMode: 0
+  moveOffset: {x: 0, y: 0.5, z: 0}
+  arcControlOffset: {x: 0.35, y: 0.35, z: 0}
+  moveEase: 6
+  scaleEase: 27
+  fadeEase: 5
+  startScale: {x: 1, y: 1, z: 1}
+  endScale: {x: 1, y: 1, z: 1}
+  playScalePulse: 1
+  scalePulseMultiplier: 1.18
+  scaleByAmount: 0
+  minAmountForScale: 1
+  maxAmountForScale: 80
+  minAmountScaleMultiplier: 1
+  maxAmountScaleMultiplier: 1.45
+  scaleFontSizeByAmount: 0
+  minAmountFontSize: 2.4
+  maxAmountFontSize: 3.8
+  punchStrength: {x: 0.12, y: 0.12, z: 0}
+  punchVibrato: 8
+  punchElasticity: 0.8
+  shakeStrength: 0.18
+  shakeVibrato: 12
+  shakeRandomness: 45
+  fadeText: 1
+  fadeSprite: 1

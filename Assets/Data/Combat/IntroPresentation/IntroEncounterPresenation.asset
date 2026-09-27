@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c6b37d5e1a54fbf9a7627b74bf46d1a, type: 3}
+  m_Name: IntroEncounterPresenation
+  m_EditorClassIdentifier: 
+  useCenterStaging: 1
+  centerSlideDuration: 0.4
+  centerSlideEase: 10
+  postDialogueDelay: 0.1
+  delayPlayerPartyUntilAfterDialogue: 1
+  spawnAdvanceDelaySeconds: 1.5
+  playerSpawnAdvanceDelaySeconds: -1
+  secondaryCenterOffset: {x: 7.5, y: 0, z: 0}
+  allowSkipIntroMessage: 0
+  copyConfig: {fileID: 11400000, guid: 5f1c8b34a7e08362f9c3e4a1b6d5289a, type: 2}
+  enableIntroCameraBeat: 1
+  introFollowOffsetY: 4.5
+  introFollowOffsetZ: -37.5
+  introPitchAngle: 8
+  introCameraBlendInSeconds: 1
+  introCameraBlendOutSeconds: 3
+  postGlitchWalletDelay: -1
+  defaultVfxProfile: {fileID: 11400000, guid: fad63d397a794145b08d338a73b2c760, type: 2}
+  bossVfxProfile: {fileID: 11400000, guid: 4de1085c9f6e4fd1a32439276b644fcd, type: 2}
+  entangledVfxProfile: {fileID: 11400000, guid: aebba763b3ed4e1fae283fb38be37fa2, type: 2}
+  pvpVfxProfile: {fileID: 11400000, guid: 46dbe6a2ef4441a2bd5d5a41b32aad36, type: 2}
+  vfxProfileOverrides:
+  - speciesId: validape
+    visualVariantId: hockey_variant
+    profile: {fileID: 11400000, guid: fad63d397a794145b08d338a73b2c760, type: 2}
+  enableDebugLogs: 0

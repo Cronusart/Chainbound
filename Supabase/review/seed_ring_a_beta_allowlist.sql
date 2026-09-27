@@ -1,0 +1,15 @@
+-- Run manually with service-role/database-owner access after collecting each tester's
+-- name, device class, wallet public key, and Discord handle. Never commit real PII.
+-- Replace the example values locally; do not run this placeholder unchanged.
+--
+-- INSERT INTO public.beta_allowlist
+--   (wallet_public_key, ring, status, notes, approved_at)
+-- VALUES
+--   ('<PROVEN_BASE58_WALLET>', 'A', 'approved',
+--    'name=<NAME>; device=<SEEKER_OR_ANDROID>; discord=<HANDLE>; seeded_by=<OPERATOR>', now())
+-- ON CONFLICT (wallet_public_key) DO UPDATE SET
+--   ring = EXCLUDED.ring,
+--   status = EXCLUDED.status,
+--   notes = EXCLUDED.notes,
+--   approved_at = EXCLUDED.approved_at,
+--   revoked_at = NULL;

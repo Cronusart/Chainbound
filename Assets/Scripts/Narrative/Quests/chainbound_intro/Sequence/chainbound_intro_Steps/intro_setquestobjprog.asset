@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a641389dfeefcb45b9da27d275eb49a, type: 3}
+  m_Name: intro_setquestobjprog
+  m_EditorClassIdentifier: 
+  stepName: intro_setquestobjprog
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: b3ca0b4d-37ba-4200-8c1d-e53e5cc622a1
+  questId: chainbound_intro
+  objectiveId: leave_house
+  completeObjective: 1
+  addAmount: 1
+  autoCompleteQuest: 0

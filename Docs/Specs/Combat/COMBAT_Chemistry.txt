@@ -1,0 +1,59 @@
+COMBAT_01_TypeChemistry_v2.0
+
+0. Purpose
+Defines Chainbound's authoritative, stackless type-chemistry behavior. Chemistry is deterministic, PvP-safe, data-driven, and fully loggable.
+
+1. Canonical Types
+Node, Gas, Block, Encrypted, Burned, Frozen, Forked, Mined, Staked, Compressed, Bot, Glitched, Shard, Meme
+
+2. Resolution
+Chemistry resolves only when a damaging hit lands.
+
+Inputs:
+- The hit's resolved attack type.
+- The defender's resolved type or types, including any active coating override.
+- The attacker-row / defender-column interaction matrix.
+
+For each defender type, a forward matrix edge contributes +1 and a reverse edge contributes -1. The summed score collapses to one relation:
+- Positive: Advantage, flat x1.2 damage.
+- Zero: Neutral, flat x1.0 damage.
+- Negative: Resisted, flat x0.8 damage.
+
+Dual typing never compounds damage beyond these three values. If multiple forward cells qualify, the defender's primary type selects the reaction first. The relation is evaluated on every hit, but a foe-targeted reaction applies at most once to each target per action and a self-targeted reaction applies at most once to the attacker per action.
+
+3. Matrix Authoring
+Rows are attacker types and columns are defender types. A cell is either '-' or exactly one reaction using:
+
+Status Name @Self
+Status Name @Foe
+
+Counts such as x1/x2 and compound outputs joined by '+' are invalid. @Self means the attacking Chainling receives the reaction; @Foe means the defending Chainling receives it.
+
+4. Chemistry Families
+All newly authored reactions belong to one of eight tactical families:
+- Liquidity: Pumped, Drained.
+- Volatility: Rugged, FOMO.
+- Latency: Jammed, Slowed, Isolated.
+- Structure: Firewall, Shattered, Corroded, Dusted, Reinforced, Anchored.
+- Exposure: Backlash Type, Leaked.
+- Sustain: Siphoned, Drip.
+- Cleanse: Defueled.
+- Contagion: Cascade Failure, Splinter.
+
+Beneficial and hybrid reactions target @Self. Harmful reactions target @Foe. This polarity is validated during import.
+
+5. Stateful Reactions
+Chemistry is stackless except for two explicitly named state values:
+- Cascade Failure exposes a 0/3 trigger counter. The third application deals 25% MaxHP damage and resets; swapping out resets it, and bench time pauses it.
+- Rugged exposes severity 1-15. It deals severity/16 MaxHP damage at End of Turn, then increases severity by one. Reapplication refreshes duration without increasing severity.
+
+6. Determinism and Logging
+All chemistry proc rolls use CombatRng. Forensic output records the relation, selected reaction, recipient, application or block result, roll/chance/branch where applicable, counter transitions, and swap-triggered Cascade resets.
+
+7. Compatibility
+Firewalled, Halted, Crashed, LiquidityPump, Evasive, Bridged, Narrowcast, Overclocked, TypeCoating, HypedTypeCoating, and Amplified remain readable where needed for migration or serialized assets but cannot be newly authored into the v1 interaction matrix.
+
+8. Authority Boundary
+Chemistry resolution is local deterministic combat authority. MagicBlock VRF, Solana instructions, and NFT minting do not participate in chemistry resolution.
+
+END

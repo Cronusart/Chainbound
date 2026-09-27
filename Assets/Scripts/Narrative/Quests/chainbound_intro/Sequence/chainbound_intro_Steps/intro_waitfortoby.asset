@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1942def8516d9349bb26d88f0652286, type: 3}
+  m_Name: intro_waitfortoby
+  m_EditorClassIdentifier: 
+  stepName: prof_toby_event
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 80585892-d944-4c96-8440-57e4d0df538a
+  eventId: prof_toby_event
+  timeoutSeconds: 30
+  onTimeoutLabel: waitfortoby

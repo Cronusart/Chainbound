@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eaf81ad1c3ed874f92ba7c3910d8b7d, type: 3}
+  m_Name: Visual_Whale
+  m_EditorClassIdentifier: 
+  speciesId: whale
+  displayName: Whale
+  idleSequence:
+    sprites:
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+    - {fileID: 21300000, guid: 82c4e9daf76dba042ba07f1b8e71d7e2, type: 3}
+    - {fileID: 21300000, guid: 47a812f12b34fac4d8d66161f6214a22, type: 3}
+    - {fileID: 21300000, guid: 1c2f77dcd54d45c42895b91326a91c4b, type: 3}
+    - {fileID: 21300000, guid: 0e835ccbf186eb540bb5dc5ee312985c, type: 3}
+    - {fileID: 21300000, guid: b2929e16bcc51494abdfdd6865b7879d, type: 3}
+    - {fileID: 21300000, guid: ebbb769c8cb5bd24fa16f3bd717d1640, type: 3}
+  idleFPS: 8
+  meleeAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+  meleeAttackFPS: 8
+  rangedAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+  rangedAttackFPS: 8
+  hitSequence:
+    sprites:
+    - {fileID: 21300000, guid: 3bc9c19746d068b4aa6e71070540142a, type: 3}
+  hitFPS: 8
+  swapInSequence:
+    sprites: []
+  swapInFPS: 10
+  swapOutSequence:
+    sprites: []
+  swapOutFPS: 10
+  koSequence:
+    sprites: []
+  koFPS: 10
+  animationAlternates: []
+  spriteSize: {x: 5, y: 5}
+  useSpritePivot: 1
+  spritePivotWorldOffset: {x: 0, y: 0}
+  presentationTrack: {fileID: 0}
+  anchorOffsets: []
+  spawnSound: {fileID: 11400000, guid: 602b09c54a3120d4f8969e7c8b101b7c, type: 2}
+  swapInSound: {fileID: 0}
+  meleeAttackFallbackSound: {fileID: 0}
+  rangedAttackFallbackSound: {fileID: 0}
+  hitReactionSound: {fileID: 0}
+  koSound: {fileID: 0}
+  portrait: {fileID: 0}
+  useCustomActionOutlineColor: 0
+  actionOutlineColor: {r: 0.15, g: 0.8, b: 1, a: 0.8}

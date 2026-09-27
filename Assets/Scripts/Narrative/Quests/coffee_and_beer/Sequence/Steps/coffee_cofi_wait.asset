@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9466e6a87bf3415429764d1855e50a66, type: 3}
+  m_Name: coffee_cofi_wait
+  m_EditorClassIdentifier: 
+  stepName: coffee_cofi_wait
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 7a1c0ffe-0001-4001-8001-aaaabbbb0204
+  triggerId: trigger_cofi_lootwak
+  armTrigger: 1
+  saveReturnSnapshotOnTriggerComplete: 1
+  returnSpawnPointId: sanctuary_jungle_trailhead

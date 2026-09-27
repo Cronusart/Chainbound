@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f80648f90974991b56034843000ec7b, type: 3}
+  m_Name: SceneSoundtrackCatalog
+  m_EditorClassIdentifier: 
+  entries:
+  - sceneName: player_room
+    cue: {fileID: 11400000, guid: f404f052921d91749a8b69758ccf1e82, type: 2}
+    triggerMoment: 1
+    fadeSeconds: 0
+    forceRestart: 1
+  - sceneName: Loomville
+    cue: {fileID: 11400000, guid: e964741f805badd4b99b4f15ae396d23, type: 2}
+    triggerMoment: 1
+    fadeSeconds: 3
+    forceRestart: 0
+  - sceneName: Loomville_Mart
+    cue: {fileID: 11400000, guid: e964741f805badd4b99b4f15ae396d23, type: 2}
+    triggerMoment: 1
+    fadeSeconds: 0
+    forceRestart: 0
+  - sceneName: Link1
+    cue: {fileID: 11400000, guid: e964741f805badd4b99b4f15ae396d23, type: 2}
+    triggerMoment: 1
+    fadeSeconds: 3
+    forceRestart: 0
+  - sceneName: Combat2_TestHarness
+    cue: {fileID: 11400000, guid: 3c73843c7a11bcc4f927287d110e4255, type: 2}
+    triggerMoment: 0
+    fadeSeconds: 0.5
+    forceRestart: 0
+  - sceneName: loom_lab
+    cue: {fileID: 11400000, guid: 752c041d006d8314f832d1cde65fad1a, type: 2}
+    triggerMoment: 1
+    fadeSeconds: 0.5
+    forceRestart: 1
+  - sceneName: Jungle
+    cue: {fileID: 11400000, guid: 0a26c0e323defec4993479c93cd1f173, type: 2}
+    triggerMoment: 1
+    fadeSeconds: 3
+    forceRestart: 0
+  - sceneName: Academy_Interior
+    cue: {fileID: 11400000, guid: 0a26c0e323defec4993479c93cd1f173, type: 2}
+    triggerMoment: 1
+    fadeSeconds: 3
+    forceRestart: 0
+  unmappedStopFadeSeconds: 3

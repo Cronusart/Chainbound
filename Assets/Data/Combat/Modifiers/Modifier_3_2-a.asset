@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3072466885a48fb47bf11038812c96c2, type: 3}
+  m_Name: Modifier_3_2-a
+  m_EditorClassIdentifier: 
+  sectionId: 3.2-a
+  displayName: Echo
+  effectDescription: 8-12% chance to repeat this move (no AP cost)
+  category: 1
+  scope: 0
+  minimumRarity: 2
+  effectMin: 8
+  effectMax: 12
+  allowedCategories: 000000000100000002000000
+  forbiddenCombinations: []
+  slotCostIncrease: 0
+  powerCap: 80
+  apCostCap: 2
+  forbiddenTags:
+  - MULTI
+  - PRIOR
+  slotType: 2
+  isTypeInfusion: 0
+  isStatSubstitution: 0
+  substitutionStat: 1
+  triggerCondition: 0
+  lowHpThresholdPercent: 30
+  triggerChance: 0
+  designNotes: 

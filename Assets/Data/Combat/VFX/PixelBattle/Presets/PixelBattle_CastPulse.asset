@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98da9a43e126384992507395cafe788, type: 3}
+  m_Name: PixelBattle_CastPulse
+  m_EditorClassIdentifier: 
+  material: {fileID: 2100000, guid: bc5c7dd750ac3824799bacf8896d976b, type: 2}
+  overrideSourceTexture: 0
+  sourceTextureOverride: {fileID: 0}
+  style: {fileID: 11400000, guid: c56f9c3d4d584c6f9b1f32b2d8f00b0e, type: 2}
+  pixelCellMultiplier: 0.75
+  posterizeSteps: 0
+  tint: {r: 1, g: 0.7, b: 0.3, a: 1}
+  emissionStrength: 1.6
+  alphaCutoff: 0.03
+  dissolveAmount: 0
+  dissolveFeather: 0.08
+  dissolveNoiseScale: {x: 16, y: 16}
+  dissolveNoiseSpeed: 0

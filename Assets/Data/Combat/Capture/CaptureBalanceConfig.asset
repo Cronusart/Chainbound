@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f673febb8740d34488f2549d24ec183, type: 3}
+  m_Name: CaptureBalanceConfig
+  m_EditorClassIdentifier: 
+  configVersion: 1
+  profileCatalog: {fileID: 11400000, guid: 23f25fe5558b67648bbd5e837787e2c1, type: 2}
+  tickRate: 30
+  standardTimerMilliseconds: 25000
+  baseBandHeightBasisPoints: 2400
+  lockMovementBasisPointsPerSecond: 1250
+  escapeMovementBasisPointsPerSecond: 800
+  maximumAttemptMilliseconds: 600000
+  lowHpThresholdBasisPoints: 1500
+  hpAboveThresholdFloorBasisPoints: 5000
+  hpResistanceCurveMilli: 1000
+  fullHpVelocityBonusBasisPoints: 7500
+  fullHpAccelerationBonusBasisPoints: 9000
+  fullHpTimerPenaltyBasisPoints: 4000
+  positiveIvMotionBonusMaximumBasisPoints: 2000
+  alertnessVelocityBasisPoints: 1000
+  alertnessAccelerationBasisPoints: 1200
+  alertnessSpikeAmplitudeBasisPoints: 1000
+  bandLiftAccelerationUnitsPerSecondSquared: 18000
+  bandGravityUnitsPerSecondSquared: 14000
+  bandDragBasisPointsPerSecond: 2200
+  bandMaximumSpeedUnitsPerSecond: 8000
+  bandEdgeBounceBasisPoints: 2500
+  traceAccelerationUnitsPerSecondSquared: 12000
+  traceMaximumSpeedUnitsPerSecond: 6500
+  traceMeanReversionUnitsPerSecondSquared: 8000
+  traceEdgeBounceBasisPoints: 6500
+  spikeChanceBasisPointsPerTick: 65
+  spikeVelocityImpulseUnitsPerSecond: 2400
+  variantRarityMotion:
+    common: 0
+    uncommon: 500
+    rare: 1200
+    epic: 2000
+    legendary: 3000
+    mythic: 4500
+  mutatedMotionBasisPoints: 1500
+  mutationRarityMotion:
+    common: 0
+    uncommon: 400
+    rare: 800
+    epic: 1500
+    legendary: 2500
+    mythic: 4000
+  entangledMotionBasisPoints: 2000
+  traitSpikeChancePerMotionBasisPoints: 4000

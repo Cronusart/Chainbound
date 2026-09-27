@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b30a6d98177f2148ad7f6410f71764a, type: 3}
+  m_Name: NPC_Admiral_ClaimControl
+  m_EditorClassIdentifier: 
+  stepName: admiral_claimcontrol
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: a26859a4-ac3c-49f0-b413-e562357c6770
+  npcId: admiral
+  claimType: 0
+  reason: 

@@ -1,0 +1,1273 @@
+COMBAT_07_ImplementationGuide_v1.0
+
+===============================================================================
+0. Purpose
+===============================================================================
+
+This specification serves as the bridge between finalized combat design specs
+and Unity implementation. It provides:
+
+- Cross-spec audit results with fixes applied and issues flagged
+- AP economy simulations validating PvP fairness
+- Species pool validation confirming exclusive-move compliance
+- Data-driven drop table structures ready for ScriptableObject conversion
+- UI metadata schemas for Chainling and modifier display
+- A phased Unity testing plan with debug hooks
+
+DESIGN PRINCIPLES:
+- Systems-first: all data structures map to reusable ScriptableObjects
+- Data-driven: combat logic consumes config data, never hard-codes content
+- Deterministic: all combat resolution is seed-reproducible for PvP replay
+- Observable: every combat event is logged for debugging and balancing
+
+CROSS-REFERENCES (versions updated after v1.2 lockdown):
+- COMBAT_01_TypeChemistry_v1.1.txt — Type interactions
+- COMBAT_02A_StatusFrameworkAndCatalog_v1.2.txt — Status definitions (added 8 statuses)
+- COMBAT_02B_StatsStagesIVs_v1.2.txt — Stats and stages (clarified guardrails)
+- COMBAT_02C_ResolutionMath_v1.2.txt — Damage, AP math, AP cap (10), Recharge mechanic
+- COMBAT_03A_Moves_CoreFramework_v1.1.txt — Move structure
+- COMBAT_03A1_Moves_BaselineList_v1.2.1.txt — 184 baseline moves (lockdown notes)
+- COMBAT_04_AcquisitionRarity_v1.0.txt — Rarity tiers and drop rates
+- COMBAT_05_MoveModifiers_v1.2.txt — 55 modifier definitions (ambiguities resolved)
+- COMBAT_06_SpeciesMovePools_v1.2.txt — Starter species and pools
+
+===============================================================================
+1. Cross-Spec Audit Results
+===============================================================================
+
+1.1 Fixes Applied in This Pass
+
+| File                | Issue                                         | Fix                            |
+|---------------------|-----------------------------------------------|--------------------------------|
+| Spec 03A v1.1       | Stale "Spec #3B" references (3 locations)     | Updated to Spec 05 v1.1       |
+| Spec 03A v1.1       | "Species spec TBD" in Section 8.1             | Updated to Spec 06 v1.2       |
+| Spec 04 v1.0        | Incorrect slot formula on line 209            | Removed wrong formula;         |
+|                     | "Slots = 6 + (2 × EvolutionStage - 1)"       | kept correct "4 + 2×Stage"    |
+|                     |                                               | and added verification table   |
+
+1.2 Missing Status Definitions (02A Catalog Gaps) — ✓ RESOLVED
+
+All missing statuses have been added to COMBAT_02A v1.2 §6.3:
+
+| Status Name       | Origin  | Class    | Effect Summary                     | Dur | Resolution                    |
+|--------------------|---------|----------|-------------------------------------|-----|-------------------------------|
+| Thread Lock        | General | Duration | Target cannot gain AP               | 1   | ✓ Added to 02A §6.3          |
+| Exploit Mark       | General | Duration | Allies deal +15% damage to target   | 2   | ✓ Added to 02A §6.3          |
+| Broadcast          | General | Consumed | Next move hits all foes             | <=2 | ✓ Added to 02A §6.3          |
+| Yield              | General | Duration | +1 AP at End of Turn                | 3   | ✓ Added to 02A §6.3          |
+| Immovable          | General | Duration | Immune to forced swap               | 2   | ✓ Added to 02A §6.3          |
+| Staggered          | General | Consumed | Next move -10% power                | 1   | ✓ Added to 02A §6.3          |
+| Surging            | General | Consumed | Next move +25% power                | 1   | ✓ Added to 02A §6.3          |
+| Isolated           | ChemOnly| Duration | Cannot receive ally Support moves    | 1   | ✓ Added to 02A §6.1          |
+
+NOTE: "Broadcast" is the General analog of ChemistryOnly "Bridged."
+NOTE: "Yield" is the General analog of ChemistryOnly "Pumped" (+1 AP end of turn).
+
+1.3 Design Ambiguities — ALL RESOLVED (v1.2 lockdown)
+
+AMBIGUITY A: Cooldown Mechanics in Baseline Inscriptions — ✓ RESOLVED
+
+DECISION: Option A — Reframe as "Recharge" mechanic using ConsumedStatus.
+IMPLEMENTED IN: COMBAT_02C v1.2 §1.2
+
+After use, the engine applies InscriptionRecharging(N) ConsumedStatus to the
+specific inscription instance. Duration decrements at End of Turn. While active,
+the inscription cannot be selected. This is a status-based solution consistent
+with the status-driven architecture — NO separate cooldown timer system.
+
+Inscriptions using Recharge:
+- Extend Protocol (Node): Recharging(3)
+- AP Boost (Typeless): Recharging(3)
+- Gecko Guard (Gilarime exclusive): Recharging(999) — once per battle
+- Fox Feint (Kitsauto exclusive): Recharging(999) — once per battle
+
+AMBIGUITY B: Streamlined Flow AP Cost Reduction — ✓ RESOLVED
+
+DECISION: Option A — Keep as intentional baseline exception.
+IMPLEMENTED IN: COMBAT_03A1 v1.2.1 (lockdown note on Streamlined Flow)
+
+Streamlined Flow (Compressed passive) is an accepted baseline exception to the
+"no AP cost reduction" modifier rule. The ban in Spec 05 applies to MODIFIERS only.
+Counterbalances: -1 Def stage + HP > 70% threshold.
+TESTING FALLBACK: If abuse is detected, apply Option B (AP Refund cannot trigger
+on moves whose AP cost was reduced by a passive).
+
+AMBIGUITY C: Stage Change Guardrails — ✓ RESOLVED
+
+DECISION: Three-tier guardrail system.
+IMPLEMENTED IN: COMBAT_02B v1.2 §6.1–6.4
+
+| Source Type          | Max Per Stat Per Event | Examples                    |
+|----------------------|------------------------|-----------------------------|
+| Passive (auto/turn)  | -1                     | Automated Pressure, Corroded|
+| Active (inscription) | -2                     | Cold Snap, Defense Corrupt  |
+| Chemistry-Only       | -3                     | Crashed, Dusted, FOMO (+3)  |
+
+AMBIGUITY D: AP Cap — ✓ RESOLVED
+
+DECISION: HARD CAP of 10 AP per Chainling.
+IMPLEMENTED IN: COMBAT_02C v1.2 §1.1
+
+AP gained beyond 10 is lost. Cap applies AFTER all gains/losses resolve for
+that phase. Prevents infinite AP banking while allowing 3+ turns of saving.
+
+AMBIGUITY E: Isolated Status — ✓ RESOLVED
+
+DECISION: Define "Isolated" as ChemistryOnly status.
+IMPLEMENTED IN: COMBAT_02A v1.2 §6.1
+
+"Isolated | ChemistryOnly | Duration | Cannot receive ally Support moves | 1"
+Produced by chemistry resolver for Burned → Staked interactions.
+
+AMBIGUITY F: Modifier Spec Ambiguity Notes — ✓ ALL RESOLVED
+
+DECISION & IMPLEMENTATION:
+1. §6.1-c / §6.2-c → "Staggered" and "Surging" added to 02A v1.2 §6.3 ✓
+2. §6.3-d → Engine KO event callback requirement documented in Spec 05 ✓
+   (CombatEventBus.OnChainlingKO must be implemented)
+3. §10.1-d → Clarified as "+3 to +4 stages" flat boost to 5 stats (not HP)
+   in Spec 05 §10.1-d table + note ✓
+
+1.4 Confirmed Consistency
+
+The following cross-spec checks PASSED:
+
+| Check                                                    | Status |
+|----------------------------------------------------------|--------|
+| All 184 inscriptions avoid direct ChemistryOnly statuses | PASS   |
+| Modifier §IDs used exclusively (no display names)        | PASS   |
+| AP cost reduction modifiers absent from Spec 05          | PASS   |
+| Cooldown modifiers absent from Spec 05                   | PASS   |
+| Multi-hit modifier limited to +1 on [MULTI] only         | PASS   |
+| Stat substitution global cap = 2 per Chainling           | PASS   |
+| Mitigation sources all within 30% single-source cap      | PASS   |
+| All modifiers declare Active or Passive scope             | PASS   |
+| Exclusive moves limited to 3 starters (6 total)          | PASS   |
+| Drop rate tables sum to 100% in all categories            | PASS   |
+| Slot progression matches table (4 + 2×Stage)             | PASS*  |
+| Type chemistry whitelist matches 02A §6.1 catalog         | PASS   |
+| Spec 05 effects reference only 02A/02B/02C mechanics      | PASS   |
+| Forbidden modifier combos consistent with stacking rules  | PASS   |
+
+*Fixed in this pass — first formula was incorrect.
+
+1.5 Inscription Classification Note
+
+Momentum Shift [UTIL][TRIG] [1 AP] is listed under Section 1.4 (Passive) in
+03A1 but has an AP cost of 1 and [UTIL] tag. It should be listed under Section
+1.2 (Status/Utility). The count tables in §3.0 already account for this
+correctly (17 Status/Utility, 12 Passive for typeless). Only the section
+placement is wrong. Fix in next 03A1 revision.
+
+===============================================================================
+2. AP Economy Simulation
+===============================================================================
+
+2.1 Baseline AP Flow (No Modifiers)
+
+Turn structure per 02A §3 and 02C §1:
+- Start of Turn: +3 AP (baseline, always)
+- Action Phase: spend AP on inscriptions (1-3 AP each)
+- End of Turn: status AP effects resolve (Pumped, Drained, MEV Extracted, etc.)
+
+STANDARD TURN ECONOMY:
+| AP Available | Possible Actions                              | AP Remaining |
+|--------------|-----------------------------------------------|--------------|
+| 3            | One 3-AP move                                 | 0            |
+| 3            | One 2-AP move + one 1-AP move                 | 0            |
+| 3            | Three 1-AP moves                              | 0            |
+| 3            | One 2-AP move (save 1 AP)                     | 1            |
+| 3            | One 1-AP move (save 2 AP)                     | 2            |
+
+KEY INSIGHT: Players always have exactly 3 AP to spend (plus carryover).
+With an average inscription cost of ~1.8 AP, players get ~1.6 actions per turn.
+Banking AP for expensive moves (3-4 AP) requires skipping a turn of damage.
+
+2.2 AP Refund Impact Analysis
+
+Modifier §3.1 provides AP refund chances:
+
+| Modifier | Rarity    | Refund Chance | Expected AP/Use |
+|----------|-----------|---------------|-----------------|
+| §3.1-a   | Common    | 5-10%         | 0.075           |
+| §3.1-b   | Uncommon  | 10-15%        | 0.125           |
+| §3.1-c   | Rare      | 15-20%        | 0.175           |
+
+SCENARIO: Rare refund modifier on a 2-AP move, used once per turn.
+- Per turn: 0.175 expected AP saved
+- Over 10 turns: 1.75 extra AP = ~1 extra action over the course of a battle
+- AP efficiency gain: 5.8% per turn
+
+VERDICT: BALANCED. The refund is modest and probability-based. Even at Rare tier,
+it provides roughly 1 free action every 6 turns. Not enough to distort tempo.
+
+2.3 Bonus Action Impact Analysis
+
+Modifier §3.2 provides bonus action chances:
+
+| Modifier | Rarity    | Chance  | Effect                           | Expected Actions/Turn |
+|----------|-----------|---------|----------------------------------|----------------------|
+| §3.2-a   | Rare      | 8-12%  | Repeat same move (no AP)         | 0.10                 |
+| §3.2-b   | Epic      | 15-20% | Auto-use random typeless move    | 0.175                |
+| §3.2-c   | Legendary | 12-15% | Auto-use random equipped move    | 0.135                |
+
+CHAINING RULE: Bonus actions CANNOT trigger other bonus action modifiers.
+Maximum 1 bonus action per turn per modifier trigger.
+
+10-TURN IMPACT:
+- §3.2-a (Rare): ~1 free repeated move over 10 turns
+- §3.2-b (Epic): ~1.75 free typeless moves over 10 turns
+- §3.2-c (Legendary): ~1.35 free moves over 10 turns
+
+VERDICT: BALANCED. Even the strongest bonus action (§3.2-b Epic) provides less
+than 2 free actions over a 10-turn battle. The anti-chaining rule prevents
+exponential action spirals. Legendary rarity gates the strongest version.
+
+2.4 AP-Denial Strategy Analysis (PvP)
+
+WORST-CASE SCENARIO: Bot-type Kitsauto with full AP denial kit.
+
+Available AP denial tools:
+- MEV Extract [UTIL][APMAN]: 2 AP — steal 1 AP/turn for 2 turns
+- Thread Lock [UTIL][APMAN]: 2 AP — target cannot gain AP next turn
+- AP Drain [UTIL][APMAN]: 2 AP — target loses 1 AP (25% chance steal)
+
+TURN-BY-TURN SIMULATION (Kitsauto vs. Opponent, both start at 3 AP):
+
+Turn 1: Kitsauto (90 Speed, acts first)
+  - Action: MEV Extract (2 AP) → 1 AP remaining
+  - Target: Has 3 AP, acts normally. End of turn: -1 AP from MEV = effective +2 net
+  - Kitsauto End: +1 AP from MEV steal
+
+Turn 2: Kitsauto (1 + 3 + 1 MEV steal = 5 AP)
+  - Action: Thread Lock (2 AP) → 3 AP remaining
+  - Action: Baseline Jab (1 AP) → 2 AP remaining, 40 power chip
+  - Target: Acts with remaining AP. End of turn: -1 AP from MEV (last turn)
+  - Thread Lock takes effect NEXT turn.
+
+Turn 3: Kitsauto (2 + 3 = 5 AP)
+  - Target: +0 AP gain (Thread Lock blocks baseline +3). Has only carryover AP.
+  - If target spent all AP on turn 2: target has 0 AP. CANNOT ACT.
+  - Kitsauto: Free to set up or deal damage with 5 AP.
+
+ANALYSIS:
+- Total AP spent on denial: 4 AP over 2 turns (MEV + Thread Lock)
+- Total AP denied from opponent: ~5 AP (2 turns of -1 MEV + 1 turn of -3 Thread Lock)
+- Net advantage: ~1 AP over 3 turns PLUS a free damage turn on turn 3
+- This IS a strong strategy but costs Kitsauto 2 full turns of damage output.
+
+COUNTERPLAY:
+1. Cleanse (1 AP) removes MEV Extracted
+2. AP Reserve (Staked, 0 AP) banks AP before Thread Lock turn
+3. Switch Chainling — new entrant has fresh AP and no MEV/Thread Lock
+4. Encrypted Seal (debuff immunity) prevents MEV application
+5. Priority moves (Baseline Jab) can be used with saved 1 AP even under pressure
+6. Double-or-Nothing (Meme passive) has AP drain immunity on lose
+
+VERDICT: STRONG BUT COUNTERABLE. The AP denial combo requires 2 turns of setup
+with zero damage output. Against prepared opponents (Cleanse, AP Reserve, swaps),
+it underperforms compared to just dealing damage. Thread Lock is the key piece;
+monitor for abuse in playtesting. If needed, reduce to "target gains 1 AP instead
+of 3 next turn" (soft lock instead of hard lock).
+
+2.5 Streamlined Flow Exception Analysis
+
+Compressed passive: "all moves -1 AP cost (min 1), -1 Def stage" while HP > 70%.
+
+IMPACT MODELING:
+
+Without Streamlined Flow (standard):
+  3 AP → 2-AP move + 1-AP move = 2 actions
+  
+With Streamlined Flow:
+  3 AP → (2-1=1 AP move) + (2-1=1 AP move) + (1=1 AP move) = 3 actions
+
+EFFECTIVE AP MULTIPLIER: ~1.5x actions per turn (3 vs 2 actions)
+
+RISK FACTORS:
+- -1 Def stage is permanent while equipped (increases damage taken by ~33%)
+- HP > 70% threshold means any significant hit turns off the passive
+- At Level 50 with ~200 HP: a single 70-power typeless hit deals ~35-45 damage
+  (17-22% HP), meaning 2 hits turn off Streamlined Flow
+- Against burst strategies: completely useless after turn 1-2
+
+COMBINED WITH AP REFUND (§3.1-c Rare):
+- 3 actions per turn × 17.5% refund chance per action = 0.525 expected AP/turn
+- Over 10 turns: 5.25 extra AP = ~2.6 extra actions (IF HP stays above 70%)
+- Realistic estimate (HP drops below 70% by turn 4): 2.1 extra AP total
+
+VERDICT: STRONG BUT FRAGILE. The glass-cannon tradeoff (-1 Def, HP threshold)
+makes Streamlined Flow high-risk. In PvP, opponents can focus-fire the
+Compressed Chainling to disable it. No action needed; monitor in testing.
+
+2.6 PvP Fairness Assessment
+
+OVERALL AP ECONOMY HEALTH:
+
+| Metric                                  | Value       | Assessment |
+|-----------------------------------------|-------------|------------|
+| Baseline AP per turn                    | 3           | Fixed      |
+| Max AP refund per turn (expected)       | 0.175       | Marginal   |
+| Max bonus actions per turn (expected)   | 0.175       | Marginal   |
+| Max AP denial per turn (dedicated)      | 3 (Thread Lock) | Strong |
+| Streamlined Flow effective gain         | +1 action   | Conditional|
+| AP manipulation tools available         | 37 inscriptions | Diverse |
+
+KEY FINDINGS:
+1. AP refund and bonus action rates are too low to create runaway advantage.
+2. AP denial is strong but requires heavy investment (multiple AP-denial moves).
+3. The most dangerous combo is Thread Lock + MEV Extract, but it costs 4 AP
+   and 2 turns of zero damage, which is fair given the payoff.
+4. Streamlined Flow is the strongest single AP efficiency tool but is
+   self-limiting via the Def penalty and HP threshold.
+5. No combination of modifiers and inscriptions creates an infinite AP loop.
+
+2.7 Recommended Adjustments
+
+| Priority | Recommendation                                           | Spec   |
+|----------|----------------------------------------------------------|--------|
+| HIGH     | Define AP cap as 10 in Spec 02C                          | 02C §1 |
+| MEDIUM   | Add "Thread Lock" to 02A General status catalog          | 02A §6 |
+| LOW      | Consider soft-locking Thread Lock (reduce to +1 AP gain  | 03A1   |
+|          | instead of 0) if PvP testing reveals abuse               |        |
+| LOW      | Clarify that AP Refund triggers on the PAID cost (after  | 05 §3  |
+|          | any reduction from Streamlined Flow), not original cost  |        |
+| MONITOR  | Kitsauto AP-denial archetype in PvP (Thread Lock + MEV)  | —      |
+| MONITOR  | Streamlined Flow + AP Refund stacking in testing         | —      |
+
+===============================================================================
+3. Species Pool Validation
+===============================================================================
+
+3.1 Validape (Node) — PASS
+
+EXCLUSIVE MOVES (2):
+| Move         | Type | Category   | AP | Power / Effect                      | Compliant |
+|--------------|------|------------|----|------------------------------------|-----------|
+| Hammer Sync  | Node | [DMG]      | 2  | 110 pwr, +10%/buffed ally (cap 30%)| YES       |
+| Pack Rally   | Node | [SUP][AOE] | 3  | All allies +1 Atk, +1 Speed       | YES       |
+
+Compliance check:
+- No ChemistryOnly status applications: PASS
+- AP cost within range (Damaging 1-3, Support 2-4): PASS
+- Power within typed range (100-120): PASS (110)
+- No cooldowns: PASS
+- No stat substitution below Epic: PASS (N/A)
+
+LEARNABLE POOL (15):
+- 9 Node inscriptions: All exist in 03A1 §2.1. VERIFIED.
+- 4 Typeless inscriptions: All exist in 03A1 §1. VERIFIED.
+- 2 Exclusive inscriptions: Unique to Validape. VERIFIED.
+
+EQUIPPABLE POOL (58):
+- 9 Node (correct: 03A1 lists 9 Node inscriptions)
+- 47 Typeless (correct: 03A1 lists 47 typeless inscriptions)
+- 2 Exclusive (correct)
+- Total: 58. VERIFIED.
+
+3.2 Gilarime (Frozen) — PASS
+
+EXCLUSIVE MOVES (2):
+| Move         | Type   | Category    | AP | Power / Effect                     | Compliant |
+|--------------|--------|-------------|----|------------------------------------|-----------|
+| Cryo Ray     | Frozen | [DMG]       | 2  | 110 pwr, 25% -2 Speed on target   | YES       |
+| Gecko Guard  | Frozen | [PAS][TRIG] | 0  | <50% HP: +2 Def, +1 Speed (1/bat) | YES       |
+
+Compliance check:
+- No ChemistryOnly status applications: PASS (Speed debuff is a stage change)
+- AP cost within range: PASS (Damaging 2, Passive 0)
+- Power within typed range: PASS (110)
+- -2 Speed debuff: within move-based stage change allowance. PASS.
+- Once per battle: tracked as ConsumedStatus, not cooldown. PASS.
+
+LEARNABLE POOL (14):
+- 9 Frozen inscriptions: All exist in 03A1 §2.6. VERIFIED.
+- 3 Typeless inscriptions: All exist in 03A1 §1. VERIFIED.
+- 2 Exclusive inscriptions: Unique to Gilarime. VERIFIED.
+
+EQUIPPABLE POOL (58):
+- 9 Frozen + 47 Typeless + 2 Exclusive = 58. VERIFIED.
+
+3.3 Kitsauto (Bot) — PASS
+
+EXCLUSIVE MOVES (2):
+| Move         | Type | Category        | AP | Power / Effect                     | Compliant |
+|--------------|------|-----------------|----|------------------------------------|-----------|
+| Blade Flurry | Bot  | [DMG][MULTI]    | 2  | 30 pwr x3 hits                     | YES       |
+| Fox Feint    | Bot  | [UTIL][TRIG]    | 1  | Dodge + counter 50% base (1/bat)   | YES       |
+
+Compliance check:
+- No ChemistryOnly status applications: PASS
+- AP cost within range: PASS (Damaging 2, Utility 1)
+- Power: 30x3 = 90 total at 2 AP is efficient but within multi-hit norms. PASS.
+- Fox Feint counter damage is typeless: no chemistry bonus. PASS.
+- Once per battle: tracked as ConsumedStatus. PASS.
+
+LEARNABLE POOL (15):
+- 10 Bot inscriptions: All exist in 03A1 §2.11. VERIFIED.
+- 3 Typeless inscriptions: All exist in 03A1 §1. VERIFIED.
+- 2 Exclusive inscriptions: Unique to Kitsauto. VERIFIED.
+
+EQUIPPABLE POOL (59):
+- 10 Bot + 47 Typeless + 2 Exclusive = 59. VERIFIED.
+- Meme type BLOCKED: explicit restriction in pool. VERIFIED.
+
+3.4 Exclusive Move Compliance Summary
+
+| Rule                                          | Status |
+|-----------------------------------------------|--------|
+| Only 3 starters have exclusive moves           | PASS   |
+| Total exclusive moves = 6 (2 per starter)      | PASS   |
+| All exclusives follow AP/power/chemistry rules  | PASS   |
+| No exclusive directly applies ChemistryOnly    | PASS   |
+| Exclusives are permanently learned              | PASS   |
+| Exclusives do not count against Mythic limits   | PASS   |
+| All learnable pool inscriptions exist in 03A1   | PASS   |
+| Equippable pool counts are mathematically correct| PASS  |
+
+===============================================================================
+4. Drop Table Data Structures
+===============================================================================
+
+4.1 ScriptableObject Schema: DropTable
+
+```
+[CreateAssetMenu(menuName = "Combat/DropTable")]
+DropTableSO {
+  id: string                     // e.g., "standard_levelup", "entangled_levelup"
+  displayName: string            // e.g., "Standard Level-Up"
+  
+  inscriptionChance: float       // Chance to receive an inscription (0.0-1.0)
+  consumableChance: float        // Chance to receive a consumable
+  currencyChance: float          // Chance to receive currency/tokens
+  // NOTE: These three must sum to 1.0
+  
+  rarityWeights: RarityWeight[]  // Weighted distribution when inscription drops
+  
+  modifierChance: float          // Independent chance for modifier drop (0.0-1.0)
+  modifierRarityWeights: RarityWeight[]  // Distribution for modifier rarity
+}
+```
+
+```
+[Serializable]
+RarityWeight {
+  rarity: InscriptionRarity      // Enum: Common, Uncommon, Rare, Epic, Legendary, Mythic
+  weight: float                  // Probability (must sum to 1.0 across all entries)
+}
+```
+
+```
+enum InscriptionRarity {
+  Common,     // Gray   #9E9E9E
+  Uncommon,   // Green  #4CAF50
+  Rare,       // Blue   #2196F3
+  Epic,       // Purple #9C27B0
+  Legendary,  // Orange #FF9800
+  Mythic      // Red    #F44336
+}
+```
+
+4.2 Concrete Drop Table Instances
+
+STANDARD LEVEL-UP TABLE (from Spec 04 §2.1 and §3.1):
+```
+{
+  id: "standard_levelup",
+  inscriptionChance: 0.70,
+  consumableChance: 0.20,
+  currencyChance: 0.10,
+  rarityWeights: [
+    { rarity: Common,    weight: 0.35 },
+    { rarity: Uncommon,  weight: 0.25 },
+    { rarity: Rare,      weight: 0.175 },
+    { rarity: Epic,      weight: 0.10 },
+    { rarity: Legendary, weight: 0.075 },
+    { rarity: Mythic,    weight: 0.05 }
+  ],
+  modifierChance: 0.15,
+  modifierRarityWeights: [
+    { rarity: Common,    weight: 0.40 },
+    { rarity: Uncommon,  weight: 0.30 },
+    { rarity: Rare,      weight: 0.15 },
+    { rarity: Epic,      weight: 0.10 },
+    { rarity: Legendary, weight: 0.04 },
+    { rarity: Mythic,    weight: 0.01 }
+  ]
+}
+```
+
+ENTANGLED LEVEL-UP TABLE (from Spec 04 §2.1 and §3.2):
+```
+{
+  id: "entangled_levelup",
+  inscriptionChance: 0.90,
+  consumableChance: 0.05,
+  currencyChance: 0.05,
+  rarityWeights: [
+    { rarity: Common,    weight: 0.25 },
+    { rarity: Uncommon,  weight: 0.20 },
+    { rarity: Rare,      weight: 0.20 },
+    { rarity: Epic,      weight: 0.15 },
+    { rarity: Legendary, weight: 0.125 },
+    { rarity: Mythic,    weight: 0.075 }
+  ],
+  modifierChance: 0.25,
+  modifierRarityWeights: [
+    { rarity: Common,    weight: 0.25 },
+    { rarity: Uncommon,  weight: 0.25 },
+    { rarity: Rare,      weight: 0.20 },
+    { rarity: Epic,      weight: 0.15 },
+    { rarity: Legendary, weight: 0.10 },
+    { rarity: Mythic,    weight: 0.05 }
+  ]
+}
+```
+
+PREMIUM VENDING TABLE (from Spec 04 §3.3):
+```
+{
+  id: "premium_vending",
+  inscriptionChance: 1.00,
+  consumableChance: 0.00,
+  currencyChance: 0.00,
+  rarityWeights: [
+    { rarity: Common,    weight: 0.20 },
+    { rarity: Uncommon,  weight: 0.25 },
+    { rarity: Rare,      weight: 0.25 },
+    { rarity: Epic,      weight: 0.15 },
+    { rarity: Legendary, weight: 0.10 },
+    { rarity: Mythic,    weight: 0.05 }
+  ],
+  modifierChance: 0.30,
+  modifierRarityWeights: [
+    { rarity: Common,    weight: 0.20 },
+    { rarity: Uncommon,  weight: 0.25 },
+    { rarity: Rare,      weight: 0.25 },
+    { rarity: Epic,      weight: 0.15 },
+    { rarity: Legendary, weight: 0.10 },
+    { rarity: Mythic,    weight: 0.05 }
+  ]
+}
+```
+
+EVENT DROP TABLE (from Spec 04 §3.4):
+```
+{
+  id: "event_drop",
+  inscriptionChance: 1.00,
+  consumableChance: 0.00,
+  currencyChance: 0.00,
+  rarityWeights: [
+    { rarity: Common,    weight: 0.30 },
+    { rarity: Uncommon,  weight: 0.30 },
+    { rarity: Rare,      weight: 0.20 },
+    { rarity: Epic,      weight: 0.12 },
+    { rarity: Legendary, weight: 0.06 },
+    { rarity: Mythic,    weight: 0.02 }
+  ],
+  modifierChance: 0.10,
+  modifierRarityWeights: [
+    { rarity: Common,    weight: 0.40 },
+    { rarity: Uncommon,  weight: 0.30 },
+    { rarity: Rare,      weight: 0.15 },
+    { rarity: Epic,      weight: 0.10 },
+    { rarity: Legendary, weight: 0.04 },
+    { rarity: Mythic,    weight: 0.01 }
+  ]
+}
+```
+
+4.3 Combined Level-Up Resolution Flow
+
+When a Chainling gains a level, the following occurs:
+
+```
+function ResolveLevelUp(chainling, dropTable):
+  seed = GenerateDeterministicSeed(chainling.id, chainling.level)
+  rng = SeededRNG(seed)
+  
+  // Step 1: Determine primary reward type
+  roll = rng.NextFloat()
+  if roll < dropTable.inscriptionChance:
+    reward = ResolveInscriptionDrop(chainling, dropTable, rng)
+  elif roll < dropTable.inscriptionChance + dropTable.consumableChance:
+    reward = ResolveConsumableDrop(rng)
+  else:
+    reward = ResolveCurrencyDrop(rng)
+  
+  // Step 2: Independent modifier roll
+  modRoll = rng.NextFloat()
+  if modRoll < dropTable.modifierChance:
+    modReward = ResolveModifierDrop(chainling, dropTable, rng)
+    ApplyModifier(modReward)
+  
+  // Step 3: Check learnable pool
+  // If the chainling reaches a learnable-pool level threshold,
+  // grant the next inscription from their curated learnable list.
+  if IsLearnableLevel(chainling):
+    GrantLearnableInscription(chainling)
+  
+  return reward
+```
+
+```
+function ResolveInscriptionDrop(chainling, dropTable, rng):
+  // Step 1: Determine rarity
+  rarityRoll = rng.NextFloat()
+  rarity = SelectRarity(dropTable.rarityWeights, rarityRoll)
+  
+  // Step 2: Build eligible pool
+  pool = []
+  pool.AddRange(GetTypedInscriptions(chainling.primaryType, rarity))
+  if chainling.secondaryType:
+    pool.AddRange(GetTypedInscriptions(chainling.secondaryType, rarity))
+  pool.AddRange(GetTypelessInscriptions(rarity))
+  
+  // Meme exception: Meme types can access ALL typed inscriptions
+  if chainling.primaryType == Meme or chainling.secondaryType == Meme:
+    pool.AddRange(GetAllTypedInscriptions(rarity))
+  
+  // Remove duplicates (already equipped)
+  pool.RemoveWhere(i => chainling.HasInscription(i))
+  
+  // Step 3: Select random inscription from pool
+  if pool.IsEmpty():
+    return FallbackReward()  // Currency or consumable if pool exhausted
+  
+  return pool[rng.NextInt(pool.Count)]
+```
+
+4.4 Pool Exhaustion Handling
+
+With 184 baseline moves and a max of 16 slots, pool exhaustion is unlikely
+for individual Chainlings. However, the system should handle edge cases:
+
+| Scenario                          | Resolution                           |
+|-----------------------------------|--------------------------------------|
+| No inscriptions of rolled rarity  | Re-roll rarity (adjacent tier first) |
+| All eligible inscriptions equipped| Grant currency/consumable instead    |
+| Rarity re-roll exhausted          | Grant Common typeless inscription    |
+
+===============================================================================
+5. UI Metadata Specifications
+===============================================================================
+
+5.1 Chainling Display Data Schema
+
+```
+ChainlingDisplayData {
+  id: string,                    // "validape", "gilarime", "kitsauto"
+  displayName: string,           // "Validape"
+  flavorText: string,            // Short lore description
+  
+  typeIcons: TypeIcon[],         // Primary (+ optional secondary) type icons
+  rarityBorder: InscriptionRarity, // Visual rarity indicator
+  isEntangled: bool,             // Bootleg visual indicator
+  
+  portraitSprite: string,        // Asset path for character portrait
+  battleSprite: string,          // Asset path for battle model
+  miniSprite: string,            // Asset path for UI thumbnail
+  
+  // Stats display (from Spec 06 §3)
+  baseStats: {
+    MaxHP: int,
+    MeleeAtk: int,
+    MeleeDef: int,
+    RangedAtk: int,
+    RangedDef: int,
+    Speed: int
+  },
+  statTotal: int,                // Sum of base stats for quick comparison
+  growthCurveDescription: string // Text description of growth pattern
+}
+```
+
+STARTER DATA INSTANCES (from Spec 06 §3):
+
+```
+Validape:
+  displayName: "Validape"
+  flavorText: "A hammer-swinging ape that roams the Chain Realm..."
+  typeIcons: [Node]
+  baseStats: { HP:85, MAtk:75, MDef:80, RAtk:70, RDef:75, Spd:65 }
+  statTotal: 450
+
+Gilarime:
+  displayName: "Gilarime"
+  flavorText: "A raygun-toting gecko exploring the Minted Expanse..."
+  typeIcons: [Frozen]
+  baseStats: { HP:90, MAtk:60, MDef:90, RAtk:75, RDef:85, Spd:50 }
+  statTotal: 450
+
+Kitsauto:
+  displayName: "Kitsauto"
+  flavorText: "A katana-wielding fox stalking the Block Labyrinth..."
+  typeIcons: [Bot]
+  baseStats: { HP:70, MAtk:85, MDef:55, RAtk:80, RDef:60, Spd:90 }
+  statTotal: 440
+```
+
+5.2 Inscription Card Schema
+
+```
+InscriptionCardData {
+  id: string,                    // "baseline_striker", "hammer_sync"
+  displayName: string,           // "Baseline Striker"
+  description: string,           // "75 power; neutral pressure; reliable damage"
+  
+  type: ChainlingType?,          // null for typeless
+  category: InscriptionCategory, // Damaging, Utility, Support, Passive
+  tags: Tag[],                   // [DMG], [MULTI], [PRIO], [TRIG], etc.
+  
+  apCost: int,                   // 0-4
+  power: int?,                   // null for non-damaging
+  accuracy: float?,              // null for auto-hit
+  
+  targeting: TargetingMode,      // Single, Multi, Self, Ally, AllAllies, AllFoes, Field
+  range: AttackRange,            // Melee, Ranged, Support, Field
+  isProjectile: bool,            // For Firewalled interaction
+  
+  rarity: InscriptionRarity,     // Common through Mythic
+  isExclusive: bool,             // true for starter signatures
+  exclusiveSpecies: string?,     // "validape" if exclusive
+  
+  modifierSlots: ModifierBadge[] // Up to 3 attached modifier badges
+}
+```
+
+```
+enum Tag {
+  DMG, UTIL, SUP, PAS,          // Primary categories
+  MULTI, AOE, PRIO,             // Mechanic tags
+  TRIG, APMAN, STAT             // Behavior tags
+}
+
+enum TargetingMode {
+  Single, Multi, Self, Ally, AllAllies, AllFoes, Field
+}
+
+enum AttackRange {
+  Melee, Ranged, Support, Field
+}
+```
+
+5.3 Modifier Badge Schema
+
+```
+ModifierBadgeData {
+  sectionId: string,             // "§2.1-a" — internal reference only
+  
+  category: ModifierCategory,    // POT, EFF, AUG, TRX, TRG, SYN
+  scope: ModifierScope,          // Active or Passive
+  rarity: InscriptionRarity,     // Determines badge color
+  
+  effectDescription: string,     // "+5-8% base power"
+  restrictionText: string?,      // "Damaging only" or null
+  stackingCategory: string,      // "Power — 1 per inscription"
+  
+  slotCost: int,                 // 0 or 1
+  source: ModifierSource,        // Standard, Entangled, Event
+  
+  // UI display
+  iconId: string,                // Asset path for effect icon
+  badgeColor: Color              // Derived from rarity (see Spec 05 §11.2)
+}
+```
+
+```
+enum ModifierCategory { POT, EFF, AUG, TRX, TRG, SYN }
+enum ModifierScope { Active, Passive }
+enum ModifierSource { Standard, Entangled, Event }
+```
+
+5.4 Active/Passive Scope Display
+
+In the UI, modifiers display their scope as follows:
+
+| Scope   | Display Element                        | Color    |
+|---------|----------------------------------------|----------|
+| Active  | Lightning bolt icon next to badge      | White    |
+| Passive | Infinity icon next to badge            | Gold     |
+
+TOOLTIP FORMAT:
+```
+[Rarity Color Bar]
+[Effect Icon] [Effect Description]
+Scope: [Active/Passive]
+Category: [POT/EFF/AUG/TRX/TRG/SYN]
+Restriction: [if any]
+Stacking: [stacking rule text]
+Source: [Standard / Entangled Only / Event Only]
+```
+
+EXAMPLE TOOLTIP:
+```
+━━━━━━━━━━━━━━━━━━━━━━━ [BLUE BAR — Rare]
+⚡ +12-18% base power
+Scope: Active (this move only)
+Category: Potency
+Restriction: Damaging inscriptions only
+Stacking: Power — max 1 per inscription
+Source: Standard
+```
+
+===============================================================================
+6. Unity Testing Plan
+===============================================================================
+
+6.1 Test Environment Architecture
+
+```
+Assets/
+  Scripts/
+    Combat/
+      Core/
+        DamageCalculator.cs       // Spec 02C §3 damage formula
+        HitChecker.cs             // Spec 02C §2 accuracy check
+        CritResolver.cs           // Spec 02C §4 crit mechanics
+        APManager.cs              // Spec 02C §1 AP system
+        StageManager.cs           // Spec 02B §6 stage system
+      
+      Chemistry/
+        ChemistryResolver.cs      // Spec 01 §2 chemistry resolution
+        ChemistryMatrix.cs        // Spec 01 §7 interaction matrix data
+        CoatingManager.cs         // Spec 01 §4 coating mechanics
+      
+      Status/
+        StatusManager.cs          // Spec 02A §1-4 status lifecycle
+        StatusCatalog.cs          // Spec 02A §6 status definitions
+        StatusFactory.cs          // Create status instances from data
+      
+      Inscriptions/
+        InscriptionResolver.cs    // Spec 03A inscription execution
+        InscriptionDatabase.cs    // Spec 03A1 all 184 + 6 exclusives
+        ModifierProcessor.cs      // Spec 05 modifier resolution
+        MultiHitResolver.cs       // Spec 02C §6 multi-hit logic
+      
+      Acquisition/
+        DropTableResolver.cs      // Spec 04 drop resolution
+        PoolManager.cs            // Spec 04 §5 pool eligibility
+        RarityRoller.cs           // Weighted random from drop tables
+      
+      Species/
+        SpeciesDatabase.cs        // Spec 06 species definitions
+        LearnablePoolManager.cs   // Spec 06 §1.2 level-up grants
+        ExclusiveValidator.cs     // Spec 06 §7.1 validation rules
+      
+      Debug/
+        CombatLogger.cs           // Deterministic combat logging
+        APFlowTracker.cs          // Per-turn AP tracking
+        ChemistryEventLog.cs      // Chemistry resolution logging
+        ModifierTriggerLog.cs     // Modifier activation logging
+        DamageBreakdown.cs        // Full damage calculation breakdown
+    
+    Tests/
+      Core/
+        DamageCalculatorTests.cs
+        HitCheckerTests.cs
+        CritResolverTests.cs
+        APManagerTests.cs
+        StageManagerTests.cs
+      Chemistry/
+        ChemistryResolverTests.cs
+        CoatingTests.cs
+      Status/
+        StatusLifecycleTests.cs
+        StatusCatalogTests.cs
+      Inscriptions/
+        InscriptionResolutionTests.cs
+        ModifierProcessorTests.cs
+        MultiHitTests.cs
+      Integration/
+        FullTurnTests.cs
+        APDenialScenarioTests.cs
+        ChemistryChainTests.cs
+        PvPSimulationTests.cs
+  
+  Data/
+    ScriptableObjects/
+      DropTables/
+        StandardLevelUp.asset
+        EntangledLevelUp.asset
+        PremiumVending.asset
+        EventDrop.asset
+      Inscriptions/
+        Typeless/                 // 47 typeless inscription SOs
+        Node/                     // 9 Node inscription SOs
+        Gas/                      // 9 Gas inscription SOs
+        ...                       // (per type)
+        Exclusive/                // 6 exclusive inscription SOs
+      Species/
+        Validape.asset
+        Gilarime.asset
+        Kitsauto.asset
+      Modifiers/
+        POT/                      // 14 Potency modifier SOs
+        EFF/                      // 6 Efficiency modifier SOs
+        AUG/                      // 4 Augmentation modifier SOs
+        TRX/                      // 5+14 Transmutation modifier SOs
+        TRG/                      // 12 Trigger modifier SOs
+        SYN/                      // 7 Synergy modifier SOs
+        Special/                  // 7 Special modifier SOs
+      ChemistryMatrix/
+        ChemistryMatrix.asset     // 14x14 interaction matrix
+```
+
+6.2 Phase 1: Core Math Validation
+
+GOAL: Verify damage formula, hit check, crit, and stage system in isolation.
+
+TEST CASES FOR DamageCalculator (Spec 02C §3):
+
+| Test ID | Description                                    | Expected Result            |
+|---------|------------------------------------------------|----------------------------|
+| DMG-01  | Base damage with equal Atk/Def at Level 50     | Power * 0.87 * rand + 1   |
+| DMG-02  | STAB bonus (1.2x) applies correctly             | +20% damage               |
+| DMG-03  | Chemistry advantage (1.3x) applies correctly    | +30% per net advantage     |
+| DMG-04  | Crit multiplier (1.5x) applies correctly         | +50% damage               |
+| DMG-05  | All multipliers stacked (STAB + Chem + Crit)    | Multiplicative result      |
+| DMG-06  | Floor(result) applied last                       | Integer output             |
+| DMG-07  | Star 0 vs Star 5 damage scaling (star-based formula) | ~2.5x difference           |
+| DMG-08  | Mitigation (20%) reduces damage correctly        | 80% of calculated          |
+| DMG-09  | Stacked mitigation (20%+25%) = multiplicative    | 60% of calculated          |
+| DMG-10  | Mitigation floor (10% minimum damage)             | Never below 10% original  |
+
+TEST CASES FOR StageManager (Spec 02B §6):
+
+| Test ID | Description                                    | Expected Result            |
+|---------|------------------------------------------------|----------------------------|
+| STG-01  | +1 stage: multiplier = (2+1)/2 = 1.5           | 1.5x                      |
+| STG-02  | -1 stage: multiplier = 2/(2+1) = 0.667         | 0.667x                    |
+| STG-03  | +6 stage (cap): multiplier = 4.0                | 4.0x                      |
+| STG-04  | -6 stage (cap): multiplier = 0.25               | 0.25x                     |
+| STG-05  | Stage cannot exceed +6                           | Clamped at +6             |
+| STG-06  | Stage cannot go below -6                         | Clamped at -6             |
+
+6.3 Phase 2: Status & Chemistry Systems
+
+GOAL: Verify status lifecycle, chemistry resolution, and type interactions.
+
+TEST CASES FOR StatusManager (Spec 02A):
+
+| Test ID | Description                                    | Expected Result            |
+|---------|------------------------------------------------|----------------------------|
+| STS-01  | DurationStatus decrements at end of turn        | Duration -1, removed at 0 |
+| STS-02  | Reapply DurationStatus refreshes to max          | Duration reset to max      |
+| STS-03  | InstantStatus resolves immediately               | Effect applies, no persist |
+| STS-04  | CounterStatus increments and triggers            | Trigger at threshold       |
+| STS-05  | ConsumedStatus persists until consumed           | Removed after consumption  |
+| STS-06  | Cleanse removes General DurationStatus debuffs   | Chemistry statuses remain  |
+| STS-07  | Cleanse does NOT remove ChemistryOnly statuses   | ChemOnly statuses persist  |
+| STS-08  | Immunity prevents application                    | Status not applied         |
+
+TEST CASES FOR ChemistryResolver (Spec 01):
+
+| Test ID | Description                                    | Expected Result            |
+|---------|------------------------------------------------|----------------------------|
+| CHM-01  | Neutral interaction (same type)                 | No chemistry output        |
+| CHM-02  | Advantage interaction (e.g., Node → Gas)        | Produce correct outputs    |
+| CHM-03  | Dual-type target resolves both types             | Aggregate outputs          |
+| CHM-04  | Coating overrides type for chemistry             | Use coating type only      |
+| CHM-05  | ChemistryOnly outputs ONLY from resolver         | Cannot direct-apply        |
+| CHM-06  | Locked PvP adjustments (Block→Fork, etc.)        | Match Spec 01 §8          |
+| CHM-07  | ChemAdv/ChemDis from current hit only            | No history accumulation    |
+| CHM-08  | Typeless damaging inherits user type             | Correct type resolution    |
+
+6.4 Phase 3: AP Economy Testing
+
+GOAL: Verify AP system, AP manipulation, and refund mechanics.
+
+TEST CASES FOR APManager (Spec 02C §1):
+
+| Test ID | Description                                    | Expected Result            |
+|---------|------------------------------------------------|----------------------------|
+| AP-01   | Baseline +3 AP at start of turn                 | AP increases by 3          |
+| AP-02   | AP cost deducted when inscription used           | AP decreases by cost       |
+| AP-03   | AP cannot go below 0                             | Clamped at 0               |
+| AP-04   | AP cap at 10 (recommended)                       | Cannot exceed 10           |
+| AP-05   | MEV Extracted steals 1 AP at end of turn         | -1 target, +1 applier     |
+| AP-06   | Thread Lock blocks AP gain next turn             | +0 AP at start of turn     |
+| AP-07   | Pumped (ChemOnly): +1 AP at end of turn          | AP +1                     |
+| AP-08   | Drained (ChemOnly): -1 AP at end of turn         | AP -1 (floor 0)           |
+| AP-09   | AP Refund modifier (§3.1): roll after resolution | Correct % chance           |
+| AP-10   | Bonus Action (§3.2): no AP consumed              | Free action at 0 AP cost  |
+| AP-11   | Bonus Actions cannot chain                        | Max 1 bonus per trigger    |
+
+SIMULATION: AP DENIAL OVER 20 BATTLES (automated)
+
+Run 20 battles: Bot Kitsauto (AP denial build) vs. Generic Node/Frozen/Forked.
+Track:
+- Average AP available to target per turn
+- Average turns where target has 0 AP
+- Win rate for AP denial strategy
+- Average battle length
+
+EXPECTED: AP denial should win ~55-60% against unprepared opponents but drop
+to ~45-50% against teams with Cleanse, AP Reserve, or swap strategies.
+
+6.5 Phase 4: Inscription Resolution
+
+GOAL: Verify inscription execution, multi-hit, and triggered effects.
+
+TEST CASES:
+
+| Test ID | Description                                    | Expected Result            |
+|---------|------------------------------------------------|----------------------------|
+| INS-01  | Basic damaging inscription resolves              | Damage dealt, AP spent     |
+| INS-02  | Multi-hit: each hit independent check            | Separate hit/miss per hit  |
+| INS-03  | Multi-hit: each hit triggers chemistry           | Chemistry per hit          |
+| INS-04  | Multi-hit + barrier: hits reduce barrier         | Barrier depleted by hits   |
+| INS-05  | Triggered inscription (on-miss): activates       | Effect fires on miss       |
+| INS-06  | Passive inscription: always active               | Effect applies each turn   |
+| INS-07  | All-In (Meme): consume all AP, deal 150 power    | AP zeroed, damage dealt    |
+| INS-08  | All-In: non-lethal recoil (floor 1 HP)           | User HP >= 1 after recoil |
+| INS-09  | Fox Feint: once per battle tracking               | Second use does nothing    |
+| INS-10  | Blade Flurry: 3 guaranteed hits                   | Exactly 3 hits resolved    |
+
+6.6 Phase 5: Modifier Integration
+
+GOAL: Verify modifier application, stacking, and forbidden combinations.
+
+TEST CASES:
+
+| Test ID | Description                                    | Expected Result            |
+|---------|------------------------------------------------|----------------------------|
+| MOD-01  | §2.1-a: +5-8% power applies to damaging move    | Power increased            |
+| MOD-02  | Two §2.1 power mods on same inscription blocked  | Equip rejected             |
+| MOD-03  | 3 modifier cap per inscription                    | 4th modifier rejected      |
+| MOD-04  | AUG + TRX on same inscription blocked              | Equip rejected             |
+| MOD-05  | §4.1-a: +1 hit on [MULTI] move only               | Non-MULTI rejected         |
+| MOD-06  | §4.1-a: per-hit power reduced by 15%              | Lower per-hit values       |
+| MOD-07  | §5.1-a: type infusion changes chemistry            | New type used in resolver  |
+| MOD-08  | §5.2 global cap: 3rd stat sub blocked              | Equip rejected             |
+| MOD-09  | §3.1-c: AP refund 15-20% after move resolves       | Correct probability        |
+| MOD-10  | §3.2: bonus action no-chain rule                    | Recursive trigger blocked  |
+| MOD-11  | §6.3-c: mitigation within 30% cap                   | 25% max                   |
+| MOD-12  | Entangled-only modifier (§10.1): non-entangled blocked| Equip rejected          |
+
+6.7 Phase 6: PvP Simulation
+
+GOAL: Run automated battles to measure balance across types and strategies.
+
+SIMULATION PARAMETERS:
+- 1000 battles per matchup
+- Both sides use random AI with weighted strategy selection:
+  - 40% damage-focused: prioritize [DMG] inscriptions
+  - 25% control-focused: prioritize [UTIL] and [APMAN] inscriptions
+  - 20% support-focused: prioritize [SUP] inscriptions
+  - 15% balanced: equal weight across categories
+- Team size: 3 Chainlings per side
+- Level: 50 (mid-game balance point)
+- Evolution: Stage 3 (10 slots)
+
+METRICS TO TRACK:
+
+| Metric                          | Target Range        | Alert Threshold |
+|---------------------------------|---------------------|-----------------|
+| Win rate per type (vs. field)   | 45-55%              | <40% or >60%    |
+| Average battle length (turns)   | 8-15 turns          | <5 or >20       |
+| Average AP available per turn   | 2.5-3.5             | <1.5 or >5      |
+| % turns with 0 AP               | <10%                | >20%            |
+| Average actions per turn        | 1.5-2.5             | <1 or >3        |
+| Modifier impact (win rate delta)| <5% improvement     | >10%            |
+| Chemistry trigger rate          | 40-60% of hits      | <25% or >80%    |
+| Mythic inscription win rate     | <3% higher than base| >5%             |
+
+TYPE MATCHUP MATRIX:
+Run all 14×14 type matchups (196 combinations). For each:
+- Record win rate
+- Flag any matchup with >65% win rate (potential hard counter)
+- Identify types with overall win rates below 45% (underpowered)
+
+6.8 Debug Hooks and Instrumentation
+
+COMBAT LOGGER (CombatLogger.cs):
+
+Every combat event must be logged with the following format:
+
+```
+CombatLogEntry {
+  turnNumber: int,
+  phase: TurnPhase,          // StartOfTurn, Action, EndOfTurn
+  sourceChainling: string,
+  targetChainling: string?,
+  eventType: CombatEventType,
+  details: Dictionary<string, object>
+}
+```
+
+```
+enum CombatEventType {
+  APGain, APSpend, APRefund, APSteal, APBlock,
+  InscriptionUsed, InscriptionResolved,
+  HitCheck, DamageDealt, CritTriggered,
+  ChemistryResolved, ChemistryOutput,
+  StatusApplied, StatusRemoved, StatusTicked,
+  StageChanged,
+  ModifierTriggered, BonusActionTriggered,
+  MultiHitResolved, BarrierDamaged, BarrierBroken,
+  ChainlingFainted, ChainlingSwitched,
+  PassiveTriggered
+}
+```
+
+AP FLOW TRACKER (APFlowTracker.cs):
+
+Per-turn AP breakdown for each Chainling:
+
+```
+APFlowEntry {
+  turnNumber: int,
+  chainlingId: string,
+  apAtTurnStart: int,
+  apGained: int,             // From baseline +3 and other sources
+  apSpent: int,              // Total AP spent on inscriptions
+  apRefunded: int,           // From modifier §3.1
+  apStolen: int,             // From MEV Extracted and similar
+  apBlocked: int,            // From Thread Lock
+  apAtTurnEnd: int,
+  actionsThisTurn: int,
+  bonusActionsThisTurn: int
+}
+```
+
+Output: After each battle, generate a CSV:
+```
+Turn,Chainling,Start,Gained,Spent,Refund,Stolen,Blocked,End,Actions,Bonus
+1,validape,0,3,2,0,0,0,1,1,0
+1,kitsauto,0,3,3,0,0,0,0,2,0
+2,validape,1,3,3,0,0,0,1,2,0
+...
+```
+
+DAMAGE BREAKDOWN (DamageBreakdown.cs):
+
+For each damage event, log:
+
+```
+DamageBreakdownEntry {
+  attackerChainling: string,
+  defenderChainling: string,
+  inscriptionId: string,
+  
+  basePower: int,
+  atkStat: int,               // After stages and substitution
+  defStat: int,               // After stages
+  levelMultiplier: float,
+  randomRoll: float,          // 0.85-1.0
+  
+  stabMultiplier: float,      // 1.0 or 1.2
+  chemMultiplier: float,      // 1.3^(ChemAdv - ChemDis)
+  critMultiplier: float,      // 1.0 or 1.5
+  mitigationMultiplier: float,// After all mitigation sources
+  
+  modifierPowerBonus: float,  // From §2.1 etc.
+  conditionalBonus: float,    // From §6.3 etc.
+  
+  rawDamage: int,             // Before mitigation
+  finalDamage: int,           // After all multipliers and floor
+  
+  hitNumber: int?,            // For multi-hit (1, 2, 3...)
+  totalHits: int?             // Total hits in multi-hit
+}
+```
+
+6.9 Regression Test Framework
+
+After each spec revision:
+1. Re-run all Phase 1-5 unit tests
+2. Re-run PvP simulation (Phase 6)
+3. Compare metrics against baseline
+4. Flag any metric outside target range
+5. Generate diff report: "COMBAT_TestReport_vX.Y.txt"
+
+AUTOMATED TEST TRIGGERS:
+- On any change to ScriptableObject data in Data/ folder
+- On any change to Scripts/Combat/ code
+- Before merging any combat-related PR
+- Weekly scheduled full simulation run
+
+===============================================================================
+7. Implementation Priority Order
+===============================================================================
+
+PHASE 1 — Core Engine (Week 1-2):
+1. DamageCalculator + unit tests
+2. HitChecker + CritResolver + unit tests
+3. StageManager + unit tests
+4. APManager + unit tests
+5. CombatLogger infrastructure
+
+PHASE 2 — Status & Chemistry (Week 3-4):
+1. StatusManager (all 4 status classes)
+2. StatusCatalog (populate from 02A)
+3. ChemistryResolver + matrix data
+4. CoatingManager
+5. Integration tests (status + chemistry)
+
+PHASE 3 — Inscriptions (Week 5-6):
+1. InscriptionDatabase (184 + 6 exclusives)
+2. InscriptionResolver (basic execution)
+3. MultiHitResolver
+4. Triggered/reactive inscription logic
+5. Full-turn integration tests
+
+PHASE 4 — Modifiers & Acquisition (Week 7-8):
+1. ModifierProcessor (55 + 13 type variants)
+2. DropTableResolver + pool eligibility
+3. RarityRoller
+4. Species-specific pool validation
+5. Modifier integration tests
+
+PHASE 5 — PvP & Balancing (Week 9-10):
+1. PvP simulation framework
+2. Random AI with strategy weights
+3. 1000-battle simulation runs
+4. Metric analysis and balance flagging
+5. Generate balance report
+
+PHASE 6 — UI Integration (Week 11-12):
+1. Inscription card rendering
+2. Modifier badge display
+3. AP flow visualization
+4. Damage breakdown overlay (debug mode)
+5. Battle replay from combat log
+
+===============================================================================
+8. Cross-References
+===============================================================================
+
+Related Specification Documents:
+- COMBAT_01_TypeChemistry_v1.1.txt — Type interactions and chemistry matrix
+- COMBAT_02A_StatusFrameworkAndCatalog_v1.1.txt — Status definitions and catalog
+- COMBAT_02B_StatsStagesIVs_v1.1.txt — Stat system, IVs, stages
+- COMBAT_02C_ResolutionMath_v1.1.txt — Damage formula, AP system, mitigation
+- COMBAT_03A_Moves_CoreFramework_v1.1.txt — Move structure and rules
+- COMBAT_03A1_Moves_BaselineList_v1.2.txt — 184 baseline moves
+- COMBAT_04_AcquisitionRarity_v1.0.txt — Rarity tiers, drop rates, slot progression
+- COMBAT_05_MoveModifiers_v1.1.txt — 55 modifier definitions (§ID refs)
+- COMBAT_06_SpeciesMovePools_v1.2.txt — 3 starters, pools, exclusive moves
+
+Style Guide:
+- .cursor/rules/spec-sheet-formatting.mdc
+
+Architecture:
+- .cursor/rules/systems-first-architecture.mdc
+
+===============================================================================
+9. Version History
+===============================================================================
+
+v1.0 — Initial implementation guide
+  - Cross-spec audit: 3 fixes applied, 6 ambiguities flagged, 5 missing statuses
+  - AP economy simulation: 7 scenarios analyzed, all within balance targets
+  - Species pool validation: all 3 starters PASS compliance checks
+  - Drop table data structures: 4 tables with ScriptableObject schemas
+  - UI metadata: 3 schemas (Chainling, Inscription, Modifier)
+  - Unity testing plan: 6 phases, 50+ test cases, PvP simulation framework
+  - Debug hooks: AP flow tracker, damage breakdown, combat logger specs
+  - Implementation timeline: 12-week phased rollout
+
+===============================================================================
+END

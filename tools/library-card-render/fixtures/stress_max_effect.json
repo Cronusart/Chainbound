@@ -1,0 +1,42 @@
+{
+  "moveId": "immutable_ledger",
+  "moveName": "Immutable Ledger",
+  "moveRarity": "Common",
+  "typeId": "Block",
+  "typeIconPath": "Assets/Sprites/UI/block_type.png",
+  "category": "passive",
+  "power": 0,
+  "accuracy": 0,
+  "effectLine": "Passive - 20% mitigation on hit; once per turn converts blocked damage to AP.",
+  "mods": [],
+  "provenance": {
+    "rolledBy": "mando",
+    "owners": [
+      "mando"
+    ],
+    "events": [
+      {
+        "type": "rolled",
+        "actor": "mando",
+        "at": "2026-09-24T00:00:00Z"
+      }
+    ]
+  },
+  "variant": "library_card_v1",
+  "side": "front",
+  "_stress": {
+    "purpose": "max-length effectLine stress test for ROLE / EFFECT stats label",
+    "sourceAsset": "Assets/Data/Combat/Moves/Move_immutable_ledger.asset",
+    "effectCharCount": 77,
+    "runnersUp": [
+      {
+        "moveId": "shattered_armor",
+        "len": 73
+      },
+      {
+        "moveId": "surge_recovery",
+        "len": 71
+      }
+    ]
+  }
+}

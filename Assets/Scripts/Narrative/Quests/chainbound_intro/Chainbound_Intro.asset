@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4c317f494a2b904f87b2c27d35a1eac, type: 3}
+  m_Name: Chainbound_Intro
+  m_EditorClassIdentifier: 
+  questId: chainbound_intro
+  questName: chainbound_intro
+  description: Tutorial intro through starter selection and dispatch to Reynard.
+  contentVersion: 1
+  autoCompleteWhenObjectivesComplete: 0
+  objectives:
+  - objectiveId: leave_house
+    description: player leaves starting scene
+    targetAmount: 1
+    currentProgress: 0
+  - objectiveId: escape_creature
+    description: player escapes first encounter
+    targetAmount: 1
+    currentProgress: 0
+  - objectiveId: jump_off_ledge
+    description: player jumps off ledge to escape
+    targetAmount: 1
+    currentProgress: 0
+  - objectiveId: talk_to_admiral
+    description: player talks to admiral NPC
+    targetAmount: 1
+    currentProgress: 0
+  - objectiveId: go_to_loom_lab
+    description: player needs to visit loom lab
+    targetAmount: 1
+    currentProgress: 0
+  - objectiveId: talk_to_toby
+    description: player talks to prof toby
+    targetAmount: 1
+    currentProgress: 0
+  - objectiveId: choose_starter
+    description: player chooses starter chainling
+    targetAmount: 1
+    currentProgress: 0
+  - objectiveId: dispatch_to_reynard
+    description: Toby sends the player to Reynard for two coffees and a beer
+    targetAmount: 1
+    currentProgress: 0
+  defaultResolutionId: chainling_bound
+  resolutions:
+  - resolutionId: chainling_bound
+    allowedContextKeys:
+    - starter_species_id
+  tags:
+  - Main

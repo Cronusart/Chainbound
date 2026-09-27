@@ -1,0 +1,14 @@
+{
+    "name": "SignalJam.UI.VisualFX",
+    "rootNamespace": "SignalJam.UI.VisualFx",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

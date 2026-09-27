@@ -1,0 +1,90 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6729d7f167810214c9b14d065c6ad781, type: 3}
+  m_Name: CapturePresentationConfig
+  m_EditorClassIdentifier: 
+  tradingGridArtwork: {fileID: 0}
+  traceColor: {r: 0.5686275, g: 0.85882354, b: 0.4117647, a: 1}
+  bandColor: {r: 0.91764706, g: 0.30980393, b: 0.21176471, a: 0.4509804}
+  bandLockedColor: {r: 0.11764706, g: 0.7372549, b: 0.4509804, a: 0.42}
+  edgeWarningColor: {r: 0.7019608, g: 0.21960784, b: 0.19215687, a: 0.5}
+  spikeFlashColor: {r: 0.9764706, g: 0.7607843, b: 0.16862746, a: 0.4}
+  bandEdgeColor: {r: 0.9607843, g: 0.4901961, b: 0.2901961, a: 1}
+  bullishCandleColor: {r: 0.11764706, g: 0.7372549, b: 0.4509804, a: 1}
+  bearishCandleColor: {r: 0.7019608, g: 0.21960784, b: 0.19215687, a: 1}
+  pooledTracePointCount: 160
+  traceThickness: 3
+  authoritativeCorrectionSeconds: 0.1
+  ticksPerCandle: 5
+  visibleCandleCount: 40
+  candleBodyWidthRatio: 0.62
+  wickThickness: 2
+  dojiMinBodyPixels: 3
+  dashedLineMaterial: {fileID: 2100000, guid: d8f6e13c4fab608c1e3d5f702a2b4c6e, type: 2}
+  dashedLineThickness: 2
+  priceLineThickness: 2
+  priceTweenSeconds: 0.08
+  candleGrowSeconds: 0.12
+  candleClosePunchSeconds: 0.16
+  candleClosePunchScale: 0.16
+  crossingPulseCooldownSeconds: 0.12
+  spikePulseCooldownSeconds: 0.2
+  firstCaptureInstructions: "HOLD A / X / SCREEN TO LIFT \u2014 RELEASE TO FALL \u2014
+    KEEP THE SIGNAL IN THE BAND"
+  lowTargetHpCopy: LOW TARGET HP
+  unavailableCopy: "SIGNAL SYNC UNAVAILABLE \u2014 RETRYING"
+  successNamePromptCopy: "You've captured a {subject}! Would you like to give it a name?"
+  failureNarrativeCopy: The capture attempt was unsuccessful. The signal slipped the lock.
+  nameChoiceYesLabel: Yes
+  nameChoiceNoLabel: 'No'
+  successBannerCopy: Success!
+  failureBannerCopy: Failure
+  panelExpandXDuration: 0.22
+  panelExpandYDuration: 0.38
+  panelProjectionLineHeight: 0.05
+  panelExpandYOvershoot: 1.35
+  riseHeight: 7.25
+  riseSeconds: 0.45
+  riseEase: 27
+  riseOvershoot: 1.35
+  postRiseHoldSeconds: 1
+  tossHoverHeight: 10
+  tossSeconds: 0.7
+  tossEase: 7
+  tossArcHeight: 4
+  preBeamHoverSeconds: 0.35
+  beamSeconds: 0.55
+  glitchFallbackSeconds: 0.8
+  resultHoldSeconds: 0.85
+  failDisintegrateSeconds: 0.45
+  successFloatSeconds: 1.1
+  successFloatHeight: 8
+  hoverBobHeight: 0.35
+  hoverBobSeconds: 1.1
+  stageTimeoutPadding: 0.35
+  beamMaterial: {fileID: 2100000, guid: 27d01faed896b024ebf54f4a743e03af, type: 2}
+  beamColor: {r: 0.9843137, g: 0.7254902, b: 0.32941177, a: 0.85}
+  beamRange: 24
+  beamAngle: 18
+  orbTossSound: {fileID: 11400000, guid: c4fd654045464e9141a1b8e0b9265726, type: 2}
+  beamSound: {fileID: 11400000, guid: e3b5ff6aa634cfa44ba8b82b0c1221a8, type: 2}
+  lockLoopSound: {fileID: 0}
+  failureBannerSound: {fileID: 11400000, guid: 3f5d5fe4e38b4bf4db1afc381b1807d5, type: 2}
+  failureVanishSound: {fileID: 11400000, guid: 60fc5107c12bc2a64aa1e54ae42db008, type: 2}
+  successBannerSound: {fileID: 11400000, guid: c4fd654045464e9141a1b8e0b9265726, type: 2}
+  successVanishSound: {fileID: 11400000, guid: e3b5ff6aa634cfa44ba8b82b0c1221a8, type: 2}
+  lockLoopEscapePitch: 0.72
+  lockLoopLockPitch: 1.35
+  lockLoopVolume: 0.55
+  musicDuckMultiplier: 0.33
+  musicDuckAttackSeconds: 0.12
+  musicDuckReleaseSeconds: 0.45

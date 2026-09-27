@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7f093e938135cf4badf87153dc7f5fa, type: 3}
+  m_Name: ChainlingVisualIdentityDatabase
+  m_EditorClassIdentifier: 
+  skins: []
+  weapons: []
+  auras:
+  - {fileID: 11400000, guid: 3518c1f95c614fb381df5a09df097977, type: 2}
+  nameplateFrames: []
+  hudCardVariants:
+  - {fileID: 11400000, guid: 6a3a4f83e2964b4f8f842a2b7cd04b90, type: 2}
+  partyColumnVariants:
+  - {fileID: 11400000, guid: b7f2e9a31c4d4e6f8a0b1c2d3e4f5a6b, type: 2}
+  spawnFx:
+  - {fileID: 11400000, guid: 61c162830b60419da7bc494e978743ef, type: 2}
+  koSwapFx:
+  - {fileID: 11400000, guid: 924a3d89d1454949b91bc297efff31fb, type: 2}
+  victoryPoses:
+  - {fileID: 11400000, guid: 0883bb1da6f240239bb8bc93799861c0, type: 2}
+  idleFlourishes:
+  - {fileID: 11400000, guid: f4a92a07252947b9962bc1186a0fa948, type: 2}
+  meleeAttackStyles:
+  - {fileID: 11400000, guid: 55a897aa93cc4dfdbbf6e5817172de4b, type: 2}
+  rangedAttackStyles:
+  - {fileID: 11400000, guid: 7282b0699ab140ec8c81a2e1f32f7157, type: 2}
+  hitReactionStyles: []
+  enemyKoStyles: []

@@ -1,0 +1,5 @@
+LoadoutId,SpeciesId,MoveIds,Modifier1Ids,Modifier2Ids
+# Example loadouts for testing and balance validation
+starter_validape_balanced,validape,hammer_sync|coordinated_shot|buff_ally|heal_ally,2.1-a|2.1-a||,2.3-a|||
+starter_gilarime_stall,gilarime,cryo_ray|frost_shot|hibernate|barrier_wall,2.1-b||2.2-a|,|||
+starter_kitsauto_aggro,kitsauto,blade_flurry|multi_thread_shot|debuff_script|mev_extract,2.1-c|2.3-b||6.1-a,|||

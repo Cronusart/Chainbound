@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db64e41df2ba20a4c97a178d0acd412d, type: 3}
+  m_Name: EncounterZone_Link1_Grass
+  m_EditorClassIdentifier: 
+  zoneId: link1_grass
+  area: {fileID: 11400000, guid: 4b1504587fcce5b4c98f9744942b5dce, type: 2}
+  encounterChance: -1
+  cadence: 1
+  cadenceIntervalSeconds: 3
+  inheritDifficulty: 1
+  difficulty: 0
+  bossIntroDialogueAsset: {fileID: 0}
+  minEncounterPartySize: -1
+  maxEncounterPartySize: -1
+  entryMergeMode: 1
+  entries:
+  - speciesId: caw
+    weight: 50
+    allowedSegments: 6
+    segmentWeights: []
+    baseCaptureRate: 55
+    baseStars: 0
+    starVariance: 0
+    movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
+    inlineMovePool: []
+    battleKitSizeMin: 1
+    battleKitSizeMax: 1
+    variantRarityTable: {fileID: 0}
+    variantPool: {fileID: 0}
+    inlineVariantPool: []
+  - speciesId: snek
+    weight: 50
+    allowedSegments: 6
+    segmentWeights: []
+    baseCaptureRate: 55
+    baseStars: 0
+    starVariance: 0
+    movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
+    inlineMovePool: []
+    battleKitSizeMin: 1
+    battleKitSizeMax: 1
+    variantRarityTable: {fileID: 0}
+    variantPool: {fileID: 0}
+    inlineVariantPool: []
+  - speciesId: ghosty
+    weight: 50
+    allowedSegments: 9
+    segmentWeights: []
+    baseCaptureRate: 50
+    baseStars: 0
+    starVariance: 0
+    movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
+    inlineMovePool: []
+    battleKitSizeMin: 1
+    battleKitSizeMax: 1
+    variantRarityTable: {fileID: 0}
+    variantPool: {fileID: 0}
+    inlineVariantPool: []
+  - speciesId: deghoul
+    weight: 50
+    allowedSegments: 9
+    segmentWeights: []
+    baseCaptureRate: 45
+    baseStars: 0
+    starVariance: 0
+    movePool: {fileID: 11400000, guid: b02b95711d9d001479ce9685bceee6ca, type: 2}
+    inlineMovePool: []
+    battleKitSizeMin: 1
+    battleKitSizeMax: 1
+    variantRarityTable: {fileID: 0}
+    variantPool: {fileID: 0}
+    inlineVariantPool: []
+  mutationChanceOverride: -1
+  entangledChanceOverride: -1
+  ivMinOverride: -2147483648
+  ivMaxOverride: -2147483648
+  defaultVariantRarityTable: {fileID: 0}
+  variantTierMultipliers:
+    common: -1
+    uncommon: -1
+    rare: -1
+    epic: -1
+    legendary: -1
+    mythic: -1
+  mutationRarityTable: {fileID: 0}
+  mutationTierMultipliers:
+    common: -1
+    uncommon: -1
+    rare: -1
+    epic: -1
+    legendary: -1
+    mythic: -1
+  defaultMovePool: {fileID: 0}
+  defaultVariantPool: {fileID: 0}

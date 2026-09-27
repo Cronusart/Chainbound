@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: CofiLootwak
+  m_EditorClassIdentifier: 
+  speciesId: cofi_lootwak
+  displayName: Cofi Lootwak
+  description: Jungle civet tank that sips beans to stay upright, then sprays a slow
+    chip beam. Story boss; not catchable.
+  primaryType: 9
+  secondaryType: 0
+  baseMaxHP: 168
+  baseMeleeAtk: 18
+  baseMeleeDef: 84
+  baseRangedAtk: 24
+  baseRangedDef: 84
+  baseSpeed: 16
+  maxEvolutionStages: 1
+  learnableMoves: []
+  learnLevels: 
+  exclusiveMoves:
+  - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
+  flagshipMove: {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
+  - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1002, type: 2}
+  progressionMovePool: []
+  isStarter: 0
+  defaultCaptureProfile: 1
+  combatRoleOverride: 4
+  designNotes: 'Story boss. Uncatchable via encounter capturePolicy Disabled. BST
+    exception 394 including HP (wall soak). Kit is exclusive; Utility AI + Bean Sip
+    recharge 2 yields sip-then-beam cadence.'

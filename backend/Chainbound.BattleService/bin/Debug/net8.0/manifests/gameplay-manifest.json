@@ -1,0 +1,5166 @@
+{
+    "manifestVersion": 1,
+    "species": [
+        {
+            "speciesId": "caw",
+            "displayName": "Caw",
+            "primaryType": 7,
+            "secondaryType": 0,
+            "baseMaxHp": 78,
+            "baseMeleeAttack": 30,
+            "baseMeleeDefense": 42,
+            "baseRangedAttack": 60,
+            "baseRangedDefense": 40,
+            "baseSpeed": 84,
+            "initialMoveIds": []
+        },
+        {
+            "speciesId": "cinislug",
+            "displayName": "Cinislug",
+            "primaryType": 5,
+            "secondaryType": 0,
+            "baseMaxHp": 115,
+            "baseMeleeAttack": 31,
+            "baseMeleeDefense": 54,
+            "baseRangedAttack": 63,
+            "baseRangedDefense": 42,
+            "baseSpeed": 28,
+            "initialMoveIds": []
+        },
+        {
+            "speciesId": "deghoul",
+            "displayName": "Deghoul",
+            "primaryType": 2,
+            "secondaryType": 0,
+            "baseMaxHp": 86,
+            "baseMeleeAttack": 72,
+            "baseMeleeDefense": 36,
+            "baseRangedAttack": 40,
+            "baseRangedDefense": 34,
+            "baseSpeed": 72,
+            "initialMoveIds": []
+        },
+        {
+            "speciesId": "ghost",
+            "displayName": "   ",
+            "primaryType": 14,
+            "secondaryType": 0,
+            "baseMaxHp": 0,
+            "baseMeleeAttack": 0,
+            "baseMeleeDefense": 0,
+            "baseRangedAttack": 0,
+            "baseRangedDefense": 0,
+            "baseSpeed": 0,
+            "initialMoveIds": []
+        },
+        {
+            "speciesId": "ghosty",
+            "displayName": "Ghosty",
+            "primaryType": 4,
+            "secondaryType": 0,
+            "baseMaxHp": 82,
+            "baseMeleeAttack": 32,
+            "baseMeleeDefense": 40,
+            "baseRangedAttack": 70,
+            "baseRangedDefense": 48,
+            "baseSpeed": 68,
+            "initialMoveIds": []
+        },
+        {
+            "speciesId": "gilarime",
+            "displayName": "Gilarime",
+            "primaryType": 6,
+            "secondaryType": 0,
+            "baseMaxHp": 132,
+            "baseMeleeAttack": 50,
+            "baseMeleeDefense": 65,
+            "baseRangedAttack": 60,
+            "baseRangedDefense": 55,
+            "baseSpeed": 45,
+            "initialMoveIds": [
+                "baseline_shot"
+            ]
+        },
+        {
+            "speciesId": "kitsauto",
+            "displayName": "Kitsauto",
+            "primaryType": 11,
+            "secondaryType": 0,
+            "baseMaxHp": 109,
+            "baseMeleeAttack": 70,
+            "baseMeleeDefense": 50,
+            "baseRangedAttack": 55,
+            "baseRangedDefense": 45,
+            "baseSpeed": 75,
+            "initialMoveIds": [
+                "baseline_jab"
+            ]
+        },
+        {
+            "speciesId": "kreechank",
+            "displayName": "Kreechank",
+            "primaryType": 12,
+            "secondaryType": 0,
+            "baseMaxHp": 104,
+            "baseMeleeAttack": 63,
+            "baseMeleeDefense": 51,
+            "baseRangedAttack": 37,
+            "baseRangedDefense": 32,
+            "baseSpeed": 52,
+            "initialMoveIds": []
+        },
+        {
+            "speciesId": "lad",
+            "displayName": "Lad",
+            "primaryType": 13,
+            "secondaryType": 0,
+            "baseMaxHp": 70,
+            "baseMeleeAttack": 82,
+            "baseMeleeDefense": 28,
+            "baseRangedAttack": 42,
+            "baseRangedDefense": 28,
+            "baseSpeed": 90,
+            "initialMoveIds": []
+        },
+        {
+            "speciesId": "snek",
+            "displayName": "Snek",
+            "primaryType": 9,
+            "secondaryType": 0,
+            "baseMaxHp": 90,
+            "baseMeleeAttack": 28,
+            "baseMeleeDefense": 58,
+            "baseRangedAttack": 55,
+            "baseRangedDefense": 52,
+            "baseSpeed": 57,
+            "initialMoveIds": []
+        },
+        {
+            "speciesId": "validape",
+            "displayName": "Validape",
+            "primaryType": 1,
+            "secondaryType": 0,
+            "baseMaxHp": 127,
+            "baseMeleeAttack": 65,
+            "baseMeleeDefense": 55,
+            "baseRangedAttack": 50,
+            "baseRangedDefense": 55,
+            "baseSpeed": 55,
+            "initialMoveIds": [
+                "baseline_striker"
+            ]
+        },
+        {
+            "speciesId": "whale",
+            "displayName": "Whale",
+            "primaryType": 10,
+            "secondaryType": 0,
+            "baseMaxHp": 128,
+            "baseMeleeAttack": 48,
+            "baseMeleeDefense": 72,
+            "baseRangedAttack": 24,
+            "baseRangedDefense": 50,
+            "baseSpeed": 18,
+            "initialMoveIds": []
+        }
+    ],
+    "moves": [
+        {
+            "moveId": "accuracy_disrupt",
+            "displayName": "Accuracy Disrupt",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "accuracy_focus",
+            "displayName": "Accuracy Focus",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "all_in",
+            "displayName": "All-In",
+            "category": 0,
+            "baseType": 14,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 130,
+            "apCost": 0,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ap_boost",
+            "displayName": "AP Boost",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 3,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ap_donation",
+            "displayName": "AP Donation",
+            "category": 3,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ap_drain",
+            "displayName": "AP Drain",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ap_redistribution",
+            "displayName": "AP Redistribution",
+            "category": 3,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ap_reserve",
+            "displayName": "AP Reserve",
+            "category": 2,
+            "baseType": 9,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ap_router",
+            "displayName": "AP Router",
+            "category": 3,
+            "baseType": 1,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ap_siphon",
+            "displayName": "AP Siphon",
+            "category": 1,
+            "baseType": 2,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 75,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ash_guard",
+            "displayName": "Ash Guard",
+            "category": 3,
+            "baseType": 5,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "automated_pressure",
+            "displayName": "Automated Pressure",
+            "category": 4,
+            "baseType": 11,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "automation_burst",
+            "displayName": "Automation Burst",
+            "category": 1,
+            "baseType": 11,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 50,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "barrier_wall",
+            "displayName": "Barrier Wall",
+            "category": 3,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_barrage",
+            "displayName": "Pellet Storm",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 13,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 3,
+            "rechargeTurns": 0,
+            "tags": [],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_blast",
+            "displayName": "Wide Burst",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 30,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_jab",
+            "displayName": "Quick Jab",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 20,
+            "apCost": 1,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "PRIO",
+                "PRIOR"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_multi_strike",
+            "displayName": "Rapid Pummel",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 10,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 5,
+            "rechargeTurns": 0,
+            "tags": [],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_shot",
+            "displayName": "Pulse Shot",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 35,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_slam",
+            "displayName": "Body Check",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 40,
+            "apCost": 3,
+            "accuracy": 85,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_snipe",
+            "displayName": "Focus Shot",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 40,
+            "apCost": 3,
+            "accuracy": 90,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_striker",
+            "displayName": "Snap Strike",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 40,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_thrust",
+            "displayName": "Pressure Point",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 35,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "baseline_volley",
+            "displayName": "Scatter Shot",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 20,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [],
+            "statusEffects": []
+        },
+        {
+            "moveId": "blade_flurry",
+            "displayName": "Blade Flurry",
+            "category": 0,
+            "baseType": 11,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 25,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 3,
+            "hitCountMax": 3,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "blockade",
+            "displayName": "Blockade",
+            "category": 3,
+            "baseType": 3,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "bot_swarm",
+            "displayName": "Bot Swarm",
+            "category": 2,
+            "baseType": 11,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "BotSwarm",
+                    "duration": 1,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "broadcast",
+            "displayName": "Broadcast",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "Broadcast",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "buff_ally",
+            "displayName": "Buff Ally",
+            "category": 3,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "bug_fix",
+            "displayName": "Bug Fix",
+            "category": 2,
+            "baseType": 12,
+            "rarity": 1,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "bug_payoff",
+            "displayName": "Bug Payoff",
+            "category": 0,
+            "baseType": 12,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "chain_fork",
+            "displayName": "Chain Fork",
+            "category": 0,
+            "baseType": 7,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 17,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 4,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "chain_seal",
+            "displayName": "Chain Seal",
+            "category": 2,
+            "baseType": 3,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "chaos_strike",
+            "displayName": "Chaos Strike",
+            "category": 0,
+            "baseType": 12,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "chaotic_resonance",
+            "displayName": "Chaotic Resonance",
+            "category": 1,
+            "baseType": 12,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 70,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "charged_relay",
+            "displayName": "Charged Relay",
+            "category": 2,
+            "baseType": 7,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "chilling_retort",
+            "displayName": "Chilling Retort",
+            "category": 2,
+            "baseType": 6,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "cinder_burst",
+            "displayName": "Cinder Burst",
+            "category": 1,
+            "baseType": 5,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 25,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 4,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "cipher_burst",
+            "displayName": "Cipher Burst",
+            "category": 1,
+            "baseType": 4,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 30,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 3,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "cipher_shot",
+            "displayName": "Cipher Shot",
+            "category": 1,
+            "baseType": 4,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "cleanse",
+            "displayName": "Cleanse",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "cold_snap",
+            "displayName": "Cold Snap",
+            "category": 2,
+            "baseType": 6,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "combustive_shift",
+            "displayName": "Combustive Shift",
+            "category": 1,
+            "baseType": 2,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 30,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 2,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "compound_guard",
+            "displayName": "Compound Guard",
+            "category": 3,
+            "baseType": 9,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "compound_returns",
+            "displayName": "Compound Returns",
+            "category": 2,
+            "baseType": 9,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "compression_burst",
+            "displayName": "Compression Burst",
+            "category": 0,
+            "baseType": 10,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 30,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 2,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "compression_trade",
+            "displayName": "Compression Trade",
+            "category": 2,
+            "baseType": 10,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "conductive_counter",
+            "displayName": "Conductive Counter",
+            "category": 4,
+            "baseType": 7,
+            "rarity": 1,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "coordinated_shot",
+            "displayName": "Coordinated Shot",
+            "category": 1,
+            "baseType": 1,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "crash_routine",
+            "displayName": "Crash Routine",
+            "category": 2,
+            "baseType": 12,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "cryo_ray",
+            "displayName": "Cryo Ray",
+            "category": 1,
+            "baseType": 6,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 95,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "crystal_bash",
+            "displayName": "Crystal Bash",
+            "category": 0,
+            "baseType": 13,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "STAT",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "crystal_extraction",
+            "displayName": "Crystal Extraction",
+            "category": 2,
+            "baseType": 8,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "crystal_focus",
+            "displayName": "Crystal Focus",
+            "category": 2,
+            "baseType": 6,
+            "rarity": 1,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "damage_intercept",
+            "displayName": "Damage Intercept",
+            "category": 3,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "data_scramble",
+            "displayName": "Data Scramble",
+            "category": 2,
+            "baseType": 12,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "debuff_script",
+            "displayName": "Debuff Script",
+            "category": 2,
+            "baseType": 11,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "deep_dig",
+            "displayName": "Deep Dig",
+            "category": 0,
+            "baseType": 8,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 95,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "deep_reap",
+            "displayName": "Deep Reap",
+            "category": 1,
+            "baseType": 8,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "defense_break",
+            "displayName": "Defense Break",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "defense_corrupt",
+            "displayName": "Defense Corrupt",
+            "category": 2,
+            "baseType": 12,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "defensive_reflex",
+            "displayName": "Defensive Reflex",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "defensive_stance",
+            "displayName": "Defensive Stance",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "deflation_mark",
+            "displayName": "Deflation Mark",
+            "category": 2,
+            "baseType": 5,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "BurnedTokens",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "desperation_surge",
+            "displayName": "Desperation Surge",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "dice_roll",
+            "displayName": "Dice Roll",
+            "category": 2,
+            "baseType": 14,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "double_or_nothing",
+            "displayName": "Double-or-Nothing",
+            "category": 4,
+            "baseType": 14,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "dust_fees",
+            "displayName": "Dust Fees",
+            "category": 2,
+            "baseType": 3,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "effect_relay",
+            "displayName": "Effect Relay",
+            "category": 3,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ember_shower",
+            "displayName": "Ember Shower",
+            "category": 1,
+            "baseType": 5,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 50,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ember_wall",
+            "displayName": "Ember Wall",
+            "category": 3,
+            "baseType": 5,
+            "rarity": 2,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "SUP",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "emergency_recovery",
+            "displayName": "Emergency Recovery",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "error_correction",
+            "displayName": "Error Correction",
+            "category": 3,
+            "baseType": 12,
+            "rarity": 2,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "evasion_maneuver",
+            "displayName": "Evasion Maneuver",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "evasion_pin",
+            "displayName": "Evasion Pin",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "exploit_window",
+            "displayName": "Exploit Window",
+            "category": 2,
+            "baseType": 8,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "ExploitMark",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "extend_protocol",
+            "displayName": "Extend Protocol",
+            "category": 2,
+            "baseType": 1,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 3,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "extraction_hit",
+            "displayName": "Extraction Hit",
+            "category": 4,
+            "baseType": 8,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "fee_collector",
+            "displayName": "Fee Collector",
+            "category": 4,
+            "baseType": 2,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "field_split",
+            "displayName": "Field Split",
+            "category": 2,
+            "baseType": 13,
+            "rarity": 0,
+            "targeting": 5,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "finish_burn",
+            "displayName": "Finish Burn",
+            "category": 1,
+            "baseType": 5,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "firewall_passive",
+            "displayName": "Firewall Passive",
+            "category": 4,
+            "baseType": 4,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "flame_charge",
+            "displayName": "Flame Charge",
+            "category": 1,
+            "baseType": 5,
+            "rarity": 1,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "fork_split",
+            "displayName": "Fork Split",
+            "category": 1,
+            "baseType": 7,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 60,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "fox_feint",
+            "displayName": "Fox Feint",
+            "category": 2,
+            "baseType": 11,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 999,
+            "tags": [
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "frost_shards",
+            "displayName": "Frost Shards",
+            "category": 1,
+            "baseType": 6,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 17,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 4,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "frost_shot",
+            "displayName": "Frost Shot",
+            "category": 1,
+            "baseType": 6,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "fuel_surge",
+            "displayName": "Fuel Surge",
+            "category": 2,
+            "baseType": 2,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "GasSpike",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "gas_cloud",
+            "displayName": "Gas Cloud",
+            "category": 2,
+            "baseType": 2,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "gecko_guard",
+            "displayName": "Gecko Guard",
+            "category": 4,
+            "baseType": 6,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 999,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "glitch_barrage",
+            "displayName": "Glitch Barrage",
+            "category": 1,
+            "baseType": 12,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 20,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 4,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "glitch_feedback",
+            "displayName": "Glitch Feedback",
+            "category": 2,
+            "baseType": 12,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "guard_posture",
+            "displayName": "Guard Posture",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "guard_stance",
+            "displayName": "Guard Stance",
+            "category": 2,
+            "baseType": 3,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "guardbreaker_combo",
+            "displayName": "Breach Rush",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 14,
+            "apCost": 3,
+            "accuracy": 90,
+            "hitCountMin": 3,
+            "hitCountMax": 4,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "hammer_sync",
+            "displayName": "Hammer Sync",
+            "category": 0,
+            "baseType": 1,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 95,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "heal_ally",
+            "displayName": "Heal Ally",
+            "category": 3,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "hibernate",
+            "displayName": "Hibernate",
+            "category": 2,
+            "baseType": 6,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "hub_heal",
+            "displayName": "Hub Heal",
+            "category": 3,
+            "baseType": 1,
+            "rarity": 0,
+            "targeting": 3,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "hype_burst",
+            "displayName": "Hype Burst",
+            "category": 2,
+            "baseType": 5,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "hype_train",
+            "displayName": "Hype Train",
+            "category": 1,
+            "baseType": 14,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 70,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ice_wall",
+            "displayName": "Ice Wall",
+            "category": 3,
+            "baseType": 6,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "SUP",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "immovable_stance",
+            "displayName": "Immovable Stance",
+            "category": 2,
+            "baseType": 3,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "Immovable",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "immutable_ledger",
+            "displayName": "Immutable Ledger",
+            "category": 4,
+            "baseType": 3,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "interest_strike",
+            "displayName": "Interest Strike",
+            "category": 0,
+            "baseType": 9,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 25,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 3,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "DMG",
+                "MULTI",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "isolation_tool",
+            "displayName": "Isolation Tool",
+            "category": 2,
+            "baseType": 13,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "jackpot_shot",
+            "displayName": "Jackpot Shot",
+            "category": 1,
+            "baseType": 14,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "key_rotation",
+            "displayName": "Key Rotation",
+            "category": 2,
+            "baseType": 4,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "lattice_guard",
+            "displayName": "Lattice Guard",
+            "category": 3,
+            "baseType": 13,
+            "rarity": 1,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "lean_hit",
+            "displayName": "Lean Hit",
+            "category": 0,
+            "baseType": 10,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 60,
+            "apCost": 1,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "lock_assets",
+            "displayName": "Lock Assets",
+            "category": 2,
+            "baseType": 6,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "FrozenAssets",
+                    "duration": 1,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "low_ap_surge",
+            "displayName": "Low AP Surge",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "lucky_scatter",
+            "displayName": "Lucky Scatter",
+            "category": 1,
+            "baseType": 14,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 25,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 4,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "majority_pressure",
+            "displayName": "Majority Pressure",
+            "category": 2,
+            "baseType": 8,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "FiftyOnePercentAttacked",
+                    "duration": 1,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "meme_magic",
+            "displayName": "Meme Magic",
+            "category": 3,
+            "baseType": 14,
+            "rarity": 1,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "meme_momentum",
+            "displayName": "Meme Momentum",
+            "category": 4,
+            "baseType": 14,
+            "rarity": 5,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "memory_leak",
+            "displayName": "Memory Leak",
+            "category": 2,
+            "baseType": 4,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "mev_extract",
+            "displayName": "MEV Extract",
+            "category": 2,
+            "baseType": 11,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "MEVExtracted",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "momentum_drill",
+            "displayName": "Momentum Drill",
+            "category": 0,
+            "baseType": 8,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "momentum_shift",
+            "displayName": "Momentum Shift",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 1,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "multi_thread_shot",
+            "displayName": "Multi-Thread Shot",
+            "category": 1,
+            "baseType": 11,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 17,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 3,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "network_response",
+            "displayName": "Network Response",
+            "category": 2,
+            "baseType": 1,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "network_sync",
+            "displayName": "Network Sync",
+            "category": 2,
+            "baseType": 1,
+            "rarity": 0,
+            "targeting": 3,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "on_crit_bonus",
+            "displayName": "On Crit Bonus",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "on_hit_momentum",
+            "displayName": "On Hit Momentum",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "optimize_aim",
+            "displayName": "Optimize Aim",
+            "category": 2,
+            "baseType": 10,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ore_restoration",
+            "displayName": "Ore Restoration",
+            "category": 3,
+            "baseType": 8,
+            "rarity": 1,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "ore_strike",
+            "displayName": "Ore Strike",
+            "category": 0,
+            "baseType": 8,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "overdraw_snipe",
+            "displayName": "Rail Spike",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 60,
+            "apCost": 3,
+            "accuracy": 85,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "overflow_reboot",
+            "displayName": "Overflow Reboot",
+            "category": 2,
+            "baseType": 1,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "pack_rally",
+            "displayName": "Pack Rally",
+            "category": 3,
+            "baseType": 1,
+            "rarity": 1,
+            "targeting": 3,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "parallel_passive",
+            "displayName": "Parallel Passive",
+            "category": 4,
+            "baseType": 13,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "partition_shot",
+            "displayName": "Partition Shot",
+            "category": 1,
+            "baseType": 13,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "FrozenAssets",
+                    "duration": 1,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "patience_passive",
+            "displayName": "Patience Passive",
+            "category": 4,
+            "baseType": 9,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "phantom_hack",
+            "displayName": "Phantom Hack",
+            "category": 1,
+            "baseType": 4,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "pickaxe_flurry",
+            "displayName": "Pickaxe Flurry",
+            "category": 0,
+            "baseType": 8,
+            "rarity": 1,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 20,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 4,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "pivot_line",
+            "displayName": "Pivot Line",
+            "category": 2,
+            "baseType": 7,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "position_swap",
+            "displayName": "Position Swap",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PRIOR",
+                "SUP",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "power_drain",
+            "displayName": "Power Drain",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "power_surge",
+            "displayName": "Power Surge",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "precision_focus",
+            "displayName": "Precision Focus",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "precision_strike",
+            "displayName": "Precision Strike",
+            "category": 1,
+            "baseType": 10,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "proof_shield",
+            "displayName": "Proof Shield",
+            "category": 3,
+            "baseType": 4,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "EncryptedSeal",
+                    "duration": 1,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "purge_protocol",
+            "displayName": "Purge Protocol",
+            "category": 2,
+            "baseType": 4,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "quick_lunge",
+            "displayName": "Blink Lunge",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 35,
+            "apCost": 2,
+            "accuracy": 90,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "PRIO",
+                "PRIOR"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "rally_cry",
+            "displayName": "Rally Cry",
+            "category": 3,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 3,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "rallying_slam",
+            "displayName": "Rallying Slam",
+            "category": 0,
+            "baseType": 3,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "rapid_strike",
+            "displayName": "Rapid Strike",
+            "category": 0,
+            "baseType": 7,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 70,
+            "apCost": 1,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "PRIO",
+                "PRIOR"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "reactive_ping",
+            "displayName": "Reactive Ping",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "recoil_strike",
+            "displayName": "Recoil Strike",
+            "category": 0,
+            "baseType": 7,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 100,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "recursive_backup",
+            "displayName": "Recursive Backup",
+            "category": 2,
+            "baseType": 11,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "TRIG",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "refined_barrage",
+            "displayName": "Ricochet Storm",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 16,
+            "apCost": 3,
+            "accuracy": 90,
+            "hitCountMin": 2,
+            "hitCountMax": 3,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "refined_blast",
+            "displayName": "Kinetic Burst",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 38,
+            "apCost": 3,
+            "accuracy": 90,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "refined_shot",
+            "displayName": "Vector Shot",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 50,
+            "apCost": 2,
+            "accuracy": 90,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "refined_slam",
+            "displayName": "Titan Crash",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 65,
+            "apCost": 3,
+            "accuracy": 80,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "refined_striker",
+            "displayName": "Impact Knuckle",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 55,
+            "apCost": 2,
+            "accuracy": 90,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "refined_thrust",
+            "displayName": "Rupture Point",
+            "category": 0,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 45,
+            "apCost": 2,
+            "accuracy": 90,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "refined_volley",
+            "displayName": "Scatterburst",
+            "category": 1,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 28,
+            "apCost": 2,
+            "accuracy": 90,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "refinery",
+            "displayName": "Refinery",
+            "category": 2,
+            "baseType": 8,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "relay_packet",
+            "displayName": "Relay Packet",
+            "category": 3,
+            "baseType": 1,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "risk_marker",
+            "displayName": "Risk Marker",
+            "category": 2,
+            "baseType": 10,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "Overleveraged",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "risk_spike",
+            "displayName": "Risk Spike",
+            "category": 2,
+            "baseType": 7,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "scorch_shot",
+            "displayName": "Scorch Shot",
+            "category": 1,
+            "baseType": 5,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "script_loop",
+            "displayName": "Script Loop",
+            "category": 2,
+            "baseType": 11,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "sear_field",
+            "displayName": "Sear Field",
+            "category": 2,
+            "baseType": 5,
+            "rarity": 0,
+            "targeting": 1,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "self_repair_protocol",
+            "displayName": "Self-Repair Protocol",
+            "category": 3,
+            "baseType": 11,
+            "rarity": 1,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "shard_partition",
+            "displayName": "Shard Partition",
+            "category": 2,
+            "baseType": 13,
+            "rarity": 0,
+            "targeting": 3,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "ShardPartition",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "shard_scatter",
+            "displayName": "Shard Scatter",
+            "category": 1,
+            "baseType": 13,
+            "rarity": 1,
+            "targeting": 1,
+            "contactType": 1,
+            "power": 25,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 3,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "shattered_armor",
+            "displayName": "Shattered Armor",
+            "category": 4,
+            "baseType": 13,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "signal_redirect",
+            "displayName": "Signal Redirect",
+            "category": 3,
+            "baseType": 1,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "slipstream",
+            "displayName": "Slipstream",
+            "category": 2,
+            "baseType": 2,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "solid_strike",
+            "displayName": "Solid Strike",
+            "category": 0,
+            "baseType": 3,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "speed_boost",
+            "displayName": "Speed Boost",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "speed_reduction",
+            "displayName": "Speed Reduction",
+            "category": 2,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "spite_counter",
+            "displayName": "Spite Counter",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "stake_heal",
+            "displayName": "Stake Heal",
+            "category": 3,
+            "baseType": 9,
+            "rarity": 0,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "stake_refund",
+            "displayName": "Stake Refund",
+            "category": 4,
+            "baseType": 9,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "stake_strike",
+            "displayName": "Stake Strike",
+            "category": 0,
+            "baseType": 9,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "stasis_field",
+            "displayName": "Stasis Field",
+            "category": 2,
+            "baseType": 6,
+            "rarity": 0,
+            "targeting": 5,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "status_resistance",
+            "displayName": "Status Resistance",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "stone_barrage",
+            "displayName": "Stone Barrage",
+            "category": 0,
+            "baseType": 3,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 20,
+            "apCost": 3,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 3,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "streamlined_flow",
+            "displayName": "Streamlined Flow",
+            "category": 4,
+            "baseType": 10,
+            "rarity": 2,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "surge_recovery",
+            "displayName": "Surge Recovery",
+            "category": 3,
+            "baseType": 7,
+            "rarity": 1,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "SUP",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "sustain_regen",
+            "displayName": "Sustain Regen",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "system_reset",
+            "displayName": "System Reset",
+            "category": 2,
+            "baseType": 4,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "team_buffer",
+            "displayName": "Team Buffer",
+            "category": 3,
+            "baseType": 13,
+            "rarity": 0,
+            "targeting": 3,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 3,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "AOE",
+                "SUP"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "thread_lock",
+            "displayName": "Thread Lock",
+            "category": 2,
+            "baseType": 11,
+            "rarity": 2,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "ThreadLock",
+                    "duration": 1,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "transaction_tax",
+            "displayName": "Transaction Tax",
+            "category": 2,
+            "baseType": 2,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "turn_start_ap_gain",
+            "displayName": "Turn Start AP Gain",
+            "category": 4,
+            "baseType": 0,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "PAS"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "unstable_code",
+            "displayName": "Unstable Code",
+            "category": 4,
+            "baseType": 12,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 0,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "PAS",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "vapor_barrier",
+            "displayName": "Vapor Barrier",
+            "category": 3,
+            "baseType": 2,
+            "rarity": 1,
+            "targeting": 2,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "SUP",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "verification_lock",
+            "displayName": "Verification Lock",
+            "category": 2,
+            "baseType": 4,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "FUD",
+                    "duration": 2,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "viral_surge",
+            "displayName": "Viral Surge",
+            "category": 2,
+            "baseType": 14,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "volatile_shot",
+            "displayName": "Volatile Shot",
+            "category": 1,
+            "baseType": 2,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 95,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "voltage_rush",
+            "displayName": "Voltage Rush",
+            "category": 2,
+            "baseType": 7,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "Overleveraged",
+                    "duration": 2,
+                    "chanceBasisPoints": 2500
+                }
+            ]
+        },
+        {
+            "moveId": "wildcard_swap",
+            "displayName": "Wildcard Swap",
+            "category": 2,
+            "baseType": 14,
+            "rarity": 0,
+            "targeting": 0,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 2,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "yield_cycle",
+            "displayName": "Yield Cycle",
+            "category": 2,
+            "baseType": 9,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "UTIL"
+            ],
+            "statusEffects": [
+                {
+                    "statusId": "Yield",
+                    "duration": 3,
+                    "chanceBasisPoints": 10000
+                }
+            ]
+        },
+        {
+            "moveId": "yield_spike",
+            "displayName": "Yield Spike",
+            "category": 0,
+            "baseType": 9,
+            "rarity": 1,
+            "targeting": 0,
+            "contactType": 0,
+            "power": 85,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "APMAN",
+                "DMG",
+                "TRIG"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "zip_step",
+            "displayName": "Zip Step",
+            "category": 2,
+            "baseType": 10,
+            "rarity": 0,
+            "targeting": 4,
+            "contactType": 2,
+            "power": 0,
+            "apCost": 1,
+            "accuracy": 0,
+            "hitCountMin": 1,
+            "hitCountMax": 1,
+            "rechargeTurns": 0,
+            "tags": [
+                "UTIL"
+            ],
+            "statusEffects": []
+        },
+        {
+            "moveId": "zipped_strikes",
+            "displayName": "Zipped Strikes",
+            "category": 1,
+            "baseType": 10,
+            "rarity": 1,
+            "targeting": 0,
+            "contactType": 1,
+            "power": 35,
+            "apCost": 2,
+            "accuracy": 95,
+            "hitCountMin": 2,
+            "hitCountMax": 2,
+            "rechargeTurns": 0,
+            "tags": [
+                "DMG",
+                "MULTI"
+            ],
+            "statusEffects": []
+        }
+    ],
+    "statuses": [
+        {
+            "statusId": "Amplified",
+            "displayName": "Amplified",
+            "statusClass": 3,
+            "origin": 0,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Anchored",
+            "displayName": "Anchored",
+            "statusClass": 3,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "BacklashType",
+            "displayName": "Backlash[Type]",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "BotSwarm",
+            "displayName": "Bot Swarm",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Bridged",
+            "displayName": "Bridged",
+            "statusClass": 3,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "BridgedOut",
+            "displayName": "Bridged Out",
+            "statusClass": 1,
+            "origin": 1,
+            "defaultDuration": 0,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Broadcast",
+            "displayName": "Broadcast",
+            "statusClass": 3,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "BurnedTokens",
+            "displayName": "Burned Tokens",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "CascadeFailure",
+            "displayName": "Cascade Failure",
+            "statusClass": 2,
+            "origin": 0,
+            "defaultDuration": 0,
+            "counterThreshold": 3,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "CompressedData",
+            "displayName": "Compressed Data",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Corroded",
+            "displayName": "Corroded",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Crashed",
+            "displayName": "Crashed",
+            "statusClass": 1,
+            "origin": 0,
+            "defaultDuration": 0,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "DamageIntercept",
+            "displayName": "Damage Intercept",
+            "statusClass": 3,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Defueled",
+            "displayName": "Defueled",
+            "statusClass": 1,
+            "origin": 0,
+            "defaultDuration": 0,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Drained",
+            "displayName": "Drained",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": -1
+        },
+        {
+            "statusId": "DustStorm",
+            "displayName": "Dust Storm",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Dusted",
+            "displayName": "Dusted",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "EncryptedSeal",
+            "displayName": "Encrypted Seal",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Evasive",
+            "displayName": "Evasive",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "ExploitMark",
+            "displayName": "Exploit Mark",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "FOMO",
+            "displayName": "FOMO",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 1000,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "FUD",
+            "displayName": "FUD",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "FiftyOnePercentAttacked",
+            "displayName": "51% Attacked",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Firewalled",
+            "displayName": "Firewalled",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "ForkedChain",
+            "displayName": "Forked Chain",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "FrozenAssets",
+            "displayName": "Frozen Assets",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "GasSpike",
+            "displayName": "Gas Spike",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "GlitchedMind",
+            "displayName": "Glitched Mind",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "HODLed",
+            "displayName": "HODLed",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Halted",
+            "displayName": "Halted",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": true,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "HypedTypeCoating",
+            "displayName": "Hyped [Type] Coating",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Immovable",
+            "displayName": "Immovable",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Isolated",
+            "displayName": "Isolated",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Jammed",
+            "displayName": "Jammed",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Leaked",
+            "displayName": "Leaked",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 1000,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "LiquidityPump",
+            "displayName": "Liquidity Pump",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "MEVExtracted",
+            "displayName": "MEV Extracted",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": -1
+        },
+        {
+            "statusId": "MemeSurge",
+            "displayName": "Meme Surge",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Narrowcast",
+            "displayName": "Narrowcast",
+            "statusClass": 3,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "NodeRelay",
+            "displayName": "Node Relay",
+            "statusClass": 1,
+            "origin": 1,
+            "defaultDuration": 0,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Offline",
+            "displayName": "Offline",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": true,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Overclocked",
+            "displayName": "Overclocked",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Overleveraged",
+            "displayName": "Overleveraged",
+            "statusClass": 3,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Pumped",
+            "displayName": "Pumped",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 1
+        },
+        {
+            "statusId": "Recharging",
+            "displayName": "Recharging",
+            "statusClass": 3,
+            "origin": 1,
+            "defaultDuration": 0,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Reinforced",
+            "displayName": "Reinforced",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Rekt",
+            "displayName": "Rekt",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Relay",
+            "displayName": "Relay",
+            "statusClass": 3,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Rugged",
+            "displayName": "Rugged",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 1000,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "ShardPartition",
+            "displayName": "Shard Partition",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Siphoned",
+            "displayName": "Siphoned",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Staggered",
+            "displayName": "Staggered",
+            "statusClass": 3,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Surging",
+            "displayName": "Surging",
+            "statusClass": 3,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "ThreadLock",
+            "displayName": "Thread Lock",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 1,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "TypeCoating",
+            "displayName": "[Type] Coating",
+            "statusClass": 0,
+            "origin": 0,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Unsealed",
+            "displayName": "Unsealed",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 2,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 0
+        },
+        {
+            "statusId": "Yield",
+            "displayName": "Yield",
+            "statusClass": 0,
+            "origin": 1,
+            "defaultDuration": 3,
+            "counterThreshold": 0,
+            "preventsAction": false,
+            "endOfTurnDamageBasisPoints": 0,
+            "endOfTurnApChange": 1
+        }
+    ],
+    "rulesets": [
+        {
+            "rulesetId": "pve_default",
+            "displayName": "PvE Default",
+            "configVersion": 1,
+            "allowedTypes": [],
+            "requiredMoveIds": [],
+            "bannedMoveIds": []
+        },
+        {
+            "rulesetId": "pvp_ranked",
+            "displayName": "PvP Ranked",
+            "configVersion": 1,
+            "allowedTypes": [],
+            "requiredMoveIds": [],
+            "bannedMoveIds": []
+        }
+    ],
+    "encounters": [
+        {
+            "encounterId": "intro_first_creature",
+            "zoneId": "",
+            "battleKind": 3,
+            "captureEnabled": false,
+            "capturePolicy": 2,
+            "weight": 1,
+            "targets": [
+                {
+                    "targetId": "intro_first_creature:0",
+                    "speciesId": "validape",
+                    "displayName": "Validape",
+                    "visualVariantId": "hockey_variant",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "elite",
+                    "currentHp": 127,
+                    "maxHp": 127,
+                    "legacyBaseCaptureRate": 45,
+                    "stars": 0,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "baseline_striker",
+                    "startsActive": true
+                }
+            ]
+        },
+        {
+            "encounterId": "zone:loomville_grass:caw",
+            "zoneId": "loomville_grass",
+            "battleKind": 0,
+            "captureEnabled": true,
+            "capturePolicy": 0,
+            "weight": 30,
+            "targets": [
+                {
+                    "targetId": "loomville_grass:caw",
+                    "speciesId": "caw",
+                    "displayName": "Caw",
+                    "visualVariantId": "base",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "standard",
+                    "currentHp": 78,
+                    "maxHp": 78,
+                    "legacyBaseCaptureRate": 40,
+                    "stars": 0,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "baseline_shot",
+                    "startsActive": true
+                }
+            ]
+        },
+        {
+            "encounterId": "zone:loomville_grass:ghosty",
+            "zoneId": "loomville_grass",
+            "battleKind": 0,
+            "captureEnabled": true,
+            "capturePolicy": 0,
+            "weight": 20,
+            "targets": [
+                {
+                    "targetId": "loomville_grass:ghosty",
+                    "speciesId": "ghosty",
+                    "displayName": "Ghosty",
+                    "visualVariantId": "base",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "standard",
+                    "currentHp": 82,
+                    "maxHp": 82,
+                    "legacyBaseCaptureRate": 55,
+                    "stars": 0,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "baseline_striker",
+                    "startsActive": true
+                }
+            ]
+        },
+        {
+            "encounterId": "zone:loomville_grass:kreechank",
+            "zoneId": "loomville_grass",
+            "battleKind": 0,
+            "captureEnabled": true,
+            "capturePolicy": 0,
+            "weight": 50,
+            "targets": [
+                {
+                    "targetId": "loomville_grass:kreechank",
+                    "speciesId": "kreechank",
+                    "displayName": "Kreechank",
+                    "visualVariantId": "base",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "standard",
+                    "currentHp": 104,
+                    "maxHp": 104,
+                    "legacyBaseCaptureRate": 55,
+                    "stars": 0,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "baseline_striker",
+                    "startsActive": true
+                }
+            ]
+        },
+        {
+            "encounterId": "zone:loomville_grass:snek",
+            "zoneId": "loomville_grass",
+            "battleKind": 0,
+            "captureEnabled": true,
+            "capturePolicy": 0,
+            "weight": 20,
+            "targets": [
+                {
+                    "targetId": "loomville_grass:snek",
+                    "speciesId": "snek",
+                    "displayName": "Snek",
+                    "visualVariantId": "base",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "standard",
+                    "currentHp": 90,
+                    "maxHp": 90,
+                    "legacyBaseCaptureRate": 35,
+                    "stars": 0,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "baseline_shot",
+                    "startsActive": true
+                }
+            ]
+        },
+        {
+            "encounterId": "zone:starter_grove_grass:cinislug",
+            "zoneId": "starter_grove_grass",
+            "battleKind": 0,
+            "captureEnabled": true,
+            "capturePolicy": 0,
+            "weight": 10,
+            "targets": [
+                {
+                    "targetId": "starter_grove_grass:cinislug",
+                    "speciesId": "cinislug",
+                    "displayName": "Cinislug",
+                    "visualVariantId": "base",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "standard",
+                    "currentHp": 115,
+                    "maxHp": 115,
+                    "legacyBaseCaptureRate": 60,
+                    "stars": 0,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "accuracy_focus",
+                    "startsActive": true
+                }
+            ]
+        },
+        {
+            "encounterId": "zone:starter_grove_grass:gilarime",
+            "zoneId": "starter_grove_grass",
+            "battleKind": 0,
+            "captureEnabled": true,
+            "capturePolicy": 0,
+            "weight": 40,
+            "targets": [
+                {
+                    "targetId": "starter_grove_grass:gilarime",
+                    "speciesId": "gilarime",
+                    "displayName": "Gilarime",
+                    "visualVariantId": "base",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "standard",
+                    "currentHp": 132,
+                    "maxHp": 132,
+                    "legacyBaseCaptureRate": 55,
+                    "stars": 0,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "accuracy_focus",
+                    "startsActive": true
+                }
+            ]
+        },
+        {
+            "encounterId": "zone:starter_grove_grass:kreechank",
+            "zoneId": "starter_grove_grass",
+            "battleKind": 0,
+            "captureEnabled": true,
+            "capturePolicy": 0,
+            "weight": 15,
+            "targets": [
+                {
+                    "targetId": "starter_grove_grass:kreechank",
+                    "speciesId": "kreechank",
+                    "displayName": "Kreechank",
+                    "visualVariantId": "base",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "standard",
+                    "currentHp": 104,
+                    "maxHp": 104,
+                    "legacyBaseCaptureRate": 35,
+                    "stars": 1,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "accuracy_focus",
+                    "startsActive": true
+                }
+            ]
+        },
+        {
+            "encounterId": "zone:starter_grove_grass:validape",
+            "zoneId": "starter_grove_grass",
+            "battleKind": 0,
+            "captureEnabled": true,
+            "capturePolicy": 0,
+            "weight": 35,
+            "targets": [
+                {
+                    "targetId": "starter_grove_grass:validape",
+                    "speciesId": "validape",
+                    "displayName": "Validape",
+                    "visualVariantId": "base",
+                    "mutationId": "none",
+                    "mutated": false,
+                    "entangled": false,
+                    "entangledTypeId": "none",
+                    "difficultyId": "standard",
+                    "currentHp": 127,
+                    "maxHp": 127,
+                    "legacyBaseCaptureRate": 50,
+                    "stars": 0,
+                    "level": 1,
+                    "ivs": [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "knownMoveId": "accuracy_focus",
+                    "startsActive": true
+                }
+            ]
+        }
+    ]
+}

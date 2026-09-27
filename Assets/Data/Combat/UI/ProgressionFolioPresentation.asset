@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3069b9f5517aee04f8224b8325977fd2, type: 3}
+  m_Name: ProgressionFolioPresentation
+  m_EditorClassIdentifier: 
+  materializeSeconds: 0.34
+  anticipationSeconds: 0.32
+  masterySweepSeconds: 0.8
+  minimumUnskippableSeconds: 0.45
+  resolvedHoldSeconds: 0.65
+  dismissSeconds: 0.18
+  uiGlitchMaterial: {fileID: 2100000, guid: 0b18efc4029d4b099ac7a854f49de011, type: 2}
+  glitchStrengthProperty: _GlitchIntensity
+  folioIssuedClip: {fileID: 8300000, guid: b7df5eae8e629404ba4c6c35322620da, type: 3}
+  noFolioClip: {fileID: 8300000, guid: b7df5eae8e629404ba4c6c35322620da, type: 3}
+  issuanceInterruptedClip: {fileID: 0}
+  backdropColor: {r: 0.035, g: 0.04, b: 0.045, a: 0.92}
+  paperColor: {r: 0.91, g: 0.84, b: 0.68, a: 1}
+  inkColor: {r: 0.13, g: 0.105, b: 0.075, a: 1}
+  neutralSealColor: {r: 0.39, g: 0.32, b: 0.22, a: 1}
+  interruptedColor: {r: 0.55, g: 0.18, b: 0.14, a: 1}
+  rarityColors:
+  - rarity: 0
+    color: {r: 0.42, g: 0.36, b: 0.27, a: 1}
+  - rarity: 1
+    color: {r: 0.22, g: 0.45, b: 0.29, a: 1}
+  - rarity: 2
+    color: {r: 0.18, g: 0.36, b: 0.58, a: 1}
+  - rarity: 3
+    color: {r: 0.48, g: 0.25, b: 0.58, a: 1}
+  - rarity: 4
+    color: {r: 0.68, g: 0.39, b: 0.12, a: 1}
+  - rarity: 5
+    color: {r: 0.61, g: 0.17, b: 0.2, a: 1}
+  starRecordedTemplate: STAR {0} RECORDED
+  masteryRecorded: FIVE-STAR MASTERY RECORDED
+  issuedHeading: FOLIO ISSUED
+  noFolioHeading: NO FOLIO ISSUED
+  interruptedHeading: ISSUANCE INTERRUPTED
+  pendingHeading: ISSUANCE PENDING
+  noFolioBody: No Known Move was learned during this milestone.
+  recordEnteredTemplate: "The milestone has been entered into {0}\u2019s record."
+  firstCopyTemplate: Fresh copy added to Known Moves.
+  duplicateCopyTemplate: "Additional copy added to Known Moves \xB7 Owned \xD7{0}"
+  cardSlideSound: {fileID: 11400000, guid: c9e50b3d6f415ca8d2037e1f51926430, type: 2}
+  cardRiserSound: {fileID: 11400000, guid: 7c4e9a2b18d64f0a9e3c5b71d8a0462f, type: 2}
+  cardPrintSound: {fileID: 0}
+  libraryCardFront: {fileID: 21300000, guid: 4dcb9b02ef422af478649db50b25e8b7, type: 3}
+  libraryCardOutline: {fileID: 21300000, guid: 96c4826d2a24a854a9bcd0882837c57f, type: 3}
+  riserHoldSeconds: 1.7
+  settleOvershoot: 1.12

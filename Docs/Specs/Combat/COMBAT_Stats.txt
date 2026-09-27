@@ -1,0 +1,91 @@
+COMBAT_02B_StatsStagesIVs_v1.2
+
+PROGRESSION ALIGNMENT (Economy v1 / XP spec):
+- Section 5 "Levels 1-100" is DEPRECATED as the primary progression model.
+- Stars (0-5) + rebirth are now authoritative. See ECONOMY_01_EconomyAndProgression_v1.md.
+- Combat power scaling should use star count (or star-derived multiplier) instead of numeric level.
+- IVs and stage system remain unchanged.
+
+REVISION NOTES (v1.2 lockdown):
+- Clarified stage guardrails: auto passive vs active move vs chemistry caps
+- Resolved ambiguity flagged in COMBAT_07 §1.3-C
+
+0. Purpose
+Defines:
+- core stats
+- derived stats (Acc/Eva/Crit)
+- IV and level scaling
+- stage system and guardrails
+
+1. Core Stats (6)
+MaxHP, MeleeAtk, MeleeDef, RangedAtk, RangedDef, Speed
+
+2. Derived Stats
+Accuracy (Acc), Evasion (Eva), CritRate, CritMultiplier (default 1.5x)
+
+3. Species Ownership
+Stats are defined per Chainling species, not per type.
+Species may have 1–2 native types.
+Rare variants may alter types without altering baseline stat tables.
+
+4. IVs
+- Per core stat (base): -5 to +5
+- independent rolls
+- may be deterministic per encounter seed if needed
+- Rebirth IV bonus: 0 to +5 per stat (player allocates +1 per rebirth, max 5 rebirths)
+- Effective IV per stat = base_iv + rebirth_bonus
+- Total effective IV range per stat: -5 to +10
+- Rebirth bonuses stored in rebirth_iv_bonuses (jsonb array); base IVs in ivs
+
+5. Progression (Stars Replace Levels)
+DEPRECATED: Levels 1–100 and LevelMult. Use star-based scaling instead.
+
+Star-based multiplier (authoritative):
+- Star count: 0–5 (plus rebirth count for long-term scaling)
+- Power scaling: use (StarCount + 1) or equivalent so 0 stars = baseline, 5 stars = 6x scalar
+- Formula: StarMult = 1 + (StarCount * 0.2)  [example: 0 stars = 1.0, 5 stars = 2.0]
+- Rebirth adds permanent IV points; XP requirements scale by 1.18^rebirth_count
+- On rebirth: StarMult resets (stars go to 0); IV gains from rebirth persist permanently
+- Effective stat formula: basePlusIv = baseValue + baseIv + rebirthBonus; then apply LevelMult/StarMult
+
+Legacy reference (do not use for new systems):
+- Old LevelMult = (Level / 100 * 2.5) + 1
+
+6. Stage System (Global)
+Stage range: -6 to +6
+Multiplier:
+- Positive: (2 + stage) / 2
+- Negative: 2 / (2 + abs(stage))
+
+Guardrails (v1.2 — Clarified):
+
+6.1 Automatic/Passive Stage Drain
+- Passive effects that trigger at End of Turn or Start of Turn:
+  capped at -1 per stat per turn
+- Example: Automated Pressure (Bot passive) = -1 random stage to foe
+- Corroded (ChemistryOnly) = -1 Def at End of Turn
+- This cap prevents passive stage spirals
+
+6.2 Active Move Stage Changes
+- Inscriptions used during the Action Phase may apply up to -2 stages
+  per stat per use
+- Example: Cold Snap (Frozen) = -2 Speed; Defense Corrupt (Glitched) = -2 Def
+- These are intentional "special cases" in the original guardrail language
+
+6.3 Chemistry-Only Stage Changes
+- ChemistryOnly effects (produced by chemistry resolver) may apply up to
+  -3 stages per stat per instance
+- Example: Shattered = Def -1 plus capped current-HP chip (Instant); Dusted = Eva -3, Spd -3 (Duration)
+- These are the most extreme stage swings, gated by chemistry resolution
+
+6.4 Stage Change Summary Table
+| Source Type          | Max Per Stat Per Event | Examples                    |
+|----------------------|------------------------|-----------------------------|
+| Passive (auto/turn)  | -1                     | Automated Pressure, Corroded|
+| Active (inscription) | -2                     | Cold Snap, Defense Corrupt  |
+| Chemistry-Only       | -3                     | Dusted; Shattered is Def -1, FOMO is Atk +1  |
+
+NOTE: Positive stage changes follow the same tier limits but are less
+restrictive since buffs can be countered by debuffs or cleansed.
+
+END

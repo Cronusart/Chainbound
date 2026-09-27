@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_courier_zeb_sequence
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_courier_zeb_sequence
+  startCheckpointId: coffee_zeb_idle
+  safeResumeLabel: coffee_zeb_idle
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 1
+  autoStartQuestId: coffee_and_beer
+  autoStartLifecycleMask: 8
+  autoStartSkipWorldFlagKey: world.coffee.zeb_talked
+  autoStartRequiredWorldFlagKey: world.loomville_mart.open
+  steps:
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0101, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0102, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0103, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0104, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0105, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0106, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0107, type: 2}
+  - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0108, type: 2}

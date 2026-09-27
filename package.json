@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "bs58": "^6.0.0",
+    "supabase": "^2.98.1",
+    "tweetnacl": "^1.0.3"
+  }
+}

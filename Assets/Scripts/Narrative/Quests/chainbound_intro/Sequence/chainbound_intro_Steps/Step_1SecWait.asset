@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0de79633959f57e40a0f6aad6da0fdd6, type: 3}
+  m_Name: Step_1SecWait
+  m_EditorClassIdentifier: 
+  stepName: 1sec_wait
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 4324c49a-3823-4bc7-b0d6-47aaa5ba2052
+  durationSeconds: 1
+  useUnscaledTime: 1

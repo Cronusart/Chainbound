@@ -1,0 +1,103 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ad21ebe327ffd642afa498460d732e9, type: 3}
+  m_Name: ManualPartyProvider
+  m_EditorClassIdentifier: 
+  roster:
+  - speciesId: cinislug
+    displayName: WAFFLEZ
+    stars: 1
+    rebirthCount: 0
+    masteryXp: 0
+    evolutionStage: 1
+    visualIdentity:
+      visualVariantId: 
+      auraId: 
+      hudCardVariantId: default
+      partyColumnVariantId: default
+      swapInFxId: default
+      swapOutFxId: default
+      koFxId: none
+      victoryPoseId: 
+      idleStyleId: none
+      idleFlourishId: 
+      meleeAttackStyleId: none
+      rangedAttackStyleId: none
+      hitReactionStyleId: none
+      attackerKoStyleId: none
+    moveIds:
+    - flame_charge
+    modifier1SectionIds:
+    - 
+    modifier2SectionIds:
+    - 
+    ivMaxHP: 2
+    ivMeleeAtk: 0
+    ivMeleeDef: 0
+    ivRangedAtk: -2
+    ivRangedDef: 2
+    ivSpeed: 5
+    pickMaxHP: 0
+    pickMeleeAtk: 0
+    pickMeleeDef: 0
+    pickRangedAtk: 0
+    pickRangedDef: 0
+    pickSpeed: 0
+    isMutated: 0
+    isEntangled: 0
+    currentHp: -1
+  - speciesId: whale
+    displayName: CATALINA
+    stars: 1
+    rebirthCount: 0
+    masteryXp: 0
+    evolutionStage: 1
+    visualIdentity:
+      visualVariantId: 
+      auraId: 
+      hudCardVariantId: default
+      partyColumnVariantId: default
+      swapInFxId: default
+      swapOutFxId: default
+      koFxId: none
+      victoryPoseId: 
+      idleStyleId: none
+      idleFlourishId: 
+      meleeAttackStyleId: none
+      rangedAttackStyleId: none
+      hitReactionStyleId: none
+      attackerKoStyleId: none
+    moveIds:
+    - barrier_wall
+    - baseline_jab
+    modifier1SectionIds:
+    - 
+    - 
+    modifier2SectionIds:
+    - 
+    - 
+    ivMaxHP: 2
+    ivMeleeAtk: 0
+    ivMeleeDef: 0
+    ivRangedAtk: -2
+    ivRangedDef: 2
+    ivSpeed: 5
+    pickMaxHP: 0
+    pickMeleeAtk: 0
+    pickMeleeDef: 0
+    pickRangedAtk: 0
+    pickRangedDef: 0
+    pickSpeed: 0
+    isMutated: 0
+    isEntangled: 0
+    currentHp: -1
+  teamName: Player

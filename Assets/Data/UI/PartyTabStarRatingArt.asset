@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7e4a1b92f8d4e6a9c0d3e5f7a1b2c4d, type: 3}
+  m_Name: PartyTabStarRatingArt
+  m_EditorClassIdentifier: 
+  emptyStar: {fileID: 21300000, guid: d7e494022b7f5e445a5261ca64f3b343, type: 3}
+  filledShimmerFrames:
+  - {fileID: 21300000, guid: 4062cd6bc35f30843a62f83b93e3d403, type: 3}
+  - {fileID: 21300000, guid: 0e1f1a1c92721614f8d270745685915d, type: 3}
+  - {fileID: 21300000, guid: 8923de3a83723164486182ccd77ad9f9, type: 3}
+  - {fileID: 21300000, guid: f6fee3e0248e7ad41b353dba524ec3b0, type: 3}
+  - {fileID: 21300000, guid: 05ed03598b39f9d43bad56e4699b7e58, type: 3}
+  - {fileID: 21300000, guid: b3df7284ea5f0df4c898c903442c3938, type: 3}
+  - {fileID: 21300000, guid: 5914cff24feb124469a8064a128cca73, type: 3}
+  - {fileID: 21300000, guid: dea4c8df6da341a4c93ee003773623d6, type: 3}
+  - {fileID: 21300000, guid: 530e8340021498947919d3f400d5f61b, type: 3}
+  - {fileID: 21300000, guid: 06a0b228811672243ab4a5b48fdc76bb, type: 3}
+  - {fileID: 21300000, guid: 6d7999171f71356459734d7cb081edd5, type: 3}
+  - {fileID: 21300000, guid: fd6b8daa56e5e604d888a04943d95b26, type: 3}
+  - {fileID: 21300000, guid: 9558fa585ae86fb499cd1e7507a5d77e, type: 3}
+  - {fileID: 21300000, guid: 36ead87d6c114e141b628e65eb9c450e, type: 3}
+  - {fileID: 21300000, guid: a01f2e45d7d9eaa48ad31c01300cc426, type: 3}
+  - {fileID: 21300000, guid: a2100c2d4368d1642846e745d11adbb5, type: 3}
+  cellSize: 32
+  spacing: 8
+  fps: 10
+  staggerSeconds: 0.04

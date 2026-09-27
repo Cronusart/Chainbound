@@ -1,0 +1,17 @@
+SpeciesId,LearnableMoves,ExclusiveMoves,FlagshipMove,InitialMoves
+validape,relay_packet|hub_heal|ap_router|signal_redirect|network_sync|coordinated_shot|extend_protocol|network_response|overflow_reboot|baseline_striker|ap_boost|buff_ally|heal_ally|hammer_sync|pack_rally,hammer_sync|pack_rally,hammer_sync,baseline_striker
+gilarime,cold_snap|lock_assets|stasis_field|ice_wall|frost_shot|hibernate|frost_shards|chilling_retort|crystal_focus|defensive_stance|guard_posture|barrier_wall|baseline_shot|cryo_ray|gecko_guard,cryo_ray|gecko_guard,cryo_ray,baseline_shot
+kitsauto,debuff_script|bot_swarm|mev_extract|automated_pressure|multi_thread_shot|automation_burst|script_loop|recursive_backup|thread_lock|self_repair_protocol|baseline_jab|speed_boost|ap_drain|blade_flurry|fox_feint,blade_flurry|fox_feint,blade_flurry,baseline_jab
+kreechank,baseline_striker|baseline_jab|defense_corrupt|chaos_strike|bug_payoff|crash_routine|glitch_feedback|data_scramble|bug_fix|unstable_code|quick_lunge|chaotic_resonance|error_correction,,bug_payoff
+cinislug,baseline_shot|deflation_mark|scorch_shot|sear_field|ash_guard|finish_burn|ember_shower|flame_charge|ember_wall|cinder_burst|defensive_stance|guard_posture,,ember_wall
+# Wild catch wave — temporary display names except deghoul. ExclusiveMoves empty (non-starters).
+# snek off-type: deep_reap (Mined) — only baseline ranged lifesteal; Staked has no native drain DMG.
+snek,yield_cycle|stake_heal|compound_guard|ap_reserve|patience_passive|compound_returns|stake_refund|baseline_shot|heal_ally|sustain_regen|speed_boost|evasion_maneuver|deep_reap,,stake_heal
+# whale: Compressed soft-wall soak. Flagship barrier_wall (wired). Off-type hibernate (Frozen) for 25% self-heal.
+whale,lean_hit|compression_burst|compression_trade|risk_marker|streamlined_flow|barrier_wall|damage_intercept|defensive_stance|defensive_reflex|sustain_regen|emergency_recovery|hibernate,,barrier_wall
+lad,isolation_tool|shard_partition|field_split|parallel_passive|baseline_jab|baseline_striker|refined_striker|quick_lunge|power_surge|defense_break|desperation_surge|on_hit_momentum,,refined_striker
+ghosty,verification_lock|cipher_shot|key_rotation|firewall_passive|memory_leak|phantom_hack|cipher_burst|proof_shield|ap_drain|baseline_shot|speed_boost|accuracy_focus,,memory_leak
+deghoul,fuel_surge|transaction_tax|slipstream|gas_cloud|fee_collector|vapor_barrier|ap_siphon|baseline_striker|refined_striker|baseline_jab|power_surge|momentum_shift,,fuel_surge
+caw,fork_split|voltage_rush|risk_spike|pivot_line|charged_relay|surge_recovery|baseline_shot|refined_shot|baseline_volley|speed_boost|ap_boost|buff_ally|rally_cry,,fork_split
+# Story boss — uncatchable. Exclusive kit stays on cofi_lootwak.
+cofi_lootwak,,bean_sip,bean_sip,bean_sip|civet_beam

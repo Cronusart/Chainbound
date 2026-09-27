@@ -1,0 +1,122 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Ghosty
+  m_EditorClassIdentifier: 
+  speciesId: ghosty
+  displayName: Ghosty
+  description: Lantern-bearing night watcher. Encrypted ranged controller that drains
+    AP to settle on-chain trauma.
+  primaryType: 4
+  secondaryType: 0
+  baseMaxHP: 82
+  baseMeleeAtk: 32
+  baseMeleeDef: 40
+  baseRangedAtk: 70
+  baseRangedDef: 48
+  baseSpeed: 68
+  maxEvolutionStages: 1
+  learnableMoves:
+  - {fileID: 11400000, guid: 1560ace71124d0a48975048465a725ac, type: 2}
+  - {fileID: 11400000, guid: 001a5f59ac27fe84a9ec9d2944c40ac6, type: 2}
+  - {fileID: 11400000, guid: 1af0eff56c8612c439f97364b1057771, type: 2}
+  - {fileID: 11400000, guid: af5b19a8ed486c9418664912d2a89b60, type: 2}
+  - {fileID: 11400000, guid: 171731845d128d84a8249a0d6320b194, type: 2}
+  - {fileID: 11400000, guid: 81b5d335089f4e54b858933f3dd4b005, type: 2}
+  - {fileID: 11400000, guid: 8aee03af1753a614baf76c392da14ce4, type: 2}
+  - {fileID: 11400000, guid: 79d7fc5a58472db4cb99f50a29b68c32, type: 2}
+  - {fileID: 11400000, guid: d200d2b41f662e84c85e2194c15bdc81, type: 2}
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  - {fileID: 11400000, guid: ab771cef5015ba94e892a385f10a944d, type: 2}
+  - {fileID: 11400000, guid: 77f3f01373f3cd74ca0e10e78f847cb0, type: 2}
+  learnLevels: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  exclusiveMoves: []
+  flagshipMove: {fileID: 11400000, guid: 171731845d128d84a8249a0d6320b194, type: 2}
+  initialMoves: []
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 1560ace71124d0a48975048465a725ac, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 001a5f59ac27fe84a9ec9d2944c40ac6, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 1af0eff56c8612c439f97364b1057771, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: af5b19a8ed486c9418664912d2a89b60, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 171731845d128d84a8249a0d6320b194, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 81b5d335089f4e54b858933f3dd4b005, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 8aee03af1753a614baf76c392da14ce4, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 79d7fc5a58472db4cb99f50a29b68c32, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: d200d2b41f662e84c85e2194c15bdc81, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: ab771cef5015ba94e892a385f10a944d, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 77f3f01373f3cd74ca0e10e78f847cb0, type: 2}
+    weight: 10
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 0
+  defaultCaptureProfile: 1
+  combatRoleOverride: 8
+  designNotes: 'Wild catch. Encrypted ranged AP drainer. Total base stats: 340. (Distinct
+    from placeholder ghost species.)'

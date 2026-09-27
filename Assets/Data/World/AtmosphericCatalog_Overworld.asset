@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 874f4c053eeb88640b74e4a55ffe5e3a, type: 3}
+  m_Name: AtmosphericCatalog_Overworld
+  m_EditorClassIdentifier: 
+  defaultProfile: {fileID: 11400000, guid: 7bf6134f92decdc4f8a5e6002ab16df1, type: 2}
+  sceneBlendSeconds: 1.2
+  sceneBindings:
+  - sceneId: Loomville
+    profile: {fileID: 11400000, guid: 7bf6134f92decdc4f8a5e6002ab16df1, type: 2}
+  - sceneId: Link1
+    profile: {fileID: 11400000, guid: 7bf6134f92decdc4f8a5e6002ab16df1, type: 2}
+  - sceneId: Jungle
+    profile: {fileID: 11400000, guid: 70c1e362fac1173438a3e23c23860adb, type: 2}

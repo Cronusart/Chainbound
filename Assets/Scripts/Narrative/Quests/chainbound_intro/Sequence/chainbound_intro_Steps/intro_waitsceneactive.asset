@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 367fa2949c8454e478a8482639908fa0, type: 3}
+  m_Name: intro_waitsceneactive
+  m_EditorClassIdentifier: 
+  stepName: waitsceneactive
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: e2f0fd0d-85ce-4879-991a-99702cea1572
+  sceneName: loom_lab
+  timeoutSeconds: 0
+  onTimeoutLabel: 
