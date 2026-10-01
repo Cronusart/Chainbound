@@ -512,5 +512,5 @@ See `Assets/Prefabs/NPCs/Townsperson_A.prefab` for complete example:
 
 ---
 
-For more information, see `NPC_System_Spec.txt` and `SEQUENCE_AUTHORING_GUIDE.md`.
+For more information, see `Docs/Architecture/NPC_System_Spec.txt` and `Docs/Narrative/SEQUENCE_AUTHORING_GUIDE.md`.
 

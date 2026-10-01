@@ -3,7 +3,7 @@
 > **Purpose:** Codex / implementation planning reference for lightweight **wall** presentation (single sprite + DOTween) and correct **attack targeting** when walls/mitigation/barriers are active, bypassed, or broken mid-move.  
 > **Abstract companion:** [COMBAT_WALL_VISUAL_AND_TARGETING_PLAN_v2.md](COMBAT_WALL_VISUAL_AND_TARGETING_PLAN_v2.md) — goal-oriented direction without implementation detail.  
 > **Scope:** Wall-only presentation and resolver→presenter intercept contract. **Does not** change chainling move VFX (`Cast` / `Projectile` / `Impact`), presentation tracks, or `CombatMoveVFX` attack prefabs.  
-> **Status:** Planning only — no implementation yet.  
+> **Status:** The wall presentation this plan describes is in the combat runtime (`CombatWallVisual`, wall intercept tests under `Assets/Scripts/Combat`). Where this plan disagrees with that code, the code wins.  
 > **Terminology:** **Wall** = player-facing label for both `% mitigation windows` and **full-absorb barriers** unless a rule explicitly distinguishes them.
 
 ---
@@ -701,7 +701,7 @@ Document new bypass predicates in `CheckBarrierBypass` and mirror in payload `by
 | Plan | Relationship |
 |------|--------------|
 | [COMBAT_MODIFIER_RESOLVER_AND_POPUP_PLAN.md](COMBAT_MODIFIER_RESOLVER_AND_POPUP_PLAN.md) | Same **structured payload** pattern; barrier bypass modifiers (4.3-b, 4.6-a) must align with `WallInterceptPayload` |
-| [COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md](../Camera/COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md) | Orthogonal — wall popups benefit from sharp overlay |
+| [COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md](../review-unimplemented/Camera/COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md) | Orthogonal — wall popups benefit from sharp overlay |
 | [Combat_VFX_Presentation_Setup_Guide.md](Combat_VFX_Presentation_Setup_Guide.md) | Update wall section only; move/profile tracks stay |
 | [COMBAT_RuntimeFollowups.md](../Specs/Combat/COMBAT_RuntimeFollowups.md) | Multi-hit + barrier interactions |
 

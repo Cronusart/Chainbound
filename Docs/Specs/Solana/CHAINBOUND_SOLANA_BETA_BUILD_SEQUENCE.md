@@ -6,7 +6,7 @@
 **Feature contract:** [`BETA_FEATURE_ALLOWLIST.md`](../../Release/BETA_FEATURE_ALLOWLIST.md)  
 **Store APK gate:** [`SolanaSeekerBeta.md`](../../Release/SolanaSeekerBeta.md)  
 **Audit snapshot:** [`SOLANA_STACK_AUDIT_2026-09-11.md`](../../Reports/SOLANA_STACK_AUDIT_2026-09-11.md)  
-**Escrow spec (step 10 only):** [`PVP_02_Ranked_Escrow_And_Ladder.md`](../../Guides/PVP_02_Ranked_Escrow_And_Ladder.md)  
+**Escrow spec (step 10 only):** [`PVP_02_Ranked_Escrow_And_Ladder.md`](../../review-unimplemented/Guides/PVP_02_Ranked_Escrow_And_Ladder.md)  
 **Taxonomy:** [`CHAINBOUND_SOLANA_ASSET_TAXONOMY.md`](CHAINBOUND_SOLANA_ASSET_TAXONOMY.md)
 
 P0 is not “finish Solana.” It is **make the live program trustworthy, and keep everything else unreachable.** Escrow, Core mint, VRF, and Ephemeral Rollups come after this foundation.

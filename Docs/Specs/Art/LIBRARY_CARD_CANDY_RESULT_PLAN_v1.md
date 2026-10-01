@@ -1,6 +1,6 @@
 # Library Card Candy Result Panel - Cursor Plan (Grok 4.7)
 
-**Status:** Presentation-only. Do **not** flip Unity ownership flags. Do **not** change Stamp Prepare/Execute or on-chain attrs.
+**Status:** Partial. `LibraryCardResultPresenter` and `LibraryCardLayout` are in the client. This file remains the visual contract; do not assume every checklist item is done. Do **not** flip Unity ownership flags. Do **not** change Stamp Prepare/Execute or on-chain attrs.
 **Goal:** Replace `CandyMachinePanel` ResultPanel generic UI with a physical library-card reveal that reuses the existing sequential stamp cadence - and that **looks like the same card** as the NFT/marketplace bake.
 
 Reference screenshot intent (user):

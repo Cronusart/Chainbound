@@ -83,7 +83,7 @@ Then on **MainMenuSequenceController**, assign under **Services**:
 - **Wallet Service** → `SolanaMenuServices`
 - **Profile Service** → `SolanaMenuServices`
 
-See **`MAIN_MENU_SOLANA_WALLET_SETUP_NOTES.md`** for full Bootstrap/SolanaServiceBridge config required for the live adapters to work.
+See [`WALLET_CONNECTION_SETUP.md`](WALLET_CONNECTION_SETUP.md) for Bootstrap/`SolanaServiceBridge` config required for the live adapters to work. The older main-menu wallet notes file is not in this public snapshot.
 
 ---
 

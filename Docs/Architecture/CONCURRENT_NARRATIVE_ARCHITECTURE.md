@@ -1,5 +1,7 @@
 # Concurrent Narrative Quest Sequences — Architecture & Migration
 
+> **Status:** Partial. `SequenceRunner` now hosts one main `SequenceExecution` plus child tracks (`TryStartChildTrack`). Later phases in this file (a separate `SequenceRunnerManager`, compensate/rollback, a quest event queue) are not that class. Where this file disagrees with `Assets/Scripts/Narrative/Sequences/SequenceRunner.cs`, the code wins.
+
 > Reference document for enabling safe concurrent quest/sequence execution.
 > Based on research into Saga pattern, event queues, idempotent consumers, and deterministic simulation.
 

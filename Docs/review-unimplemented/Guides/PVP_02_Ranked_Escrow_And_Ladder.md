@@ -1,9 +1,11 @@
+> **Parked for review.** Yet to implement as a mode. Client wager types exist under `Assets/Scripts/Combat/Runtime/PvP/` and are not a playable ranked flow. No escrow program. The closed-beta client policy does not expose wager services. Review list: [../README.md](../README.md).
+
 # PvP Phase 2 — Ranked Escrow & Competitive Ladder
 
 **Status:** Spec / implementation guide (pre-build)  
 **Audience:** Implementing agents, Unity engineers, Anchor/backend engineers, auditors  
 **Depends on:** Phase 1 dual-sim + matchmaking + forensic hash agreement pipeline  
-**Related:** [`PVP_01_Social_Lobby_And_Casual_Matchmaking.md`](PVP_01_Social_Lobby_And_Casual_Matchmaking.md), [`PVP_03_Tournaments_And_Themed_Brackets.md`](PVP_03_Tournaments_And_Themed_Brackets.md), [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md), [`LEVER_BOARDS_v1.md`](../Specs/Combat/LEVER_BOARDS_v1.md), solana-unity skill, Solana MCP (mandatory for chain work)
+**Related:** [`PVP_01_Social_Lobby_And_Casual_Matchmaking.md`](PVP_01_Social_Lobby_And_Casual_Matchmaking.md), [`PVP_03_Tournaments_And_Themed_Brackets.md`](PVP_03_Tournaments_And_Themed_Brackets.md), [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md), [`LEVER_BOARDS_v1.md`](../../Specs/Combat/LEVER_BOARDS_v1.md), solana-unity skill, Solana MCP (mandatory for chain work)
 
 ---
 
@@ -45,7 +47,7 @@ Add **economic stakes** and **competitive integrity** on top of Phase 1:
 | Ranked loadout | `RankedLoadoutValidator` (no Ordinals; Rune caps via `MAX_RUNES_PER_CHAINLING_RANKED`) |
 | Favor ranked lock | `FavorService.SetRankedLock` — **no callers yet** |
 | Anchor game program | `backend/chainbound_game` — **no escrow instructions**; vaults exist for moves/chainlings but are not wager escrow |
-| Ladder groundwork | `Docs/Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md` |
+| Ladder groundwork | `Docs/review-unimplemented/Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md` |
 | Config stamps | Resolver `ConfigStamp`, battle outcome `config_hash` |
 
 **Note on product semantics:** Current stub models “winner picks one opponent inscription.” Phase 2 ranked may also support **SOL + NFT pool winner-takes-wager** (both stakes minus fee). Spec both paths; implement the path product locks before coding. Default recommendation for v1 ranked: **SOL wager + optional Core Rune stakes**, settle = winner receives SOL pool − fee + chosen/all NFT stakes per match rules encoded on escrow PDA.

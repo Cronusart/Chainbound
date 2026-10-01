@@ -400,7 +400,7 @@ created inline (use the `+` button in the steps list).
 - Place at the dog's bed / starting position
 
 **`[GUARDRAIL]` Computer Monitor â€” `InteractableObject`**
-> This is NOT in the main sequence. Uses the Interactable system (see `Scripts/Interactable/INTERACTABLE_SETUP.md`).
+> This is NOT in the main sequence. Uses the Interactable system (see [`INTERACTABLE_SETUP.md`](INTERACTABLE_SETUP.md)).
 
 - On the monitor/computer GameObject:
   1. Add `Collider` (BoxCollider, Is Trigger = true)

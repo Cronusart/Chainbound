@@ -1,5 +1,7 @@
 # Combat SFX Foundation Plan
 
+> **Status:** The foundation this plan calls for is in the client: `ICombatAudioBridge`, `CombatAudioBridge`, and `CombatSfxOrchestrator`. The later recipe model is parked under `Docs/review-unimplemented/Guides/COMBAT_SFX_ADVANCED_SEQUENCING_PLAN.md`.
+
 ## Purpose
 
 This plan establishes the first shippable layer of battle scene sound effects without trying to solve every sequencing edge case. The goal is to route all combat audio through the existing audio service, keep sounds data-driven, and create stable entry points for universal battle SFX, UI SFX, species SFX, and move SFX.

@@ -1,10 +1,12 @@
+> **Parked for review.** Yet to implement. No lobby or matchmaking types in the Unity scripts. The NGO package is only a manifest dependency. Review list: [../README.md](../README.md).
+
 # PvP Phase 1 — Social Lobby & Casual Matchmaking
 
 **Status:** Spec / implementation guide (pre-build)  
 **Audience:** Implementing agents, Unity engineers, backend engineers  
 **Depends on:** Existing combat determinism (`CombatResolver`, `ConfigStamp`, `forensicHash`), wallet session (`AccountSessionService`), NGO package already in `Packages/manifest.json`  
 **Does not include:** On-chain escrow, ranked rating, tournament brackets (Phases 2–3)  
-**Related:** [`PVP_02_Ranked_Escrow_And_Ladder.md`](PVP_02_Ranked_Escrow_And_Ladder.md), [`PVP_03_Tournaments_And_Themed_Brackets.md`](PVP_03_Tournaments_And_Themed_Brackets.md), [`LEVER_BOARDS_v1.md`](../Specs/Combat/LEVER_BOARDS_v1.md), [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md), [`AssemblyModules.md`](../Architecture/AssemblyModules.md), [`WALLET_CONNECTION_SETUP.md`](../WALLET_CONNECTION_SETUP.md)
+**Related:** [`PVP_02_Ranked_Escrow_And_Ladder.md`](PVP_02_Ranked_Escrow_And_Ladder.md), [`PVP_03_Tournaments_And_Themed_Brackets.md`](PVP_03_Tournaments_And_Themed_Brackets.md), [`LEVER_BOARDS_v1.md`](../../Specs/Combat/LEVER_BOARDS_v1.md), [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md), [`AssemblyModules.md`](../../Architecture/AssemblyModules.md), [`WALLET_CONNECTION_SETUP.md`](../../Guides/WALLET_CONNECTION_SETUP.md)
 
 ---
 
@@ -200,7 +202,7 @@ New board per Rule 11 (lever boards). Own these values **only here**:
 | `maxAppVersionSkew` | Reject mismatched clients |
 | `defaultCasualRulesetId` | Points at `CombatRulesetSO` |
 
-Implement: `ComputeConfigHash()`, `OnValidate()`, `CreateRuntimeDefault()`, register on `BalanceConfigRuntime` / `BalanceConfigService`. Update [`LEVER_BOARDS_v1.md`](../Specs/Combat/LEVER_BOARDS_v1.md) when shipping.
+Implement: `ComputeConfigHash()`, `OnValidate()`, `CreateRuntimeDefault()`, register on `BalanceConfigRuntime` / `BalanceConfigService`. Update [`LEVER_BOARDS_v1.md`](../../Specs/Combat/LEVER_BOARDS_v1.md) when shipping.
 
 Server mirror: `Supabase/functions/_shared/matchmaking_config.ts` + `get_pvp_config` (can start as matchmaking-only; Phase 2 extends with wager fields). Client must refuse to queue if local hash ≠ server hash when server reachable (same pattern as `get_vending_config`).
 
@@ -228,7 +230,7 @@ Use existing MWA stack for connect prompts (`SolanaWalletService`, `MobileWallet
 
 ## 5. Assembly & folder placement (agents)
 
-Follow [`.cursor/rules/project-structure.mdc`](../../.cursor/rules/project-structure.mdc) and [`AssemblyModules.md`](../Architecture/AssemblyModules.md):
+Follow the project-structure rule (not in this public snapshot) and [`AssemblyModules.md`](../../Architecture/AssemblyModules.md):
 
 | Code | Suggested home | Assembly |
 |------|----------------|----------|

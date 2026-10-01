@@ -1,8 +1,10 @@
+> **Parked for review.** Yet to implement. Groundwork only. `RankedLoadoutValidator` exists; there is no season or ladder service. Review list: [../../README.md](../../README.md).
+
 # Competitive Ladder & Seasons — Groundwork v1
 
 **Status:** Groundwork / pre-launch (do not soft-launch ranks until population gates pass)  
 **Date:** 2026-07-21  
-**Related:** [`CHAINLING_PVE_SERVICE_RECORD.md`](CHAINLING_PVE_SERVICE_RECORD.md), [`CHAINLINGS_PARTY_TAB.md`](../UI/CHAINLINGS_PARTY_TAB.md) §5.6, economy / rarity “power ≠ rarity” heuristics
+**Related:** [`CHAINLING_PVE_SERVICE_RECORD.md`](../../../Specs/Combat/CHAINLING_PVE_SERVICE_RECORD.md), [`CHAINLINGS_PARTY_TAB.md`](../../../Specs/UI/CHAINLINGS_PARTY_TAB.md) §5.6, economy / rarity “power ≠ rarity” heuristics
 
 ---
 
@@ -48,7 +50,7 @@ This doc is intentionally **not** a full ranked-PvP ruleset. It locks:
 
 ### 3.1 Career service record (exists today)
 
-Source of truth: [`CHAINLING_PVE_SERVICE_RECORD.md`](CHAINLING_PVE_SERVICE_RECORD.md) columns on `chainlings`.
+Source of truth: [`CHAINLING_PVE_SERVICE_RECORD.md`](../../../Specs/Combat/CHAINLING_PVE_SERVICE_RECORD.md) columns on `chainlings`.
 
 - Lifetime / career dossier numbers (victories, damage dealt/taken, XP earned, etc.).
 - Party Stats summary binds these (§5.6).
@@ -104,7 +106,7 @@ Do not show ladder chrome when any of:
 
 ### 5.3 Party Stats relationship
 
-Per [`CHAINLINGS_PARTY_TAB.md`](../UI/CHAINLINGS_PARTY_TAB.md) §5.6:
+Per [`CHAINLINGS_PARTY_TAB.md`](../../../Specs/UI/CHAINLINGS_PARTY_TAB.md) §5.6:
 
 - Summary ships **without** ranks.
 - Optional later seasoning: append muted `· Top 12%` on damage or victories **only** after materialization + flags.

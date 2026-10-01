@@ -3,7 +3,7 @@
 > **Purpose:** Goal-oriented direction for wall presentation and attack targeting.  
 > **Audience:** Design, Codex planning, implementation leads — use this to align on *why* and *what good looks like* before diving into files.  
 > **Detailed companion:** [COMBAT_WALL_VISUAL_AND_TARGETING_PLAN.md](COMBAT_WALL_VISUAL_AND_TARGETING_PLAN.md) (v1 — concrete audit, contracts, checklists).  
-> **Status:** Direction only — not a task list.
+> **Status:** Direction note. Wall presentation shipped after this was written (`CombatWallVisual`). This file is the goal statement, not a task list.
 
 ---
 

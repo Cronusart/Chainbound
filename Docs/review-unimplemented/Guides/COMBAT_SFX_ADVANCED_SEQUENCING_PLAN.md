@@ -1,3 +1,5 @@
+> **Parked for review.** Yet to implement. Foundation SFX shipped; this recipe/role model did not. Review list: [../README.md](../README.md).
+
 # Combat SFX Advanced Sequencing Plan
 
 ## Purpose

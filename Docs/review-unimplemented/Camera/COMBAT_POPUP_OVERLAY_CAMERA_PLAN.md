@@ -1,3 +1,5 @@
+> **Parked for review.** Yet to implement. No combat popup overlay camera in the client scripts. Review list: [../README.md](../README.md).
+
 # Combat Popup Overlay Camera — Planning Brief
 
 > **Purpose:** Reference document for Codex / implementation planning.  

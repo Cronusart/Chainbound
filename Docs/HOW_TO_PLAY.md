@@ -19,3 +19,4 @@
 ## Notes
 - Devnet + RPC config must be set before live-chain actions.
 - If blockchain services are unavailable, use stub/demo mode for gameplay iteration.
+- Mechanic-by-mechanic doc map: [INDEX.md](INDEX.md).

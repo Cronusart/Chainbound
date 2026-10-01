@@ -1,9 +1,11 @@
+> **Parked for review.** Yet to implement. No tournament or bracket code. Review list: [../README.md](../README.md).
+
 # PvP Phase 3 — Tournaments & Themed Brackets
 
 **Status:** Spec / implementation guide (pre-build)  
 **Audience:** Implementing agents, Unity engineers, backend/Anchor engineers, designers  
 **Depends on:** Phase 1 dual-sim + matchmaking; Phase 2 escrow + referee settle (pool escrow extends match escrow)  
-**Related:** [`PVP_01_Social_Lobby_And_Casual_Matchmaking.md`](PVP_01_Social_Lobby_And_Casual_Matchmaking.md), [`PVP_02_Ranked_Escrow_And_Ladder.md`](PVP_02_Ranked_Escrow_And_Ladder.md), [`CombatRulesetSO`](../../Assets/Scripts/Combat/Runtime/ScriptableObjects/CombatRulesetSO.cs), [`LEVER_BOARDS_v1.md`](../Specs/Combat/LEVER_BOARDS_v1.md), [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md)
+**Related:** [`PVP_01_Social_Lobby_And_Casual_Matchmaking.md`](PVP_01_Social_Lobby_And_Casual_Matchmaking.md), [`PVP_02_Ranked_Escrow_And_Ladder.md`](PVP_02_Ranked_Escrow_And_Ladder.md), [`CombatRulesetSO`](../../../Assets/Scripts/Combat/Runtime/ScriptableObjects/CombatRulesetSO.cs), [`LEVER_BOARDS_v1.md`](../../Specs/Combat/LEVER_BOARDS_v1.md), [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md)
 
 ---
 
