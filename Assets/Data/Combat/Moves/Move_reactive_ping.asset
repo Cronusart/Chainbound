@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: reactive_ping
   displayName: Reactive Ping
-  description: Passive - when an enemy misses ping it for 5% MaxHP damage.
+  description: Passive - a miss deals 5% MaxHP to the attacker.
   category: 4
   baseType: 0
   rarity: 0
@@ -117,6 +117,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

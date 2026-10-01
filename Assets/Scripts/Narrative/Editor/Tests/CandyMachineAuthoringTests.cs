@@ -716,6 +716,188 @@ public sealed class CandyMachineAuthoringTests
         }
     }
 
+    [Test]
+    public void Prefab_ModePickHidesSlotsWithCanvasGroupsNotDeactivation()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CandyMachineAuthoring.PrefabPath);
+        Assert.That(prefab, Is.Not.Null);
+        const string body = "SafeAreaPanel/SafeContent/BodyRow";
+        CandyMachineScreen screen = prefab.GetComponent<CandyMachineScreen>();
+        SerializedObject serialized = new SerializedObject(screen);
+
+        foreach ((string slot, string field) in new[]
+        {
+            ("Slot_Browse", "slotBrowseGroup"),
+            ("Slot_Detail", "slotDetailGroup"),
+        })
+        {
+            Transform slotTransform = prefab.transform.Find($"{body}/{slot}");
+            Assert.That(slotTransform, Is.Not.Null, slot);
+            Assert.That(slotTransform.gameObject.activeSelf, Is.True, $"{slot} must stay active so BodyRow keeps its flex widths.");
+            CanvasGroup group = slotTransform.GetComponent<CanvasGroup>();
+            Assert.That(group, Is.Not.Null, slot);
+            Assert.That(serialized.FindProperty(field).objectReferenceValue, Is.SameAs(group), field);
+            LayoutElement layout = slotTransform.GetComponent<LayoutElement>();
+            Assert.That(layout, Is.Not.Null, slot);
+            Assert.That(layout.ignoreLayout, Is.False, $"{slot} must keep its BodyRow flex share.");
+        }
+
+        Assert.That(prefab.transform.Find($"{body}/Slot_Mode").GetComponent<CanvasGroup>(), Is.Null, "Mode column is never hidden.");
+        Assert.That(
+            serialized.FindProperty("modeColumnRoot").objectReferenceValue,
+            Is.SameAs(prefab.transform.Find($"{ModePath}")));
+        Assert.That(CandyMachineScreen.ModePickScale, Is.EqualTo(1.25f).Within(0.001f));
+    }
+
+    [Test]
+    public void Prefab_ModeTabsReadRollAndStamp()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CandyMachineAuthoring.PrefabPath);
+        Assert.That(prefab, Is.Not.Null);
+        Assert.That(prefab.transform.Find($"{ModePath}/ModeTabs/FolioTab/Label").GetComponent<TMP_Text>().text, Is.EqualTo("ROLL"));
+        Assert.That(prefab.transform.Find($"{ModePath}/ModeTabs/StampTab/Label").GetComponent<TMP_Text>().text, Is.EqualTo("STAMP"));
+        Assert.That(prefab.transform.Find($"{DetailPath}/ButtonRow/PrimaryButton/Label").GetComponent<TMP_Text>().text, Is.EqualTo("ROLL"));
+
+        TMP_Text[] labels = prefab.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            string text = labels[i].text.ToUpperInvariant();
+            Assert.That(text, Does.Not.Contain("FOLIO"), labels[i].name);
+            Assert.That(text, Does.Not.Contain("GET KNOWN"), labels[i].name);
+        }
+    }
+
+    [Test]
+    public void RollPrimaryLabel_InsufficientRamMatchesStamp()
+    {
+        Assert.That(CandyMachineScreen.ResolveRollPrimaryLabel(true), Is.EqualTo("ROLL"));
+        Assert.That(CandyMachineScreen.ResolveRollPrimaryLabel(false), Is.EqualTo("INSUFFICIENT RAM"));
+    }
+
+    [Test]
+    public void Screen_RollWithNoRamGraysPrimary()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CandyMachineAuthoring.PrefabPath);
+        GameObject host = Object.Instantiate(prefab);
+        try
+        {
+            CandyMachineScreen screen = host.GetComponent<CandyMachineScreen>();
+            Assert.That(screen.Open(), Is.True);
+            InvokePrivate(screen, "SetMode", CandyMachineMode.GetKnown);
+            Assert.That(screen.RequiredKnownRam, Is.GreaterThan(0));
+            Assert.That(screen.DisplayRamBalance, Is.LessThan(screen.RequiredKnownRam));
+
+            Button primary = host.transform.Find($"{DetailPath}/ButtonRow/PrimaryButton").GetComponent<Button>();
+            Assert.That(primary.interactable, Is.False);
+            Assert.That(primary.GetComponentInChildren<TMP_Text>(true).text, Is.EqualTo("INSUFFICIENT RAM"));
+            Assert.That(primary.GetComponent<PlayerMenuChromeButtonVisual>().IsSelected, Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(host);
+        }
+    }
+
+    [Test]
+    public void StampPrimaryLabel_LocalConfirmThenPreparingThenStamp()
+    {
+        Assert.That(Label(moveSelected: false), Is.EqualTo("SELECT A MOVE"));
+        Assert.That(Label(moveSelected: true), Is.EqualTo("CONFIRM"));
+        Assert.That(Label(moveSelected: true, enoughRam: false), Is.EqualTo("INSUFFICIENT RAM"));
+        Assert.That(Label(preparing: true), Is.EqualTo("PREPARING..."));
+        Assert.That(Label(prepared: true), Is.EqualTo("STAMP"));
+        Assert.That(Label(prepared: true, committing: true), Is.EqualTo("STAMPING..."));
+        Assert.That(Label(pendingNeedsSignature: true, hasPendingStamp: true), Is.EqualTo("RESUME STAMP"));
+        Assert.That(Label(reconciling: true, prepared: true), Is.EqualTo("CHECKING"));
+    }
+
+    [Test]
+    public void Screen_PreparedStampLocksCancelCloseAndModeTabs()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CandyMachineAuthoring.PrefabPath);
+        GameObject host = Object.Instantiate(prefab);
+        try
+        {
+            CandyMachineScreen screen = host.GetComponent<CandyMachineScreen>();
+            Assert.That(screen.Open(), Is.True);
+            InvokePrivate(screen, "SetMode", CandyMachineMode.Stamp);
+            SetPrivate(screen, "navLayer", CandyMachineNavLayer.Detail);
+            SetPrivate(screen, "reviewedRequest", new StampMoveRequest { knownInstanceId = "known", requestedModifierCount = 1, idempotencyKey = "key" });
+            SetPrivate(screen, "presentationState", CandyMachinePresentationState.Review);
+            InvokePrivate(screen, "RefreshModeVisuals");
+
+            Assert.That(screen.IsStampInFlight, Is.True);
+            Assert.That(screen.TryHandleCancel(), Is.True, "Cancel is consumed while a prepared Stamp waits on STAMP.");
+            Assert.That(screen.NavLayer, Is.EqualTo(CandyMachineNavLayer.Detail));
+            screen.Close();
+            Assert.That(screen.IsShowing, Is.True, "Close no-ops until STAMP completes or errors.");
+
+            SerializedObject serialized = new SerializedObject(screen);
+            Assert.That(((Button)serialized.FindProperty("folioTabButton").objectReferenceValue).interactable, Is.False);
+            Assert.That(((Button)serialized.FindProperty("stampTabButton").objectReferenceValue).interactable, Is.False);
+
+            SetPrivate(screen, "reviewedRequest", null);
+            SetPrivate(screen, "presentationState", CandyMachinePresentationState.Browse);
+            Assert.That(screen.IsStampInFlight, Is.False);
+            Assert.That(screen.TryHandleCancel(), Is.True);
+            Assert.That(screen.NavLayer, Is.EqualTo(CandyMachineNavLayer.Browse), "Before prepare, Back still pops to the list.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(host);
+        }
+    }
+
+    [Test]
+    public void ChromeVisual_StickyConfirmCanSuppressFocusShimmer()
+    {
+        GameObject host = new GameObject("ChromeStub", typeof(RectTransform), typeof(Image), typeof(Button));
+        Texture2D texture = new Texture2D(4, 4);
+        try
+        {
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, 4f, 4f), Vector2.one * 0.5f);
+            PlayerMenuChromeButtonVisual visual = host.AddComponent<PlayerMenuChromeButtonVisual>();
+            visual.Configure(sprite, sprite, Color.white, Color.white, new[] { sprite, sprite }, 12f, true, 1f, true);
+
+            visual.SetStickySelected(true, false);
+            visual.OnSelect(null);
+            Assert.That(visual.IsSelected, Is.True);
+            Assert.That(visual.IsShimmerPlaying, Is.False, "Confirmed mode tab stays flat orange.");
+
+            visual.SetStickySelected(true);
+            Assert.That(visual.IsShimmerPlaying, Is.True, "Default sticky still shimmers on focus.");
+
+            visual.ClearStickySelection();
+            visual.OnDeselect(null);
+            Assert.That(visual.IsSelected, Is.False);
+            Assert.That(visual.IsShimmerPlaying, Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(host);
+            Object.DestroyImmediate(texture);
+        }
+    }
+
+    private static string Label(
+        bool reconciling = false,
+        bool preparing = false,
+        bool prepared = false,
+        bool committing = false,
+        bool pendingNeedsSignature = false,
+        bool hasPendingStamp = false,
+        bool enoughRam = true,
+        bool moveSelected = true) =>
+        CandyMachineScreen.ResolveStampPrimaryLabel(
+            reconciling,
+            preparing,
+            prepared,
+            committing,
+            pendingNeedsSignature,
+            hasPendingStamp,
+            enoughRam,
+            moveSelected);
+
     private static void SetPrivate(object target, string fieldName, object value)
     {
         FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);

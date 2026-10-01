@@ -16,17 +16,17 @@ namespace Chainbound.Combat
         [Min(0f)] public float utilityCastHold = 0.3f;
 
         [Header("Impact Holds")]
-        [Min(0f)] public float damageHold = 0.18f;
-        [Min(0f)] public float healHold = 0.18f;
-        [Min(0f)] public float missDodgeHold = 0.18f;
-        [Min(0f)] public float apFeedbackHold = 0.28f;
-        [Min(0f)] public float statusLabelHold = 0.32f;
-        [Min(0f)] public float stageLabelHold = 0.28f;
-        [Min(0f)] public float passiveLabelHold = 0.22f;
-        [Min(0f)] public float modifierLabelHold = 0.22f;
-        [Min(0f)] public float noApHold = 0.28f;
-        [Min(0f)] public float barrierBlockedHold = 0.4f;
-        [Min(0f)] public float barrierRaisedHold = 0.32f;
+        [Min(0f)] public float damageHold = 0.9f;
+        [Min(0f)] public float healHold = 0.9f;
+        [Min(0f)] public float missDodgeHold = 0.75f;
+        [Min(0f)] public float apFeedbackHold = 0.6f;
+        [Min(0f)] public float statusLabelHold = 0.8f;
+        [Min(0f)] public float stageLabelHold = 0.8f;
+        [Min(0f)] public float passiveLabelHold = 0.95f;
+        [Min(0f)] public float modifierLabelHold = 0.9f;
+        [Min(0f)] public float noApHold = 0.55f;
+        [Min(0f)] public float barrierBlockedHold = 1f;
+        [Min(0f)] public float barrierRaisedHold = 0.9f;
         [Min(0f)] public float swapSettleDelay = 0.4f;
         [Min(0f)] public float faintPostImpactDelay = 0.25f;
 

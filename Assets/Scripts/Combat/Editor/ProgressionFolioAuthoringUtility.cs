@@ -100,7 +100,8 @@ namespace Chainbound.Combat.Editor
             profile.noFolioClip = neutralSettle;
             profile.cardSlideSound = AssetDatabase.LoadAssetAtPath<SoundEventSO>("Assets/Data/Audio/SFX/LIBRARY_CARD_SLIDE.asset");
             profile.cardRiserSound = AssetDatabase.LoadAssetAtPath<SoundEventSO>("Assets/Data/Audio/SFX/REVEAL_RISER.asset");
-            profile.libraryCardFront = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/LibraryCards/librarycard_frontUI.png");
+            profile.cardPrintSound = AssetDatabase.LoadAssetAtPath<SoundEventSO>("Assets/Data/Audio/SFX/TYPE_STICKER.asset");
+            profile.libraryCardFront = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/LibraryCards/librarycard_learned_frontUI.png");
             profile.libraryCardOutline = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/LibraryCards/librarycard_outline.png");
             profile.rarityColors = new List<FolioRarityColor>
             {

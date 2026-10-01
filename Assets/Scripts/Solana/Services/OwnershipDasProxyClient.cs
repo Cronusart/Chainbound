@@ -7,14 +7,13 @@ using UnityEngine;
 namespace Chainbound.Combat
 {
     /// <summary>
-    /// Authenticated, read-only client for the Devnet Ownership Spine DAS proxy.
+    /// Authenticated, read-only client for the selected Ownership Spine DAS proxy.
     /// The Helius endpoint and key remain server-side; Unity supplies only its
     /// existing public anon API key and process-memory user access token.
     /// </summary>
     public sealed class OwnershipDasProxyClient
     {
         public const string FunctionName = "ownership_das_proxy";
-        public const string ExpectedProjectHost = "jhzqcbrzkausrrtcavuu.supabase.co";
         private const int MaximumResponseCharacters = 2 * 1024 * 1024;
 
         private readonly SupabaseConfigSO supabaseConfig;
@@ -22,8 +21,10 @@ namespace Chainbound.Combat
 
         public OwnershipDasProxyClient(SupabaseConfigSO backend, SolanaConfigSO chain)
         {
-            supabaseConfig = backend ?? throw new ArgumentNullException(nameof(backend));
-            solanaConfig = chain ?? throw new ArgumentNullException(nameof(chain));
+            supabaseConfig = PlatformContext.ResolveSupabaseConfig(backend)
+                ?? throw new ArgumentNullException(nameof(backend));
+            solanaConfig = PlatformContext.ResolveSolanaConfig(chain)
+                ?? throw new ArgumentNullException(nameof(chain));
         }
 
         public async Task<OwnershipDasAsset> GetAssetAsync(string assetId)
@@ -89,14 +90,20 @@ namespace Chainbound.Combat
 
         private RequestContext RequireRequestContext()
         {
-            if (!string.Equals(solanaConfig.ownershipCluster?.Trim(), "devnet", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Ownership DAS reads are restricted to Devnet.");
+            string expectedCluster = OwnershipDeploymentProfileRules.ExpectedCluster(
+                PlatformContext.ResolveOwnershipEnvironment());
+            if (!string.Equals(
+                    OwnershipDeploymentProfileRules.NormalizeCluster(solanaConfig.ownershipCluster),
+                    expectedCluster,
+                    StringComparison.Ordinal))
+                throw new InvalidOperationException("Ownership DAS cluster does not match the selected deployment profile.");
 
-            if (!Uri.TryCreate(supabaseConfig.ResolvedEdgeFunctionBaseUrl, UriKind.Absolute, out Uri endpoint)
+            if (!Uri.TryCreate(supabaseConfig.supabaseUrl, UriKind.Absolute, out Uri projectEndpoint)
+                || !Uri.TryCreate(supabaseConfig.ResolvedEdgeFunctionBaseUrl, UriKind.Absolute, out Uri endpoint)
                 || endpoint.Scheme != Uri.UriSchemeHttps
-                || !string.Equals(endpoint.Host, ExpectedProjectHost, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(endpoint.Host, projectEndpoint.Host, StringComparison.OrdinalIgnoreCase)
                 || !endpoint.AbsolutePath.TrimEnd('/').Equals("/functions/v1", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Ownership DAS proxy must use the pinned HTTPS Supabase project endpoint.");
+                throw new InvalidOperationException("Ownership DAS proxy must use the selected HTTPS Supabase project endpoint.");
 
             if (string.IsNullOrWhiteSpace(supabaseConfig.supabaseAnonKey))
                 throw new InvalidOperationException("The public Supabase anon key is unavailable.");

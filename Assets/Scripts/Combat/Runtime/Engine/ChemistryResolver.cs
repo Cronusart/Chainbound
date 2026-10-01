@@ -334,6 +334,8 @@ namespace Chainbound.Combat
             {
                 parameterType = output.parameterType,
             };
+            if (StatusInstance.IsNextActionStatus(output.statusId))
+                instance.HoldThroughGrantTurn(turn);
 
             bool refreshed = false;
             for (int s = 0; s < recipient.statuses.Count; s++)
@@ -342,6 +344,8 @@ namespace Chainbound.Combat
                 {
                     int before = recipient.statuses[s].turnsRemaining;
                     recipient.statuses[s].turnsRemaining = statusDef.defaultDuration;
+                    if (StatusInstance.IsNextActionStatus(output.statusId))
+                        recipient.statuses[s].HoldThroughGrantTurn(turn);
                     refreshed = true;
                     _log.LogStatus(turn, CombatEventType.StatusRefreshed,
                         recipient.instanceId, output.statusId, statusDef.defaultDuration, attackerId);

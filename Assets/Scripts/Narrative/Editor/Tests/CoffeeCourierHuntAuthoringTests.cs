@@ -129,5 +129,137 @@ public sealed class CoffeeCourierHuntAuthoringTests
 
         Assert.That(gateQueuesZeb, Is.True, "Mart leftover should hand off to the Zeb courier sequence.");
     }
+
+    [Test]
+    public void CoffeeQuest_TracksBeansAndBeerWithoutClosingOnToby()
+    {
+        QuestDefinitionSO quest = AssetDatabase.LoadAssetAtPath<QuestDefinitionSO>(QuestPath);
+        QuestObjective beans = quest.Objectives.First(item => item.objectiveId == CoffeeCourierHuntAuthoring.FetchCoffeeObjective);
+        QuestObjective beer = quest.Objectives.First(item => item.objectiveId == CoffeeCourierHuntAuthoring.FetchBeerObjective);
+        QuestObjective delivery = quest.Objectives.First(item => item.objectiveId == CoffeeCourierHuntAuthoring.DeliverToTobyObjective);
+
+        Assert.That(beans.targetAmount, Is.EqualTo(1));
+        Assert.That(beans.description, Does.Contain("coffee beans").IgnoreCase);
+        Assert.That(beer.targetAmount, Is.EqualTo(1));
+        Assert.That(beer.description, Does.Contain("Momo"));
+        Assert.That(delivery.targetAmount, Is.EqualTo(1));
+        Assert.That(delivery.description, Does.Contain("Toby"));
+        Assert.That(quest.AutoCompleteWhenObjectivesComplete, Is.True);
+    }
+
+    [Test]
+    public void CofiSequence_GrantsBeansOnlyAfterAWin()
+    {
+        SequenceAsset cofi = AssetDatabase.LoadAssetAtPath<SequenceAsset>(CofiSequencePath);
+        int winIf = IndexOfStep<Step_If>(cofi);
+        int grant = IndexOfStep<Step_ApplyProfileItemDelta>(cofi);
+        int defeated = -1;
+        for (int i = 0; i < cofi.StepCount; i++)
+        {
+            if (cofi.GetStep(i) is Step_SetProfileWorldFlag flag &&
+                flag.FlagKey == CoffeeCourierHuntAuthoring.CofiDefeatedFlag)
+            {
+                defeated = i;
+            }
+        }
+
+        Assert.That(winIf, Is.GreaterThanOrEqualTo(0));
+        Assert.That(grant, Is.GreaterThan(winIf));
+        Assert.That(defeated, Is.GreaterThan(grant));
+
+        Step_ApplyProfileItemDelta delta = (Step_ApplyProfileItemDelta)cofi.GetStep(grant);
+        Assert.That(delta.IdempotencyKey, Is.EqualTo(CoffeeCourierHuntAuthoring.CoffeeBeansIdempotencyKey));
+        Assert.That(delta.Grants[0].itemId, Is.EqualTo(CoffeeCourierHuntAuthoring.CoffeeBeansItemId));
+        Assert.That(delta.Consumes, Is.Empty);
+    }
+
+    [Test]
+    public void DeliveryProfiles_GateOnWorldFlags()
+    {
+        QuestInteractionProfileSO zeb = AssetDatabase.LoadAssetAtPath<QuestInteractionProfileSO>(
+            "Assets/Scripts/NPC/Interaction/Intro/zeb_coffee_interaction_profile.asset");
+        QuestInteractionProfileSO reynard = AssetDatabase.LoadAssetAtPath<QuestInteractionProfileSO>(
+            "Assets/Scripts/NPC/Interaction/Reynard/Reynard_CoffeeInteractionProfile.asset");
+        QuestInteractionProfileSO toby = AssetDatabase.LoadAssetAtPath<QuestInteractionProfileSO>(
+            "Assets/Scripts/NPC/Interaction/Intro/prof_toby_coffee_active_profile.asset");
+        QuestInteractionProfileSO momo = AssetDatabase.LoadAssetAtPath<QuestInteractionProfileSO>(
+            "Assets/Scripts/NPC/Interaction/Academy/Momo/momo_academy_profile.asset");
+
+        Assert.That(zeb.Rules[0].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.ZebDepartedFlag));
+        Assert.That(zeb.Rules[0].triggerId, Is.Empty);
+        Assert.That(zeb.Rules[1].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.ZebReturnTriggerId));
+        Assert.That(zeb.Rules[1].dialogue.GetLine(0).text, Does.Contain("bag back"));
+
+        Assert.That(reynard.Rules[0].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardBrewedFlag));
+        Assert.That(reynard.Rules[1].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardBrewTriggerId));
+        Assert.That(reynard.Rules[2].dialogue.GetLine(0).text, Does.Contain("piping hot").IgnoreCase.Or.Contain("beer"));
+
+        Assert.That(toby.Rules[0].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.HoldingTobysDeliveryFlag));
+        Assert.That(toby.Rules[0].dialogue.GetLine(0).text, Does.Contain("doorway"));
+        Assert.That(toby.Rules[1].dialogue.GetLine(0).text, Does.Contain("gnaw"));
+
+        Assert.That(momo.Rules[0].label, Is.EqualTo(CoffeeCourierHuntAuthoring.MomoBeerRuleLabel));
+        Assert.That(momo.Rules[0].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.MomoBeerTriggerId));
+        Assert.That(momo.Rules[0].dialogue.GetLine(0).text, Does.Contain("cold beer").IgnoreCase);
+        Assert.That(momo.Rules.Count, Is.GreaterThan(1));
+    }
+
+    [Test]
+    public void Jungle_ZebAndCartHideOnTheNextEnable()
+    {
+        const string scenePath = "Assets/Scenes/Jungle.unity";
+        UnityEngine.SceneManagement.Scene scene = UnityEditor.SceneManagement.EditorSceneManager.GetSceneByPath(scenePath);
+        bool opened = false;
+        if (!scene.isLoaded)
+        {
+            scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                scenePath,
+                UnityEditor.SceneManagement.OpenSceneMode.Additive);
+            opened = true;
+        }
+
+        try
+        {
+            int departed = 0;
+            bool sawZeb = false;
+            bool sawCart = false;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                WorldPresenceBinding[] bindings = root.GetComponentsInChildren<WorldPresenceBinding>(true);
+                for (int i = 0; i < bindings.Length; i++)
+                {
+                    if (bindings[i].PresenceId != CoffeeCourierHuntAuthoring.ZebDepartedFlag)
+                        continue;
+                    departed++;
+                    Assert.That(bindings[i].ApplyOnEnableOnly, Is.True);
+                    Assert.That(bindings[i].ActiveWhenTrue, Is.False);
+                    if (bindings[i].Target != null && bindings[i].Target.name == "Zeb")
+                        sawZeb = true;
+                    if (bindings[i].Target != null && bindings[i].Target.name == "Zeb_BrokenDeliveryCart")
+                        sawCart = true;
+                }
+            }
+
+            Assert.That(departed, Is.EqualTo(2));
+            Assert.That(sawZeb, Is.True);
+            Assert.That(sawCart, Is.True);
+        }
+        finally
+        {
+            if (opened)
+                UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
+        }
+    }
+
+    private static int IndexOfStep<T>(SequenceAsset sequence) where T : SequenceStep
+    {
+        for (int i = 0; i < sequence.StepCount; i++)
+        {
+            if (sequence.GetStep(i) is T)
+                return i;
+        }
+
+        return -1;
+    }
 }
 #endif

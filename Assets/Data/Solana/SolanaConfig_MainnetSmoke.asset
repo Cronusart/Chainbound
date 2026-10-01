@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30581b11afc75b24fa32e7d4fcd589cd, type: 3}
+  m_Name: SolanaConfig_MainnetSmoke
+  m_EditorClassIdentifier: 
+  rpcEndpoint: 
+  wsEndpoint: 
+  gameProgramId: 
+  vrfProgramId: 
+  vrfOracleQueueId: 
+  metaplexCoreProgramId: CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d
+  ownershipCluster: mainnet-beta
+  expectedGenesisHash: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d
+  coreMovesCollectionId: 
+  coreMovesUpdateAuthority: 
+  ownershipSchemaVersion: 1
+  dasRpcEndpoint: 
+  coreCosmeticsCollectionId: 
+  confirmationTimeoutMs: 45000
+  requireFinalizedForCritical: 1
+  confirmPollIntervalMs: 2000
+  mwaIdentityUri: https://chainbound-pub.chainboundsolana.workers.dev
+  mwaIconUri: favicon.ico
+  mwaIdentityName: Chainbound
+  useDesktopBridgeInEditor: 0
+  autoBootstrapPdasOnWalletConnect: 0
+  useStubServices: 0
+  useDeterministicVrfInEditor: 0
+  enableRpcLogging: 0

@@ -28,6 +28,10 @@ namespace Chainbound.Combat
         private int _stepActionCursor = -1;
         private bool _passAReactiveCastInProgress;
         private ConfigStampPayload _configStamp;
+        // Granted during an action and ticked at the shared end of that turn.
+        // Duration 1 is the rest of this turn: later actions can still use it, then it expires.
+        private const int RestOfTurnDuration = 1;
+
         private static readonly CoreStat[] RandomStageStats =
         {
             CoreStat.MeleeAtk,
@@ -369,6 +373,14 @@ namespace Chainbound.Combat
 
         private void ProcessStartOfTurnForTeam(TeamState team, int turn)
         {
+            if (team?.chainlings != null)
+            {
+                for (int i = 0; i < team.chainlings.Count; i++)
+                {
+                    if (team.chainlings[i] != null)
+                        team.chainlings[i].hitsTakenThisTurn = 0;
+                }
+            }
             ApplyPendingTurnStartStatusesForTeam(team, turn);
             for (int s = 0; s < team.activeIndices.Count; s++)
             {
@@ -1563,7 +1575,7 @@ namespace Chainbound.Combat
             // TriggerOnce is also valid for authored active/utility moves (for example,
             // an armed one-shot dodge). Record successful use in the existing battle set
             // so eligibility can reject a second cast without a move-id special case.
-            if (move.triggerOncePerBattle && actor.triggeredPassiveIds != null)
+            if (move.category != MoveCategory.Passive && move.triggerOncePerBattle && actor.triggeredPassiveIds != null)
                 actor.triggeredPassiveIds.Add(move.instanceId);
 
             ProcessActionEconomyModifiers(state, actingTeam, opposingTeam, actor, target, move, conditionMet);
@@ -1744,6 +1756,16 @@ namespace Chainbound.Combat
                 modifierContext.damageMultiplier *= _resolverConfig.splinterSingleTargetDamageMultiplier;
             }
 
+            if (modifierContext != null
+                && modifierContext.bounceToOneAdjacent
+                && !modifierContext.expandSingleTargetToAllEnemies
+                && targets.Count == 1)
+            {
+                ChainlingInstance bounceTarget = FindAdjacentActive(opposingTeam, targets[0]);
+                if (bounceTarget != null)
+                    targets.Add(bounceTarget);
+            }
+
             bool attackerChemistryReactionApplied = false;
             var defenderChemistryReactionApplied = new HashSet<ChainlingInstance>();
 
@@ -1751,10 +1773,19 @@ namespace Chainbound.Combat
             {
                 if (!target.isAlive) continue;
 
-                if (resolveProfile.utilityExecutionTiming == MoveUtilityExecutionTiming.ResolveBeforeFirstHit)
+                bool isBounceTarget = modifierContext != null
+                    && modifierContext.bounceToOneAdjacent
+                    && targets.Count > 1
+                    && target != targets[0];
+                int hitsThisTarget = isBounceTarget ? 1 : hitCount;
+                float bouncePower = isBounceTarget
+                    ? (modifierContext.bouncePowerMultiplier > 0f ? modifierContext.bouncePowerMultiplier : 0.50f)
+                    : 1f;
+
+                if (!isBounceTarget && resolveProfile.utilityExecutionTiming == MoveUtilityExecutionTiming.ResolveBeforeFirstHit)
                     ApplyDamagingMoveUtilityEffects(attacker, target, move, state.currentTurn);
 
-                for (int hit = 0; hit < hitCount; hit++)
+                for (int hit = 0; hit < hitsThisTarget; hit++)
                 {
                     if (!target.isAlive) break;
 
@@ -1881,6 +1912,10 @@ namespace Chainbound.Combat
                     DamageModifierContext hitModifierContext = modifierContext != null
                         ? modifierContext.Clone()
                         : new DamageModifierContext();
+                    if (isBounceTarget)
+                        hitModifierContext.powerMultiplier *= bouncePower;
+                    bool firstIncomingHit = target.hitsTakenThisTurn == 0;
+                    ApplyDefensivePassiveMitigation(hitModifierContext, target, move, state.currentTurn);
                     hitModifierContext.damageMultiplier *= ResolveConditionalDamageMultiplier(
                         state,
                         actingTeam,
@@ -1891,6 +1926,9 @@ namespace Chainbound.Combat
                         hit);
                     int damage = DamageCalculator.CalculateDamageDetailed(
                         attacker, target, move, chemResult, isCrit, _rng, hitModifierContext, _resolverConfig, out DamageComputationTrace trace);
+                    target.hitsTakenThisTurn++;
+                    if (firstIncomingHit)
+                        TryImmutableLedgerAp(target, state.currentTurn);
 
                     // Barrier absorption — check bypass conditions first
                     int incomingDamage = damage;
@@ -2125,7 +2163,7 @@ namespace Chainbound.Combat
                         penetrationDamage,
                         actualDelta);
 
-                    bool shouldApplyMoveEffects = ShouldApplyMoveEffectsAtResolve(attacker, target, move, state.currentTurn, logSkipped: false);
+                    bool shouldApplyMoveEffects = !isBounceTarget && ShouldApplyMoveEffectsAtResolve(attacker, target, move, state.currentTurn, logSkipped: false);
                     if (shouldApplyMoveEffects)
                     {
                         ApplyMoveStatuses(attacker, target, move, state.currentTurn);
@@ -2133,7 +2171,7 @@ namespace Chainbound.Combat
                         if (resolveProfile.applyHealingOnDamagingMoves)
                             ApplyMoveHealing(attacker, target, move, state.currentTurn);
                     }
-                    if (resolveProfile.utilityExecutionTiming == MoveUtilityExecutionTiming.AfterEachConfirmedHit)
+                    if (!isBounceTarget && resolveProfile.utilityExecutionTiming == MoveUtilityExecutionTiming.AfterEachConfirmedHit)
                         ApplyDamagingMoveUtilityEffects(attacker, target, move, state.currentTurn, actualDelta);
                     if (!attackerKoByPartialReflect)
                         ProcessAfterDamageModifiers(attacker, target, move, damage, isCrit, state.currentTurn);
@@ -2142,8 +2180,10 @@ namespace Chainbound.Combat
 
                     // Check for passive move triggers (e.g., HP threshold triggers)
                     CheckPassiveTriggers(target, state.currentTurn, PassiveTriggerPoint.AfterDamage, attacker, damage, move);
+                    if (!attacker.isAlive)
+                        break;
                     if (!attackerKoByPartialReflect)
-                        CheckPassiveTriggers(attacker, state.currentTurn, PassiveTriggerPoint.OnHit, target, damage, move);
+                        CheckPassiveTriggers(attacker, state.currentTurn, PassiveTriggerPoint.OnHit, target, damage, move, chemResult.chemAdvCount > 0);
                     CheckPassiveTriggersForTeam(
                         actingTeam,
                         state.currentTurn,
@@ -2743,6 +2783,36 @@ namespace Chainbound.Combat
                 if (candidate != null && candidate.isAlive)
                     return candidate;
             }
+            return null;
+        }
+
+        private ChainlingInstance FindAdjacentActive(TeamState team, ChainlingInstance target)
+        {
+            if (team == null || team.activeIndices == null || target == null)
+                return null;
+
+            int slot = -1;
+            for (int s = 0; s < team.activeIndices.Count; s++)
+            {
+                if (team.GetActiveInSlot(s) == target)
+                {
+                    slot = s;
+                    break;
+                }
+            }
+            if (slot < 0)
+                return null;
+
+            ChainlingInstance left = slot > 0 ? team.GetActiveInSlot(slot - 1) : null;
+            ChainlingInstance right = slot + 1 < team.activeIndices.Count ? team.GetActiveInSlot(slot + 1) : null;
+            bool leftOk = left != null && left.isAlive && left != target;
+            bool rightOk = right != null && right.isAlive && right != target;
+            if (leftOk && rightOk)
+                return _rng.Check(0.5f) ? left : right;
+            if (leftOk)
+                return left;
+            if (rightOk)
+                return right;
             return null;
         }
 
@@ -3401,7 +3471,7 @@ namespace Chainbound.Combat
                     if (mitigation <= 0f)
                         continue;
 
-                    target.AddMitigationSource(mitigation, 1, $"Modifier.{mod.sectionId}");
+                    target.AddMitigationSource(mitigation, RestOfTurnDuration, $"Modifier.{mod.sectionId}");
                     LogModifierOutcome(
                         mod,
                         source,
@@ -3500,8 +3570,10 @@ namespace Chainbound.Combat
                     }
                     else
                     {
-                        _statusProcessor.ApplyStatus(statusTarget, effect.statusId,
+                        bool applied = _statusProcessor.ApplyStatus(statusTarget, effect.statusId,
                             duration, move.instanceId, turn);
+                        if (applied)
+                            TrySpiteCounter(statusTarget, source, effect.statusId, duration, turn, statusDefinition);
                     }
 
                     EmitStatusModifierOutcomes(
@@ -3512,6 +3584,54 @@ namespace Chainbound.Combat
                         move,
                         turn);
                 }
+            }
+        }
+
+        private void TrySpiteCounter(
+            ChainlingInstance recipient,
+            ChainlingInstance attacker,
+            StatusId statusId,
+            int duration,
+            int turn,
+            StatusDefinitionSO statusDefinition)
+        {
+            if (recipient == null || attacker == null || recipient == attacker || !attacker.isAlive)
+                return;
+            if (statusDefinition == null || !statusDefinition.isDebuff)
+                return;
+            if (recipient.moves == null)
+                return;
+
+            bool hasSpite = false;
+            for (int i = 0; i < recipient.moves.Count; i++)
+            {
+                MoveInstance passive = recipient.moves[i];
+                if (passive != null && passive.category == MoveCategory.Passive &&
+                    string.Equals(passive.definitionId, "spite_counter", StringComparison.Ordinal))
+                {
+                    hasSpite = true;
+                    break;
+                }
+            }
+            if (!hasSpite)
+                return;
+
+            bool mirrored = _rng.Check(0.33f, out float roll);
+            _log.LogForensic(
+                CombatForensicEventType.ProcRoll,
+                new ProcRollPayload { procId = "Passive.spite_counter", chance = 0.33f, roll = roll, triggered = mirrored },
+                recipient.instanceId,
+                new List<string> { attacker.instanceId },
+                turn);
+            if (!mirrored)
+                return;
+
+            if (_statusProcessor.ApplyStatus(attacker, statusId, duration, "spite_counter", turn))
+            {
+                _log.LogMessage(
+                    CombatEventType.SystemMessage,
+                    $"{recipient.displayName}'s Spite Counter mirrored {statusId} onto {attacker.displayName}.",
+                    turn);
             }
         }
 
@@ -3723,7 +3843,8 @@ namespace Chainbound.Combat
             PassiveTriggerPoint triggerPoint,
             ChainlingInstance other = null,
             int damage = 0,
-            MoveInstance sourceMove = null)
+            MoveInstance sourceMove = null,
+            bool superEffective = false)
         {
             if (chainling == null || !chainling.isAlive) return;
 
@@ -3735,7 +3856,8 @@ namespace Chainbound.Combat
                 if (move.category != MoveCategory.Passive) continue;
 
                 // Check if already triggered (for once-per-battle passives)
-                if (move.triggerOncePerBattle && chainling.triggeredPassiveIds.Contains(move.instanceId))
+                if (move.triggerOncePerBattle && chainling.triggeredPassiveIds != null &&
+                    chainling.triggeredPassiveIds.Contains(move.instanceId))
                     continue;
 
                 // Check trigger condition
@@ -3821,13 +3943,15 @@ namespace Chainbound.Combat
                             turn);
                         continue;
                     }
-                    bool applied = TriggerPassiveMove(chainling, move, turn, triggerPoint, other, damage, sourceMove);
+                    bool applied = TriggerPassiveMove(chainling, move, turn, triggerPoint, other, damage, sourceMove, superEffective);
 
-                    // Mark as triggered if once-per-battle
-                    if (applied && move.triggerOncePerBattle)
-                    {
+                    // Once-per-battle passives are spent when the trigger lands, including a
+                    // heal that cannot land because the fighter is already at 0 HP. Swap, bench,
+                    // and in-battle revive keep this set on the same instance.
+                    if (move.triggerOncePerBattle && chainling.triggeredPassiveIds != null)
                         chainling.triggeredPassiveIds.Add(move.instanceId);
-                    }
+                    if (!applied)
+                        continue;
                 }
             }
         }
@@ -3842,8 +3966,12 @@ namespace Chainbound.Combat
             PassiveTriggerPoint triggerPoint,
             ChainlingInstance other,
             int damage,
-            MoveInstance sourceMove)
+            MoveInstance sourceMove,
+            bool superEffective = false)
         {
+            if (string.Equals(move.definitionId, "shattered_armor", StringComparison.Ordinal) && !superEffective)
+                return false;
+
             bool appliedAny = false;
             _log.Log(new CombatEvent
             {
@@ -3851,7 +3979,7 @@ namespace Chainbound.Combat
                 turn = turn,
                 sourceId = chainling.instanceId,
                 moveId = move.instanceId,
-                message = $"{chainling.displayName}'s {move.displayName} triggered!"
+                message = $"{chainling.displayName}'s {move.displayName} triggered!",
             });
 
             // Apply stage changes (targets self for passive Stamped moves)
@@ -3955,21 +4083,19 @@ namespace Chainbound.Combat
                 {
                     appliedAny |= _apService.Gain(chainling, 1, turn, defId) > 0;
                 }
-                else if (defId == "low_ap_surge" && chainling.currentAP < 2)
-                {
-                    int oldStage = chainling.GetStage(CoreStat.Speed);
-                    chainling.SetStage(CoreStat.Speed, oldStage + 1);
-                    int delta = chainling.GetStage(CoreStat.Speed) - oldStage;
-                    if (delta != 0)
-                    {
-                        _log.LogStageChange(turn, chainling.instanceId, CoreStat.Speed, delta, chainling.GetStage(CoreStat.Speed));
-                        appliedAny = true;
-                    }
-                }
             }
             else if (triggerPoint == PassiveTriggerPoint.OnHit)
             {
-                if (defId == "on_hit_momentum" && chainling.GetStage(CoreStat.MeleeAtk) < 3)
+                if (defId == "shattered_armor" && superEffective && chainling.MarkOncePerTurn(defId, turn))
+                {
+                    chainling.AddMitigationSource(0.05f, 1, -1, defId, defId);
+                    appliedAny |= _apService.Gain(chainling, 1, turn, defId) > 0;
+                    _log.LogMessage(
+                        CombatEventType.SystemMessage,
+                        $"{chainling.displayName}'s {move.displayName} grants 5% mitigation for the rest of this turn.",
+                        turn);
+                }
+                else if (defId == "on_hit_momentum" && chainling.GetStage(CoreStat.MeleeAtk) < 3)
                 {
                     float roll;
                     bool triggered = _rng.Check(0.25f, out roll);
@@ -3991,7 +4117,7 @@ namespace Chainbound.Combat
             }
             else if (triggerPoint == PassiveTriggerPoint.OnCrit)
             {
-                if (defId == "on_crit_bonus" || defId == "meme_momentum")
+                if (defId == "on_crit_bonus")
                     appliedAny |= _apService.Gain(chainling, 1, turn, defId) > 0;
             }
             else if (triggerPoint == PassiveTriggerPoint.OnMiss)
@@ -3999,10 +4125,10 @@ namespace Chainbound.Combat
                 if (defId == "precision_focus")
                 {
                     float roll;
-                    bool triggered = _rng.Check(0.25f, out roll);
+                    bool triggered = _rng.Check(0.75f, out roll);
                     _log.LogForensic(
                         CombatForensicEventType.ProcRoll,
-                        new ProcRollPayload { procId = $"Passive.{defId}", chance = 0.25f, roll = roll, triggered = triggered },
+                        new ProcRollPayload { procId = $"Passive.{defId}", chance = 0.75f, roll = roll, triggered = triggered },
                         chainling.instanceId,
                         new List<string> { chainling.instanceId },
                         turn);
@@ -4012,58 +4138,18 @@ namespace Chainbound.Combat
                 else if (defId == "reactive_ping" && other != null && other.isAlive)
                 {
                     int ping = Math.Max(1, (int)Math.Floor(other.EffectiveMaxHP * 0.05f));
-                    other.currentHP = Math.Max(0, other.currentHP - ping);
-                    _log.Log(new CombatEvent
-                    {
-                        eventType = CombatEventType.PassiveDamageDealt,
-                        turn = turn,
-                        sourceId = chainling.instanceId,
-                        targetId = other.instanceId,
-                        moveId = move.instanceId,
-                        intValue = ping,
-                        message = $"{move.displayName} pinged {other.displayName} for {ping} damage.",
-                    });
-                    if (other.currentHP <= 0)
-                        other.isAlive = false;
-                    appliedAny = true;
+                    appliedAny = ApplyPassiveStrike(chainling, other, move, ping, turn, "ping");
                 }
             }
             else if (triggerPoint == PassiveTriggerPoint.AfterDamage)
             {
-                if (defId == "conductive_counter" && other != null && sourceMove != null && sourceMove.contactType == ContactType.Contact)
+                if (defId == "conductive_counter" && other != null && other.isAlive && sourceMove != null &&
+                    sourceMove.contactType == ContactType.Contact && damage > 0 &&
+                    chainling.MarkOncePerTurn(defId, turn))
                 {
-                    int counter = Math.Max(1, (int)Math.Floor(Math.Max(1, damage) * 0.10f));
-                    other.currentHP = Math.Max(0, other.currentHP - counter);
-                    _log.Log(new CombatEvent
-                    {
-                        eventType = CombatEventType.PassiveDamageDealt,
-                        turn = turn,
-                        sourceId = chainling.instanceId,
-                        targetId = other.instanceId,
-                        moveId = move.instanceId,
-                        intValue = counter,
-                        message = $"{move.displayName} countered for {counter} damage.",
-                    });
+                    int counter = Math.Max(1, (int)Math.Floor(damage * 0.15f));
+                    appliedAny = ApplyPassiveStrike(chainling, other, move, counter, turn, "counter");
                     _apService.Gain(chainling, 1, turn, defId);
-                    if (other.currentHP <= 0)
-                        other.isAlive = false;
-                    appliedAny = true;
-                }
-                else if (defId == "immutable_ledger")
-                {
-                    appliedAny |= _apService.Gain(chainling, 1, turn, defId) > 0;
-                }
-                else if (defId == "desperation_surge")
-                {
-                    appliedAny |= _apService.Gain(chainling, 1, turn, defId) > 0;
-                    int oldStage = chainling.GetStage(CoreStat.MeleeAtk);
-                    chainling.SetStage(CoreStat.MeleeAtk, oldStage + 2);
-                    int delta = chainling.GetStage(CoreStat.MeleeAtk) - oldStage;
-                    if (delta != 0)
-                    {
-                        _log.LogStageChange(turn, chainling.instanceId, CoreStat.MeleeAtk, delta, chainling.GetStage(CoreStat.MeleeAtk));
-                        appliedAny = true;
-                    }
                 }
             }
             else if (triggerPoint == PassiveTriggerPoint.EndOfTurn)
@@ -4082,6 +4168,16 @@ namespace Chainbound.Combat
                         ? _apService.Gain(chainling, 1, turn, defId) > 0
                         : _apService.Drain(chainling, 1, turn, defId) > 0;
                 }
+                else if (defId == "meme_momentum")
+                {
+                    appliedAny |= ApplyMemeMomentum(chainling, move, turn);
+                }
+            }
+
+            if (triggerPoint == PassiveTriggerPoint.EndOfTurn &&
+                string.Equals(move.definitionId, "patience_passive", StringComparison.Ordinal))
+            {
+                appliedAny |= ApplyPatienceHeal(chainling, move, turn);
             }
 
             return appliedAny;
@@ -4102,20 +4198,16 @@ namespace Chainbound.Combat
             switch (triggerPoint)
             {
                 case PassiveTriggerPoint.TurnStart:
-                    return defId == "turn_start_ap_gain" ||
-                           (defId == "low_ap_surge" && chainling.currentAP < 2);
+                    return defId == "turn_start_ap_gain";
 
                 case PassiveTriggerPoint.OnHit:
                     return defId == "on_hit_momentum";
 
                 case PassiveTriggerPoint.OnCrit:
-                    return defId == "on_crit_bonus" || defId == "meme_momentum";
+                    return defId == "on_crit_bonus";
 
                 case PassiveTriggerPoint.AfterDamage:
-                    return damage > 0 &&
-                           (defId == "immutable_ledger" ||
-                            defId == "conductive_counter" ||
-                            defId == "desperation_surge");
+                    return damage > 0 && defId == "conductive_counter";
             }
 
             return false;
@@ -4230,8 +4322,8 @@ namespace Chainbound.Combat
                 {
                     if (move.targeting == MoveTargeting.SingleEnemy)
                     {
-                        context.expandSingleTargetToAllEnemies = true;
-                        context.expandedTargetPowerMultiplier = Math.Min(context.expandedTargetPowerMultiplier, 0.50f);
+                        context.bounceToOneAdjacent = true;
+                        context.bouncePowerMultiplier = 0.50f;
                         applied = true;
                     }
                     else
@@ -4288,6 +4380,11 @@ namespace Chainbound.Combat
                     {
                         LogModifierOutcome(mod, attacker, target, move, turn, false, "No infusion type supplied");
                     }
+                }
+                else if (section.Equals("5.2-d", StringComparison.OrdinalIgnoreCase) && IsDamagingMove(move))
+                {
+                    context.inverseAttackScaling = true;
+                    applied = true;
                 }
                 else if (StartsWithSection(section, "5.2") && IsDamagingMove(move))
                 {
@@ -4423,8 +4520,144 @@ namespace Chainbound.Combat
             if (context.expandSingleTargetToAllEnemies && context.expandedTargetPowerMultiplier > 0f && context.expandedTargetPowerMultiplier < 1f)
                 context.powerMultiplier *= context.expandedTargetPowerMultiplier;
 
-            ApplyDefensivePassiveMitigation(context, target, move, turn);
             return context;
+        }
+
+        private bool ApplyPassiveStrike(
+            ChainlingInstance source,
+            ChainlingInstance victim,
+            MoveInstance passive,
+            int amount,
+            int turn,
+            string verb)
+        {
+            if (source == null || victim == null || passive == null || amount <= 0 || !victim.isAlive)
+                return false;
+
+            victim.currentHP = Math.Max(0, victim.currentHP - amount);
+            _log.Log(new CombatEvent
+            {
+                eventType = CombatEventType.PassiveDamageDealt,
+                turn = turn,
+                sourceId = source.instanceId,
+                targetId = victim.instanceId,
+                moveId = passive.instanceId,
+                intValue = amount,
+                message = $"{victim.displayName} took {amount} {verb} damage from {source.displayName}'s {passive.displayName}.",
+            });
+
+            if (victim.currentHP > 0)
+                return true;
+
+            victim.currentHP = 0;
+            victim.isAlive = false;
+            TeamState victimTeam = FindTeamContaining(_currentState, victim);
+            TeamState sourceTeam = FindTeamContaining(_currentState, source);
+            int teamIndex = victimTeam != null ? victimTeam.teamIndex : -1;
+            EnsureTurnActionLedger(_currentState)?.RecordKo(victim.instanceId, teamIndex);
+            if (sourceTeam != null)
+            {
+                ProcessArmedWindowsForTeam(sourceTeam, victim, ArmedWindowTrigger.FoeKO, turn);
+                CheckPassiveTriggersForTeam(sourceTeam, turn, PassiveTriggerPoint.OnKO, victim, passive);
+            }
+            if (victimTeam != null)
+            {
+                CheckPassiveTriggersForTeam(
+                    victimTeam,
+                    turn,
+                    PassiveTriggerPoint.AllyKO,
+                    victim,
+                    passive,
+                    exclude: victim);
+            }
+            _log.LogKO(
+                turn,
+                victim.instanceId,
+                source.instanceId,
+                passive.instanceId,
+                teamIndex,
+                FindSlotOf(victimTeam, victim));
+            return true;
+        }
+
+        private bool ApplyMemeMomentum(ChainlingInstance chainling, MoveInstance move, int turn)
+        {
+            TurnActionLedger ledger = EnsureTurnActionLedger(_currentState);
+            bool landedHit = false;
+            if (ledger != null && ledger.actorTargetsHitThisTurn != null)
+            {
+                for (int i = 0; i < ledger.actorTargetsHitThisTurn.Count; i++)
+                {
+                    if (string.Equals(ledger.actorTargetsHitThisTurn[i].actorId, chainling.instanceId, StringComparison.Ordinal))
+                    {
+                        landedHit = true;
+                        break;
+                    }
+                }
+            }
+
+            bool attacked = ledger != null && ledger.DidActorUseDamagingMoveThisTurn(chainling.instanceId);
+            if (!landedHit && !attacked)
+                return false;
+
+            int stageDelta = landedHit ? 2 : -1;
+            bool stageChanged = ApplyMemeStage(chainling, CoreStat.MeleeAtk, stageDelta, turn);
+            stageChanged |= ApplyMemeStage(chainling, CoreStat.RangedAtk, stageDelta, turn);
+
+            bool apChanged = landedHit
+                ? _apService.Gain(chainling, 2, turn, move.definitionId) > 0
+                : _apService.Drain(chainling, 1, turn, move.definitionId) > 0;
+            _log.LogMessage(
+                CombatEventType.SystemMessage,
+                landedHit
+                    ? $"{chainling.displayName}'s {move.displayName} surges after a landed hit."
+                    : $"{chainling.displayName}'s {move.displayName} slips after a miss.",
+                turn);
+            return stageChanged || apChanged;
+        }
+
+        private bool ApplyMemeStage(ChainlingInstance chainling, CoreStat stat, int stageDelta, int turn)
+        {
+            int oldStage = chainling.GetStage(stat);
+            chainling.SetStage(stat, oldStage + stageDelta);
+            int appliedDelta = chainling.GetStage(stat) - oldStage;
+            if (appliedDelta == 0)
+                return false;
+            _log.LogStageChange(turn, chainling.instanceId, stat, appliedDelta, chainling.GetStage(stat));
+            return true;
+        }
+
+        private void TryImmutableLedgerAp(ChainlingInstance defender, int turn)
+        {
+            if (defender?.moves == null)
+                return;
+            for (int i = 0; i < defender.moves.Count; i++)
+            {
+                MoveInstance move = defender.moves[i];
+                if (move?.category != MoveCategory.Passive ||
+                    !string.Equals(move.definitionId, "immutable_ledger", StringComparison.Ordinal))
+                    continue;
+                _apService.Gain(defender, 1, turn, move.definitionId);
+                return;
+            }
+        }
+
+        private bool ApplyPatienceHeal(ChainlingInstance chainling, MoveInstance move, int turn)
+        {
+            TurnActionLedger ledger = EnsureTurnActionLedger(_currentState);
+            if (ledger != null && ledger.DidActorUseDamagingMoveThisTurn(chainling.instanceId))
+                return false;
+            if (chainling.currentHP <= 0)
+                return false;
+
+            int heal = Math.Max(1, (int)(chainling.EffectiveMaxHP * 0.05f));
+            int before = chainling.currentHP;
+            chainling.currentHP = Math.Min(chainling.EffectiveMaxHP, chainling.currentHP + heal);
+            int actual = chainling.currentHP - before;
+            if (actual <= 0)
+                return false;
+            LogHealApplied(turn, chainling, chainling, move, actual, move.displayName);
+            return true;
         }
 
         private void ApplyDefensivePassiveMitigation(
@@ -4461,11 +4694,15 @@ namespace Chainbound.Combat
                 }
 
                 // Backward-compatible fallback for assets not yet reimported from CSV.
+                bool ledger = defId == "immutable_ledger";
+                if (ledger && defender.hitsTakenThisTurn > 0)
+                    continue;
+
                 if (!hasAuthoredMitigation)
                 {
                     if (defId == "defensive_reflex")
                         mitigation = 0.20f;
-                    else if (defId == "immutable_ledger")
+                    else if (ledger)
                         mitigation = 0.20f;
                     else if (defId == "firewall_passive" && incomingMove.contactType == ContactType.Projectile)
                         mitigation = 0.25f;
@@ -4748,7 +4985,7 @@ namespace Chainbound.Combat
                 if (mitigation <= 0f)
                     continue;
 
-                actor.AddMitigationSource(mitigation, 1, $"Modifier.{mod.sectionId}");
+                actor.AddMitigationSource(mitigation, RestOfTurnDuration, $"Modifier.{mod.sectionId}");
                 LogModifierOutcome(
                     mod,
                     actor,
@@ -5150,7 +5387,7 @@ namespace Chainbound.Combat
             if (mitigation <= 0f)
                 return;
 
-            actor.AddMitigationSource(mitigation, 1, $"Modifier.{mod.sectionId}");
+            actor.AddMitigationSource(mitigation, RestOfTurnDuration, $"Modifier.{mod.sectionId}");
             LogModifierOutcome(
                 mod,
                 actor,

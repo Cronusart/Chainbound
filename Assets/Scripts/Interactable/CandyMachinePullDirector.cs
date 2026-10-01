@@ -244,6 +244,17 @@ public sealed class CandyMachinePullDirector : MonoBehaviour, ICandyMachinePullD
     {
         if (emissiveRenderer == null)
             return;
+
+        // DOTween can evaluate an inserted tween once at its zero value while
+        // the sequence is being constructed or killed. Do not let that zero
+        // sample reactivate the authored emissive object after cancellation.
+        if (progress <= 0.0001f)
+        {
+            emissiveRenderer.SetPropertyBlock(null);
+            emissiveRenderer.gameObject.SetActive(false);
+            return;
+        }
+
         if (!emissiveRenderer.gameObject.activeSelf)
             emissiveRenderer.gameObject.SetActive(true);
 

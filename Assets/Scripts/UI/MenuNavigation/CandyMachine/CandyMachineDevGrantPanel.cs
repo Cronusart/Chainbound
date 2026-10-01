@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Chainbound.Combat;
 using TMPro;
@@ -37,6 +38,7 @@ namespace SignalJam.UI.MenuNavigation
             EnsureInitializeButton();
             WireButtons();
             RefreshVisibility();
+            RefreshForCurrentState();
         }
 
         public void Bind(
@@ -58,6 +60,26 @@ namespace SignalJam.UI.MenuNavigation
             EnsureInitializeButton();
             WireButtons();
             RefreshVisibility();
+            RefreshForCurrentState();
+        }
+
+        public void RefreshForCurrentState()
+        {
+            if (screen == null || !ShouldShow)
+                return;
+
+            pendingRamGrantReview = null;
+            pendingRamGrantIdempotencyKey = null;
+            bool localPreview = screen.DevInventory != null;
+            bool freshProfile = screen.DisplayRamBalance <= 0;
+            if (grantRamButton != null)
+                grantRamButton.interactable = localPreview || freshProfile;
+
+            SetStatus(localPreview
+                ? $"LOCAL PREVIEW | RAM {screen.DisplayRamBalance}"
+                : freshProfile
+                    ? "DEVNET TOOLS READY | RAM GRANT AVAILABLE"
+                    : $"DEVNET | RAM {screen.DisplayRamBalance} | FRESH-PROFILE RAM GRANT DISABLED");
         }
 
         public void RefreshVisibility()
@@ -79,6 +101,21 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             gameObject.SetActive(show);
+        }
+
+        /// <summary>
+        /// Keeps long-running dev-strip messages aligned with the authoritative
+        /// server mirror without clearing an in-progress two-step grant review.
+        /// </summary>
+        public void SynchronizeDisplayedRam()
+        {
+            if (screen == null || statusLabel == null || string.IsNullOrWhiteSpace(statusLabel.text))
+                return;
+            statusLabel.text = Regex.Replace(
+                statusLabel.text,
+                @"\bRAM\s+\d+\b",
+                $"RAM {screen.DisplayRamBalance}",
+                RegexOptions.IgnoreCase);
         }
 
         /// <summary>
@@ -287,7 +324,12 @@ namespace SignalJam.UI.MenuNavigation
         private void SetButtonsInteractable(bool value)
         {
             if (initializeSpineButton != null) initializeSpineButton.interactable = value;
-            if (grantRamButton != null) grantRamButton.interactable = value;
+            if (grantRamButton != null)
+            {
+                bool localPreview = screen != null && screen.DevInventory != null;
+                bool freshProfile = screen == null || screen.DisplayRamBalance <= 0;
+                grantRamButton.interactable = value && (localPreview || freshProfile);
+            }
             if (grantKnownButton != null) grantKnownButton.interactable = value;
             if (clearButton != null) clearButton.interactable = value;
         }

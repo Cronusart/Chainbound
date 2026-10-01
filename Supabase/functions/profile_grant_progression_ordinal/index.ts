@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import {
+  getActiveWallet,
   JsonMap,
   jsonResponse,
   readJsonBody,
@@ -8,6 +9,13 @@ import {
   str,
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
+import { MOVE_AUTHORITY } from "../_shared/ownership_card_catalog.generated.ts";
+import {
+  hashMoveId,
+  isOwnershipWalletAllowed,
+  loadRollConfig,
+  OwnershipConfigurationError,
+} from "../_shared/ownership_spine.ts";
 
 serve(async (req: Request) => {
   const early = requirePost(req);
@@ -31,6 +39,16 @@ serve(async (req: Request) => {
 
     const idempotencyKey = str(body.idempotency_key) ||
       buildIdempotencyKey(profile.player_profile_id, chainlingId, body);
+    const authority = (MOVE_AUTHORITY as Record<string, { element: number; basePower: number }>)[moveId];
+    if (!authority) return jsonResponse({ success: false, error: "move_not_in_catalog" }, 400);
+    const config = loadRollConfig();
+    if (config.cluster === "mainnet-beta") {
+      const activeWallet = await getActiveWallet(supabase, profile.player_profile_id);
+      const walletAddress = str(activeWallet?.wallet_public_key);
+      if (!walletAddress || !isOwnershipWalletAllowed(config.cluster, walletAddress)) {
+        return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
+      }
+    }
 
     const { data, error } = await supabase.rpc("profile_grant_progression_ordinal_tx", {
       p_profile_id: profile.player_profile_id,
@@ -42,6 +60,11 @@ serve(async (req: Request) => {
       p_star_index: integer(body.star_index),
       p_mastery_cycle_index: integer(body.mastery_cycle_index),
       p_battle_seed: integer(body.battle_seed),
+      p_onchain_move_id: hashMoveId(moveId),
+      p_element: authority.element,
+      p_base_power: authority.basePower,
+      p_generator_version: config.generatorVersion,
+      p_pool_hash: config.modifierPoolHash,
     });
 
     if (error) {
@@ -56,11 +79,15 @@ serve(async (req: Request) => {
       success: payload.success === true,
       already_applied: payload.already_applied === true,
       move_item_id: str(payload.move_item_id),
+      known_id: str(payload.known_id),
       move_id: str(payload.move_id) || moveId,
       owned_copy_count: integer(payload.owned_copy_count),
       error: str(payload.error),
     });
   } catch (error) {
+    if (error instanceof OwnershipConfigurationError) {
+      return jsonResponse({ success: false, error: error.code }, 503);
+    }
     console.error("[profile_grant_progression_ordinal]", error);
     return jsonResponse({ success: false, error: "profile_grant_progression_ordinal_failed" }, 500);
   }
@@ -96,5 +123,7 @@ function normalizeRpcError(message: string): string {
   if (normalized.includes("move_id_required")) return "move_id_required";
   if (normalized.includes("idempotency_key_required")) return "idempotency_key_required";
   if (normalized.includes("idempotency_key_conflict")) return "idempotency_key_conflict";
+  if (normalized.includes("invalid_generator_version")) return "invalid_generator_version";
+  if (normalized.includes("invalid_pool_hash")) return "invalid_pool_hash";
   return normalized;
 }

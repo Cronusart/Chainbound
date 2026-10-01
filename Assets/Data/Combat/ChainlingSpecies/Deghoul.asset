@@ -18,105 +18,73 @@ MonoBehaviour:
     spikes Atk for Def in volatile trades.
   primaryType: 2
   secondaryType: 0
-  baseMaxHP: 86
+  baseMaxHP: 106
   baseMeleeAtk: 72
   baseMeleeDef: 36
   baseRangedAtk: 40
   baseRangedDef: 34
   baseSpeed: 72
   maxEvolutionStages: 1
+  offTypeMoveExceptions: []
   learnableMoves:
+  - {fileID: 11400000, guid: fe392f6a2eb096340a7bf694b8c8b5dd, type: 2}
   - {fileID: 11400000, guid: 16b82b7d4dd8a0a47b80db6b1da6e4d1, type: 2}
   - {fileID: 11400000, guid: ee35d79191ba66b4aa876459adc15f2f, type: 2}
   - {fileID: 11400000, guid: 699cda4b81b5f6a43a37927cf7d102d5, type: 2}
-  - {fileID: 11400000, guid: ad605aad7682f4f4cb738e19075b392d, type: 2}
-  - {fileID: 11400000, guid: fe392f6a2eb096340a7bf694b8c8b5dd, type: 2}
-  - {fileID: 11400000, guid: ea61937d4b43c9b44b3321e16ec50453, type: 2}
   - {fileID: 11400000, guid: dea79505a9957a54e9e58fdb2d38ece8, type: 2}
-  - {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
-  - {fileID: 11400000, guid: e41aa4b70be44c78962b917cd5527d10, type: 2}
-  - {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
-  - {fileID: 11400000, guid: b39679155c2f9e741b25de573c056c06, type: 2}
-  - {fileID: 11400000, guid: d1767ff5f7e2a7044b0c8d6c366bff11, type: 2}
-  learnLevels: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
-  flagshipMove: {fileID: 11400000, guid: 16b82b7d4dd8a0a47b80db6b1da6e4d1, type: 2}
-  initialMoves: []
+  flagshipMove: {fileID: 11400000, guid: fe392f6a2eb096340a7bf694b8c8b5dd, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: 16b82b7d4dd8a0a47b80db6b1da6e4d1, type: 2}
   progressionMovePool:
+  - move: {fileID: 11400000, guid: fe392f6a2eb096340a7bf694b8c8b5dd, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
   - move: {fileID: 11400000, guid: 16b82b7d4dd8a0a47b80db6b1da6e4d1, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: ee35d79191ba66b4aa876459adc15f2f, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: 699cda4b81b5f6a43a37927cf7d102d5, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: ad605aad7682f4f4cb738e19075b392d, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: fe392f6a2eb096340a7bf694b8c8b5dd, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: ea61937d4b43c9b44b3321e16ec50453, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: dea79505a9957a54e9e58fdb2d38ece8, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: e41aa4b70be44c78962b917cd5527d10, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: b39679155c2f9e741b25de573c056c06, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: d1767ff5f7e2a7044b0c8d6c366bff11, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   isStarter: 0
   defaultCaptureProfile: 1
+  rarity: 0
   combatRoleOverride: 8
-  designNotes: 'Wild catch. Gas melee disruptor; Gas typed pool is AP/tempo so melee
-    damage comes from typeless. Total base stats: 340.'
+  designNotes: Wild catch. Common. Gas melee disruptor. Net 360.

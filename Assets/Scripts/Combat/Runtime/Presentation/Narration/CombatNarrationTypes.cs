@@ -35,6 +35,8 @@ namespace Chainbound.Combat
         public string speaker = "";
         public string text = "";
         public float minimumDisplaySeconds;
+        /// <summary>Seconds of full text that must show before this page can be skipped.</summary>
+        public float skipLockoutSeconds;
 
         public bool IsReadable => !string.IsNullOrWhiteSpace(text);
     }

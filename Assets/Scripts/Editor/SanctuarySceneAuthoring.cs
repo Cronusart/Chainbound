@@ -38,7 +38,7 @@ public static class SanctuarySceneAuthoring
     private const string GlitchClipAPath = "Assets/Data/Audio/SFX/Combat/Combat_SFX_Glitch.asset";
     private const string GlitchClipBPath = "Assets/Data/Audio/SFX/Combat/Combat_SFX_Glitch2.asset";
     private const string GlitchMaterialPath = "Assets/Sprites/Materials/Signal_Glitch.mat";
-    private const string PingSoundPath = "Assets/Data/Audio/SFX/Combat/Combat_SFX_Glitch.asset";
+    private const string PingSoundPath = "Assets/Data/Audio/SFX/Combat/Sanctuary_Checkin.asset";
     private const string DialogueFolder = "Assets/Scripts/Narrative/Dialogue";
     private const string ResourcesNarrativeFolder = "Assets/Resources/Narrative";
     private const string CatalogPath = ResourcesNarrativeFolder + "/SanctuaryWakeCatalog.asset";

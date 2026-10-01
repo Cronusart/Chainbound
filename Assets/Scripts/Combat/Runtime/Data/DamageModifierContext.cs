@@ -18,6 +18,9 @@ namespace Chainbound.Combat
         public int extraHits = 0;
         public bool expandSingleTargetToAllEnemies;
         public float expandedTargetPowerMultiplier = 1f;
+        public bool bounceToOneAdjacent;
+        public float bouncePowerMultiplier = 1f;
+        public bool inverseAttackScaling;
         public bool hasAtkStatOverride;
         public CoreStat atkStatOverride;
         public bool hasAttackTypeOverride;
@@ -59,6 +62,9 @@ namespace Chainbound.Combat
                 extraHits = extraHits,
                 expandSingleTargetToAllEnemies = expandSingleTargetToAllEnemies,
                 expandedTargetPowerMultiplier = expandedTargetPowerMultiplier,
+                bounceToOneAdjacent = bounceToOneAdjacent,
+                bouncePowerMultiplier = bouncePowerMultiplier,
+                inverseAttackScaling = inverseAttackScaling,
                 hasAtkStatOverride = hasAtkStatOverride,
                 atkStatOverride = atkStatOverride,
                 hasAttackTypeOverride = hasAttackTypeOverride,

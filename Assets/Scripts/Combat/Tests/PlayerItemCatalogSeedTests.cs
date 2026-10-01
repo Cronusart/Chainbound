@@ -27,6 +27,16 @@ namespace Chainbound.Combat.Tests
             Assert.IsTrue(PlayerItemCatalogSeed.TryGet("archive_severance", out PlayerItemDefinition severance));
             Assert.AreEqual(PlayerItemOwnershipKind.CoreCollectible, severance.ownershipKind);
             Assert.AreEqual(PlayerItemEffectFamily.UnbindArchiveBook, severance.effectFamily);
+
+            Assert.IsTrue(PlayerItemCatalogSeed.TryGet("coffee_beans", out PlayerItemDefinition beans));
+            Assert.AreEqual(PlayerItemCategory.Quest, beans.category);
+            Assert.AreEqual(PlayerItemEffectFamily.None, beans.effectFamily);
+            Assert.AreEqual(1, beans.maxStack);
+            Assert.IsFalse(beans.usableInMenu);
+            Assert.IsTrue(PlayerItemCatalogSeed.TryGet("cold_beer", out PlayerItemDefinition beer));
+            Assert.AreEqual(PlayerItemCategory.Quest, beer.category);
+            Assert.IsTrue(PlayerItemCatalogSeed.TryGet("tobys_delivery", out PlayerItemDefinition delivery));
+            Assert.AreEqual("Toby's Delivery", delivery.displayName);
         }
 
         [Test]

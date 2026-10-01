@@ -53,8 +53,8 @@ MonoBehaviour:
   duplicateCopyTemplate: "Additional copy added to Known Moves \xB7 Owned \xD7{0}"
   cardSlideSound: {fileID: 11400000, guid: c9e50b3d6f415ca8d2037e1f51926430, type: 2}
   cardRiserSound: {fileID: 11400000, guid: 7c4e9a2b18d64f0a9e3c5b71d8a0462f, type: 2}
-  cardPrintSound: {fileID: 0}
-  libraryCardFront: {fileID: 21300000, guid: 4dcb9b02ef422af478649db50b25e8b7, type: 3}
+  cardPrintSound: {fileID: 11400000, guid: daf61c4e70526db9e3148f2062a37541, type: 2}
+  libraryCardFront: {fileID: 21300000, guid: acff54fba868e564c8fc1a9f62f9ff9b, type: 3}
   libraryCardOutline: {fileID: 21300000, guid: 96c4826d2a24a854a9bcd0882837c57f, type: 3}
   riserHoldSeconds: 1.7
   settleOvershoot: 1.12

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Chainbound.Combat
@@ -15,7 +16,9 @@ namespace Chainbound.Combat
     {
         const float EntranceOffsetY = 1040f;
         const float EntranceDuration = 0.64f;
-        const float OutlinePulseSeconds = 0.9f;
+        const float BeatGapSeconds = 1.7f;
+        const float DissolveSeconds = 0.46f;
+        const float OutlineFlashSeconds = 1f;
 
         [SerializeField] private CanvasGroup rootGroup;
         [SerializeField] private RectTransform document;
@@ -155,22 +158,28 @@ namespace Chainbound.Combat
             PoseCardOffscreen();
             rootGroup.alpha = 1f;
 
-            float hold = Mathf.Max(0f, profile.riserHoldSeconds);
-            float overshoot = Mathf.Max(1f, profile.settleOvershoot);
+            RarityTier rarity = move != null ? move.rarity : RarityTier.Common;
             Sequence sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
             sequence.AppendCallback(() => PlaySound(profile.cardSlideSound));
             AppendEntrance(sequence);
+            AppendDissolveBeat(sequence, FadeImages(DissolveSeconds, cardTypeIcon), profile, rarity);
+            sequence.AppendInterval(BeatGapSeconds);
             sequence.AppendCallback(() => PlaySound(profile.cardRiserSound));
-            sequence.AppendInterval(hold);
+            AppendDissolveBeat(sequence, FadeImages(DissolveSeconds, moveDot), profile, rarity);
+            sequence.AppendInterval(BeatGapSeconds);
+            AppendDissolveBeat(sequence, FadeImages(DissolveSeconds, moveNameStamp, statsStamp), profile, rarity);
+            return sequence;
+        }
+
+        private void AppendDissolveBeat(Sequence sequence, Tween dissolve, ProgressionFolioPresentationSO profile, RarityTier rarity)
+        {
             sequence.AppendCallback(() =>
             {
                 PlaySound(profile.cardPrintSound);
-                StartOutlinePulse(move != null ? move.rarity : RarityTier.Common);
+                FlashOutline(rarity);
             });
-            sequence.Append(FadePrintedInk(0.35f));
-            sequence.Append(cardRoot.DOScale(fitScale * overshoot, 0.28f).SetEase(Ease.OutCubic));
-            sequence.Append(cardRoot.DOScale(fitScale, 0.22f).SetEase(Ease.OutQuad));
-            return sequence;
+            if (dissolve != null)
+                sequence.Append(dissolve);
         }
 
         private Sequence BuildNoticeSequence(
@@ -324,32 +333,35 @@ namespace Chainbound.Combat
             sequence.Append(cardRoot.DOScale(fitScale, 0.12f).SetEase(Ease.OutQuad));
         }
 
-        private Tween FadePrintedInk(float duration)
+        private Tween FadeImages(float duration, params Image[] images)
         {
             Sequence fade = DOTween.Sequence();
-            if (cardTypeIcon != null && cardTypeIcon.sprite != null)
-                fade.Join(cardTypeIcon.DOFade(1f, duration));
-            if (moveDot != null)
-                fade.Join(moveDot.DOFade(1f, duration));
-            if (moveNameStamp != null && moveNameStamp.sprite != null)
-                fade.Join(moveNameStamp.DOFade(1f, duration));
-            if (statsStamp != null && statsStamp.sprite != null)
-                fade.Join(statsStamp.DOFade(1f, duration));
-            return fade;
+            int joins = 0;
+            if (images == null)
+                return fade;
+            for (int i = 0; i < images.Length; i++)
+            {
+                Image image = images[i];
+                if (image == null || image.sprite == null)
+                    continue;
+                fade.Join(image.DOFade(1f, duration).SetEase(Ease.InOutSine));
+                joins++;
+            }
+
+            return joins > 0 ? fade : null;
         }
 
-        private void StartOutlinePulse(RarityTier rarity)
+        private void FlashOutline(RarityTier rarity)
         {
             if (outlineFlash == null)
                 return;
             outlinePulse?.Kill(false);
-            Color color = LibraryCardRarityColors.For(rarity);
-            color.a = 0.2f;
-            outlineFlash.color = color;
             outlineFlash.gameObject.SetActive(true);
-            outlinePulse = outlineFlash.DOFade(0.85f, OutlinePulseSeconds)
-                .SetEase(Ease.InOutSine)
-                .SetLoops(-1, LoopType.Yoyo)
+            Color color = LibraryCardRarityColors.For(rarity);
+            color.a = 0.9f;
+            outlineFlash.color = color;
+            outlinePulse = outlineFlash.DOFade(0f, OutlineFlashSeconds)
+                .SetEase(Ease.OutSine)
                 .SetUpdate(true)
                 .SetTarget(this);
         }
@@ -361,7 +373,12 @@ namespace Chainbound.Combat
             AwaitingContinue = true;
             SetContinueVisible(true);
             if (accelerationButton != null)
+            {
                 accelerationButton.interactable = true;
+                accelerationButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            }
+
+            FocusContinueButton();
         }
 
         private void HandleSequenceKilled()
@@ -545,7 +562,21 @@ namespace Chainbound.Combat
             continueButton.targetGraphic = image;
             continueButton.transition = Selectable.Transition.None;
             continueButton.onClick.AddListener(ConfirmContinue);
+            continueButton.navigation = new Navigation { mode = Navigation.Mode.None };
             image.gameObject.SetActive(false);
+        }
+
+        public void FocusContinueButton()
+        {
+            if (continueButton == null || !continueButton.gameObject.activeInHierarchy)
+                return;
+
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null)
+                return;
+
+            eventSystem.SetSelectedGameObject(null);
+            eventSystem.SetSelectedGameObject(continueButton.gameObject);
         }
 
         private void SetContinueVisible(bool visible)
@@ -591,7 +622,15 @@ namespace Chainbound.Combat
         {
             if (image == null)
                 return;
-            Sprite sprite = LibraryCardStampStrip.Bake(text, fontSize, maxWidth, seed, null, lineHeight);
+            Sprite sprite = LibraryCardStampStrip.Bake(
+                text,
+                fontSize,
+                maxWidth,
+                seed,
+                null,
+                lineHeight,
+                LibraryCardFaces.LearnedInk,
+                false);
             if (sprite != null)
                 spawnedStrips.Add(sprite);
             image.sprite = sprite;

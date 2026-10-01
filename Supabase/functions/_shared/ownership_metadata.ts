@@ -1,15 +1,23 @@
-import { PNG } from "npm:pngjs@7.0.0";
+import { PNG as PngJs } from "npm:pngjs@7.0.0";
 import { Buffer } from "npm:buffer@6.0.3";
 import gifenc from "npm:gifenc@1.0.3";
 import {
+  LEARNED_CARD_FRONT_PNG_BASE64,
+  LEARNED_MOVE_CARD_DELTA_PNG_BASE64,
   MODIFIER_CARD_CATALOG,
   MODIFIER_INK_PNG_BASE64,
   MOVE_CARD_CATALOG,
   MOVE_CARD_PNG_BASE64,
   RARITY_DOT_PNG_BASE64,
   SCANLINE_FRAME_PNG_BASE64,
+  TYPE_STICKER_PNG_BASE64,
 } from "./ownership_card_catalog.generated.ts";
-import { STAMP_METADATA_RENDER_VERSION } from "./ownership_spine.ts";
+import {
+  formatLockedModifierEffect,
+  formatLockedNumber,
+  normalizeAcquisition,
+  STAMP_METADATA_RENDER_VERSION,
+} from "./ownership_spine.ts";
 
 export interface StampMetadataInput {
   assetAddress: string;
@@ -22,6 +30,9 @@ export interface StampMetadataInput {
   rarity: number;
   generatorVersion: number;
   poolHash: string;
+  acquisition?: string;
+  modifierEffectValues?: number[];
+  cluster?: "devnet" | "mainnet-beta";
 }
 
 export interface PublishedStampMetadata {
@@ -29,6 +40,15 @@ export interface PublishedStampMetadata {
   imageUri: string;
   masterImageUri: string;
   animationUri: string;
+}
+
+export interface PublishStampMetadataOptions {
+  /** Defaults to the current immutable render version. Reserved for operator repair/backfill. */
+  renderVersion?: number;
+  /** Runtime publication remains immutable. Only an explicit operator repair may replace objects. */
+  replaceExisting?: boolean;
+  /** Optional media cache key used only when repairing a previously published metadata document. */
+  mediaCacheNonce?: string;
 }
 
 type StorageClient = {
@@ -43,6 +63,26 @@ type StorageClient = {
 
 const RARITIES = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"] as const;
 
+interface PngImage {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
+interface EncodedLayer {
+  x: number;
+  y: number;
+  png: string;
+}
+
+const PNG = PngJs as unknown as {
+  new (options: { width: number; height: number }): PngImage;
+  sync: {
+    read(value: Uint8Array): PngImage;
+    write(value: PngImage, options?: Record<string, unknown>): Uint8Array;
+  };
+};
+
 function titleCaseId(value: string): string {
   return value.split("_").filter(Boolean).map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" ");
 }
@@ -53,40 +93,91 @@ function moveInfo(moveId: string, basePower: number) {
     power: number;
     accuracy: number;
     category: number;
+    categoryName: string;
     typeId: number;
+    typeName: string;
+    typeIconPath: string;
   }>;
   return catalog[moveId] ?? {
     displayName: titleCaseId(moveId),
     power: basePower,
     accuracy: 0,
     category: 0,
+    categoryName: "Damaging Melee",
     typeId: 0,
+    typeName: "Typeless",
+    typeIconPath: "Assets/Sprites/UI/typeless.png",
   };
 }
 
-function modifierInfo(modifierId: string) {
+function modifierInfo(modifierId: string, lockedValue?: number) {
   const catalog = MODIFIER_CARD_CATALOG as Record<string, { displayName: string; effect: string }>;
-  return catalog[modifierId] ?? { displayName: modifierId, effect: "" };
+  const entry = catalog[modifierId] ?? { displayName: modifierId, effect: "" };
+  const locked = lockedValue != null && Number.isFinite(lockedValue);
+  return {
+    displayName: entry.displayName,
+    effect: locked ? formatLockedModifierEffect(entry.effect, lockedValue) : entry.effect,
+    lockedValue: locked ? lockedValue : undefined,
+  };
 }
 
-function pngFromBase64(value: string): PNG {
+function pngFromBase64(value: string): PngImage {
   return PNG.sync.read(Buffer.from(value, "base64"));
 }
 
-function alphaComposite(base: PNG, overlay: PNG): void {
+function alphaComposite(base: PngImage, overlay: PngImage): void {
   if (base.width !== overlay.width || base.height !== overlay.height) throw new Error("metadata_layer_size_mismatch");
-  for (let i = 0; i < base.data.length; i += 4) {
-    const alpha = overlay.data[i + 3] / 255;
-    if (alpha <= 0) continue;
-    const inverse = 1 - alpha;
-    base.data[i] = Math.round(overlay.data[i] * alpha + base.data[i] * inverse);
-    base.data[i + 1] = Math.round(overlay.data[i + 1] * alpha + base.data[i + 1] * inverse);
-    base.data[i + 2] = Math.round(overlay.data[i + 2] * alpha + base.data[i + 2] * inverse);
-    base.data[i + 3] = Math.round((alpha + (base.data[i + 3] / 255) * inverse) * 255);
+  alphaCompositeAt(base, overlay, 0, 0);
+}
+
+function alphaCompositeAt(base: PngImage, overlay: PngImage, offsetX: number, offsetY: number): void {
+  if (offsetX < 0 || offsetY < 0 || offsetX + overlay.width > base.width || offsetY + overlay.height > base.height) {
+    throw new Error("metadata_layer_bounds_mismatch");
+  }
+  for (let y = 0; y < overlay.height; y++) {
+    for (let x = 0; x < overlay.width; x++) {
+      const source = (y * overlay.width + x) * 4;
+      const target = ((y + offsetY) * base.width + x + offsetX) * 4;
+      const alpha = overlay.data[source + 3] / 255;
+      if (alpha <= 0) continue;
+      const inverse = 1 - alpha;
+      base.data[target] = Math.round(overlay.data[source] * alpha + base.data[target] * inverse);
+      base.data[target + 1] = Math.round(overlay.data[source + 1] * alpha + base.data[target + 1] * inverse);
+      base.data[target + 2] = Math.round(overlay.data[source + 2] * alpha + base.data[target + 2] * inverse);
+      base.data[target + 3] = Math.round((alpha + (base.data[target + 3] / 255) * inverse) * 255);
+    }
   }
 }
 
-function resizeNearest(source: PNG, width: number, height: number): PNG {
+function decodeLayer(layer: EncodedLayer): { image: PngImage; x: number; y: number } {
+  return { image: pngFromBase64(layer.png), x: layer.x, y: layer.y };
+}
+
+function compositeLayer(base: PngImage, layer: EncodedLayer): void {
+  const decoded = decodeLayer(layer);
+  alphaCompositeAt(base, decoded.image, decoded.x, decoded.y);
+}
+
+function tintAndCompositeLayer(
+  base: PngImage,
+  layer: EncodedLayer,
+  tint?: { red: number; green: number; blue: number },
+): void {
+  const decoded = decodeLayer(layer);
+  if (tint) tintVisiblePixels(decoded.image, tint.red, tint.green, tint.blue);
+  alphaCompositeAt(base, decoded.image, decoded.x, decoded.y);
+}
+
+function tintVisiblePixels(image: PngImage, red: number, green: number, blue: number): void {
+  for (let i = 0; i < image.data.length; i += 4) {
+    if (image.data[i + 3] === 0) continue;
+    image.data[i] = red;
+    image.data[i + 1] = green;
+    image.data[i + 2] = blue;
+  }
+}
+
+function resizeNearest(source: PngImage, width: number, height: number): PngImage {
   const output = new PNG({ width, height });
   for (let y = 0; y < height; y++) {
     const sy = Math.min(source.height - 1, Math.floor(y * source.height / height));
@@ -103,7 +194,7 @@ function resizeNearest(source: PNG, width: number, height: number): PNG {
   return output;
 }
 
-function shiftVertical(source: PNG, offset: number): void {
+function shiftVertical(source: PngImage, offset: number): void {
   if (offset === 0) return;
   const original = new Uint8Array(source.data);
   const rowBytes = source.width * 4;
@@ -113,7 +204,7 @@ function shiftVertical(source: PNG, offset: number): void {
   }
 }
 
-function renderAnimation(card: PNG): Uint8Array {
+function renderAnimation(card: PngImage): Uint8Array {
   const { GIFEncoder, quantize, applyPalette } = gifenc as {
     GIFEncoder: () => {
       writeFrame: (
@@ -147,26 +238,38 @@ function renderAnimation(card: PNG): Uint8Array {
 
 export function renderStampLibraryCard(
   input: StampMetadataInput,
-): { master: Uint8Array; market: Uint8Array; animation: Uint8Array } {
+): { master: Uint8Array; market: Uint8Array } {
+  const learned = normalizeAcquisition(input.acquisition ?? "") === "progression_learn";
   const moveCards = MOVE_CARD_PNG_BASE64 as Record<string, string>;
-  const modifierLayers = MODIFIER_INK_PNG_BASE64 as Record<string, string>;
-  const rarityLayers = RARITY_DOT_PNG_BASE64 as Record<string, string>;
-  const moveCard = moveCards[input.moveId];
+  const learnedMoveDeltas = LEARNED_MOVE_CARD_DELTA_PNG_BASE64 as Record<string, EncodedLayer>;
+  const typeStickerLayers = TYPE_STICKER_PNG_BASE64 as Record<string, EncodedLayer>;
+  const modifierLayers = MODIFIER_INK_PNG_BASE64 as Record<string, EncodedLayer>;
+  const rarityLayers = RARITY_DOT_PNG_BASE64 as Record<string, EncodedLayer>;
+  const moveCard = learned ? LEARNED_CARD_FRONT_PNG_BASE64 : moveCards[input.moveId];
   if (!moveCard) throw new Error(`metadata_move_card_missing:${input.moveId}`);
+  const learnedMoveDelta = learned ? learnedMoveDeltas[input.moveId] : undefined;
+  if (learned && !learnedMoveDelta) throw new Error(`metadata_learned_move_layer_missing:${input.moveId}`);
   const modifierId = input.modifierIds[0] ?? "";
   const modifierLayer = modifierLayers[modifierId];
   if (!modifierLayer) throw new Error(`metadata_modifier_layer_missing:${modifierId}`);
 
   const card = pngFromBase64(moveCard);
-  alphaComposite(card, pngFromBase64(modifierLayer));
-  alphaComposite(card, pngFromBase64(rarityLayers[String(input.rarity)] ?? rarityLayers["0"]));
+  if (learned && learnedMoveDelta) compositeLayer(card, learnedMoveDelta);
+  const typeStickerLayer = typeStickerLayers[String(moveInfo(input.moveId, input.basePower).typeId)];
+  if (!typeStickerLayer) throw new Error(`metadata_type_sticker_missing:${input.moveId}`);
+  compositeLayer(card, typeStickerLayer);
+  tintAndCompositeLayer(
+    card,
+    modifierLayer,
+    learned ? { red: 158, green: 69, blue: 57 } : undefined,
+  );
+  compositeLayer(card, rarityLayers[String(input.rarity)] ?? rarityLayers["0"]);
   const poster = pngFromBase64(SCANLINE_FRAME_PNG_BASE64[0]);
   alphaComposite(poster, card);
   const market = resizeNearest(poster, 1024, 1024);
   return {
     master: new Uint8Array(PNG.sync.write(card, { colorType: 6 })),
     market: new Uint8Array(PNG.sync.write(market, { colorType: 6 })),
-    animation: renderAnimation(card),
   };
 }
 
@@ -184,8 +287,9 @@ function storageTarget(metadataUriBase: string): { bucket: string; publicBase: s
 export function stampedMetadataPublicUris(
   metadataUriBase: string,
   assetAddress: string,
+  renderVersion = STAMP_METADATA_RENDER_VERSION,
 ): PublishedStampMetadata {
-  const prefix = `stamped/v${STAMP_METADATA_RENDER_VERSION}/${assetAddress}`;
+  const prefix = `stamped/v${renderVersion}/${assetAddress}`;
   const { publicBase } = storageTarget(metadataUriBase);
   return {
     masterImageUri: `${publicBase}/${prefix}/master.png`,
@@ -226,18 +330,19 @@ async function uploadImmutable(
   publicUrl: string,
   body: Uint8Array | string,
   contentType: string,
+  replaceExisting = false,
 ): Promise<void> {
   const bytes = typeof body === "string" ? new TextEncoder().encode(body) : body;
   const expectedHash = await sha256(bytes);
   const existing = await readPublicObject(publicUrl);
   if (existing) {
-    if (await sha256(existing) !== expectedHash) throw new Error(`metadata_object_hash_mismatch:${path}`);
-    return;
+    if (await sha256(existing) === expectedHash) return;
+    if (!replaceExisting) throw new Error(`metadata_object_hash_mismatch:${path}`);
   }
   const { error } = await supabase.storage.from(bucket).upload(path, body, {
     contentType,
-    cacheControl: "31536000",
-    upsert: false,
+    cacheControl: replaceExisting ? "60" : "31536000",
+    upsert: replaceExisting,
   });
   if (error && !/already exists|duplicate/i.test(error.message ?? "")) {
     throw new Error(`metadata_upload_failed:${path}:${error.message ?? "unknown"}`);
@@ -245,40 +350,46 @@ async function uploadImmutable(
   if (!await waitForPublicObject(publicUrl, expectedHash)) throw new Error(`metadata_public_read_failed:${path}`);
 }
 
-export async function publishStampedMetadata(
-  supabase: StorageClient,
-  metadataUriBase: string,
-  input: StampMetadataInput,
-): Promise<PublishedStampMetadata> {
-  const target = storageTarget(metadataUriBase);
-  const prefix = `stamped/v${STAMP_METADATA_RENDER_VERSION}/${input.assetAddress}`;
-  const uris = stampedMetadataPublicUris(metadataUriBase, input.assetAddress);
-  const rendered = renderStampLibraryCard(input);
-  await uploadImmutable(supabase, target.bucket, `${prefix}/master.png`, uris.masterImageUri, rendered.master, "image/png");
-  await uploadImmutable(supabase, target.bucket, `${prefix}/poster.png`, uris.imageUri, rendered.market, "image/png");
-  await uploadImmutable(
-    supabase,
-    target.bucket,
-    `${prefix}/animation.gif`,
-    uris.animationUri,
-    rendered.animation,
-    "image/gif",
-  );
+function withCacheNonce(uri: string, nonce?: string): string {
+  const value = nonce?.trim();
+  if (!value) return uri;
+  const url = new URL(uri);
+  url.searchParams.set("render", value);
+  return url.toString();
+}
 
+export function buildStampedMetadata(
+  input: StampMetadataInput,
+  uris: PublishedStampMetadata,
+  renderVersion = STAMP_METADATA_RENDER_VERSION,
+  mediaCacheNonce?: string,
+): Record<string, unknown> {
   const move = moveInfo(input.moveId, input.basePower);
-  const mods = input.modifierIds.map(modifierInfo);
-  const metadata = {
+  const lockedValues = Array.isArray(input.modifierEffectValues) ? input.modifierEffectValues : [];
+  const mods = input.modifierIds.map((id, index) => modifierInfo(id, lockedValues[index]));
+  const acquisition = normalizeAcquisition(input.acquisition ?? "");
+  const cardFace = acquisition === "progression_learn" ? "Learned" : "Rolled";
+  const imageUri = withCacheNonce(uris.imageUri, mediaCacheNonce);
+  const masterImageUri = withCacheNonce(uris.masterImageUri, mediaCacheNonce);
+  return {
     name: move.displayName,
     symbol: "CBMOVE",
-    description: `Chainbound Stamped move - ${move.displayName} with ${mods.map((mod) => mod.displayName).join(" + ")}.`,
-    image: uris.imageUri,
-    animation_url: uris.animationUri,
-    external_url: `https://explorer.solana.com/address/${input.assetAddress}?cluster=devnet`,
+    description: `Chainbound Stamped move - ${move.displayName} with ${
+      mods.map((mod) => mod.displayName).join(" + ")
+    }.`,
+    image: imageUri,
+    external_url: input.cluster === "mainnet-beta"
+      ? `https://explorer.solana.com/address/${input.assetAddress}`
+      : `https://explorer.solana.com/address/${input.assetAddress}?cluster=devnet`,
     attributes: [
       { trait_type: "cb.kind", value: "stamped_move" },
       { trait_type: "cb.move_tier", value: "stamped" },
       { trait_type: "cb.move_id", value: input.moveId },
       { trait_type: "cb.known_instance_id", value: input.onchainInstanceId },
+      { trait_type: "cb.acquisition", value: acquisition },
+      { trait_type: "card_face", value: cardFace },
+      { trait_type: "cb.type", value: move.typeName },
+      { trait_type: "cb.move_category", value: move.categoryName },
       { trait_type: "cb.rarity", value: String(input.rarity) },
       { trait_type: "rarity_name", value: RARITIES[input.rarity] ?? RARITIES[0] },
       { trait_type: "cb.modifier_count", value: String(input.modifierIds.length) },
@@ -286,23 +397,70 @@ export async function publishStampedMetadata(
       { trait_type: "cb.generator_version", value: String(input.generatorVersion) },
       { trait_type: "cb.schema_version", value: "1" },
       { trait_type: "cb.pool_hash", value: input.poolHash },
-      { trait_type: "cb.render_version", value: String(STAMP_METADATA_RENDER_VERSION) },
+      { trait_type: "cb.render_version", value: String(renderVersion) },
       { trait_type: "display_name", value: move.displayName },
+      { trait_type: "type", value: move.typeName },
+      { trait_type: "move_category", value: move.categoryName },
       { trait_type: "power", value: String(move.power) },
       { trait_type: "accuracy", value: move.accuracy <= 0 ? "AUTO" : String(move.accuracy) },
-      ...mods.map((mod, index) => ({ trait_type: `mod_${index + 1}_name`, value: mod.displayName })),
+      ...mods.flatMap((mod, index) => [
+        { trait_type: `mod_${index + 1}_name`, value: mod.displayName },
+        { trait_type: `mod_${index + 1}_effect`, value: mod.effect },
+        ...(mod.lockedValue != null
+          ? [{ trait_type: `mod_${index + 1}_value`, value: formatLockedNumber(mod.lockedValue) }]
+          : []),
+      ]),
       { trait_type: "stamped_by", value: input.walletAddress },
     ],
     properties: {
       category: "image",
-      chainbound: { asset_address: input.assetAddress, known_id: input.knownId },
+      chainbound: {
+        asset_address: input.assetAddress,
+        known_id: input.knownId,
+        move_id: input.moveId,
+        acquisition,
+        card_face: cardFace.toLowerCase(),
+        type: move.typeName,
+        move_category: move.categoryName,
+      },
       files: [
-        { uri: uris.imageUri, type: "image/png", note: "1024x1024 marketplace poster" },
-        { uri: uris.animationUri, type: "image/gif", note: "animated scanline card" },
-        { uri: uris.masterImageUri, type: "image/png", note: "1280x1280 authored master" },
+        { uri: imageUri, type: "image/png", note: "1024x1024 marketplace poster" },
+        { uri: masterImageUri, type: "image/png", note: "1280x1280 authored master" },
       ],
     },
   };
+}
+
+export async function publishStampedMetadata(
+  supabase: StorageClient,
+  metadataUriBase: string,
+  input: StampMetadataInput,
+  options: PublishStampMetadataOptions = {},
+): Promise<PublishedStampMetadata> {
+  const renderVersion = options.renderVersion ?? STAMP_METADATA_RENDER_VERSION;
+  const target = storageTarget(metadataUriBase);
+  const prefix = `stamped/v${renderVersion}/${input.assetAddress}`;
+  const uris = stampedMetadataPublicUris(metadataUriBase, input.assetAddress, renderVersion);
+  const rendered = renderStampLibraryCard(input);
+  await uploadImmutable(
+    supabase,
+    target.bucket,
+    `${prefix}/master.png`,
+    uris.masterImageUri,
+    rendered.master,
+    "image/png",
+    options.replaceExisting,
+  );
+  await uploadImmutable(
+    supabase,
+    target.bucket,
+    `${prefix}/poster.png`,
+    uris.imageUri,
+    rendered.market,
+    "image/png",
+    options.replaceExisting,
+  );
+  const metadata = buildStampedMetadata(input, uris, renderVersion, options.mediaCacheNonce);
   await uploadImmutable(
     supabase,
     target.bucket,
@@ -310,6 +468,7 @@ export async function publishStampedMetadata(
     uris.metadataUri,
     JSON.stringify(metadata),
     "application/json",
+    options.replaceExisting,
   );
   return uris;
 }

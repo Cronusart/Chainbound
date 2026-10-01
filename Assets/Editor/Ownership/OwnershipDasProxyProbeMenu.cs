@@ -55,9 +55,9 @@ public static class OwnershipDasProxyProbeMenu
         var evidence = new StringBuilder();
         evidence.AppendLine("OwnershipDasProxyProbeMenu — AUTHENTICATED READ ONLY");
         evidence.AppendLine($"utc={stamp}");
-        evidence.AppendLine("cluster=devnet");
+        evidence.AppendLine($"cluster={chain.ownershipCluster}");
         evidence.AppendLine($"function={OwnershipDasProxyClient.FunctionName}");
-        evidence.AppendLine($"projectHost={OwnershipDasProxyClient.ExpectedProjectHost}");
+        evidence.AppendLine($"projectHost={new Uri(backend.supabaseUrl).Host}");
         evidence.AppendLine($"collection={chain.coreMovesCollectionId}");
         evidence.AppendLine($"expectedAuthority={chain.coreMovesUpdateAuthority}");
         evidence.AppendLine("--- getAsset ---");

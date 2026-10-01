@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Chainbound.Combat;
 using UnityEditor;
 using UnityEditor.Android;
@@ -14,11 +15,13 @@ using UnityEngine;
 /// </summary>
 public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, IPostGenerateGradleAndroidProject
 {
-    private const string ConfigPath = "Assets/Data/Solana/SolanaConfig.asset";
+    private const string DevnetProfilePath = "Assets/Resources/DeploymentProfiles/DevnetOwnership.asset";
+    private const string MainnetProfilePath = "Assets/Resources/DeploymentProfiles/MainnetSmoke.asset";
     private const string MainManifestPath = "Assets/Plugins/Android/AndroidManifest.xml";
     private const string MwaLibraryPath = "Assets/Plugins/Android/SignalJamSolanaMwa.androidlib";
     private const string MwaGradlePath = MwaLibraryPath + "/build.gradle";
     private const string MwaManifestPath = MwaLibraryPath + "/src/main/AndroidManifest.xml";
+    private const string MwaBridgePath = MwaLibraryPath + "/src/main/java/com/signaljam/solana/mwa/SignalJamMwaBridge.kt";
     private const string RequiredMwaDependency = "mobile-wallet-adapter-clientlib-ktx:2.0.7";
     private const string RequiredKotlinPlugin = "id 'org.jetbrains.kotlin.android'";
     private const string KotlinPluginVersion = "2.1.10";
@@ -30,7 +33,7 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
         if (report.summary.platform != BuildTarget.Android)
             return;
 
-        List<string> errors = CollectErrors(report.summary.options);
+        List<string> errors = CollectErrors(report.summary.options, null);
         if (errors.Count > 0)
         {
             throw new BuildFailedException(
@@ -65,27 +68,70 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
     [MenuItem("Tools/Chainbound/Solana Mobile/Validate Android Release")]
     public static void ValidateFromMenu()
     {
-        List<string> errors = CollectErrors(BuildOptions.None);
+        ValidateFromMenu(OwnershipDeploymentEnvironment.DevnetOwnership);
+    }
+
+    [MenuItem("Tools/Chainbound/Solana Mobile/Validate Mainnet Smoke")]
+    public static void ValidateMainnetFromMenu()
+    {
+        ValidateFromMenu(OwnershipDeploymentEnvironment.MainnetSmoke);
+    }
+
+    private static void ValidateFromMenu(OwnershipDeploymentEnvironment environment)
+    {
+        List<string> errors = CollectErrors(BuildOptions.None, environment);
         if (errors.Count == 0)
         {
-            Debug.Log("[SolanaMobileReleaseValidator] Android MWA release configuration passed static validation.");
+            Debug.Log($"[SolanaMobileReleaseValidator] {environment} Android configuration passed validation.");
             return;
         }
 
         Debug.LogError(
-            "[SolanaMobileReleaseValidator] Android MWA release configuration is not ready:\n - " +
+            $"[SolanaMobileReleaseValidator] {environment} Android configuration is not ready:\n - " +
             string.Join("\n - ", errors));
     }
 
-    private static List<string> CollectErrors(BuildOptions options)
+    private static List<string> CollectErrors(
+        BuildOptions options,
+        OwnershipDeploymentEnvironment? environmentOverride)
     {
         var errors = new List<string>();
-        SolanaConfigSO config = AssetDatabase.LoadAssetAtPath<SolanaConfigSO>(ConfigPath);
-        if (config == null)
+        OwnershipDeploymentEnvironment? commandSelection = DevelopmentAndroidBuildCommand.ActiveDeploymentEnvironment;
+        OwnershipDeploymentEnvironment? selected = environmentOverride
+            ?? commandSelection
+            ?? ResolveDefinedEnvironment();
+        string globalDefines = PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Android);
+        bool globalDevnet = ContainsDefine(globalDefines, "CHAINBOUND_DEVNET_OWNERSHIP");
+        bool globalMainnet = ContainsDefine(globalDefines, "CHAINBOUND_MAINNET_SMOKE");
+        if (globalDevnet && globalMainnet)
+            errors.Add("Android Player Settings contain both deployment defines; exactly one environment is allowed.");
+        if (commandSelection == OwnershipDeploymentEnvironment.DevnetOwnership && globalMainnet)
+            errors.Add("Devnet build is blocked because Android Player Settings contain the opposite Mainnet deployment define.");
+        if (commandSelection == OwnershipDeploymentEnvironment.MainnetSmoke && globalDevnet)
+            errors.Add("Mainnet build is blocked because Android Player Settings contain the opposite Devnet deployment define.");
+        if (!selected.HasValue)
         {
-            errors.Add($"Missing SolanaConfigSO at {ConfigPath}.");
+            errors.Add("Android build must explicitly select CHAINBOUND_DEVNET_OWNERSHIP or CHAINBOUND_MAINNET_SMOKE.");
+            selected = OwnershipDeploymentEnvironment.Disabled;
+        }
+
+        string profilePath = selected == OwnershipDeploymentEnvironment.MainnetSmoke
+            ? MainnetProfilePath
+            : DevnetProfilePath;
+        PlatformBuildProfileSO profile = AssetDatabase.LoadAssetAtPath<PlatformBuildProfileSO>(profilePath);
+        if (profile == null)
+        {
+            errors.Add($"Missing deployment profile at {profilePath}.");
         }
         else
+        {
+            errors.AddRange(OwnershipDeploymentProfileRules.Validate(profile, requireComplete: true));
+            if (profile.OwnershipEnvironment != selected.Value)
+                errors.Add($"Profile environment {profile.OwnershipEnvironment} does not match build selection {selected.Value}.");
+        }
+
+        SolanaConfigSO config = profile != null ? profile.SolanaConfig : null;
+        if (config != null)
         {
             if (!Uri.TryCreate(config.mwaIdentityUri, UriKind.Absolute, out Uri identity) ||
                 identity.Scheme != Uri.UriSchemeHttps || string.IsNullOrWhiteSpace(identity.Host))
@@ -96,12 +142,38 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
             if (string.IsNullOrWhiteSpace(config.mwaIdentityName))
                 errors.Add("MWA identity name is empty.");
 
+            string cluster = config.ownershipCluster?.Trim().ToLowerInvariant();
+            if (cluster != "devnet" && cluster != "mainnet-beta")
+                errors.Add("Ownership cluster must be explicitly set to devnet or mainnet-beta for MWA.");
+
             if (!IsRelativeIconUri(config.mwaIconUri))
                 errors.Add("MWA icon URI must be a relative path beneath the identity URI (for example, icons/chainbound.png).");
 
             if (config.useStubServices)
                 errors.Add("SolanaConfig is configured to use stub services.");
+
+            if (!string.IsNullOrWhiteSpace(config.rpcEndpoint) &&
+                !string.IsNullOrWhiteSpace(config.expectedGenesisHash))
+            {
+                try
+                {
+                    string endpoint = config.rpcEndpoint.Trim();
+                    string actualGenesis = Task.Run(async () =>
+                    {
+                        using (var rpc = new SolanaRpcService(endpoint))
+                            return await rpc.GetGenesisHashAsync().ConfigureAwait(false);
+                    }).GetAwaiter().GetResult();
+                    if (!string.Equals(actualGenesis, config.expectedGenesisHash.Trim(), StringComparison.Ordinal))
+                        errors.Add($"RPC genesis mismatch: expected {config.expectedGenesisHash.Trim()}, received {actualGenesis}.");
+                }
+                catch (Exception exception)
+                {
+                    errors.Add("RPC genesis verification failed: " + exception.Message);
+                }
+            }
         }
+
+        ValidateEnvironmentIsolation(selected.Value, profile, errors);
 
         if (!File.Exists(MainManifestPath))
             errors.Add($"Missing custom Android manifest at {MainManifestPath}.");
@@ -116,6 +188,27 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
         if (!File.Exists(MwaManifestPath) ||
             !File.ReadAllText(MwaManifestPath).Contains("SignalJamMwaActivity", StringComparison.Ordinal))
             errors.Add("Native MWA host activity is missing from the Android library manifest.");
+
+        if (!File.Exists(MwaBridgePath))
+        {
+            errors.Add($"Native MWA bridge source is missing at {MwaBridgePath}.");
+        }
+        else
+        {
+            string source = File.ReadAllText(MwaBridgePath);
+            int clusterAssignment = source.IndexOf("adapter.rpcCluster =", StringComparison.Ordinal);
+            int authTokenRestore = source.IndexOf("adapter.authToken = request.authToken", StringComparison.Ordinal);
+            if (!source.Contains("RpcCluster.Devnet", StringComparison.Ordinal) ||
+                !source.Contains("RpcCluster.MainnetBeta", StringComparison.Ordinal) ||
+                clusterAssignment < 0)
+            {
+                errors.Add("Native MWA bridge must map devnet and mainnet-beta to explicit RpcCluster values.");
+            }
+            else if (authTokenRestore < 0 || clusterAssignment > authTokenRestore)
+            {
+                errors.Add("Native MWA bridge must select its RPC cluster before restoring a cached authorization token.");
+            }
+        }
 
         if (PlayerSettings.Android.minSdkVersion < AndroidSdkVersions.AndroidApiLevel24)
             errors.Add("Android minimum SDK must be API 24 or newer for this MWA bridge.");
@@ -138,6 +231,61 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
             errors.Add("Non-development dApp Store APKs must use a dedicated custom signing keystore.");
 
         return errors;
+    }
+
+    private static OwnershipDeploymentEnvironment? ResolveDefinedEnvironment()
+    {
+        string defines = PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Android);
+        bool devnet = ContainsDefine(defines, "CHAINBOUND_DEVNET_OWNERSHIP");
+        bool mainnet = ContainsDefine(defines, "CHAINBOUND_MAINNET_SMOKE");
+        if (devnet == mainnet)
+            return null;
+        return mainnet
+            ? OwnershipDeploymentEnvironment.MainnetSmoke
+            : OwnershipDeploymentEnvironment.DevnetOwnership;
+    }
+
+    private static bool ContainsDefine(string defines, string expected)
+    {
+        string[] values = (defines ?? "").Split(';');
+        return Array.Exists(values, value => string.Equals(value.Trim(), expected, StringComparison.Ordinal));
+    }
+
+    private static void ValidateEnvironmentIsolation(
+        OwnershipDeploymentEnvironment selected,
+        PlatformBuildProfileSO selectedProfile,
+        ICollection<string> errors)
+    {
+        if (selected != OwnershipDeploymentEnvironment.MainnetSmoke || selectedProfile == null)
+            return;
+
+        PlatformBuildProfileSO devnet = AssetDatabase.LoadAssetAtPath<PlatformBuildProfileSO>(DevnetProfilePath);
+        if (devnet == null)
+        {
+            errors.Add("Devnet deployment profile is missing, so Mainnet isolation cannot be verified.");
+            return;
+        }
+
+        if (ReferenceEquals(selectedProfile.SolanaConfig, devnet.SolanaConfig))
+            errors.Add("Mainnet Smoke must use a separate SolanaConfig asset from Devnet.");
+        if (ReferenceEquals(selectedProfile.SupabaseConfig, devnet.SupabaseConfig))
+            errors.Add("Mainnet Smoke must use a separate SupabaseConfig asset from Devnet.");
+
+        if (selectedProfile.SupabaseConfig != null && devnet.SupabaseConfig != null &&
+            Uri.TryCreate(selectedProfile.SupabaseConfig.supabaseUrl, UriKind.Absolute, out Uri mainnetBackend) &&
+            Uri.TryCreate(devnet.SupabaseConfig.supabaseUrl, UriKind.Absolute, out Uri devnetBackend) &&
+            string.Equals(mainnetBackend.Host, devnetBackend.Host, StringComparison.OrdinalIgnoreCase))
+        {
+            errors.Add("Mainnet Smoke and Devnet must use different Supabase projects.");
+        }
+
+        if (selectedProfile.SolanaConfig != null && devnet.SolanaConfig != null)
+        {
+            if (string.Equals(selectedProfile.SolanaConfig.gameProgramId, devnet.SolanaConfig.gameProgramId, StringComparison.Ordinal))
+                errors.Add("Mainnet Smoke must not reuse the Devnet game program ID.");
+            if (string.Equals(selectedProfile.SolanaConfig.coreMovesCollectionId, devnet.SolanaConfig.coreMovesCollectionId, StringComparison.Ordinal))
+                errors.Add("Mainnet Smoke must not reuse the Devnet Core Moves collection.");
+        }
     }
 
     private static bool IsRelativeIconUri(string value)

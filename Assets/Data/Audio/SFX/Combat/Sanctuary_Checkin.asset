@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e411382a9c8eba546a30b4ce6573732f, type: 3}
+  m_Name: Sanctuary_Checkin
+  m_EditorClassIdentifier: 
+  id: Sanctuary_Checkin
+  clips:
+  - {fileID: 8300000, guid: 370edb18d22da2645baef89df246719c, type: 3}
+  outputBus: 0
+  loop: 0
+  volumeMin: 0.7
+  volumeMax: 0.85
+  pitchMin: 0.78
+  pitchMax: 0.88
+  is3D: 1
+  spatialBlend: 0.85
+  minDistance: 2
+  maxDistance: 28
+  polyphonyKey: 
+  maxInstances: 0
+  cooldownSeconds: 0

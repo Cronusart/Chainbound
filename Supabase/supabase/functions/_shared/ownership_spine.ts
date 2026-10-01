@@ -9,18 +9,28 @@ import {
 import * as bs58Module from "npm:bs58@5.0.0";
 import { Buffer } from "npm:buffer@6.0.3";
 import { JsonMap, SOLANA_BASE58_RE, str } from "./account_helpers.ts";
-import { MODIFIER_POOL } from "./modifier_pool.generated.ts";
-import { HELIUS_DAS_URL_ENV, requireHeliusDevnetUrl } from "./ownership_das_proxy.ts";
+import { MODIFIER_EFFECT_BOUNDS, MODIFIER_POOL } from "./modifier_pool.generated.ts";
+import {
+  HELIUS_DAS_URL_ENV,
+  OwnershipCluster,
+  requireHeliusDasUrl,
+  requireOwnershipCluster,
+} from "./ownership_das_proxy.ts";
 
 export {
   EXPECTED_MODIFIER_POOL_HASH,
   EXPECTED_MODIFIER_POOL_ROW_COUNT,
+  MODIFIER_EFFECT_BOUNDS,
   MODIFIER_POOL,
 } from "./modifier_pool.generated.ts";
 
 export const CHAINBOUND_PROGRAM_ID = "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ";
 export const CORE_PROGRAM_ID = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d";
 export const CORE_AUTHORITY_PDA = "FNRyxJLpcGuWwEUXYiXqjJMDsHAAs1gU8CnkjjBRL3ys";
+export const MAINNET_SMOKE_ENABLED_ENV = "CHAINBOUND_MAINNET_SMOKE_ENABLED";
+export const MAINNET_SMOKE_WALLETS_ENV = "CHAINBOUND_MAINNET_SMOKE_WALLETS";
+export const DEVNET_GENESIS_HASH = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
+export const MAINNET_GENESIS_HASH = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
 export const KNOWN_ROLL_RAM_COST = 5;
 export const FIRST_STAMP_RAM_COST = 75;
 export const SECOND_STAMP_RAM_COST_PIN = 150;
@@ -38,7 +48,7 @@ const PLAYER_PROFILE_DISCRIMINATOR = bytes(82, 226, 99, 87, 164, 130, 181, 80);
 const MOVE_VAULT_DISCRIMINATOR = bytes(30, 75, 22, 221, 63, 126, 196, 29);
 const RAM_GRANT_RECEIPT_DISCRIMINATOR = bytes(151, 111, 207, 251, 59, 36, 69, 29);
 const STAMP_TICKET_DISCRIMINATOR = bytes(27, 188, 81, 247, 225, 23, 30, 219);
-export const STAMP_METADATA_RENDER_VERSION = 4;
+export const STAMP_METADATA_RENDER_VERSION = 6;
 
 // Server-owned Phase 1 pool. IDs and powers are canonical Moves.csv values;
 // the numeric ID is the same FNV-1a truncation used by MoveDatabaseSO.
@@ -73,8 +83,9 @@ export function resolveEventKnownAuthority(moveId: string): KnownAuthorityResult
 }
 
 export interface OwnershipConfig {
-  cluster: string;
+  cluster: OwnershipCluster;
   rpcUrl: string;
+  expectedGenesisHash: string;
   dasUrl: string;
   programId: PublicKey;
   movesCollection: PublicKey;
@@ -106,6 +117,7 @@ export interface KnownAuthorityResult {
 export interface StampAuthorityResult {
   modifierIds: string[];
   rarity: number;
+  modifierEffectValues: number[];
 }
 
 export interface BuiltStampTransaction {
@@ -116,7 +128,11 @@ export interface BuiltStampTransaction {
   onchainInstanceId: bigint;
   estimatedNetworkFeeLamports: number;
   expiresAt: Date;
+  chainRamBalance: number;
+  chainRamRequired: number;
 }
+
+export type SignatureOutcome = "missing" | "pending" | "confirmed" | "failed";
 
 export interface BuiltRamGrantTransaction {
   transactionBase64: string;
@@ -183,9 +199,11 @@ export class OwnershipConfigurationError extends Error {
 
 export function loadRollConfig(): Pick<
   OwnershipConfig,
-  "resultAuthority" | "generatorVersion" | "modifierPoolHash" | "schemaVersion"
+  "cluster" | "resultAuthority" | "generatorVersion" | "modifierPoolHash" | "schemaVersion"
 > {
+  const cluster = loadOwnershipCluster();
   return {
+    cluster,
     resultAuthority: readResultAuthority(requiredEnv("CHAINBOUND_RESULT_AUTHORITY_SECRET")),
     generatorVersion: positiveIntEnv("CHAINBOUND_OWNERSHIP_GENERATOR_VERSION"),
     modifierPoolHash: hashEnv("CHAINBOUND_OWNERSHIP_MODIFIER_POOL_HASH"),
@@ -195,12 +213,23 @@ export function loadRollConfig(): Pick<
 
 export function loadOwnershipConfig(): OwnershipConfig {
   const roll = loadRollConfig();
-  const cluster = requiredEnv("CHAINBOUND_SOLANA_CLUSTER");
-  if (cluster !== "devnet") throw new OwnershipConfigurationError("ownership_cluster_must_be_devnet");
+  const cluster = roll.cluster;
   const programText = requiredEnv("CHAINBOUND_GAME_PROGRAM_ID");
-  if (programText !== CHAINBOUND_PROGRAM_ID) throw new OwnershipConfigurationError("unexpected_chainbound_program_id");
+  if (cluster === "devnet" && programText !== CHAINBOUND_PROGRAM_ID) {
+    throw new OwnershipConfigurationError("unexpected_chainbound_program_id");
+  }
+  if (cluster === "mainnet-beta" && programText === CHAINBOUND_PROGRAM_ID) {
+    throw new OwnershipConfigurationError("mainnet_program_must_be_isolated");
+  }
+  const programId = publicKey(programText, "invalid_chainbound_program_id");
   const authorityText = requiredEnv("CHAINBOUND_CORE_MOVES_UPDATE_AUTHORITY");
-  if (authorityText !== CORE_AUTHORITY_PDA) throw new OwnershipConfigurationError("unexpected_moves_update_authority");
+  const [derivedCoreAuthority] = PublicKey.findProgramAddressSync([utf8("core_authority")], programId);
+  if (authorityText !== derivedCoreAuthority.toBase58()) {
+    throw new OwnershipConfigurationError("unexpected_moves_update_authority");
+  }
+  if (cluster === "devnet" && authorityText !== CORE_AUTHORITY_PDA) {
+    throw new OwnershipConfigurationError("unexpected_moves_update_authority");
+  }
   const metadataUriBase = requiredEnv("CHAINBOUND_OWNERSHIP_METADATA_URI_BASE").replace(/\/+$/, "");
   if (!metadataUriBase.startsWith("https://")) throw new OwnershipConfigurationError("metadata_uri_base_must_be_https");
   const stampRamCost = positiveIntEnv("CHAINBOUND_OWNERSHIP_STAMP_RAM_COST");
@@ -210,18 +239,103 @@ export function loadOwnershipConfig(): OwnershipConfig {
   return {
     ...roll,
     cluster,
-    rpcUrl: requiredEnv("CHAINBOUND_SOLANA_RPC_ENDPOINT"),
+    rpcUrl: requireHttpsRpcUrl(requiredEnv("CHAINBOUND_SOLANA_RPC_ENDPOINT")),
+    expectedGenesisHash: expectedGenesisHashForCluster(cluster),
     // Stamped-asset confirmation requires DAS, not plain Solana JSON-RPC.
     // Reuse the same validated server-only Devnet Helius endpoint as the
     // authenticated read proxy; the value is never returned to Unity.
-    dasUrl: requireHeliusDevnetUrl(Deno.env.get(HELIUS_DAS_URL_ENV)),
-    programId: publicKey(programText, "invalid_chainbound_program_id"),
+    dasUrl: requireHeliusDasUrl(Deno.env.get(HELIUS_DAS_URL_ENV), cluster),
+    programId,
     movesCollection: publicKey(requiredEnv("CHAINBOUND_CORE_MOVES_COLLECTION"), "moves_collection_unset_or_invalid"),
     movesUpdateAuthority: publicKey(authorityText, "invalid_moves_update_authority"),
     ticketTtlSeconds: positiveIntEnv("CHAINBOUND_OWNERSHIP_TICKET_TTL_SECONDS"),
     stampRamCost,
     metadataUriBase,
   };
+}
+
+export function expectedGenesisHashForCluster(cluster: OwnershipCluster): string {
+  return cluster === "mainnet-beta" ? MAINNET_GENESIS_HASH : DEVNET_GENESIS_HASH;
+}
+
+export function loadMainnetSmokeWallets(): ReadonlySet<string> {
+  return parseWalletAllowlist(
+    requiredEnv(MAINNET_SMOKE_WALLETS_ENV),
+    "invalid_mainnet_smoke_wallets",
+  );
+}
+
+export function isOwnershipWalletAllowed(cluster: OwnershipCluster, walletAddress: string): boolean {
+  if (cluster !== "mainnet-beta") return true;
+  const normalized = publicKey(walletAddress, "invalid_wallet_public_key").toBase58();
+  return loadMainnetSmokeWallets().has(normalized);
+}
+
+const verifiedRpcGenesis = new Map<string, Promise<void>>();
+
+export async function ensureOwnershipRpcCluster(
+  config: Pick<OwnershipConfig, "cluster" | "rpcUrl" | "expectedGenesisHash">,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const cacheKey = `${config.cluster}|${config.rpcUrl}|${config.expectedGenesisHash}`;
+  let pending = verifiedRpcGenesis.get(cacheKey);
+  if (!pending) {
+    pending = verifyRpcGenesis(config, fetchImpl);
+    verifiedRpcGenesis.set(cacheKey, pending);
+  }
+  try {
+    await pending;
+  } catch (error) {
+    verifiedRpcGenesis.delete(cacheKey);
+    throw error;
+  }
+}
+
+async function verifyRpcGenesis(
+  config: Pick<OwnershipConfig, "rpcUrl" | "expectedGenesisHash">,
+  fetchImpl: typeof fetch,
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetchImpl(config.rpcUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getGenesisHash" }),
+    });
+  } catch {
+    throw new OwnershipConfigurationError("solana_rpc_genesis_check_failed");
+  }
+  if (!response.ok) throw new OwnershipConfigurationError("solana_rpc_genesis_check_failed");
+  const payload = await response.json() as { error?: unknown; result?: unknown };
+  if (payload.error || typeof payload.result !== "string") {
+    throw new OwnershipConfigurationError("solana_rpc_genesis_check_failed");
+  }
+  if (payload.result !== config.expectedGenesisHash) {
+    throw new OwnershipConfigurationError("solana_rpc_cluster_mismatch");
+  }
+}
+
+function requireHttpsRpcUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") throw new Error("not_https");
+    return url.toString();
+  } catch {
+    throw new OwnershipConfigurationError("invalid_solana_rpc_endpoint");
+  }
+}
+
+function loadOwnershipCluster(): OwnershipCluster {
+  let cluster: OwnershipCluster;
+  try {
+    cluster = requireOwnershipCluster(Deno.env.get("CHAINBOUND_SOLANA_CLUSTER"));
+  } catch {
+    throw new OwnershipConfigurationError("unsupported_ownership_cluster");
+  }
+  if (cluster === "mainnet-beta" && str(Deno.env.get(MAINNET_SMOKE_ENABLED_ENV)).toLowerCase() !== "true") {
+    throw new OwnershipConfigurationError("mainnet_ownership_disabled");
+  }
+  return cluster;
 }
 
 export function loadDevnetSmokeGrantConfig(): DevnetSmokeGrantConfig {
@@ -247,6 +361,14 @@ export function loadDevnetSmokeGrantConfig(): DevnetSmokeGrantConfig {
 }
 
 export function parseDevnetSmokeWallets(value: string): ReadonlySet<string> {
+  return parseWalletAllowlist(value, "invalid_devnet_smoke_wallets");
+}
+
+export function parseMainnetSmokeWallets(value: string): ReadonlySet<string> {
+  return parseWalletAllowlist(value, "invalid_mainnet_smoke_wallets");
+}
+
+function parseWalletAllowlist(value: string, errorCode: string): ReadonlySet<string> {
   try {
     const parsed = JSON.parse(value) as unknown;
     if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > 32) {
@@ -255,14 +377,14 @@ export function parseDevnetSmokeWallets(value: string): ReadonlySet<string> {
     const wallets = new Set<string>();
     for (const candidate of parsed) {
       if (typeof candidate !== "string") throw new Error("invalid_wallet_type");
-      const normalized = publicKey(candidate.trim(), "invalid_devnet_smoke_wallets").toBase58();
+      const normalized = publicKey(candidate.trim(), errorCode).toBase58();
       if (wallets.has(normalized)) throw new Error("duplicate_wallet");
       wallets.add(normalized);
     }
     return wallets;
   } catch (error) {
     if (error instanceof OwnershipConfigurationError) throw error;
-    throw new OwnershipConfigurationError("invalid_devnet_smoke_wallets");
+    throw new OwnershipConfigurationError(errorCode);
   }
 }
 
@@ -290,9 +412,13 @@ export async function deriveStampResult(
   // The client idempotency key is deliberately excluded. A Known move receives
   // one immutable outcome for a given generator/pool, regardless of retries,
   // wallet cancellation, blockhash expiry, or app relaunch.
-  const digest = await authorityDigest(
+  const digest = await stampResultDigest(
     secret,
-    `stamp:v2:${generatorVersion}:${poolHash}:${profileId}:${knownId}:mods:${modifierCount}`,
+    profileId,
+    knownId,
+    modifierCount,
+    generatorVersion,
+    poolHash,
   );
   const first = readU32(digest, 0) % MODIFIER_POOL.length;
   let second = readU32(digest, 4) % (MODIFIER_POOL.length - 1);
@@ -309,9 +435,127 @@ export async function deriveStampResult(
     : rarityRoll < 9900
     ? 4
     : 5;
+  const modifierIds = modifierCount === 1 ? [MODIFIER_POOL[first]] : [MODIFIER_POOL[first], MODIFIER_POOL[second]];
   return {
-    modifierIds: modifierCount === 1 ? [MODIFIER_POOL[first]] : [MODIFIER_POOL[first], MODIFIER_POOL[second]],
+    modifierIds,
     rarity,
+    modifierEffectValues: lockModifierEffectValues(digest, modifierIds),
+  };
+}
+
+async function stampResultDigest(
+  secret: Uint8Array,
+  profileId: string,
+  knownId: string,
+  modifierCount: number,
+  generatorVersion: number,
+  poolHash: string,
+): Promise<Uint8Array> {
+  return await authorityDigest(
+    secret,
+    `stamp:v2:${generatorVersion}:${poolHash}:${profileId}:${knownId}:mods:${modifierCount}`,
+  );
+}
+
+export async function deriveStampLockForModifiers(
+  secret: Uint8Array,
+  profileId: string,
+  knownId: string,
+  modifierIds: string[],
+  generatorVersion: number,
+  poolHash: string,
+): Promise<number[]> {
+  if (modifierIds.length !== 1 && modifierIds.length !== 2) throw new Error("invalid_modifier_count");
+  const digest = await stampResultDigest(
+    secret,
+    profileId,
+    knownId,
+    modifierIds.length,
+    generatorVersion,
+    poolHash,
+  );
+  return lockModifierEffectValues(digest, modifierIds);
+}
+
+export function lockModifierEffectValues(digest: Uint8Array, modifierIds: string[]): number[] {
+  return modifierIds.map((sectionId, slot) => {
+    const bounds = modifierEffectBounds(sectionId);
+    return rollLockedEffectValue(bounds.min, bounds.max, readU32(digest, 12 + slot * 4));
+  });
+}
+
+function modifierEffectBounds(sectionId: string): { min: number; max: number } {
+  const entry = (MODIFIER_EFFECT_BOUNDS as Record<string, { min: number; max: number }>)[sectionId];
+  return entry ?? { min: 0, max: 0 };
+}
+
+export function rollLockedEffectValue(min: number, max: number, raw: number): number {
+  let low = min;
+  let high = max;
+  if (high < low) {
+    const swap = low;
+    low = high;
+    high = swap;
+  }
+  if (Math.abs(high - low) < 0.0001) return roundAwayFromZero(low, 4);
+  const unitInclusive = (raw >>> 0) / 4294967295;
+  return roundAwayFromZero(low + ((high - low) * unitInclusive), 4);
+}
+
+export function roundAwayFromZero(value: number, digits: number): number {
+  if (!Number.isFinite(value)) return 0;
+  if (value === 0) return 0;
+  const factor = 10 ** digits;
+  const sign = value < 0 ? -1 : 1;
+  return sign * Math.round(Math.abs(value) * factor) / factor;
+}
+
+export function formatLockedNumber(value: number): string {
+  const rounded = roundAwayFromZero(value, 4);
+  const negative = rounded < 0;
+  const [whole, frac = ""] = Math.abs(rounded).toFixed(4).split(".");
+  const trimmedFrac = frac.replace(/0+$/, "");
+  const abs = trimmedFrac.length > 0 ? `${whole}.${trimmedFrac}` : whole;
+  return negative ? `-${abs}` : abs;
+}
+
+const LOCKED_NUMERIC_RANGE = /(?<![\d.])[+-]?\d+(?:\.\d+)?\s*(?:-|–|—)\s*[+-]?\d+(?:\.\d+)?/;
+
+export function formatLockedModifierEffect(description: string, lockedValue: number): string {
+  const formatted = formatLockedNumber(lockedValue);
+  const source = description.trim();
+  if (!source) return formatted;
+  let next = source.replace(LOCKED_NUMERIC_RANGE, formatted);
+  next = next.split("{value}").join(formatted).split("{n}").join(formatted);
+  return next;
+}
+
+export function parseModifierEffectValues(value: unknown): number[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const parsed = value.map((entry) => {
+    const numeric = typeof entry === "number" ? entry : Number(entry);
+    return Number.isFinite(numeric) ? numeric : NaN;
+  });
+  if (parsed.some((entry) => Number.isNaN(entry))) return null;
+  return parsed.map((entry) => roundAwayFromZero(entry, 4));
+}
+
+export function stampEffectFieldsFromOperation(operation: JsonMap): JsonMap {
+  const values = parseModifierEffectValues(operation.modifier_effect_values);
+  const count = Math.max(0, Number(operation.modifier_count) || 0);
+  if (!values || values.length < 1) {
+    return {
+      modifier1EffectValue: 0,
+      modifier1EffectValueLocked: false,
+      modifier2EffectValue: 0,
+      modifier2EffectValueLocked: false,
+    };
+  }
+  return {
+    modifier1EffectValue: values[0],
+    modifier1EffectValueLocked: true,
+    modifier2EffectValue: count > 1 ? values[1] ?? 0 : 0,
+    modifier2EffectValueLocked: count > 1 && values.length > 1,
   };
 }
 
@@ -347,15 +591,21 @@ export async function buildStampTransaction(args: {
     program,
   );
 
-  const vaultInfo = await connection.getAccountInfo(vault, "confirmed");
+  const [vaultInfo, profileInfo] = await connection.getMultipleAccountsInfo([vault, profile], "confirmed");
   if (!vaultInfo) throw new Error("move_vault_not_initialized");
+  if (!profileInfo) throw new Error("player_profile_not_initialized");
   if (!vaultInfo.owner.equals(program)) throw new Error("move_vault_wrong_program_owner");
+  if (!profileInfo.owner.equals(program)) throw new Error("player_profile_wrong_program_owner");
   const vaultState = decodeMoveVault(new Uint8Array(vaultInfo.data));
+  const profileState = decodePlayerProfile(new Uint8Array(profileInfo.data));
+  if (profileState.owner !== owner.toBase58()) throw new Error("player_profile_owner_mismatch");
   const onchainInstanceId = args.existingOnchainInstanceId
     ? BigInt(args.existingOnchainInstanceId)
     : vaultState.nextInstanceId;
   const materialize = !vaultState.instanceIds.some((value) => value === onchainInstanceId);
   if (args.existingOnchainInstanceId && materialize) throw new Error("known_onchain_instance_missing");
+  const chainRamRequired = args.config.stampRamCost + (materialize ? KNOWN_ROLL_RAM_COST : 0);
+  if (profileState.ramBalance < chainRamRequired) throw new Error("insufficient_ram");
 
   const instructions: TransactionInstruction[] = [];
   if (materialize) {
@@ -446,7 +696,43 @@ export async function buildStampTransaction(args: {
     onchainInstanceId,
     estimatedNetworkFeeLamports: estimated.value ?? 0,
     expiresAt,
+    chainRamBalance: profileState.ramBalance,
+    chainRamRequired,
   };
+}
+
+/**
+ * Server-side preflight for the exact partially signed transaction returned to
+ * Unity. The owner signature is intentionally absent, so signature checks stay
+ * disabled while every program instruction and account transition is executed.
+ */
+export async function simulateStampTransaction(rpcUrl: string, transactionBase64: string): Promise<void> {
+  const response = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "simulateTransaction",
+      params: [transactionBase64, {
+        encoding: "base64",
+        commitment: "confirmed",
+        sigVerify: false,
+        replaceRecentBlockhash: false,
+      }],
+    }),
+  });
+  if (!response.ok) throw new Error("stamp_simulation_failed");
+  const payload = await response.json() as {
+    error?: unknown;
+    result?: { value?: { err?: unknown; logs?: string[] } };
+  };
+  const simulationError = payload.error ?? payload.result?.value?.err;
+  if (!simulationError) return;
+  const serialized = JSON.stringify(simulationError);
+  if (serialized.includes("6001")) throw new Error("insufficient_ram");
+  console.error("[simulateStampTransaction]", serialized, payload.result?.value?.logs ?? []);
+  throw new Error("stamp_simulation_failed");
 }
 
 export async function buildDevnetSmokeGrantTransaction(args: {
@@ -745,15 +1031,24 @@ export async function fetchAndVerifyRamGrant(args: {
 }
 
 export async function signatureIsConfirmed(rpcUrl: string, signature: string): Promise<boolean> {
+  return await signatureOutcome(rpcUrl, signature) === "confirmed";
+}
+
+export async function signatureOutcome(rpcUrl: string, signature: string): Promise<SignatureOutcome> {
   const connection = new Connection(rpcUrl, "confirmed");
   const result = await connection.getSignatureStatuses([signature], { searchTransactionHistory: true });
   const status = result.value[0];
-  return !!status && !status.err &&
-    (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized");
+  if (!status) return "missing";
+  if (status.err) return "failed";
+  return status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized"
+    ? "confirmed"
+    : "pending";
 }
 
 export function stampMetadataUri(metadataUriBase: string, assetAddress: string): string {
-  return `${metadataUriBase.replace(/\/+$/, "")}/stamped/v${STAMP_METADATA_RENDER_VERSION}/${assetAddress}/metadata.json`;
+  return `${
+    metadataUriBase.replace(/\/+$/, "")
+  }/stamped/v${STAMP_METADATA_RENDER_VERSION}/${assetAddress}/metadata.json`;
 }
 
 /**
@@ -951,6 +1246,11 @@ export function authoritySecretBytes(keypair: Keypair): Uint8Array {
 
 export async function sha256Hex(value: string): Promise<string> {
   return Array.from(await sha256Bytes(value)).map((value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+export function normalizeAcquisition(value: string): string {
+  if (value === "progression_learn" || value === "event_grant" || value === "candy_roll") return value;
+  return "candy_roll";
 }
 
 export function hashMoveId(moveId: string): number {

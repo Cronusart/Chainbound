@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10ff48baf5b26454ea6dff5762eb67c5, type: 3}
+  m_Name: coffee_momo_queue_reynard
+  m_EditorClassIdentifier: 
+  stepName: coffee_momo_queue_reynard
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 51504193-ef30-435f-a16c-25f4e7fcad5d
+  sequence: {fileID: 11400000, guid: fa9ae6c82351ca54d82852ee19b4de34, type: 2}
+  acquireInputLock: 0

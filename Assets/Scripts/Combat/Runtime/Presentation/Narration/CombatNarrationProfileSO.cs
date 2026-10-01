@@ -19,10 +19,12 @@ namespace Chainbound.Combat
 
         [Header("Advance And Timing")]
         [SerializeField] private CombatNarrationAdvanceMode advanceMode = CombatNarrationAdvanceMode.AutoWithOptionalAdvance;
-        [Min(1f)] [SerializeField] private float charactersPerSecond = 60f;
-        [Min(0f)] [SerializeField] private float actionLeadSeconds = 0.22f;
-        [Min(0f)] [SerializeField] private float primaryResolutionSeconds = 0.70f;
-        [Min(0f)] [SerializeField] private float consequenceSeconds = 0.55f;
+        [Min(1f)] [SerializeField] private float charactersPerSecond = 45f;
+        [Min(0f)] [SerializeField] private float actionLeadSeconds = 0.4f;
+        [Min(0f)] [SerializeField] private float primaryResolutionSeconds = 1.7f;
+        [Min(0f)] [SerializeField] private float consequenceSeconds = 1.45f;
+        [Tooltip("Full-text time before a damage, heal, mitigation, or passive page can be skipped.")]
+        [Min(0f)] [SerializeField] private float effectPageSkipLockoutSeconds = 1.15f;
 
         [Header("Action Templates")]
         [SerializeField] private string moveTemplate = "{actor} used {move}!";
@@ -81,6 +83,7 @@ namespace Chainbound.Combat
         public float ActionLeadSeconds => Mathf.Max(0f, actionLeadSeconds);
         public float PrimaryResolutionSeconds => Mathf.Max(0f, primaryResolutionSeconds);
         public float ConsequenceSeconds => Mathf.Max(0f, consequenceSeconds);
+        public float EffectPageSkipLockoutSeconds => Mathf.Max(0f, effectPageSkipLockoutSeconds);
 
         internal string MoveTemplate => moveTemplate;
         internal string MultiHitMoveTemplate => multiHitMoveTemplate;

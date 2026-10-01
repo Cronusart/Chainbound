@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Minefolk
+  m_EditorClassIdentifier: 
+  speciesId: minefolk
+  displayName: Minefolk
+  description: Mined ranged striker. A rifle that ramps into tanks, with one contact
+    follow-up.
+  primaryType: 8
+  secondaryType: 0
+  baseMaxHP: 124
+  baseMeleeAtk: 48
+  baseMeleeDef: 52
+  baseRangedAtk: 74
+  baseRangedDef: 50
+  baseSpeed: 48
+  maxEvolutionStages: 1
+  offTypeMoveExceptions: []
+  learnableMoves:
+  - {fileID: 11400000, guid: 3f4b63353209ed54090eada861357e09, type: 2}
+  - {fileID: 11400000, guid: c5c176107b654c4fb3b91b62f7ad6f0a, type: 2}
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  - {fileID: 11400000, guid: 7bc8b700c4a81fa45a6c26e2ac5630b4, type: 2}
+  - {fileID: 11400000, guid: 37d573f9d35b0e64a8621a412d73ce85, type: 2}
+  learnLevels: 0100000001000000010000000100000001000000
+  exclusiveMoves: []
+  flagshipMove: {fileID: 11400000, guid: 3f4b63353209ed54090eada861357e09, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 3f4b63353209ed54090eada861357e09, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: c5c176107b654c4fb3b91b62f7ad6f0a, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 7bc8b700c4a81fa45a6c26e2ac5630b4, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 37d573f9d35b0e64a8621a412d73ce85, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 0
+  defaultCaptureProfile: 1
+  rarity: 2
+  combatRoleOverride: 3
+  designNotes: Rare Mined ranged striker. Net 396. Rifle 74, melee 48 so FOMO's melee-attack
+    stage has a stat to spend, defenses 52/50, speed 48. Sturdy striker, not a wall.
+    Signature is Deep Reap. Progression pool is that shot, Vector Shot, Pulse Shot,
+    Pickaxe Flurry, and Exploit Window.

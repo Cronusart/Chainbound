@@ -181,6 +181,42 @@ namespace Chainbound.Combat.Tests
             Assert.IsFalse(rewards.defeatGrantsRewards);
             Assert.IsTrue(rewards.defeatRevivesKoChainlings);
             Assert.AreEqual(0.5f, rewards.defeatKoRespawnHpFraction);
+            Assert.AreEqual(25, rewards.ramBoss);
+            Assert.AreEqual(0, rewards.koXpBoss);
+            Assert.AreEqual(100, rewards.completionBonusBoss);
+        }
+
+        [Test]
+        public void RewardCalculator_BossVictory_PaysFlatRamAndXp()
+        {
+            PostBattleRewardsConfigSO rewards = PostBattleRewardsConfigSO.CreateRuntimeDefault();
+            ProgressionConfigSO progression = ProgressionConfigSO.CreateRuntimeDefault();
+            _createdAssets.Add(rewards);
+            _createdAssets.Add(progression);
+            var calculator = new StandardBattleRewardCalculator(rewards, progression);
+            var result = new BattleResult
+            {
+                winnerTeamIndex = 0,
+                totalEnemyKOs = 2,
+                encounterDifficulty = EncounterDifficulty.Boss,
+                battleType = BattleType.PvE,
+                playerParticipants = new List<BattleParticipant>
+                {
+                    new BattleParticipant
+                    {
+                        instanceId = "c1",
+                        backendChainlingId = "chainling-1",
+                        speciesId = "validape",
+                        wasActive = true,
+                    },
+                },
+            };
+
+            BattleRewardSummary summary = calculator.Calculate(result);
+
+            Assert.AreEqual(25, summary.ramEarned);
+            Assert.AreEqual(1, summary.chainlingRewards.Count);
+            Assert.AreEqual(100, summary.chainlingRewards[0].xpEarned);
         }
 
         [Test]

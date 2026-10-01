@@ -11,13 +11,17 @@ import {
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
 import {
+  ensureOwnershipRpcCluster,
   fetchAndVerifyStampReceipt,
   FIRST_STAMP_RAM_COST,
   hashMoveId,
+  isOwnershipWalletAllowed,
   isSolanaSignature,
   loadOwnershipConfig,
+  normalizeAcquisition,
   OwnershipConfigurationError,
-  signatureIsConfirmed,
+  signatureOutcome,
+  stampEffectFieldsFromOperation,
 } from "../_shared/ownership_spine.ts";
 
 serve(async (req: Request) => {
@@ -42,6 +46,10 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "wallet_not_linked_to_profile" }, 403);
     }
     const config = loadOwnershipConfig();
+    if (!isOwnershipWalletAllowed(config.cluster, walletAddress)) {
+      return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
+    }
+    await ensureOwnershipRpcCluster(config);
     const { data: operation, error } = await supabase.from("ownership_stamp_operations").select("*")
       .eq("player_profile_id", profile.player_profile_id).eq("idempotency_key", idempotencyKey).maybeSingle();
     if (error) throw error;
@@ -49,6 +57,12 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "stamp_operation_not_found" }, 404);
     }
     if (str(operation.status) === "confirmed") {
+      const confirmedAsset = operation.verified_asset_json && typeof operation.verified_asset_json === "object"
+        ? {
+          ...(operation.verified_asset_json as JsonMap),
+          acquisition: normalizeAcquisition(str(operation.acquisition)),
+        }
+        : null;
       return jsonResponse({
         success: true,
         confirmed: true,
@@ -57,10 +71,11 @@ serve(async (req: Request) => {
         operation_status: "confirmed",
         known_instance_id: knownId,
         idempotency_key: idempotencyKey,
+        acquisition: normalizeAcquisition(str(operation.acquisition)),
         stamped_asset_address: str(operation.stamped_asset_address),
         idempotent: true,
         signature: str(operation.signature),
-        asset: operation.verified_asset_json ?? null,
+        asset: confirmedAsset,
       });
     }
     if (str(operation.status) === "failed") {
@@ -80,7 +95,7 @@ serve(async (req: Request) => {
     if (submittedError) throw submittedError;
 
     const { data: knownRow, error: knownError } = await supabase.from("ownership_known_moves")
-      .select("move_id,onchain_move_id").eq("known_id", knownId).single();
+      .select("move_id,onchain_move_id,acquisition").eq("known_id", knownId).single();
     if (knownError) throw knownError;
     const modifierIds = Array.isArray(operation.modifier_ids)
       ? operation.modifier_ids.map((value: unknown) => str(value))
@@ -97,7 +112,19 @@ serve(async (req: Request) => {
       expectedStampedAssetAddress: str(operation.stamped_asset_address),
     });
 
-    if (!verified && !await signatureIsConfirmed(config.rpcUrl, signature)) {
+    const outcome = verified ? "confirmed" : await signatureOutcome(config.rpcUrl, signature);
+    if (outcome === "failed") {
+      const { error: failedUpdateError } = await supabase.from("ownership_stamp_operations").update({
+        status: "failed",
+        failure_code: "transaction_failed",
+        last_reconciled_at: now,
+        updated_at: now,
+      }).eq("operation_id", operation.operation_id).neq("status", "confirmed");
+      if (failedUpdateError) throw failedUpdateError;
+      return jsonResponse({ success: false, error: "stamp_transaction_failed" }, 409);
+    }
+
+    if (!verified && outcome !== "confirmed") {
       return jsonResponse({
         success: true,
         confirmed: false,
@@ -106,6 +133,7 @@ serve(async (req: Request) => {
         operation_status: "submitted",
         known_instance_id: knownId,
         idempotency_key: idempotencyKey,
+        acquisition: normalizeAcquisition(str(operation.acquisition)),
         stamped_asset_address: str(operation.stamped_asset_address),
         signature,
         message: "Stamp submitted; confirmation will resume automatically.",
@@ -128,13 +156,20 @@ serve(async (req: Request) => {
         operation_status: "chain_confirmed",
         known_instance_id: knownId,
         idempotency_key: idempotencyKey,
+        acquisition: normalizeAcquisition(str(operation.acquisition)),
         stamped_asset_address: str(operation.stamped_asset_address),
         signature,
         message: "Transaction confirmed; the on-chain Stamp receipt is still propagating.",
       }, 202);
     }
 
-    const publicAsset: JsonMap = { ...verified, knownInstanceId: knownId, moveId: str(knownRow?.move_id) };
+    const publicAsset: JsonMap = {
+      ...verified,
+      ...stampEffectFieldsFromOperation(operation),
+      knownInstanceId: knownId,
+      moveId: str(knownRow?.move_id),
+      acquisition: normalizeAcquisition(str(operation.acquisition) || str(knownRow?.acquisition)),
+    };
     delete publicAsset.knownOnchainInstanceId;
     delete publicAsset.ticketAddress;
     delete publicAsset.idempotencyHash;
@@ -157,6 +192,7 @@ serve(async (req: Request) => {
       operation_status: "confirmed",
       known_instance_id: knownId,
       idempotency_key: idempotencyKey,
+      acquisition: normalizeAcquisition(str(operation.acquisition)),
       stamped_asset_address: str(operation.stamped_asset_address),
       idempotent: settlement?.replayed === true,
       signature: str(settlement?.signature) || signature,

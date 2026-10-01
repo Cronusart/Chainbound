@@ -12,6 +12,8 @@ public sealed class WorldPresenceBinding : MonoBehaviour
     [SerializeField] private GameObject target;
     [Tooltip("Once the flag exists: active when the flag is true, inactive when false.")]
     [SerializeField] private bool activeWhenTrue = true;
+    [Tooltip("When enabled, a flag change does not hide or show the target until this binding enables again.")]
+    [SerializeField] private bool applyOnEnableOnly;
     [Tooltip("Unspecified uses the world-presence prefix board.")]
     [SerializeField] private WorldPresenceLifetime lifetimeOverride = WorldPresenceLifetime.Unspecified;
 
@@ -22,6 +24,7 @@ public sealed class WorldPresenceBinding : MonoBehaviour
     public string PresenceId => presenceId != null ? presenceId.Trim() : "";
     public GameObject Target => target;
     public bool ActiveWhenTrue => activeWhenTrue;
+    public bool ApplyOnEnableOnly => applyOnEnableOnly;
     public WorldPresenceLifetime LifetimeOverride => lifetimeOverride;
 
     /// <summary>
@@ -111,6 +114,8 @@ public sealed class WorldPresenceBinding : MonoBehaviour
 
     private void HandleFlagChanged(string changedKey, bool value)
     {
+        if (applyOnEnableOnly)
+            return;
         if (string.Equals(changedKey, PresenceId, StringComparison.Ordinal))
             Apply();
     }

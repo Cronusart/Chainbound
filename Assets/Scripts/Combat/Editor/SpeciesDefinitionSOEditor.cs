@@ -16,10 +16,11 @@ namespace Chainbound.Combat.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Base Stat Balance", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
+                $"Net stat total (includes MaxHP): {species.BaseNetStatTotal}\n" +
                 $"Combat stat total (excludes MaxHP): {species.BaseCombatStatTotal}\n" +
                 $"MATK {species.baseMeleeAtk} + MDEF {species.baseMeleeDef} + " +
                 $"RATK {species.baseRangedAtk} + RDEF {species.baseRangedDef} + SPD {species.baseSpeed}\n" +
-                $"MaxHP (excluded): {species.baseMaxHP}",
+                $"MaxHP: {species.baseMaxHP}",
                 MessageType.Info);
 
             int totalWeight = 0;

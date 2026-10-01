@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Chainbound.Combat
 {
@@ -41,6 +42,19 @@ namespace Chainbound.Combat
         public int temporaryStageDelta;
 
         /// <summary>
+        /// Stage changes this status owns and must undo when it expires.
+        /// Used by rest-of-turn debuffs such as Bot Swarm.
+        /// </summary>
+        public List<OwnedStageDelta> ownedStageDeltas;
+
+        /// <summary>
+        /// Turn this status was applied. Paired with holdThroughGrantTurn so a
+        /// next-action status is not deleted by the end-of-turn tick that follows the grant.
+        /// </summary>
+        public int grantedOnTurn = -1;
+        public bool holdThroughGrantTurn;
+
+        /// <summary>
         /// For Recharging status: the move instance ID being recharged.
         /// Only relevant when statusId == StatusId.Recharging.
         /// </summary>
@@ -74,11 +88,52 @@ namespace Chainbound.Combat
         /// <summary>Decrement duration at End of Turn. Returns true if still active.</summary>
         public bool Tick()
         {
-            if (statusClass == StatusClass.Duration || statusClass == StatusClass.Consumed)
+            return Tick(int.MinValue);
+        }
+
+        /// <summary>
+        /// Decrement duration at End of Turn. A next-action status skips the tick
+        /// on the turn it was granted, so it can still be used next turn.
+        /// </summary>
+        public bool Tick(int turn)
+        {
+            if (holdThroughGrantTurn && grantedOnTurn == turn)
             {
-                turnsRemaining--;
+                holdThroughGrantTurn = false;
+                return !IsExpired;
             }
+
+            if (statusClass == StatusClass.Duration || statusClass == StatusClass.Consumed)
+                turnsRemaining--;
             return !IsExpired;
+        }
+
+        public void HoldThroughGrantTurn(int turn)
+        {
+            grantedOnTurn = turn;
+            holdThroughGrantTurn = true;
+        }
+
+        public void AddOwnedStage(CoreStat stat, int delta)
+        {
+            if (delta == 0)
+                return;
+            if (ownedStageDeltas == null)
+                ownedStageDeltas = new List<OwnedStageDelta>();
+            ownedStageDeltas.Add(new OwnedStageDelta { stat = stat, delta = delta });
+        }
+
+        /// <summary>
+        /// Consumed statuses that mean "your next action," not "the rest of this turn."
+        /// They stay up through the granting turn's end tick, then expire if unused.
+        /// </summary>
+        public static bool IsNextActionStatus(StatusId id)
+        {
+            return id == StatusId.Staggered
+                || id == StatusId.Surging
+                || id == StatusId.Splinter
+                || id == StatusId.Amplified
+                || id == StatusId.DamageIntercept;
         }
 
         /// <summary>Consume the status (for Consumed class). Marks it as used.</summary>
@@ -97,5 +152,12 @@ namespace Chainbound.Combat
             counterValue += amount;
             return counterValue >= counterThreshold;
         }
+    }
+
+    [Serializable]
+    public struct OwnedStageDelta
+    {
+        public CoreStat stat;
+        public int delta;
     }
 }

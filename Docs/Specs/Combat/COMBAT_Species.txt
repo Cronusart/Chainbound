@@ -2,7 +2,7 @@ COMBAT_06_SpeciesMovePools_v1.3
 
 REVISION NOTES:
 - Removed secondary-type assumptions from the pool framework
-- Reworked exclusive moves into source-species acquisition plus same-type equip
+- Starter exclusive moves are learned from that species' progression pool and equip only on that species
 - Clarified that only exclusive and limited-event moves may be permanently locked
 - Kept current shipped exclusives on starters, while allowing future event-based exclusives
 - Reframed learnable pools around star-up / mastery acquisition instead of generic leveling
@@ -17,9 +17,9 @@ plus any source-exclusive moves assigned to that species.
 
 IMPORTANT CLARIFICATIONS:
 - A species can have a curated learnable pool and a broader equippable pool.
-- Source-exclusive moves are acquired only on their source species.
-- Once acquired, an exclusive move may be equipped by any Chainling whose current type matches the move.
-- If the source species is Entangled, the exclusive move inherits that Entangled type.
+- Source-exclusive moves are acquired only from that species' progression pool.
+- A starter exclusive equips only on its source species, including an Entangled specimen of that species.
+- Entangled type is per specimen. It does not come from species.secondaryType.
 
 DESIGN PRINCIPLES:
 - Species pools should create identity through curation, not through raw power spikes.
@@ -46,7 +46,7 @@ Every Chainling can equip moves from:
 | Primary Type     | Full access to all moves of that primary type              |
 | Typeless         | Full access to all typeless moves                          |
 | Off-Type         | Only documented species exceptions                         |
-| Exclusive / Event| Must match the move's current type and already be acquired |
+| Exclusive / Event| Equips only on the source species that owns the exclusive |
 
 These moves can be equipped if acquired through any allowed method:
 - Star-up / mastery ordinal rewards
@@ -69,7 +69,7 @@ Rules:
 The following restrictions apply:
 - Secondary type access is not part of the current design.
 - Off-type exceptions must be documented explicitly.
-- Exclusive moves are source-species locked for acquisition, not for equip.
+- Exclusive moves are locked to the source species for both acquisition and equip.
 - Meme access is handled separately in Section 4.
 
 1.4 Slot Reminder
@@ -136,7 +136,7 @@ Current shipped exclusives belong to:
 - Gilarime
 - Kitsauto
 
-These are source-exclusive today, not globally equip-exclusive forever.
+These equip only on their source species.
 
 ===============================================================================
 4. Meme Type Restriction
@@ -166,7 +166,7 @@ By default, a species can access:
 
 5.2 Off-Type Exceptions
 
-Some species may receive 1-3 off-type baseline moves.
+Some species may receive 1-2 off-type baseline moves.
 
 Requirements:
 - Must fit species lore or morphology
@@ -180,12 +180,12 @@ Requirements:
 
 6.1 Core Rule
 
-Exclusive moves are defined by acquisition source, not by permanent equip lockout.
+Starter exclusive moves belong to one species for both learning and equip.
 
 That means:
-- The source species is the only species that can roll the move from star-up or mastery
-- Once acquired, any Chainling whose current type matches the move may equip it
-- Entangled source species convert the move to the Entangled type for both acquisition result and later equip checks
+- The source species is the only species that can roll the move from its progression pool
+- Only that species can equip it, including an Entangled specimen of the same species
+- An Entangled type on a different species does not unlock the exclusive
 
 6.2 Current Shipping Rule
 
@@ -196,7 +196,7 @@ That means:
 
 Future event-based exclusives are allowed if they obey:
 - source-species acquisition lock
-- same-type equip rule
+- source-species equip lock
 - clear limited-availability labeling
 - no raw power advantage over permanent baseline content
 
@@ -211,7 +211,8 @@ On species data validation:
 - Off-type moves must be explicitly documented
 - Permanently learned moves must be exclusive or limited-event only
 - Exclusive move source species must be defined
-- Equip eligibility must key off current move type, not source species ownership
+- Equip eligibility keys off primary type, the specimen's entangled type, typeless moves, and that species' off-type exceptions
+- Exclusive equip keys off the source species, not type match alone
 
 7.2 UI Integration
 
@@ -229,7 +230,7 @@ Loadout services must support:
 - duplicate move cap of 2
 - competitive rune cap of 2 per Chainling
 - removable vs permanently learned moves
-- same-type exclusive equip checks
+- source-species exclusive equip checks
 - source-species acquisition metadata for exclusives
 
 ===============================================================================
@@ -248,7 +249,7 @@ Related Specification Documents:
 ===============================================================================
 
 v1.3
-- Reworked exclusives into source-species acquisition plus same-type equip
+- Starter exclusives equip only on their source species
 - Removed secondary-type scaffolding
 - Clarified permanent move rules
 - Allowed future event-based exclusives by design

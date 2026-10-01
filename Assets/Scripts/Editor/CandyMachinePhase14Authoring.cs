@@ -171,6 +171,7 @@ public static class CandyMachinePhase14Authoring
                 mod2Dot,
                 flash,
                 stampFont);
+            presenter.SetLearnedCardFace(AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/LibraryCards/librarycard_learned_frontUI.png"));
 
             CandyMachineResultView resultView = resultObject.AddComponent<CandyMachineResultView>();
             resultView.Bind(resultGroup, presenter, continueButton);
@@ -282,6 +283,7 @@ public static class CandyMachinePhase14Authoring
 
             LibraryCardResultPresenter presenter = cardObject.AddComponent<LibraryCardResultPresenter>();
             presenter.Bind(cardRect, cardFace, typeWell, moveName, stats, mod1, mod2, effect, moveDot, mod1Dot, mod2Dot, flash, stampFont);
+            presenter.SetLearnedCardFace(AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/UI/LibraryCards/librarycard_learned_frontUI.png"));
             CandyMachineResultView resultView = GetOrAdd<CandyMachineResultView>(result.gameObject);
             resultView.Bind(resultGroup, presenter, continueButton);
             result.gameObject.SetActive(false);

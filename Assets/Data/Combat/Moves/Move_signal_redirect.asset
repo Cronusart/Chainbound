@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: signal_redirect
   displayName: Signal Redirect
-  description: Redirect next hit on ally to self and gain Def +1.
+  description: Redirect the next hit on an ally to yourself and gain Def +1. Holds
+    through next turn.
   category: 3
   baseType: 1
   rarity: 0
@@ -119,6 +120,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

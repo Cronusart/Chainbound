@@ -34,8 +34,11 @@ namespace SignalJam.UI.MenuNavigation
         private bool selected;
         private bool focused;
         private bool stickyChrome;
+        private bool stickyShimmerSuppressed;
 
         public bool IsSelected => selected;
+
+        public bool IsShimmerPlaying => shimmerImage != null && shimmerImage.gameObject.activeSelf;
 
         public bool ShimmerFollowsFocus => shimmerFollowsFocus;
 
@@ -70,6 +73,7 @@ namespace SignalJam.UI.MenuNavigation
             pixelsPerUnitMultiplier = Mathf.Max(0.01f, pixelsPerUnit);
             shimmerFollowsFocus = followFocus;
             stickyChrome = false;
+            stickyShimmerSuppressed = false;
             focused = false;
 
             shimmerFrames.Clear();
@@ -143,9 +147,16 @@ namespace SignalJam.UI.MenuNavigation
         /// <summary>
         /// Orange vs grey chrome stays until the next call. Shimmer still follows EventSystem focus.
         /// </summary>
-        public void SetStickySelected(bool isSelected)
+        public void SetStickySelected(bool isSelected) => SetStickySelected(isSelected, true);
+
+        /// <summary>
+        /// Sticky orange/grey. With <paramref name="allowShimmer"/> false the plate stays flat
+        /// even while focused (committed mode tabs).
+        /// </summary>
+        public void SetStickySelected(bool isSelected, bool allowShimmer)
         {
             stickyChrome = true;
+            stickyShimmerSuppressed = !allowShimmer;
             selected = isSelected;
             EnsureHierarchy();
             ApplySelectedVisual();
@@ -157,6 +168,7 @@ namespace SignalJam.UI.MenuNavigation
         public void ClearStickySelection()
         {
             stickyChrome = false;
+            stickyShimmerSuppressed = false;
             selected = focused && shimmerFollowsFocus;
             EnsureHierarchy();
             ApplySelectedVisual();
@@ -196,7 +208,7 @@ namespace SignalJam.UI.MenuNavigation
             bool playShimmer = enableShimmer
                 && shimmerFrames != null
                 && shimmerFrames.Count > 0
-                && (stickyChrome ? focused : isSelected);
+                && (stickyChrome ? focused && !stickyShimmerSuppressed : isSelected);
             if (shimmerImage != null)
             {
                 shimmerImage.type = Image.Type.Sliced;

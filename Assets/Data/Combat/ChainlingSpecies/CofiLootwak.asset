@@ -25,18 +25,59 @@ MonoBehaviour:
   baseRangedDef: 84
   baseSpeed: 16
   maxEvolutionStages: 1
-  learnableMoves: []
-  learnLevels: 
+  offTypeMoveExceptions: []
+  learnableMoves:
+  - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1002, type: 2}
+  - {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
+  - {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+  learnLevels: 010000000100000001000000
   exclusiveMoves:
   - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
   flagshipMove: {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
   initialMoves:
   - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
   - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1002, type: 2}
-  progressionMovePool: []
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1002, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
+    poolTag: 1
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
   isStarter: 0
   defaultCaptureProfile: 1
+  rarity: 0
   combatRoleOverride: 4
-  designNotes: 'Story boss. Uncatchable via encounter capturePolicy Disabled. BST
+  designNotes: Story boss. Uncatchable via encounter capturePolicy Disabled. BST
     exception 394 including HP (wall soak). Kit is exclusive; Utility AI + Bean Sip
-    recharge 2 yields sip-then-beam cadence.'
+    recharge 2 yields sip-then-beam cadence.

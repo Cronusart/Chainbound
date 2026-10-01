@@ -204,7 +204,7 @@ namespace Chainbound.Combat
             IReadOnlyCollection<string> eligibleInstanceIds,
             Action<string> onConfirm,
             Action onCancel,
-            string prompt = "Select your target")
+            string prompt = null)
         {
             ResolveFallbacks();
             if (state == null || hudController == null || onConfirm == null || eligibleInstanceIds == null)
@@ -238,9 +238,10 @@ namespace Chainbound.Combat
             }
 
             _targetCursor = 0;
-            _activeTargetingPromptMessage = string.IsNullOrWhiteSpace(prompt) ? "Select your target" : prompt;
+            _activeTargetingPromptMessage = string.IsNullOrWhiteSpace(prompt) ? null : prompt;
             _mode = Mode.ExternalTargetSelect;
-            HidePanels();
+            swapSelectPanel?.SetVisible(false);
+            moveInfoPanel?.SetVisible(false);
             ShowTargetingPrompt();
             RefreshPreviewTargets();
             return true;
@@ -269,10 +270,16 @@ namespace Chainbound.Combat
                 RefreshSwapUI();
                 PlayUiCue(CombatUiSfxCue.Navigate);
             }
-            else if ((_mode == Mode.TargetSelect || _mode == Mode.ExternalTargetSelect) && _targetCandidates.Count > 0)
+            else if (_mode == Mode.TargetSelect && _targetCandidates.Count > 0)
             {
                 _targetCursor = Wrap(_targetCursor + step, _targetCandidates.Count);
                 RefreshMoveUI();
+                RefreshPreviewTargets();
+                PlayUiCue(CombatUiSfxCue.TargetChanged);
+            }
+            else if (_mode == Mode.ExternalTargetSelect && _targetCandidates.Count > 0)
+            {
+                _targetCursor = Wrap(_targetCursor + step, _targetCandidates.Count);
                 RefreshPreviewTargets();
                 PlayUiCue(CombatUiSfxCue.TargetChanged);
             }
@@ -314,7 +321,7 @@ namespace Chainbound.Combat
                 {
                     _mode = Mode.TargetSelect;
                     _targetCursor = Mathf.Clamp(_targetCursor, 0, _targetCandidates.Count - 1);
-                    moveSelectPanel?.SetVisible(false);
+                    _activeTargetingPromptMessage = null;
                     ShowTargetingPrompt();
                     RefreshMoveUI();
                     RefreshPreviewTargets();
@@ -703,7 +710,7 @@ namespace Chainbound.Combat
                 return;
             }
 
-            if (!IndexValid(_moveCursor, _moves.Count))
+            if (_mode != Mode.ExternalTargetSelect && !IndexValid(_moveCursor, _moves.Count))
             {
                 hudController.ClearPreviewTargets();
                 battlefieldPresenter?.ClearSelectionPreview();
@@ -848,7 +855,9 @@ namespace Chainbound.Combat
 
         private void ShowTargetingPrompt()
         {
+            hudController?.SetBottomActionPanelVisible(true);
             var label = EnsureTargetingPromptLabel();
+            moveSelectPanel?.HoldOpenForTargetingPrompt(label != null ? label.gameObject : null);
             if (label == null) return;
 
             label.text = !string.IsNullOrWhiteSpace(_activeTargetingPromptMessage)

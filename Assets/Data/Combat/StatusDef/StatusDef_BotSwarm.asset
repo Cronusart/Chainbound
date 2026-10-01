@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 212
   displayName: Bot Swarm
-  effectSummary: Team Atk/Def down
+  effectSummary: Atk and Def down for the rest of this turn
   statusClass: 0
   origin: 1
   defaultDuration: 1

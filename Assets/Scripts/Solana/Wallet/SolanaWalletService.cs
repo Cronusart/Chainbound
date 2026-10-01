@@ -12,10 +12,13 @@ namespace Chainbound.Combat
     public sealed class SolanaWalletService : IWalletService, IWalletRequestCancellation, IDisposable
     {
         private const string LastPublicKeyPreference = "SolWallet_LastPubkey";
-        private const string AuthTokenStorageKey = "mwa.authToken";
+        private const string LegacyAuthTokenStorageKey = "mwa.authToken";
+        private const string AuthTokenStorageKeyPrefix = "mwa.authToken.";
 
         private readonly SolanaConfigSO _config;
         private readonly IMobileWalletAdapterBridge _mobileBridge;
+        private readonly string _mwaCluster;
+        private readonly string _authTokenStorageKey;
         private bool _connected;
         private string _publicKey;
         private string _authToken;
@@ -33,7 +36,11 @@ namespace Chainbound.Combat
         {
             _config = config;
             _mobileBridge = mobileBridge ?? new AndroidMobileWalletAdapterBridge();
-            _authToken = SecureCredentialStore.Get(AuthTokenStorageKey);
+            _mwaCluster = config == null ? string.Empty : NormalizeMwaCluster(config.ownershipCluster);
+            _authTokenStorageKey = string.IsNullOrEmpty(_mwaCluster)
+                ? string.Empty
+                : GetAuthTokenStorageKey(_mwaCluster);
+            _authToken = LoadClusterAuthorizationToken();
         }
 
         public bool IsConnected => _connected;
@@ -55,6 +62,7 @@ namespace Chainbound.Combat
 
         public async Task<string> ConnectAsync()
         {
+            await SolanaClusterGuard.EnsureExpectedClusterAsync(_config);
 #if UNITY_EDITOR
             if (_config == null || _config.useDesktopBridgeInEditor)
             {
@@ -82,6 +90,7 @@ namespace Chainbound.Combat
             try
             {
                 authorization = await _mobileBridge.ConnectAsync(
+                    _mwaCluster,
                     _config.mwaIdentityUri,
                     _config.mwaIconUri,
                     _config.mwaIdentityName,
@@ -89,9 +98,7 @@ namespace Chainbound.Combat
             }
             finally { IsWalletUiActive = false; }
 
-            _authToken = authorization.AuthToken;
-            if (!string.IsNullOrWhiteSpace(_authToken))
-                SecureCredentialStore.Set(AuthTokenStorageKey, _authToken);
+            PersistAuthorizationToken(authorization.AuthToken);
             SetConnected(authorization.PublicKey);
             return _publicKey;
 #endif
@@ -112,6 +119,7 @@ namespace Chainbound.Combat
                 {
                     IsWalletUiActive = true;
                     await _mobileBridge.DisconnectAsync(
+                        _mwaCluster,
                         _config.mwaIdentityUri,
                         _config.mwaIconUri,
                         _config.mwaIdentityName,
@@ -125,7 +133,10 @@ namespace Chainbound.Combat
             }
 #endif
             _authToken = null;
-            SecureCredentialStore.Delete(AuthTokenStorageKey);
+            if (!string.IsNullOrEmpty(_authTokenStorageKey))
+                SecureCredentialStore.Delete(_authTokenStorageKey);
+            if (string.Equals(_mwaCluster, "devnet", StringComparison.Ordinal))
+                SecureCredentialStore.Delete(LegacyAuthTokenStorageKey);
             _connected = false;
             _publicKey = null;
             OnDisconnected?.Invoke();
@@ -149,6 +160,7 @@ namespace Chainbound.Combat
         public async Task<string> SignAndSendTransactionAsync(byte[] transactionBytes)
         {
             EnsureConnected();
+            await SolanaClusterGuard.EnsureExpectedClusterAsync(_config);
 #if UNITY_EDITOR
             await Task.Yield();
             throw new NotSupportedException("The Editor browser bridge supports sign-only transactions.");
@@ -157,12 +169,15 @@ namespace Chainbound.Combat
             IsWalletUiActive = true;
             try
             {
-                return await _mobileBridge.SignAndSendTransactionAsync(
+                MobileWalletTransactionSubmission submission = await _mobileBridge.SignAndSendTransactionAsync(
+                    _mwaCluster,
                     _config.mwaIdentityUri,
                     _config.mwaIconUri,
                     _config.mwaIdentityName,
                     _authToken,
                     transactionBytes);
+                PersistAuthorizationToken(submission.AuthToken);
+                return submission.Signature;
             }
             finally { IsWalletUiActive = false; }
 #endif
@@ -180,12 +195,15 @@ namespace Chainbound.Combat
             IsWalletUiActive = true;
             try
             {
-                return await _mobileBridge.SignMessageAsync(
+                MobileWalletMessageSignature signedMessage = await _mobileBridge.SignMessageAsync(
+                    _mwaCluster,
                     _config.mwaIdentityUri,
                     _config.mwaIconUri,
                     _config.mwaIdentityName,
                     _authToken,
                     messageBytes);
+                PersistAuthorizationToken(signedMessage.AuthToken);
+                return signedMessage.Signature;
             }
             finally { IsWalletUiActive = false; }
 #endif
@@ -221,6 +239,69 @@ namespace Chainbound.Combat
                 throw new InvalidOperationException("MWA identity URI must be a configured HTTPS URL owned by the game.");
             if (string.IsNullOrWhiteSpace(_config.mwaIdentityName))
                 throw new InvalidOperationException("MWA identity name is not configured.");
+
+            string configuredCluster = NormalizeMwaCluster(_config.ownershipCluster);
+            if (!string.Equals(configuredCluster, _mwaCluster, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "The Solana cluster changed after wallet service initialization. Recreate the wallet service before authorizing.");
+            }
+        }
+
+        private string LoadClusterAuthorizationToken()
+        {
+            if (string.IsNullOrEmpty(_authTokenStorageKey))
+                return string.Empty;
+
+            string token = SecureCredentialStore.Get(_authTokenStorageKey);
+            if (!string.IsNullOrWhiteSpace(token) ||
+                !string.Equals(_mwaCluster, "devnet", StringComparison.Ordinal))
+            {
+                return token;
+            }
+
+            // The pre-cluster cache was used only by Devnet builds. Migrate it once, but
+            // never consider it for Mainnet authorization.
+            string legacyToken = SecureCredentialStore.Get(LegacyAuthTokenStorageKey);
+            if (string.IsNullOrWhiteSpace(legacyToken))
+                return string.Empty;
+
+            SecureCredentialStore.Set(_authTokenStorageKey, legacyToken);
+            SecureCredentialStore.Delete(LegacyAuthTokenStorageKey);
+            return legacyToken;
+        }
+
+        private void PersistAuthorizationToken(string authToken)
+        {
+            _authToken = string.IsNullOrWhiteSpace(authToken) ? string.Empty : authToken;
+            if (string.IsNullOrEmpty(_authTokenStorageKey))
+                return;
+
+            if (string.IsNullOrEmpty(_authToken))
+                SecureCredentialStore.Delete(_authTokenStorageKey);
+            else
+                SecureCredentialStore.Set(_authTokenStorageKey, _authToken);
+        }
+
+        private static string GetAuthTokenStorageKey(string cluster)
+        {
+            return AuthTokenStorageKeyPrefix + NormalizeMwaCluster(cluster);
+        }
+
+        private static string NormalizeMwaCluster(string cluster)
+        {
+            string normalized = cluster?.Trim().ToLowerInvariant();
+            switch (normalized)
+            {
+                case "devnet":
+                    return "devnet";
+                case "mainnet":
+                case "mainnet-beta":
+                    return "mainnet-beta";
+                default:
+                    throw new InvalidOperationException(
+                        "MWA requires ownershipCluster to be 'devnet' or 'mainnet-beta'.");
+            }
         }
 
         public void Dispose()

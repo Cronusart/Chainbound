@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.3-d
   displayName: Revenge Spark
-  effectDescription: +20-30% power for 1 turn after ally KO'd
+  effectDescription: After an ally is knocked out, your later moves this turn deal +20-30% power
   category: 5
   scope: 0
   minimumRarity: 3

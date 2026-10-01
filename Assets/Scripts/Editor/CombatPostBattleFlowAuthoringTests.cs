@@ -1,10 +1,13 @@
 #if UNITY_EDITOR
+using System.Reflection;
 using Chainbound.Combat;
 using NUnit.Framework;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public sealed class CombatPostBattleFlowAuthoringTests
 {
@@ -23,6 +26,18 @@ public sealed class CombatPostBattleFlowAuthoringTests
         Assert.That(FindDeep(prefab.transform, "RewardsSurface"), Is.Not.Null);
         Assert.That(FindDeep(prefab.transform, "BannerTitle"), Is.Not.Null);
         Assert.That(FindDeep(prefab.transform, "XpRows"), Is.Not.Null);
+        Transform rowTemplate = FindDeep(prefab.transform, "XpRowTemplate");
+        Assert.That(rowTemplate, Is.Not.Null, "XP row chrome is authored so runtime clones it instead of building a new row.");
+        Assert.That(rowTemplate.gameObject.activeSelf, Is.True, "The rewards row must be visible on the prefab.");
+        Assert.That(rowTemplate.GetComponent<CombatPostBattleXpRowView>(), Is.Not.Null);
+        Assert.That(FindDeep(rowTemplate, "StarRowLayout"), Is.Not.Null, "Star icons are authored on the row, not built when rewards open.");
+        Assert.That(FindDeep(prefab.transform, "ReportSurface").gameObject.activeSelf, Is.False);
+        Assert.That(FindDeep(prefab.transform, "BannerSurface").gameObject.activeSelf, Is.False);
+        Assert.That(FindDeep(prefab.transform, "RewardsSurface").gameObject.activeSelf, Is.True);
+        Assert.That(FindDeep(prefab.transform, "RewardsIntroPlate"), Is.Null);
+        Assert.That(FindDeep(prefab.transform, "RewardsSpoilsPlate"), Is.Null);
+        Assert.That(FindDeep(prefab.transform, "RewardsListViewport"), Is.Null);
+        Assert.That(FindDeep(prefab.transform, "LogOverflowFade"), Is.Null);
         Assert.That(FindDeep(prefab.transform, "RamLabel"), Is.Not.Null);
 
         Transform report = FindDeep(prefab.transform, "ReportSurface");
@@ -38,11 +53,57 @@ public sealed class CombatPostBattleFlowAuthoringTests
     }
 
     [Test]
+    public void Report_RuntimeLeavesAuthoredHierarchyAlone()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        GameObject host = Object.Instantiate(prefab);
+        try
+        {
+            CombatPostBattleReportController report = host.AddComponent<CombatPostBattleReportController>();
+            report.BindAuthoredVisuals(
+                host,
+                FindDeep(host.transform, "Title").GetComponent<TMP_Text>() as TextMeshProUGUI,
+                FindDeep(host.transform, "Content").GetComponent<TMP_Text>() as TextMeshProUGUI,
+                FindDeep(host.transform, "SummaryTab").GetComponent<Button>(),
+                FindDeep(host.transform, "BattleLogTab").GetComponent<Button>(),
+                FindDeep(host.transform, "ContinueButton").GetComponent<Button>(),
+                FindDeep(host.transform, "Viewport").GetComponent<ScrollRect>());
+
+            Invoke(report, "EnsureRewardPlates");
+            Invoke(report, "EnsureRewardsListScroll");
+            Invoke(report, "EnsureLogOverflowFade");
+
+            Assert.That(FindDeep(host.transform, "RewardsIntroPlate"), Is.Null);
+            Assert.That(FindDeep(host.transform, "RewardsSpoilsPlate"), Is.Null);
+            Assert.That(FindDeep(host.transform, "RewardsListViewport"), Is.Null);
+            Assert.That(FindDeep(host.transform, "LogOverflowFade"), Is.Null);
+            Assert.That(FindDeep(host.transform, "RewardsOverflowFade"), Is.Null);
+            Assert.That(FindDeep(host.transform, "XpRows").parent.name, Is.EqualTo("RewardsSurface"));
+        }
+        finally
+        {
+            Object.DestroyImmediate(host);
+        }
+    }
+
+    [Test]
     public void BannerStripMotion_UsesSevenPercentYScale()
     {
         Vector3 strip = CombatBannerStripMotion.StripScale(Vector3.one, CombatBannerStripMotion.DefaultStripScaleY);
         Assert.AreEqual(1f, strip.x);
         Assert.AreEqual(0.07f, strip.y, 0.0001f);
+    }
+
+    [Test]
+    public void BannerStripMotion_PostBattleUsesAThinSliver()
+    {
+        CombatBannerStripMotion.Settings settings = CombatBannerStripMotion.Settings.PostBattle;
+        Vector3 strip = CombatBannerStripMotion.StripScale(Vector3.one, settings.stripScaleY);
+        Assert.AreEqual(1f, strip.x);
+        Assert.AreEqual(CombatBannerStripMotion.PostBattleStripScaleY, strip.y, 0.0001f);
+        Assert.Less(settings.stripScaleY, CombatBannerStripMotion.DefaultStripScaleY);
+        Assert.Greater(settings.overshootScale, 1.2f);
+        Assert.Less(settings.slideInDuration, 0.2f);
     }
 
     [Test]
@@ -161,6 +222,13 @@ public sealed class CombatPostBattleFlowAuthoringTests
         {
             Object.DestroyImmediate(config);
         }
+    }
+
+    private static void Invoke(object target, string methodName)
+    {
+        MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null, methodName);
+        method.Invoke(target, null);
     }
 
     private static Transform FindDeep(Transform root, string name)

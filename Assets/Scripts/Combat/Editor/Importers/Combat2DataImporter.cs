@@ -1402,6 +1402,11 @@ namespace Chainbound.Combat.Editor
             GetWindow<Combat2DataImporter>().ImportMovesFromCSV();
         }
 
+        public static void RunImportSpeciesPoolsFromCSV()
+        {
+            GetWindow<Combat2DataImporter>().ImportSpeciesPoolsFromCSV();
+        }
+
         public static void RunImportStatusesFromCSV()
         {
             GetWindow<Combat2DataImporter>().ImportStatusesFromCSV();
@@ -2417,6 +2422,53 @@ namespace Chainbound.Combat.Editor
             return map.TryGetValue(typeName.Trim(), out type);
         }
 
+        private static void AppendImportedProgression(
+            SpeciesDefinitionSO species,
+            List<MoveDefinitionSO> moves,
+            ProgressionPoolTag tag,
+            MoveDefinitionSO flagship)
+        {
+            if (species?.progressionMovePool == null || moves == null)
+                return;
+
+            for (int i = 0; i < moves.Count; i++)
+            {
+                MoveDefinitionSO move = moves[i];
+                if (move == null)
+                    continue;
+
+                bool alreadyPresent = false;
+                for (int j = 0; j < species.progressionMovePool.Count; j++)
+                {
+                    SpeciesProgressionMoveEntry existing = species.progressionMovePool[j];
+                    if (existing != null && existing.move == move)
+                    {
+                        alreadyPresent = true;
+                        break;
+                    }
+                }
+
+                if (alreadyPresent)
+                    continue;
+
+                bool signature = flagship != null && move == flagship;
+                species.progressionMovePool.Add(new SpeciesProgressionMoveEntry
+                {
+                    move = move,
+                    weight = signature ? SpeciesProgressionPoolWeights.Signature : SpeciesProgressionPoolWeights.Standard,
+                    useWeightAtStarFive = signature,
+                    weightAtStarFive = signature
+                        ? SpeciesProgressionPoolWeights.SignatureAtStarFive
+                        : SpeciesProgressionPoolWeights.Standard,
+                    isSignature = signature,
+                    poolTag = tag,
+                    minStar = 0,
+                    maxStar = CombatConstants.STAR_MAX,
+                    excludeIfOwned = false,
+                });
+            }
+        }
+
         // ———— Import Species Pools from CSV ————
 
         private void ImportSpeciesPoolsFromCSV()
@@ -2453,6 +2505,7 @@ namespace Chainbound.Combat.Editor
                 string exclusiveRaw   = GetField(f, 2);
                 string flagshipId     = GetField(f, 3);
                 string initialRaw     = GetField(f, 4);
+                string offTypeRaw     = GetField(f, 5);
 
                 var speciesDef = speciesDb.GetById(speciesId);
                 if (speciesDef == null)
@@ -2477,14 +2530,11 @@ namespace Chainbound.Combat.Editor
                 }
 
                 var exclusiveMoves = new List<MoveDefinitionSO>();
-                if (StarterIds.Contains(speciesId))
+                foreach (string id in SplitPipe(exclusiveRaw))
                 {
-                    foreach (string id in SplitPipe(exclusiveRaw))
-                    {
-                        var m = FindMoveById(moveLookup, id.Trim());
-                        if (m != null) exclusiveMoves.Add(m);
-                        else _logOutput += $"    WARN: Exclusive move '{id}' not found for {speciesId}\n";
-                    }
+                    var m = FindMoveById(moveLookup, id.Trim());
+                    if (m != null) exclusiveMoves.Add(m);
+                    else _logOutput += $"    WARN: Exclusive move '{id}' not found for {speciesId}\n";
                 }
 
                 MoveDefinitionSO flagship = null;
@@ -2511,12 +2561,26 @@ namespace Chainbound.Combat.Editor
                         initialMoves.Add(m);
                 }
 
+                var offTypeMoves = new List<MoveDefinitionSO>();
+                foreach (string id in SplitPipe(offTypeRaw))
+                {
+                    var m = FindMoveById(moveLookup, id.Trim());
+                    if (m != null && !offTypeMoves.Contains(m))
+                        offTypeMoves.Add(m);
+                    else if (m == null)
+                        _logOutput += $"    WARN: Off-type move '{id}' not found for {speciesId}\n";
+                }
+
                 speciesDef.learnableMoves = learnableMoves;
                 speciesDef.learnLevels = new List<int>();
                 for (int i = 0; i < learnableMoves.Count; i++) speciesDef.learnLevels.Add(1);
                 speciesDef.exclusiveMoves = exclusiveMoves;
                 speciesDef.flagshipMove = flagship;
                 speciesDef.initialMoves = initialMoves;
+                speciesDef.offTypeMoveExceptions = offTypeMoves;
+                speciesDef.progressionMovePool = new List<SpeciesProgressionMoveEntry>();
+                AppendImportedProgression(speciesDef, learnableMoves, ProgressionPoolTag.Learnable, flagship);
+                AppendImportedProgression(speciesDef, exclusiveMoves, ProgressionPoolTag.Exclusive, flagship);
                 EditorUtility.SetDirty(speciesDef);
 
                 imported++;

@@ -31,8 +31,8 @@ namespace Chainbound.Combat
 
         public void Configure(SupabaseConfigSO backend, SolanaConfigSO chain, IWalletService walletService, IRpcService rpcService)
         {
-            supabaseConfig = backend;
-            solanaConfig = chain;
+            supabaseConfig = PlatformContext.ResolveSupabaseConfig(backend);
+            solanaConfig = PlatformContext.ResolveSolanaConfig(chain);
             wallet = walletService;
             rpc = rpcService;
         }
@@ -52,19 +52,9 @@ namespace Chainbound.Combat
         {
             RequireEnabled();
             ResolveChainDependencies();
-            if (wallet != null && wallet.IsConnected)
-            {
-                try
-                {
-                    await ReconcileStampAsync();
-                }
-                catch (Exception exception)
-                {
-                    // Inventory remains readable while RPC/DAS catches up. Preparing another
-                    // Stamp is still blocked server-side by the durable pending intent.
-                    Debug.LogWarning($"[OwnershipSpine] Pending Stamp reconciliation deferred: {exception.Message}");
-                }
-            }
+            // Hydration is a read. Reconciliation is deliberately initiated by the
+            // ownership service/UI so opening a screen cannot silently start a pull
+            // animation or leave presentation state locked behind a network request.
             return await FetchInventoryAsync() ?? new OwnershipSpineSnapshot();
         }
 
@@ -146,6 +136,7 @@ namespace Chainbound.Combat
                 operationStatus = confirmation?.operation_status,
                 knownInstanceId = confirmation?.known_instance_id ?? request.knownInstanceId,
                 idempotencyKey = confirmation?.idempotency_key ?? request.idempotencyKey,
+                acquisition = confirmation?.acquisition ?? payload.acquisition,
                 assetAddress = confirmation?.stamped_asset_address ?? payload.stamped_asset_address,
                 message = confirmation?.message,
                 signature = signature,
@@ -298,6 +289,7 @@ namespace Chainbound.Combat
                 operationStatus = response.operation_status,
                 knownInstanceId = response.known_instance_id,
                 idempotencyKey = response.idempotency_key,
+                acquisition = response.acquisition,
                 assetAddress = response.stamped_asset_address,
                 signature = response.signature,
                 message = response.message,
@@ -348,11 +340,11 @@ namespace Chainbound.Combat
 
         private bool IsRuntimeEnabled()
         {
-#if DEVELOPMENT_BUILD && !UNITY_EDITOR
-            return true;
-#else
-            return enableDevnetOwnershipSpine;
-#endif
+            if (!PlatformContext.ResolveOwnershipRuntimeEnabled())
+                return false;
+            if (Application.isEditor)
+                return enableDevnetOwnershipSpine;
+            return PlatformContext.HasExplicitDeploymentSelection;
         }
 
         private void ResolveChainDependencies()
@@ -369,9 +361,9 @@ namespace Chainbound.Combat
         [Serializable] private sealed class ReconcileRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; }
         [Serializable] private sealed class PrepareRequest { public string player_profile_id; public string wallet_address; public string known_instance_id; public int modifier_count; public string idempotency_key; }
         [Serializable] private sealed class ConfirmRequest { public string player_profile_id; public string wallet_address; public string known_instance_id; public string idempotency_key; public string signature; }
-        [Serializable] private sealed class ConfirmationResponse { public bool success; public bool confirmed; public bool pending; public string operation_id; public string operation_status; public string known_instance_id; public string idempotency_key; public string stamped_asset_address; public string signature; public string message; public long ram_balance; public StampedMoveRecord asset; }
-        [Serializable] private sealed class ReconcileResponse { public bool success; public bool confirmed; public bool pending; public string operation_id; public string operation_status; public string known_instance_id; public string idempotency_key; public string stamped_asset_address; public string signature; public string message; public long ram_balance; public StampedMoveRecord asset; }
-        [Serializable] private sealed class PreparedStampPayload { public string operation_id; public string operation_status; public string idempotency_key; public string known_instance_id; public string stamped_asset_address; public string transaction_base64; public StampTransactionReview review; }
+        [Serializable] private sealed class ConfirmationResponse { public bool success; public bool confirmed; public bool pending; public string operation_id; public string operation_status; public string known_instance_id; public string idempotency_key; public string acquisition; public string stamped_asset_address; public string signature; public string message; public long ram_balance; public StampedMoveRecord asset; }
+        [Serializable] private sealed class ReconcileResponse { public bool success; public bool confirmed; public bool pending; public string operation_id; public string operation_status; public string known_instance_id; public string idempotency_key; public string acquisition; public string stamped_asset_address; public string signature; public string message; public long ram_balance; public StampedMoveRecord asset; }
+        [Serializable] private sealed class PreparedStampPayload { public string operation_id; public string operation_status; public string idempotency_key; public string known_instance_id; public string acquisition; public string stamped_asset_address; public string transaction_base64; public StampTransactionReview review; }
         [Serializable] private sealed class RamGrantPrepareRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; }
         [Serializable] private sealed class RamGrantConfirmRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; public string signature; }
         [Serializable] private sealed class PreparedRamGrantPayload { public string transaction_base64; public DevnetRamGrantReview review; }

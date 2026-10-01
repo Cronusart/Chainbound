@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: fee_collector
   displayName: Fee Collector
-  description: Passive - if a foe starts with more AP gain +1 AP.
+  description: Passive - foes with more AP lose 1 AP at your turn start.
   category: 4
   baseType: 2
-  rarity: 0
+  rarity: 2
   targeting: 4
   contactType: 2
   power: 0
@@ -36,7 +36,7 @@ MonoBehaviour:
   activeConditionType: 0
   activeConditionThresholdPercent: 0
   utilityEffects:
-  - effectType: 3
+  - effectType: 4
     magnitude: 0
     turnBudget: 0
     hitBudget: 0
@@ -44,7 +44,7 @@ MonoBehaviour:
     stackKey: fee_collector
     statusId: 0
     statusDuration: 0
-    targetOverride: 4
+    targetOverride: 1
     chance: 1
     reflectPercent: 0
     stageStat: 0
@@ -144,6 +144,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

@@ -4,8 +4,9 @@ using UnityEngine;
 namespace Chainbound.Combat
 {
     /// <summary>
-    /// Rolls a wild battle kit (N moves, at least one damaging) and exactly one
-    /// known move from that kit for capture persistence.
+    /// Rolls a wild battle kit (N moves, at least one damaging).
+    /// knownMoveId is a legacy kit pick used only when the zone has no species database.
+    /// Captures with a species database roll the progression pool instead.
     /// </summary>
     public static class WildMoveRoller
     {

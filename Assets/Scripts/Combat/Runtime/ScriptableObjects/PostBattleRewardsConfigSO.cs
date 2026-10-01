@@ -16,17 +16,17 @@ namespace Chainbound.Combat
         [Header("KO XP by Difficulty")]
         public int koXpStandard = 20;
         public int koXpElite = 45;
-        public int koXpBoss = 90;
+        public int koXpBoss = 0;
 
         [Header("Completion Bonus by Difficulty")]
         public int completionBonusStandard = 20;
         public int completionBonusElite = 40;
-        public int completionBonusBoss = 80;
+        public int completionBonusBoss = 100;
 
         [Header("RAM by Difficulty")]
-        public int ramStandard = 3;
+        public int ramStandard = 5;
         public int ramElite = 15;
-        public int ramBoss = 50;
+        public int ramBoss = 25;
 
         [Header("XP Distribution")]
         [Range(0f, 1f)] public float activeXpShare = 1f;
@@ -119,13 +119,13 @@ namespace Chainbound.Combat
             configVersion = 3;
             koXpStandard = 20;
             koXpElite = 45;
-            koXpBoss = 90;
+            koXpBoss = 0;
             completionBonusStandard = 20;
             completionBonusElite = 40;
-            completionBonusBoss = 80;
-            ramStandard = 3;
+            completionBonusBoss = 100;
+            ramStandard = 5;
             ramElite = 15;
-            ramBoss = 50;
+            ramBoss = 25;
             activeXpShare = 1f;
             benchXpShare = 0.5f;
             kodReceivesXp = true;

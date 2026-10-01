@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_reynard_brew_sequence
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_reynard_brew_sequence
+  startCheckpointId: coffee_reynard_idle
+  safeResumeLabel: coffee_reynard_idle
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 1
+  autoStartQuestId: coffee_and_beer
+  autoStartLifecycleMask: 8
+  autoStartSkipWorldFlagKey: world.coffee.reynard_brewed
+  autoStartRequiredWorldFlagKey: world.coffee.cold_beer_granted
+  steps:
+  - {fileID: 11400000, guid: 44d73a0ce61824b4391c8eb3b596b708, type: 2}
+  - {fileID: 11400000, guid: 583bc18c858e1de4c82e214db5ba7f91, type: 2}
+  - {fileID: 11400000, guid: aed095e2abf71d14cb23a888a1870cb7, type: 2}
+  - {fileID: 11400000, guid: 3df4a24eaacbbf243af851b962740218, type: 2}
+  - {fileID: 11400000, guid: e6eb64aa33ce98444a80e510b2e07aec, type: 2}
+  - {fileID: 11400000, guid: 4f02a898f78aad54a86710e19cf616b0, type: 2}
+  - {fileID: 11400000, guid: 0ce68acc0f8ac5344be8050c4da0311e, type: 2}
+  - {fileID: 11400000, guid: 618ac9db0a1e23e47ba13affe568712a, type: 2}
+  - {fileID: 11400000, guid: 0cbaf6e69352ecd4ca03d7dea3de5037, type: 2}
+  - {fileID: 11400000, guid: 24d1d0473e1eb6a48ae61fccef4b2001, type: 2}
+  - {fileID: 11400000, guid: 82f47c7c1a569d2429b804e246b6f4a2, type: 2}
+  - {fileID: 11400000, guid: 3d40f46c69ee31242a3b87b8fb7a90de, type: 2}
+  - {fileID: 11400000, guid: 296877b5baa20184eb526db5119a254e, type: 2}
+  - {fileID: 11400000, guid: 247920b7d6c0caf4ba219dc26c33ae2e, type: 2}
+  - {fileID: 11400000, guid: 801e7e9749960eb418a46c55ba4e5b37, type: 2}
+  - {fileID: 11400000, guid: 34eba9db4cae2f1439eff1581d8bf3d6, type: 2}
+  - {fileID: 11400000, guid: 02be9ed7a6a5d5f44a2fc2f8e28023a4, type: 2}
+  - {fileID: 11400000, guid: e74976bb28df0d84687bf8ad089c25ac, type: 2}

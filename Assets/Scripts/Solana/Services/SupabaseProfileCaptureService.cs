@@ -8,8 +8,6 @@ using UnityEngine;
 /// </summary>
 public class SupabaseProfileCaptureService : MonoBehaviour, ICaptureService
 {
-    private const string DefaultKnownMoveId = "baseline_jab";
-
     [Header("Supabase")]
     [SerializeField] private SupabaseConfigSO supabaseConfig;
 
@@ -54,7 +52,8 @@ public class SupabaseProfileCaptureService : MonoBehaviour, ICaptureService
             captureParams.idempotencyKey,
             $"wild_capture:{playerProfileId}:{speciesId}:{Guid.NewGuid():N}");
 
-        string knownMoveId = FirstNonEmpty(captureParams.knownMoveId, DefaultKnownMoveId);
+        // Empty means the progression-pool gate missed. Do not substitute a default move.
+        string knownMoveId = captureParams.knownMoveId != null ? captureParams.knownMoveId.Trim() : "";
         int favorScore = captureParams.favorScore >= 0
             ? captureParams.favorScore
             : FavorRuntime.CurrentScore;

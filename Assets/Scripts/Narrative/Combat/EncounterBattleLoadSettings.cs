@@ -14,7 +14,7 @@ namespace SignalJam.Narrative.Combat
         [Tooltip("Scene to load for this encounter. Leave empty to use the service default battle scene.")]
         public string battleSceneName = "";
 
-        [Tooltip("Optional spawn id passed to SceneLoader (arena entry, camera zone, etc.). Empty = no spawn routing.")]
+        [Tooltip("Combat stage id (loomville, link1, jungle) passed through SceneLoader. Empty uses loomville. This is scenery selection, not an overworld player spawn.")]
         public string battleSpawnId = "";
 
         [Header("Transition (SceneLoader)")]

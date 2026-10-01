@@ -18,7 +18,23 @@ MonoBehaviour:
     displayName: Cofi Lootwak
     stars: 2
     rebirthCount: 0
+    masteryXp: 0
     evolutionStage: 1
+    visualIdentity:
+      visualVariantId: base
+      auraId: none
+      hudCardVariantId: default
+      partyColumnVariantId: default
+      swapInFxId: default
+      swapOutFxId: default
+      koFxId: none
+      victoryPoseId: default
+      idleStyleId: none
+      idleFlourishId: none
+      meleeAttackStyleId: none
+      rangedAttackStyleId: none
+      hitReactionStyleId: none
+      attackerKoStyleId: none
     moveIds:
     - bean_sip
     - civet_beam
@@ -30,6 +46,17 @@ MonoBehaviour:
     ivRangedAtk: 0
     ivRangedDef: 0
     ivSpeed: 0
+    pickMaxHP: 0
+    pickMeleeAtk: 0
+    pickMeleeDef: 0
+    pickRangedAtk: 0
+    pickRangedDef: 0
+    pickSpeed: 0
+    isMutated: 0
+    mutationId: none
+    isEntangled: 0
+    entangledType: 0
+    currentHp: -1
   teamName: Cofi Lootwak
   aiPersonality: 3
   difficulty: 2

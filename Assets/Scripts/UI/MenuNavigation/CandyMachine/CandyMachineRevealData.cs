@@ -36,6 +36,8 @@ namespace SignalJam.UI.MenuNavigation
             || !string.IsNullOrWhiteSpace(ApText);
 
         public bool IsStamp => Mode == CandyMachineMode.Stamp;
+        public string Acquisition { get; set; } = LibraryCardFaces.CandyRoll;
+        public bool UsesLearnedFace => LibraryCardFaces.IsLearned(Acquisition);
 
         public CandyMachineRevealData(
             CandyMachineMode mode,

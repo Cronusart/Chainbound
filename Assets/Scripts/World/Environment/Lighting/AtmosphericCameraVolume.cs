@@ -1,12 +1,15 @@
 using System.Collections.Generic;
+using Chainbound.Combat;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Overworld-only camera-follow atmosphere. Emits motes, wind streaks, and
-/// billboard debris from the active scene's AtmosphericProfileSO.
-/// Combat and interiors stay dark because they release the persistent camera.
+/// Camera-follow atmosphere. Emits motes, wind streaks, and billboard debris
+/// from the active scene's AtmosphericProfileSO. Overworld uses the persistent
+/// camera. Combat uses the scene camera while a combat stage is active, and
+/// resolves the profile from that stage id (loomville, link1, jungle).
+/// Interiors stay dark because they release the persistent camera and publish no stage.
 /// </summary>
 public sealed class AtmosphericCameraVolume : MonoBehaviour
 {
@@ -57,10 +60,11 @@ public sealed class AtmosphericCameraVolume : MonoBehaviour
     private void OnEnable()
     {
         SceneManager.activeSceneChanged += HandleActiveSceneChanged;
+        CombatStageRequest.ActiveStageChanged += HandleActiveStageChanged;
         TimeOfDayManager.OnInstanceAvailable += HandleTimeManagerAvailable;
         EnsureParticleSystems();
         EnsureMaterials();
-        currentSceneId = SceneManager.GetActiveScene().name;
+        currentSceneId = ResolveAtmosphereKey(SceneManager.GetActiveScene().name);
         toProfile = ResolveProfile(currentSceneId);
         fromProfile = toProfile;
         blendT = 1f;
@@ -92,6 +96,7 @@ public sealed class AtmosphericCameraVolume : MonoBehaviour
     private void OnDisable()
     {
         SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
+        CombatStageRequest.ActiveStageChanged -= HandleActiveStageChanged;
         TimeOfDayManager.OnInstanceAvailable -= HandleTimeManagerAvailable;
         UnsubscribeTime();
         StopAndClear();
@@ -99,7 +104,7 @@ public sealed class AtmosphericCameraVolume : MonoBehaviour
 
     private void LateUpdate()
     {
-        bool live = SceneCameraResolver.HasLivePersistentCamera;
+        bool live = TryResolveAtmosphereCamera(out Camera camera);
         if (live != overworldLive)
         {
             overworldLive = live;
@@ -111,8 +116,6 @@ public sealed class AtmosphericCameraVolume : MonoBehaviour
 
         if (!overworldLive)
             return;
-
-        Camera camera = SceneCameraResolver.PersistentGameplayCamera;
         AtmosphericProfileSO profile = ActiveProfile;
         if (camera == null || profile == null)
         {
@@ -145,7 +148,38 @@ public sealed class AtmosphericCameraVolume : MonoBehaviour
 
     private void HandleActiveSceneChanged(Scene previous, Scene next)
     {
-        SetScene(next.name);
+        SetScene(ResolveAtmosphereKey(next.name));
+    }
+
+    private void HandleActiveStageChanged(string stageId)
+    {
+        SetScene(ResolveAtmosphereKey(SceneManager.GetActiveScene().name));
+    }
+
+    private static string ResolveAtmosphereKey(string sceneName)
+    {
+        if (!string.IsNullOrEmpty(CombatStageRequest.ActiveStageId))
+            return CombatStageRequest.ActiveStageId;
+
+        return sceneName ?? string.Empty;
+    }
+
+    private static bool TryResolveAtmosphereCamera(out Camera camera)
+    {
+        if (SceneCameraResolver.HasLivePersistentCamera)
+        {
+            camera = SceneCameraResolver.PersistentGameplayCamera;
+            return camera != null;
+        }
+
+        if (string.IsNullOrEmpty(CombatStageRequest.ActiveStageId))
+        {
+            camera = null;
+            return false;
+        }
+
+        camera = SceneCameraResolver.ResolveGameplayCamera();
+        return camera != null && camera.isActiveAndEnabled;
     }
 
     private void SetScene(string sceneId)
@@ -176,9 +210,9 @@ public sealed class AtmosphericCameraVolume : MonoBehaviour
 
     private void TickSceneBlend(AtmosphericProfileSO fallback)
     {
-        string activeName = SceneManager.GetActiveScene().name;
-        if (!string.Equals(activeName, currentSceneId, System.StringComparison.OrdinalIgnoreCase))
-            SetScene(activeName);
+        string atmosphereKey = ResolveAtmosphereKey(SceneManager.GetActiveScene().name);
+        if (!string.Equals(atmosphereKey, currentSceneId, System.StringComparison.OrdinalIgnoreCase))
+            SetScene(atmosphereKey);
 
         if (blendT >= 1f)
             return;
@@ -363,7 +397,7 @@ public sealed class AtmosphericCameraVolume : MonoBehaviour
     {
         EnsureParticleSystems();
         EnsureMaterials();
-        overworldLive = SceneCameraResolver.HasLivePersistentCamera;
+        overworldLive = TryResolveAtmosphereCamera(out _);
         if (!overworldLive)
         {
             StopAndClear();

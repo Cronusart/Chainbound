@@ -194,15 +194,28 @@ public class EncounterTriggerZone : MonoBehaviour
             var moveRoll = WildMoveRoller.Roll(
                 entry.movePool, entry.battleKitSizeMin, entry.battleKitSizeMax, rng, moveDb, entry.moveWeightMultipliers);
             var visual = WildVariantRoller.Roll(entry.variantPool, rng, traits.isEntangled, entry.variantWeightMultipliers);
+            int stars = Mathf.Clamp(entry.baseStars, 0, CombatConstants.STAR_MAX);
+            string knownMoveId = moveRoll.knownMoveId;
+            if (zone != null && zone.speciesDatabase != null)
+            {
+                knownMoveId = ProgressionKnownMoveRoll.TryRoll(
+                    zone.speciesDatabase.GetById(entry.speciesId),
+                    stars,
+                    traits.isEntangled,
+                    rng,
+                    zone.progressionRewardTables,
+                    zone.progressionConfig);
+            }
+
             slots.Add(new ZoneEncounterSlot
             {
                 speciesId = entry.speciesId,
                 traits = traits,
-                stars = Mathf.Clamp(entry.baseStars, 0, CombatConstants.STAR_MAX),
+                stars = stars,
                 level = 0,
                 baseCaptureRate = entry.baseCaptureRate,
                 moveIds = moveRoll.battleMoveIds,
-                knownMoveId = moveRoll.knownMoveId,
+                knownMoveId = knownMoveId,
                 visualIdentity = visual,
             });
         }
@@ -236,6 +249,7 @@ public class EncounterTriggerZone : MonoBehaviour
         {
             playerTransform = player,
             battleSceneName = battleSceneName,
+            battleSpawnId = zone != null ? zone.ResolveCombatStageId() : CombatStageIds.Default,
             launchSource = EncounterTransitionBridge.EncounterLaunchSource.Zone,
             authoritativeZoneId = result != null ? result.zoneId : "",
             onReadyToLoad = () => SetActivePayload(result),

@@ -1,0 +1,91 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Forkrook
+  m_EditorClassIdentifier: 
+  speciesId: forkrook
+  displayName: Forkrook
+  description: Speedy Forked bird that splits burst across the field and keeps tempo
+    efficient for the team.
+  primaryType: 7
+  secondaryType: 0
+  baseMaxHP: 104
+  baseMeleeAtk: 30
+  baseMeleeDef: 42
+  baseRangedAtk: 68
+  baseRangedDef: 44
+  baseSpeed: 88
+  maxEvolutionStages: 1
+  offTypeMoveExceptions: []
+  learnableMoves:
+  - {fileID: 11400000, guid: 4aeed331dfd2cbc4cb388c346c348a14, type: 2}
+  - {fileID: 11400000, guid: 4fd59dbba678d734ea6d95cdddd3e5e0, type: 2}
+  - {fileID: 11400000, guid: b663f1769efeb2741894a7c388cbb6f2, type: 2}
+  - {fileID: 11400000, guid: 0d20685c13b94754d9ebb84a2727508e, type: 2}
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  learnLevels: 0100000001000000010000000100000001000000
+  exclusiveMoves: []
+  flagshipMove: {fileID: 11400000, guid: 4aeed331dfd2cbc4cb388c346c348a14, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 4aeed331dfd2cbc4cb388c346c348a14, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 4fd59dbba678d734ea6d95cdddd3e5e0, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: b663f1769efeb2741894a7c388cbb6f2, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 0d20685c13b94754d9ebb84a2727508e, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 0
+  defaultCaptureProfile: 1
+  rarity: 1
+  combatRoleOverride: 3
+  designNotes: Wild catch. Uncommon. Forked ranged spreader. Net 376. The extra points
+    sit in HP, ranged attack, ranged defense, and speed.

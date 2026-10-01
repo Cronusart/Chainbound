@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: immutable_ledger
   displayName: Immutable Ledger
-  description: Passive - 20% mitigation on hit; once per turn converts blocked damage
-    to AP.
+  description: Passive - the first hit each turn deals 20% less damage and grants
+    +1 AP.
   category: 4
   baseType: 3
-  rarity: 0
+  rarity: 1
   targeting: 4
   contactType: 2
   power: 0
@@ -118,6 +118,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

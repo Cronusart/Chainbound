@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 309
   displayName: Damage Intercept
-  effectSummary: Redirect next single-target attack on you to interceptor
+  effectSummary: Redirect the next single-target hit. Holds through the next turn if unused.
   statusClass: 3
   origin: 1
   defaultDuration: 1

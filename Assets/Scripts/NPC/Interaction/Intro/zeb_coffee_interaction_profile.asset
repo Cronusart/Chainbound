@@ -14,17 +14,68 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   questDefinition: {fileID: 11400000, guid: e4f5a6b7c8d9012a3b4c5d6e7f8091a2, type: 2}
   questId: 
-  rules: []
+  rules:
+  - label: already sent the player on
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.zeb_departed
+      comparison: 2
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: e104a79379342b747aa997a7cedd7766, type: 2}
+    useDialogueCamera: 1
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  - label: "beans recovered \u2014 send to Reynard and Momo"
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.cofi_lootwak.defeated
+      comparison: 2
+    - key: world.coffee.zeb_departed
+      comparison: 3
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: 365eea978f5bc104b92d9b339fd1cbe2, type: 2}
+    useDialogueCamera: 1
+    triggerId: trigger_coffee_zeb_return
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
   inactiveDialogue: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0003, type: 2}
   inactiveTriggerId: trigger_coffee_zeb_talked
   inactiveNpcBehavior:
-    mode: 0
+    mode: 1
     behaviorOverride: {fileID: 0}
   activeFallbackDialogue: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0003, type: 2}
   activeFallbackTriggerId: trigger_coffee_zeb_talked
   activeFallbackNpcBehavior:
-    mode: 0
+    mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: Reynard's courier. Talking while coffee_and_beer is Active fires trigger_coffee_zeb_talked and points the player at Cofi Lootwak.
+  designerNotes: First talk points at Cofi. After the win, Zeb sends the player to
+    Reynard and Momo. He stays until Jungle loads again.
   activateQuestOnInactiveInteract: 0
   completeObjectiveOnActivate: 

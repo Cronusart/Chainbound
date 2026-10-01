@@ -218,8 +218,12 @@ namespace SignalJam.UI.MenuNavigation
             var loadout = new ChainlingLoadout
             {
                 speciesId = snapshot != null ? snapshot.speciesId : "",
+                speciesDefinition = species,
+                speciesDatabase = speciesDatabase,
                 primaryType = species != null ? species.primaryType : ChainlingType.None,
                 secondaryType = species != null ? species.secondaryType : ChainlingType.None,
+                isEntangled = snapshot != null && snapshot.isEntangled,
+                entangledType = snapshot != null ? snapshot.entangledType : ChainlingType.None,
                 evolutionStage = snapshot != null && snapshot.evolutionStage > 0 ? snapshot.evolutionStage : 1,
                 rebirthCount = snapshot != null ? snapshot.rebirthCount : 0,
             };
@@ -350,9 +354,17 @@ namespace SignalJam.UI.MenuNavigation
             if (species == null || def == null)
                 return "Fit unknown";
 
-            bool sameType = def.baseType != ChainlingType.None &&
-                            (def.baseType == species.primaryType || def.baseType == species.secondaryType);
-            string typeCue = sameType ? "Type match" : "Off-type";
+            bool entangled = entry != null && entry.snapshot != null && entry.snapshot.isEntangled;
+            ChainlingType entangledType = entry != null && entry.snapshot != null
+                ? entry.snapshot.entangledType
+                : ChainlingType.None;
+            string typeCue = SpeciesMoveEquipRules.DescribeFit(
+                species,
+                entangled,
+                entangledType,
+                def.moveId,
+                def.baseType,
+                speciesDatabase);
             string statCue = "";
             if (def.category == MoveCategory.DamagingMelee)
                 statCue = species.baseMeleeAtk >= species.baseRangedAtk ? "melee favored" : "melee weaker";

@@ -125,7 +125,7 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
 
         private static ChainlingPartyMoveRowSummary BuildSignatureMove(SpeciesDefinitionSO species)
         {
-            MoveDefinitionSO flagship = species != null ? species.flagshipMove : null;
+            MoveDefinitionSO flagship = ResolveSignatureMove(species);
             if (flagship == null)
             {
                 return new ChainlingPartyMoveRowSummary
@@ -150,6 +150,21 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
                 moveType = flagship.baseType,
                 rarity = flagship.rarity,
             };
+        }
+
+        private static MoveDefinitionSO ResolveSignatureMove(SpeciesDefinitionSO species)
+        {
+            if (species?.progressionMovePool != null)
+            {
+                for (int i = 0; i < species.progressionMovePool.Count; i++)
+                {
+                    SpeciesProgressionMoveEntry entry = species.progressionMovePool[i];
+                    if (entry != null && entry.isSignature && entry.move != null)
+                        return entry.move;
+                }
+            }
+
+            return species != null ? species.flagshipMove : null;
         }
 
         private static string TruncateDescription(string description)

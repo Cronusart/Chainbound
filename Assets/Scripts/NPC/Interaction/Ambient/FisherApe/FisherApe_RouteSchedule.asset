@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: FisherApe_RouteSchedule
   m_EditorClassIdentifier: 
   nightRoute:
-    routeAsset: {fileID: 0}
+    routeAsset: {fileID: 11400000, guid: 5695da59d96e40f49bcc08415f530272, type: 2}
     blinkRateMultiplier: 1
     waitTimeMultiplier: 1
     microWanderEnabled: 1
@@ -24,7 +24,7 @@ MonoBehaviour:
     microWanderRadius: 1.5
     microWanderCooldown: 10
   dawnRoute:
-    routeAsset: {fileID: 0}
+    routeAsset: {fileID: 11400000, guid: 0aae49fd8ca0830448301ff4c4c3aa5d, type: 2}
     blinkRateMultiplier: 1
     waitTimeMultiplier: 1
     microWanderEnabled: 1
@@ -35,7 +35,7 @@ MonoBehaviour:
     microWanderRadius: 1.5
     microWanderCooldown: 10
   dayRoute:
-    routeAsset: {fileID: 0}
+    routeAsset: {fileID: 11400000, guid: 0aae49fd8ca0830448301ff4c4c3aa5d, type: 2}
     blinkRateMultiplier: 1
     waitTimeMultiplier: 1
     microWanderEnabled: 1
@@ -46,7 +46,7 @@ MonoBehaviour:
     microWanderRadius: 1.5
     microWanderCooldown: 10
   duskRoute:
-    routeAsset: {fileID: 0}
+    routeAsset: {fileID: 11400000, guid: 5695da59d96e40f49bcc08415f530272, type: 2}
     blinkRateMultiplier: 1
     waitTimeMultiplier: 1
     microWanderEnabled: 1

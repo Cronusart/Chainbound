@@ -30,8 +30,11 @@ namespace Chainbound.Combat
         public string metaplexCoreProgramId = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d";
 
         [Header("Ownership Spine Trust")]
-        [Tooltip("Solana cluster for Ownership Spine transactions. Phase 1 is devnet-only.")]
+        [Tooltip("Solana cluster for wallet authorization and Ownership Spine transactions. Supported values are devnet and mainnet-beta.")]
         public string ownershipCluster = "devnet";
+
+        [Tooltip("Expected getGenesisHash result for the configured RPC cluster. Wallet authorization and signing fail closed on mismatch.")]
+        public string expectedGenesisHash = OwnershipDeploymentProfileRules.DevnetGenesisHash;
 
         [Tooltip("Trusted Metaplex Core collection address for Chainbound Stamped moves.")]
         public string coreMovesCollectionId = "";
@@ -97,6 +100,7 @@ namespace Chainbound.Combat
             vrfOracleQueueId = TrimOrEmpty(vrfOracleQueueId);
             metaplexCoreProgramId = TrimOrEmpty(metaplexCoreProgramId);
             ownershipCluster = TrimOrEmpty(ownershipCluster);
+            expectedGenesisHash = TrimOrEmpty(expectedGenesisHash);
             coreMovesCollectionId = TrimOrEmpty(coreMovesCollectionId);
             coreMovesUpdateAuthority = TrimOrEmpty(coreMovesUpdateAuthority);
             ownershipSchemaVersion = Mathf.Max(1, ownershipSchemaVersion);

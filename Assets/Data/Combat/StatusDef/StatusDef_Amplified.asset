@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 115
   displayName: Amplified
-  effectSummary: Next move x2 power
+  effectSummary: Next move x2 power. Holds through the next turn if unused.
   statusClass: 3
   origin: 0
   defaultDuration: 1

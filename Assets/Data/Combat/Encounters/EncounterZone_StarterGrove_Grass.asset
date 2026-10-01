@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: EncounterZone_StarterGrove_Grass
   m_EditorClassIdentifier: 
   zoneId: starter_grove_grass
+  combatStageId: loomville
   area: {fileID: 11400000, guid: c3d4e5f60718293a4b5c6d7e8f901a2b, type: 2}
   encounterChance: -1
   cadence: 0
@@ -43,3 +44,6 @@ MonoBehaviour:
   ivMaxOverride: -2147483648
   defaultMovePool: {fileID: 0}
   defaultVariantPool: {fileID: 0}
+  speciesDatabase: {fileID: 11400000, guid: 30d36b2ab437f37498a64868dc46ed1c, type: 2}
+  progressionRewardTables: {fileID: 11400000, guid: 4e76389e000000000000000000000101, type: 2}
+  progressionConfig: {fileID: 11400000, guid: 1d2f29e91c254f539382360868e1a3ee, type: 2}

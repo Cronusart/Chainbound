@@ -25,4 +25,5 @@ MonoBehaviour:
   includeInactive: 1
   persistAcrossSceneLoads: 1
   allowMissingWhenPersisting: 1
+  stateIdOverride: 
   persistAsProfileWorldFlag: 0

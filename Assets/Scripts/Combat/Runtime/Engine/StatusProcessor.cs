@@ -173,7 +173,7 @@ namespace Chainbound.Combat
                 var status = chainling.statuses[i];
                 if (status.statusClass == StatusClass.Instant) continue; // Instants don't tick
 
-                bool stillActive = status.Tick();
+                bool stillActive = status.Tick(turn);
                 if (!stillActive)
                 {
                     StatusDefinitionSO expiredDefinition = _catalog.Get(status.statusId);
@@ -208,6 +208,20 @@ namespace Chainbound.Combat
             StatusDefinitionSO definition,
             int turn)
         {
+            if (status.ownedStageDeltas != null && status.ownedStageDeltas.Count > 0)
+            {
+                for (int i = 0; i < status.ownedStageDeltas.Count; i++)
+                {
+                    OwnedStageDelta owned = status.ownedStageDeltas[i];
+                    int before = chainling.GetStage(owned.stat);
+                    chainling.SetStage(owned.stat, before - owned.delta);
+                    _log.LogStageChange(turn, chainling.instanceId, owned.stat,
+                        chainling.GetStage(owned.stat) - before,
+                        chainling.GetStage(owned.stat));
+                }
+                return;
+            }
+
             if (status.hasTemporaryStageDelta)
             {
                 int before = chainling.GetStage(status.temporaryStageStat);
@@ -296,8 +310,10 @@ namespace Chainbound.Combat
             }
 
             // Baseline AP gain per turn; the AP service enforces Thread Lock.
+            // Turn-start passives run after this, so Low AP Surge sees the granted AP.
             _apService.Gain(chainling, _resolverConfig.apPerTurn, turn, "TurnRegen");
             chainling.hasActedThisTurn = false;
+            chainling.hitsTakenThisTurn = 0;
         }
 
         /// <summary>
@@ -389,6 +405,8 @@ namespace Chainbound.Combat
                 {
                     int before = target.statuses[i].turnsRemaining;
                     target.statuses[i].turnsRemaining = Math.Max(target.statuses[i].turnsRemaining, duration);
+                    if (StatusInstance.IsNextActionStatus(statusId))
+                        target.statuses[i].HoldThroughGrantTurn(turn);
                     _log.LogStatus(turn, CombatEventType.StatusRefreshed,
                         target.instanceId, statusId, target.statuses[i].turnsRemaining, sourceId);
                     _log.LogForensic(
@@ -412,6 +430,8 @@ namespace Chainbound.Combat
 
             // Apply new status
             var instance = new StatusInstance(statusId, def.statusClass, StatusOrigin.General, duration, sourceId);
+            if (StatusInstance.IsNextActionStatus(statusId))
+                instance.HoldThroughGrantTurn(turn);
             target.statuses.Add(instance);
             _log.LogStatus(turn, CombatEventType.StatusApplied,
                 target.instanceId, statusId, duration, sourceId);
@@ -447,6 +467,10 @@ namespace Chainbound.Combat
                             instance.hasTemporaryStageDelta = true;
                             instance.temporaryStageStat = eff.stat;
                             instance.temporaryStageDelta = appliedDelta;
+                        }
+                        else if (statusId == StatusId.BotSwarm || statusId == StatusId.FiftyOnePercentAttacked)
+                        {
+                            instance.AddOwnedStage(eff.stat, appliedDelta);
                         }
                         _log.LogStageChange(turn, target.instanceId, eff.stat,
                             appliedDelta, target.GetStage(eff.stat));

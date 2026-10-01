@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 7.1-b
   displayName: Shield Link
-  effectDescription: +12-18% mitigation to ally when used
+  effectDescription: On use, an ally gains 12-18% mitigation for the rest of this turn
   category: 6
   scope: 0
   minimumRarity: 2

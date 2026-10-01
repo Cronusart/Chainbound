@@ -17,6 +17,8 @@ namespace SignalJam.Narrative.Combat
 
         [Header("Battle Scene")]
         [SerializeField] private string battleSceneName = "Combat2_TestHarness";
+        [Tooltip("Combat stage id (loomville, link1, jungle). Empty uses loomville.")]
+        [SerializeField] private string battleSpawnId = "";
         [SerializeField] private bool useSceneLoader = true;
         [SerializeField] private TransitionStyle transitionStyle = TransitionStyle.QuickFade;
 
@@ -107,6 +109,7 @@ namespace SignalJam.Narrative.Combat
             {
                 playerTransform = playerTransform,
                 battleSceneName = battleSceneName,
+                battleSpawnId = battleSpawnId,
                 transitionStyle = transitionStyle,
                 useSceneLoader = useSceneLoader,
                 launchSource = EncounterTransitionBridge.EncounterLaunchSource.ManualEncounter,

@@ -32,9 +32,9 @@ MonoBehaviour:
   spriteSortingOrder: 120
   spriteColorPropertyName: _Color
   worldYOffset: 0
-  duration: 0.95
+  duration: 1.25
   startDelay: 0
-  holdBeforeFade: 0.08
+  holdBeforeFade: 0.45
   useUnscaledTime: 1
   rootMotionLayers: 3
   translateMode: 0
@@ -71,7 +71,7 @@ MonoBehaviour:
   spriteArcControlOffset: {x: 0, y: 0, z: 0}
   fadeText: 1
   fadeSprite: 1
-  textFadeDelay: 0
-  textFadeDuration: 0
+  textFadeDelay: 0.75
+  textFadeDuration: 0.4
   spriteFadeDelay: 0
   spriteFadeDuration: 0

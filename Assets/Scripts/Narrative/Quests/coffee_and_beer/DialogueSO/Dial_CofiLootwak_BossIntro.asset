@@ -16,7 +16,7 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Cofi Lootwak
-    text: Don't fade the civet, anon. I rugged the courier — not the community.
+    text: "Don't fade the civet, anon. I rugged the courier \u2014 not the community."
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 21300000, guid: 85ead7f548f723d4b86d13ef2f9b70bb, type: 3}

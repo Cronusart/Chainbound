@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Idempotent Link1 wild encounters: existing grass triggers plus BushPatch
 /// volumes cloned from each GrassPatchManager box collider.
-/// Day: caw, snek. Night: deghoul, ghosty.
+/// Day: forkrook, rattlestake. Night: deghoul, keyper.
 /// </summary>
 public static class Link1EncounterZoneAuthoring
 {
@@ -69,7 +69,7 @@ public static class Link1EncounterZoneAuthoring
 
         Debug.Log(
             $"[Link1EncounterAuthoring] Authored Link1 grass/bush encounters. " +
-            $"Day: caw, snek. Night: deghoul, ghosty. BushPatch triggers={bushCount}.");
+            $"Day: forkrook, rattlestake. Night: deghoul, keyper. BushPatch triggers={bushCount}.");
     }
 
     private static void AuthorArea(EncounterAreaSO area, WildVariantPoolSO variantPool)
@@ -93,6 +93,7 @@ public static class Link1EncounterZoneAuthoring
         WildMovePoolSO rangedPool)
     {
         zone.zoneId = "link1_grass";
+        zone.combatStageId = CombatStageIds.Link1;
         zone.area = area;
         zone.encounterChance = -1f;
         zone.cadence = EncounterCadence.PerSecond;
@@ -105,9 +106,9 @@ public static class Link1EncounterZoneAuthoring
         zone.entryMergeMode = EncounterEntryMergeMode.Replace;
         zone.entries = new List<ZoneEncounterEntry>
         {
-            CreateEntry("caw", 50, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
-            CreateEntry("snek", 50, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
-            CreateEntry("ghosty", 50, TimeSegmentMask.Dusk | TimeSegmentMask.Night, rangedPool, 50),
+            CreateEntry("forkrook", 50, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
+            CreateEntry("rattlestake", 50, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
+            CreateEntry("keyper", 50, TimeSegmentMask.Dusk | TimeSegmentMask.Night, rangedPool, 50),
             CreateEntry("deghoul", 50, TimeSegmentMask.Dusk | TimeSegmentMask.Night, meleePool, 45),
         };
         zone.mutationChanceOverride = -1f;
@@ -116,6 +117,7 @@ public static class Link1EncounterZoneAuthoring
         zone.ivMaxOverride = int.MinValue;
         zone.defaultMovePool = null;
         zone.defaultVariantPool = null;
+        AssignCaptureRollConfig(zone);
         EditorUtility.SetDirty(zone);
     }
 
@@ -301,6 +303,16 @@ public static class Link1EncounterZoneAuthoring
         clause.FindPropertyRelative("allowedLifecycleMask").intValue = (int)NarrativeQuestLifecycleMask.Completed;
 
         guard.FindPropertyRelative("excludedClauses").arraySize = 0;
+    }
+
+    private static void AssignCaptureRollConfig(EncounterZoneSO zone)
+    {
+        zone.speciesDatabase = AssetDatabase.LoadAssetAtPath<SpeciesDatabaseSO>(
+            "Assets/Data/Combat/ChainlingSpecies/Database/SpeciesDatabase.asset");
+        zone.progressionRewardTables = AssetDatabase.LoadAssetAtPath<ChainlingProgressionRewardTablesSO>(
+            "Assets/Data/Combat/ChainlingProgressionRewardTables.asset");
+        zone.progressionConfig = AssetDatabase.LoadAssetAtPath<ProgressionConfigSO>(
+            "Assets/Data/Combat/Config/ProgressionConfig_Default.asset");
     }
 
     private static T EnsureAsset<T>(string path) where T : ScriptableObject

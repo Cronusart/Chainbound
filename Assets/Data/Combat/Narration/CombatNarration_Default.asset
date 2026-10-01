@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speakerLabel: BATTLE LINK
   advanceMode: 0
-  charactersPerSecond: 60
-  actionLeadSeconds: 0.22
-  primaryResolutionSeconds: 0.7
-  consequenceSeconds: 0.55
+  charactersPerSecond: 45
+  actionLeadSeconds: 0.4
+  primaryResolutionSeconds: 1.7
+  consequenceSeconds: 1.45
+  effectPageSkipLockoutSeconds: 1.15
   moveTemplate: '{actor} used {move}!'
   multiHitMoveTemplate: '{actor} used {move}...'
   priorityMoveTemplate: '{actor} struck first with priority {move}!'

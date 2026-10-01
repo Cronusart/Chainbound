@@ -25,7 +25,7 @@ import {
 // not a player grant API and cannot be redirected by request-body values.
 const OPERATOR_TARGET_PROFILE_ID = "38ac2f9a-5b94-4037-9bc6-fdd205632018";
 const OPERATOR_TARGET_WALLET = "9zMwTbQtjvexJzuMZjzbKS7LtWNXVYG3auBNeV82VHUj";
-const OPERATOR_IDEMPOTENCY_KEY = "operator-devnet-ram-topup-20260927-seeker-1";
+const OPERATOR_IDEMPOTENCY_KEY = "operator-devnet-ram-topup-20260930-seeker-4";
 const OPERATOR_TOKEN_ENV = "CHAINBOUND_DEVNET_OPERATOR_TOPUP_TOKEN";
 
 function operatorAuthorized(req: Request): boolean {

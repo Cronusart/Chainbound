@@ -16,7 +16,7 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Reynard
-    text: Still no beans. Look for Zeb — my courier.
+    text: "Still no beans. Look for Zeb \u2014 my courier."
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -28,7 +28,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Reynard
-    text: He was picking the shipment up deep in the jungle. That's the direction. Go.
+    text: He was picking the shipment up deep in the jungle. That's the direction.
+      Go.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

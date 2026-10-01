@@ -16,10 +16,15 @@ MonoBehaviour:
   questId: chainbound_intro
   rules:
   - label: during quest
+    lifecycleScope: 0
+    lifecycleMask: 8
     objectiveId: choose_starter
     objectiveComparison: 2
     objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
     flagPredicates: []
+    worldFlagPredicates: []
     counterPredicates: []
     timeOfDay:
       allowedSegments: 0
@@ -27,10 +32,22 @@ MonoBehaviour:
       minNormalizedTime: 0
       maxNormalizedTime: 0
     dialogue: {fileID: 11400000, guid: c4b2ccb970c2a10499acde72895a9b1c, type: 2}
+    useDialogueCamera: 0
     triggerId: loom_broken
+    npcBehavior:
+      mode: 0
+      behaviorOverride: {fileID: 0}
   inactiveDialogue: {fileID: 11400000, guid: c4b2ccb970c2a10499acde72895a9b1c, type: 2}
   inactiveTriggerId: 
+  inactiveNpcBehavior:
+    mode: 0
+    behaviorOverride: {fileID: 0}
   activeFallbackDialogue: {fileID: 11400000, guid: c4b2ccb970c2a10499acde72895a9b1c, type: 2}
   activeFallbackTriggerId: 
-  designerNotes: Post-intro fallback uses the broken-machine look so talk is never empty while coffee_and_beer is active.
- 
+  activeFallbackNpcBehavior:
+    mode: 0
+    behaviorOverride: {fileID: 0}
+  designerNotes: Post-intro fallback uses the broken-machine look so talk is never
+    empty while coffee_and_beer is active.
+  activateQuestOnInactiveInteract: 0
+  completeObjectiveOnActivate: 

@@ -33,6 +33,7 @@ public class EncounterTransitionBridge : MonoBehaviour
     {
         public Transform playerTransform;
         public string battleSceneName = "Combat2_TestHarness";
+        [Tooltip("Combat stage id for the shared battle scene. Empty resolves to loomville at load.")]
         public string battleSpawnId = "";
         public string returnSpawnId = "";
         public SoundtrackCueSO soundtrackOverride;
@@ -422,7 +423,9 @@ public class EncounterTransitionBridge : MonoBehaviour
 
     private bool StartSceneLoad(EncounterTransitionRequest request)
     {
-        string battleSpawnId = request.battleSpawnId ?? string.Empty;
+        string battleSpawnId = CombatStageIds.Normalize(request.battleSpawnId);
+        request.battleSpawnId = battleSpawnId;
+        CombatStageRequest.SetPending(battleSpawnId);
 
         SceneLoader sceneLoader = SceneLoader.Instance;
         if (sceneLoader == null)

@@ -55,7 +55,7 @@ MonoBehaviour:
     isMutated: 0
     isEntangled: 0
     currentHp: -1
-  - speciesId: whale
+  - speciesId: humpacked
     displayName: CATALINA
     stars: 1
     rebirthCount: 0

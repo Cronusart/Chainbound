@@ -17,105 +17,73 @@ MonoBehaviour:
   description: Sneaky glitch-beast who corrupts defenses and strikes at close range.
   primaryType: 12
   secondaryType: 0
-  baseMaxHP: 104
+  baseMaxHP: 124
   baseMeleeAtk: 63
   baseMeleeDef: 51
   baseRangedAtk: 37
   baseRangedDef: 32
   baseSpeed: 52
   maxEvolutionStages: 1
+  offTypeMoveExceptions: []
   learnableMoves:
-  - {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
-  - {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
-  - {fileID: 11400000, guid: 217e26e36e09d174fa4c865174fe41e5, type: 2}
+  - {fileID: 11400000, guid: db2f9f514dc9a8a4f9812b2ee22ebf9a, type: 2}
   - {fileID: 11400000, guid: 5ea95e1205143b243b9cb4a6ee58ed04, type: 2}
   - {fileID: 11400000, guid: cbff9949485987845aded72d55b25c0a, type: 2}
-  - {fileID: 11400000, guid: 620f0004159e04e46bfb81886280aad7, type: 2}
-  - {fileID: 11400000, guid: af4cf77a8b088d8428e5e7932eeed919, type: 2}
-  - {fileID: 11400000, guid: db2f9f514dc9a8a4f9812b2ee22ebf9a, type: 2}
-  - {fileID: 11400000, guid: a37b560f161e79246b479694bc22c0be, type: 2}
+  - {fileID: 11400000, guid: 217e26e36e09d174fa4c865174fe41e5, type: 2}
   - {fileID: 11400000, guid: a05d33e4c37329c4cb6bb6751da8c052, type: 2}
-  - {fileID: 11400000, guid: 790e2c7ccdd946278d7ea829346297c7, type: 2}
-  - {fileID: 11400000, guid: 0c3b0c9f6a3b76f409d138c5e230ac18, type: 2}
-  learnLevels: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
-  flagshipMove: {fileID: 11400000, guid: cbff9949485987845aded72d55b25c0a, type: 2}
-  initialMoves: []
+  flagshipMove: {fileID: 11400000, guid: db2f9f514dc9a8a4f9812b2ee22ebf9a, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: 5ea95e1205143b243b9cb4a6ee58ed04, type: 2}
   progressionMovePool:
-  - move: {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 217e26e36e09d174fa4c865174fe41e5, type: 2}
-    weight: 10
+  - move: {fileID: 11400000, guid: db2f9f514dc9a8a4f9812b2ee22ebf9a, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: 5ea95e1205143b243b9cb4a6ee58ed04, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: cbff9949485987845aded72d55b25c0a, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 620f0004159e04e46bfb81886280aad7, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: af4cf77a8b088d8428e5e7932eeed919, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: db2f9f514dc9a8a4f9812b2ee22ebf9a, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: a37b560f161e79246b479694bc22c0be, type: 2}
-    weight: 10
+  - move: {fileID: 11400000, guid: 217e26e36e09d174fa4c865174fe41e5, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: a05d33e4c37329c4cb6bb6751da8c052, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 790e2c7ccdd946278d7ea829346297c7, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 0c3b0c9f6a3b76f409d138c5e230ac18, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   isStarter: 0
   defaultCaptureProfile: 1
+  rarity: 0
   combatRoleOverride: 0
-  designNotes: 'Wild catch. Kreechures-inspired Glitched melee exploit archetype.
-    Total base stats: 340.'
+  designNotes: Wild catch. Common. Glitched melee exploit. Net 359.

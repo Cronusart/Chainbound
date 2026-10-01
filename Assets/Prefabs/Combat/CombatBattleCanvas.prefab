@@ -81,7 +81,7 @@ MonoBehaviour:
   bannerTitleText: {fileID: 6355601923033782100}
   bannerImage: {fileID: 6022101498675261133}
   bannerPromptText: {fileID: 6083651063238627555}
-  bannerContinueButton: {fileID: 3688664477701892782}
+  bannerContinueButton: {fileID: 0}
   reportSurface: {fileID: 7980712081128413703}
   titleText: {fileID: 601224951139264073}
   contentText: {fileID: 2560276822023871942}
@@ -25820,17 +25820,6 @@ MonoBehaviour:
 --- !u!114 &3158136482330392077 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8244542758074993477, guid: 8a15e36e41c2c984a90a8b73351af818, type: 3}
-  m_PrefabInstance: {fileID: 6465352195273751880}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &3688664477701892782 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7676754302862399462, guid: 8a15e36e41c2c984a90a8b73351af818, type: 3}
   m_PrefabInstance: {fileID: 6465352195273751880}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}

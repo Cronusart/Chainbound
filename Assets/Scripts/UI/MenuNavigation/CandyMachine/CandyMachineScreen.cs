@@ -97,6 +97,7 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private Image stampTabMarker;
 
         [Header("View / Browse column")]
+        [SerializeField] private RectTransform browseColumnRoot;
         [SerializeField] private TMP_Text browseHeader;
         [SerializeField] private TMP_Text browseSubheader;
         [SerializeField] private RectTransform folioBrowse;
@@ -108,6 +109,7 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private TMP_Text listFooter;
 
         [Header("View / Detail column")]
+        [SerializeField] private RectTransform detailColumnRoot;
         [SerializeField] private TMP_Text detailHeader;
         [SerializeField] private TMP_Text detailSubheader;
         [SerializeField] private TMP_Text previewCaption;
@@ -126,6 +128,11 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private TMP_Text tokensLabel;
         [SerializeField] private TMP_Text reviewHint;
         [SerializeField] private Button primaryButton;
+
+        [Header("View / Mode pick")]
+        [SerializeField] private RectTransform modeColumnRoot;
+        [SerializeField] private CanvasGroup slotBrowseGroup;
+        [SerializeField] private CanvasGroup slotDetailGroup;
 
         [Header("View / Pull and reveal")]
         [SerializeField] private CanvasGroup bodyRow;
@@ -156,6 +163,7 @@ namespace SignalJam.UI.MenuNavigation
         private DevCandyMachineInventory devInventory;
         private CandyMachineMode mode = CandyMachineMode.GetKnown;
         private int selectedKnownIndex;
+        private string stampHostAcquisition = LibraryCardFaces.CandyRoll;
         private StampMoveRequest reviewedRequest;
         private InputLockHandle inputLockHandle;
         private ICandyMachinePullDirector pullDirector;
@@ -173,6 +181,14 @@ namespace SignalJam.UI.MenuNavigation
         private bool stampReconciliationRunning;
         private bool settlementPullStarted;
         private bool pullAnimationReady;
+
+        public const float ModePickScale = 1.25f;
+        private readonly object columnTweenId = new object();
+        private bool? columnsRevealed;
+        private Tween primaryPulse;
+        private bool stampPreparing;
+        private StampTransactionReview reviewedStampSummary;
+        private long? heldStampRamBaseline;
 
         public static CandyMachineScreen Instance
         {
@@ -199,11 +215,36 @@ namespace SignalJam.UI.MenuNavigation
         public bool UsesDevnetOwnership => EffectiveRuntimeMode == CandyMachineRuntimeMode.DevnetOwnership;
 
         public bool CanShowDevGrantPanel =>
-            DevCandyMachineInventory.IsDevSurfaceAllowed && (devInventory != null || ownershipService != null);
+            PlatformContext.ResolveAllowDevelopmentTools()
+            && DevCandyMachineInventory.IsDevSurfaceAllowed
+            && (devInventory != null || ownershipService != null);
 
         public long DisplayRamBalance => ownershipService != null
             ? ownershipService.RamBalance
             : devInventory != null ? devInventory.RamBalance : 0L;
+
+        /// <summary>
+        /// RAM shown on the label. Once a Stamp is confirmed locally the cost is shown as spent
+        /// until the flow ends; the server still debits only at ownership_confirm_stamp.
+        /// </summary>
+        public long VisibleRamBalance => heldStampRamBaseline.HasValue
+            ? Math.Max(0L, Math.Min(DisplayRamBalance, heldStampRamBaseline.Value - RequiredStampRam))
+            : DisplayRamBalance;
+
+        public bool IsStampInFlight => stampPreparing || IsStampHoldLocked();
+
+        public bool AreColumnsRevealed => columnsRevealed == true;
+
+        public int RequiredStampRam => ownershipService != null
+            ? ownershipService.StampRamCost
+            : devInventory != null
+                ? devInventory.RamCostStamp
+                : vendingConfig != null ? Mathf.Max(0, vendingConfig.ramCostStampKnown) : 0;
+
+        /// <summary>Known roll cost shown on the panel. Zero means the roll is free.</summary>
+        public int RequiredKnownRam => devInventory != null
+            ? devInventory.RamCostGetKnown
+            : vendingConfig != null ? Mathf.Max(0, vendingConfig.ramCostGetKnown) : 0;
 
         public PlayerMenuChromePalette Chrome => chrome;
 
@@ -252,6 +293,8 @@ namespace SignalJam.UI.MenuNavigation
             mode = CandyMachineMode.GetKnown;
             navLayer = CandyMachineNavLayer.Mode;
             reviewedRequest = null;
+            ResetStampHold();
+            columnsRevealed = null;
             RefreshPresentation();
             if (ownershipService != null)
                 RefreshOwnershipStateOnOpen();
@@ -264,7 +307,7 @@ namespace SignalJam.UI.MenuNavigation
 
         public void Close()
         {
-            if (IsInteractionLocked())
+            if (IsExitLocked())
                 return;
             CloseImmediate();
         }
@@ -276,8 +319,12 @@ namespace SignalJam.UI.MenuNavigation
             PlayUiCue(PlayerMenuSfxCue.MenuClose);
             SetInputContextActive(false);
             reviewedRequest = null;
+            ResetStampHold();
             StopRevealCoroutine();
             DOTween.Kill(this);
+            DOTween.Kill(columnTweenId, true);
+            columnsRevealed = null;
+            SyncPrimaryPulse(false);
             pullDirector?.CancelAndRestore();
             pullDirector = null;
             pendingReveal = null;
@@ -294,14 +341,44 @@ namespace SignalJam.UI.MenuNavigation
 
         public void RefreshPresentation()
         {
+            AlignSelectionWithPreparedStamp();
             RefreshRam();
             RefreshModeVisuals();
             RefreshList();
             RefreshDetail();
+            if (navLayer == CandyMachineNavLayer.Mode)
+                ShowModeHubBody();
             RefreshActions();
             RefreshNavigation();
+            ApplyStampFinalizationGate();
             if (grantPanel != null)
+            {
                 grantPanel.RefreshVisibility();
+                grantPanel.SynchronizeDisplayedRam();
+            }
+            ApplyExitLockToGrantStrip();
+        }
+
+        private void ShowModeHubBody()
+        {
+            if (PendingStampIsFinalizing(ownershipService?.PendingStamp))
+                return;
+            detailBodyView?.Show(
+                CandyMachineDetailBodyMode.Idle,
+                "CHOOSE A MODE",
+                "ROLL A NEW MOVE, OR STAMP A MOVE YOU ALREADY KNOW.",
+                "LEFT / RIGHT TO PICK | CONFIRM TO SELECT");
+        }
+
+        private void ApplyExitLockToGrantStrip()
+        {
+            if (grantPanel == null || !IsExitLocked())
+                return;
+            CanvasGroup strip = grantPanel.GetComponent<CanvasGroup>();
+            if (strip == null)
+                return;
+            strip.interactable = false;
+            strip.blocksRaycasts = false;
         }
 
         /// <summary>
@@ -388,13 +465,13 @@ namespace SignalJam.UI.MenuNavigation
             BindFromHierarchy();
             ProtectBackgroundPresentation();
 
-            // Author the prefab in its opening state: FOLIO tab, browse cards, Get Known CTA.
+            // Author the prefab in its opening state: ROLL tab, browse cards, ROLL CTA.
             mode = CandyMachineMode.GetKnown;
             RefreshModeVisuals();
             RefreshDetail();
             RefreshActions();
             SetText(oddsLabel, "COMMON 60% | RARE 30% | LEGEND 10%");
-            detailBodyView?.Show(CandyMachineDetailBodyMode.Idle, "FOLIO", "READY | FOLIO TOKEN AVAILABLE", "CONFIRM TO PULL");
+            detailBodyView?.Show(CandyMachineDetailBodyMode.Idle, "ROLL", "READY | ROLL AVAILABLE", "CONFIRM TO PULL");
         }
 
         private void Awake()
@@ -530,10 +607,8 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             devInventory = null;
-            bool devnetEnabled = enableDevnetOwnershipSpine;
-#if DEVELOPMENT_BUILD && !UNITY_EDITOR
-            devnetEnabled = true;
-#endif
+            bool devnetEnabled = PlatformContext.ResolveOwnershipRuntimeEnabled()
+                && (!Application.isEditor || enableDevnetOwnershipSpine);
             if (EffectiveRuntimeMode == CandyMachineRuntimeMode.DevnetOwnership
                 && devnetEnabled
                 && ownershipGateway is IOwnershipSpineGateway gateway
@@ -556,7 +631,7 @@ namespace SignalJam.UI.MenuNavigation
 
             knownMoves = null;
             stampedMoves = null;
-            SetStatus("Get Known and Stamp need the Ownership Spine on devnet.");
+            SetStatus("Roll and Stamp need the Ownership Spine on devnet.");
         }
 
         private void ResolveOwnershipDependencies()
@@ -601,7 +676,10 @@ namespace SignalJam.UI.MenuNavigation
 
             await ownershipService.RefreshAsync();
             if (showing)
+            {
                 RefreshPresentation();
+                grantPanel?.RefreshForCurrentState();
+            }
         }
 
         private async void RefreshOwnershipStateOnOpen()
@@ -609,8 +687,9 @@ namespace SignalJam.UI.MenuNavigation
             try
             {
                 await RefreshOwnershipStateAsync();
-                if (showing && ownershipService?.PendingStamp != null)
-                    await ResumePendingStampAsync(ownershipService.PendingStamp);
+                if (showing && ownershipService?.PendingStamp != null
+                    && !PendingStampRequiresWalletSignature(ownershipService.PendingStamp))
+                    await ResumePendingStampAsync(ownershipService.PendingStamp, false);
             }
             catch (Exception exception)
             {
@@ -647,7 +726,7 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (HasFeatureServices())
                 return true;
-            SetStatus("Get Known and Stamp need the Ownership Spine on devnet.");
+            SetStatus("Roll and Stamp need the Ownership Spine on devnet.");
             return false;
         }
 
@@ -655,6 +734,12 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (!CanUseFeature() || knownMoves == null)
                 return;
+            if (!HasSufficientRam(DisplayRamBalance, RequiredKnownRam))
+            {
+                RefreshPresentation();
+                FocusDetailPrimary();
+                return;
+            }
 
             presentationState = CandyMachinePresentationState.Committing;
             SetBlockedInputMuted(true);
@@ -687,9 +772,12 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (!CanUseFeature() || knownMoves == null || stampedMoves == null)
                 return;
-            if (ownershipService?.PendingStamp != null)
+
+            PendingStampRecord pendingStamp = ownershipService?.PendingStamp;
+            bool resumePreparedStamp = PendingStampRequiresWalletSignature(pendingStamp);
+            if (pendingStamp != null && !resumePreparedStamp)
             {
-                await ResumePendingStampAsync(ownershipService.PendingStamp);
+                await ResumePendingStampAsync(pendingStamp, false);
                 return;
             }
             if (knownMoves.CachedKnown.Count == 0)
@@ -698,13 +786,70 @@ namespace SignalJam.UI.MenuNavigation
                 return;
             }
 
+            if (resumePreparedStamp && reviewedRequest == null)
+            {
+                // A wallet may have broadcast immediately before the app was suspended.
+                // Reconcile once before rebuilding the same deterministic intent so a
+                // confirmed transaction is never offered for a second signature.
+                try
+                {
+                    presentationState = CandyMachinePresentationState.Committing;
+                    SetBlockedInputMuted(true);
+                    SetPending(true, "Checking prepared Stamp...");
+                    StampMoveResult recovered = await ownershipService.ReconcilePendingStampAsync(
+                        pendingStamp.idempotencyKey);
+                    if (recovered == null || !recovered.success)
+                    {
+                        ShowOperationError(recovered?.error ?? "Prepared Stamp status could not be verified.");
+                        return;
+                    }
+                    if (recovered.confirmed && recovered.verifiedAsset != null
+                        && ContainsCachedStamp(recovered.verifiedAsset.assetAddress))
+                    {
+                        selectedKnownIndex = 0;
+                        BeginRecoveredReveal(BuildStampReveal(recovered.verifiedAsset));
+                        return;
+                    }
+                    if (recovered.pending
+                        && !string.Equals(recovered.operationStatus, "prepared", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ReconcileStampUntilSettledAsync(recovered, false);
+                        return;
+                    }
+
+                    pendingStamp = ownershipService.PendingStamp;
+                    resumePreparedStamp = PendingStampRequiresWalletSignature(pendingStamp);
+                    AlignSelectionWithPreparedStamp();
+                }
+                catch (Exception exception)
+                {
+                    ShowOperationError(exception.Message);
+                    return;
+                }
+            }
+
+            if (!resumePreparedStamp && !HasSufficientRam(DisplayRamBalance, RequiredStampRam))
+            {
+                presentationState = CandyMachinePresentationState.Browse;
+                SetBlockedInputMuted(false);
+                RefreshPresentation();
+                FocusDetailPrimary();
+                return;
+            }
+
             selectedKnownIndex = Mathf.Clamp(selectedKnownIndex, 0, knownMoves.CachedKnown.Count - 1);
             KnownMoveRecord selected = knownMoves.CachedKnown[selectedKnownIndex];
+            stampHostAcquisition = LibraryCardFaces.Normalize(
+                resumePreparedStamp
+                    ? (!string.IsNullOrWhiteSpace(pendingStamp.acquisition)
+                        ? pendingStamp.acquisition
+                        : FindKnownAcquisition(pendingStamp.knownInstanceId))
+                    : selected.acquisition);
             StampMoveRequest request = reviewedRequest ?? new StampMoveRequest
             {
-                knownInstanceId = selected.instanceId,
+                knownInstanceId = resumePreparedStamp ? pendingStamp.knownInstanceId : selected.instanceId,
                 requestedModifierCount = StampSlotsPerAction,
-                idempotencyKey = Guid.NewGuid().ToString("N"),
+                idempotencyKey = resumePreparedStamp ? pendingStamp.idempotencyKey : Guid.NewGuid().ToString("N"),
             };
 
             try
@@ -713,8 +858,11 @@ namespace SignalJam.UI.MenuNavigation
                 {
                     presentationState = CandyMachinePresentationState.Committing;
                     SetBlockedInputMuted(true);
-                    SetPending(true, "Reviewing Stamp...");
+                    stampPreparing = true;
+                    HoldStampRam();
+                    RefreshPresentation();
                     StampTransactionReview review = await stampedMoves.ReviewStampAsync(request);
+                    stampPreparing = false;
                     if (review == null || !review.simulationSucceeded)
                     {
                         ShowOperationError(review?.simulationMessage ?? "Simulation failed.");
@@ -722,11 +870,11 @@ namespace SignalJam.UI.MenuNavigation
                     }
 
                     reviewedRequest = request;
-                    ShowReview(review);
+                    reviewedStampSummary = review;
                     presentationState = CandyMachinePresentationState.Review;
                     SetBlockedInputMuted(false);
-                    SetPending(false, "Review the result, then confirm Stamp.");
-                    RefreshActions();
+                    RefreshPresentation();
+                    PunchPrimary();
                     FocusDetailPrimary();
                     return;
                 }
@@ -734,12 +882,17 @@ namespace SignalJam.UI.MenuNavigation
                 presentationState = CandyMachinePresentationState.Committing;
                 SetBlockedInputMuted(true);
                 SetPending(true, "Stamping...");
+                detailBodyView?.Show(
+                    CandyMachineDetailBodyMode.Confirm,
+                    "STAMPING",
+                    "SIGN WITH YOUR LINKED WALLET, THEN WAIT FOR CONFIRMATION.",
+                    "CANDY MACHINE LOCKED UNTIL THE STAMP LANDS");
+                RefreshActions();
                 StampMoveResult result = await stampedMoves.StampMoveAsync(request);
                 reviewedRequest = null;
                 if (result != null && result.success && result.pending)
                 {
-                    BeginSettlementPull();
-                    await ReconcileStampUntilSettledAsync(result);
+                    await ReconcileStampUntilSettledAsync(result, true);
                     return;
                 }
                 if (result == null || !result.success || !result.confirmed || result.verifiedAsset == null
@@ -750,10 +903,11 @@ namespace SignalJam.UI.MenuNavigation
                 }
 
                 selectedKnownIndex = 0;
-                BeginCommittedPull(BuildStampReveal(result.verifiedAsset));
+                BeginCommittedPull(BuildStampReveal(result.verifiedAsset, stampHostAcquisition));
             }
             catch (Exception exception)
             {
+                stampPreparing = false;
                 reviewedRequest = null;
                 ShowOperationError(exception.Message);
             }
@@ -761,7 +915,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private void SetMode(CandyMachineMode next)
         {
-            if (IsInteractionLocked() || navLayer != CandyMachineNavLayer.Mode)
+            if (IsExitLocked() || navLayer != CandyMachineNavLayer.Mode)
                 return;
 
             mode = next;
@@ -780,7 +934,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private void SelectKnown(int index)
         {
-            if (IsInteractionLocked() || navLayer != CandyMachineNavLayer.Browse)
+            if (IsExitLocked() || navLayer != CandyMachineNavLayer.Browse)
                 return;
             selectedKnownIndex = index;
             reviewedRequest = null;
@@ -793,11 +947,42 @@ namespace SignalJam.UI.MenuNavigation
 
         private void RefreshRam()
         {
-            long ram = DisplayRamBalance;
+            long ram = VisibleRamBalance;
             if (ramLabel != null)
                 ramLabel.text = $"RAM  {ram}";
             if (titleLabel != null)
                 titleLabel.text = MachineTitle;
+        }
+
+        private void HoldStampRam()
+        {
+            if (heldStampRamBaseline.HasValue || RequiredStampRam <= 0)
+                return;
+            heldStampRamBaseline = DisplayRamBalance;
+            RefreshRam();
+            if (ramLabel == null || !Application.isPlaying)
+                return;
+            Transform label = ramLabel.transform;
+            DOTween.Kill(label, true);
+            label.localScale = Vector3.one;
+            label.DOPunchScale(new Vector3(0.22f, 0.22f, 0f), 0.35f, 7, 0.6f)
+                .SetUpdate(true)
+                .SetTarget(label);
+        }
+
+        private void ReleaseStampRamHold()
+        {
+            if (!heldStampRamBaseline.HasValue)
+                return;
+            heldStampRamBaseline = null;
+            RefreshRam();
+        }
+
+        private void ResetStampHold()
+        {
+            stampPreparing = false;
+            reviewedStampSummary = null;
+            heldStampRamBaseline = null;
         }
 
         private void RefreshModeVisuals()
@@ -819,6 +1004,15 @@ namespace SignalJam.UI.MenuNavigation
                 ClearStickyModeChrome(stampTabButton);
             }
 
+            bool tabsInteractable = !IsExitLocked();
+            if (folioTabButton != null)
+                folioTabButton.interactable = tabsInteractable;
+            if (stampTabButton != null)
+                stampTabButton.interactable = tabsInteractable;
+            SetTabLabelText(folioTabButton, "ROLL");
+            SetTabLabelText(stampTabButton, "STAMP");
+            SyncColumnReveal();
+
             if (folioBrowse != null)
                 folioBrowse.gameObject.SetActive(folio);
             if (stampBrowse != null)
@@ -835,7 +1029,7 @@ namespace SignalJam.UI.MenuNavigation
                 reviewHint.transform.parent.gameObject.SetActive(!folio);
 
             if (browseHeader != null)
-                browseHeader.text = folio ? "FOLIO BROWSE" : "STAMPABLE MOVES";
+                browseHeader.text = folio ? "MOVE BROWSE" : "STAMPABLE MOVES";
             if (browseSubheader != null)
             {
                 browseSubheader.text = folio
@@ -844,7 +1038,7 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             if (detailHeader != null)
-                detailHeader.text = folio ? "FOLIO / GET KNOWN" : "STAMP A MOVE";
+                detailHeader.text = folio ? "ROLL A MOVE" : "STAMP A MOVE";
             if (detailSubheader != null)
             {
                 detailSubheader.text = folio
@@ -878,6 +1072,8 @@ namespace SignalJam.UI.MenuNavigation
                 return;
 
             IReadOnlyList<KnownMoveRecord> records = knownMoves.CachedKnown;
+            PendingStampRecord pendingStamp = ownershipService?.PendingStamp;
+            bool lockToPreparedStamp = PendingStampRequiresWalletSignature(pendingStamp);
             for (int i = 0; i < records.Count; i++)
             {
                 int index = i;
@@ -888,6 +1084,11 @@ namespace SignalJam.UI.MenuNavigation
                     FormatMeter(record.modifierCount));
                 SetRowSelected(row, index == selectedKnownIndex);
                 row.onClick.AddListener(() => SelectKnown(index));
+                if (lockToPreparedStamp
+                    && !string.Equals(record.instanceId, pendingStamp.knownInstanceId, StringComparison.Ordinal))
+                {
+                    row.interactable = false;
+                }
                 knownRowButtons.Add(row);
             }
 
@@ -966,19 +1167,28 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (mode == CandyMachineMode.GetKnown)
             {
-                int cost = devInventory != null
-                    ? devInventory.RamCostGetKnown
-                    : vendingConfig != null ? Mathf.Max(0, vendingConfig.ramCostGetKnown) : 0;
+                int cost = RequiredKnownRam;
                 SetText(detailTitle, "ARC OF THE POOL");
                 SetText(detailMeta, "0 MODIFIERS | CLEAN ENTRY");
                 SetText(costLabel, cost <= 0 ? "FREE" : $"{cost} RAM");
                 SetText(resultLabel, "KNOWN / CLEAN");
                 SetText(tokensLabel, ramLabel != null ? ramLabel.text.Replace("RAM", string.Empty).Trim() : "0");
-                detailBodyView?.Show(
-                    CandyMachineDetailBodyMode.Idle,
-                    "GET KNOWN",
-                    "A NEW MOVE ENTERS THE FOLIO WITH ZERO STAMPS. USE STAMP MODE LATER TO FILL SLOTS.",
-                    cost <= 0 ? "CONFIRM TO PULL" : $"CONFIRM TO SPEND {cost} RAM");
+                if (!HasSufficientRam(DisplayRamBalance, cost))
+                {
+                    detailBodyView?.Show(
+                        CandyMachineDetailBodyMode.Error,
+                        "INSUFFICIENT RAM",
+                        $"{cost} RAM IS REQUIRED TO ROLL A MOVE. CURRENT BALANCE: {DisplayRamBalance} RAM.",
+                        "EARN OR GRANT MORE RAM TO CONTINUE");
+                }
+                else
+                {
+                    detailBodyView?.Show(
+                        CandyMachineDetailBodyMode.Idle,
+                        "ROLL A MOVE",
+                        "A NEW MOVE JOINS YOUR MOVES WITH ZERO STAMPS. USE STAMP LATER TO FILL SLOTS.",
+                        cost <= 0 ? "PRESS ROLL TO PULL" : $"PRESS ROLL TO SPEND {cost} RAM");
+                }
                 RefreshSlots(0, null, null);
                 return;
             }
@@ -991,8 +1201,8 @@ namespace SignalJam.UI.MenuNavigation
                 detailBodyView?.Show(
                     CandyMachineDetailBodyMode.Error,
                     "NO STAMPABLE MOVES",
-                    "ROLL GET KNOWN OR USE THE DEV GRANT STRIP TO ADD A KNOWN MOVE.",
-                    "SELECT FOLIO TO CONTINUE");
+                    "ROLL A MOVE OR USE THE DEV GRANT STRIP TO ADD A KNOWN MOVE.",
+                    "GO BACK AND PICK ROLL TO CONTINUE");
                 RefreshSlots(0, null, null);
                 return;
             }
@@ -1008,17 +1218,73 @@ namespace SignalJam.UI.MenuNavigation
             SetText(
                 detailMeta,
                 $"METER {FormatMeterIcons(filled)} | NEXT = SLOT {Mathf.Min(filled + 1, MaxStampSlots)}");
-            int stampCost = devInventory != null
-                ? devInventory.RamCostStamp
-                : vendingConfig != null ? Mathf.Max(0, vendingConfig.ramCostStampKnown) : 0;
+            int stampCost = RequiredStampRam;
             SetText(costLabel, stampCost <= 0 ? "1 STAMP" : $"1 STAMP | {stampCost} RAM");
             SetText(reviewHint, "CONFIRM");
-            detailBodyView?.Show(
-                CandyMachineDetailBodyMode.Idle,
-                "STAMP SELECTED MOVE",
-                "FILL NEXT EMPTY SLOT ONLY | NO DOUBLE-STAMP, NO MOD PICKER.",
-                stampCost <= 0 ? "CONFIRM TO REVIEW" : $"CONFIRM TO REVIEW | {stampCost} RAM");
+            if (stampPreparing)
+            {
+                ShowStampPreparing();
+                RefreshSlots(filled, null, null);
+                return;
+            }
+            if (IsStampHoldLocked() && reviewedStampSummary != null)
+            {
+                ShowReview(reviewedStampSummary);
+                RefreshSlots(filled, null, null);
+                return;
+            }
+
+            bool preparedResume = PendingStampRequiresWalletSignature(ownershipService?.PendingStamp);
+            bool insufficientRam = !preparedResume && !HasSufficientRam(DisplayRamBalance, stampCost);
+            if (insufficientRam)
+            {
+                detailBodyView?.Show(
+                    CandyMachineDetailBodyMode.Error,
+                    "INSUFFICIENT RAM",
+                    $"{stampCost} RAM IS REQUIRED TO STAMP A MOVE. CURRENT BALANCE: {DisplayRamBalance} RAM.",
+                    "EARN OR GRANT MORE RAM TO CONTINUE");
+                RefreshSlots(filled, null, null);
+                return;
+            }
+            if (preparedResume)
+            {
+                detailBodyView?.Show(
+                    CandyMachineDetailBodyMode.Idle,
+                    "RESUME PREPARED STAMP",
+                    "THE RESULT IS LOCKED. REVIEW A FRESH TRANSACTION, THEN SIGN WITH THE LINKED WALLET.",
+                    stampCost <= 0 ? "PRESS RESUME TO CONTINUE" : $"PRESS RESUME TO CONTINUE | {stampCost} RAM");
+            }
+            else if (navLayer == CandyMachineNavLayer.Detail)
+            {
+                detailBodyView?.Show(
+                    CandyMachineDetailBodyMode.Confirm,
+                    "STAMP THIS MOVE?",
+                    stampCost <= 0
+                        ? $"FILLS THE NEXT EMPTY SLOT ON {catalog.displayName.ToUpperInvariant()}."
+                        : $"FILLS THE NEXT EMPTY SLOT ON {catalog.displayName.ToUpperInvariant()}. {stampCost} RAM IS SPENT WHEN THE STAMP CONFIRMS.",
+                    "PRESS CONFIRM TO PREPARE | BACK TO PICK ANOTHER");
+            }
+            else
+            {
+                detailBodyView?.Show(
+                    CandyMachineDetailBodyMode.Idle,
+                    "PICK A MOVE TO STAMP",
+                    "SELECT A KNOWN MOVE FROM THE LIST. NOTHING IS SPENT UNTIL YOU CONFIRM.",
+                    "UP / DOWN TO BROWSE | CONFIRM TO SELECT");
+            }
             RefreshSlots(filled, null, null);
+        }
+
+        private void ShowStampPreparing()
+        {
+            int stampCost = RequiredStampRam;
+            detailBodyView?.Show(
+                CandyMachineDetailBodyMode.Confirm,
+                "PREPARING STAMP",
+                "PLEASE WAIT TO CONFIRM YOUR STAMP.",
+                stampCost <= 0
+                    ? "CANDY MACHINE LOCKED"
+                    : $"{stampCost} RAM RESERVED | CANDY MACHINE LOCKED");
         }
 
         private void RefreshSlots(int filledSlots, string slotOneModifier, string slotTwoModifier)
@@ -1083,26 +1349,147 @@ namespace SignalJam.UI.MenuNavigation
         private void RefreshActions()
         {
             bool canUse = HasFeatureServices();
-            bool stampPending = ownershipService?.PendingStamp != null || stampReconciliationRunning;
+            bool hasPendingStamp = ownershipService?.PendingStamp != null;
+            bool pendingNeedsSignature = PendingStampRequiresWalletSignature(ownershipService?.PendingStamp);
+            bool stampBusy = stampReconciliationRunning;
+            bool enoughRam = HasSufficientRam(DisplayRamBalance, RequiredStampRam);
+            bool committing = presentationState == CandyMachinePresentationState.Committing;
+            bool stampInFlight = false;
             if (primaryButton != null)
             {
                 TMP_Text label = primaryButton.GetComponentInChildren<TMP_Text>(true);
                 if (mode == CandyMachineMode.GetKnown)
                 {
+                    bool enoughRollRam = HasSufficientRam(DisplayRamBalance, RequiredKnownRam);
                     if (label != null)
-                        label.text = "GET KNOWN";
-                    primaryButton.interactable = canUse && !stampPending && navLayer == CandyMachineNavLayer.Detail;
+                        label.text = ResolveRollPrimaryLabel(enoughRollRam);
+                    primaryButton.interactable = canUse && enoughRollRam && !hasPendingStamp && !stampBusy && !committing
+                        && navLayer == CandyMachineNavLayer.Detail;
                 }
                 else
                 {
+                    stampInFlight = stampPreparing || (committing && reviewedRequest != null);
                     if (label != null)
-                        label.text = stampPending ? "SETTLING" : reviewedRequest == null ? "STAMP" : "CONFIRM STAMP";
-                    primaryButton.interactable = canUse && !stampPending
+                        label.text = ResolveStampPrimaryLabel(
+                            stampBusy,
+                            stampPreparing,
+                            reviewedRequest != null,
+                            committing,
+                            pendingNeedsSignature,
+                            hasPendingStamp,
+                            enoughRam,
+                            navLayer == CandyMachineNavLayer.Detail);
+                    primaryButton.interactable = canUse && !stampBusy && !committing
                         && navLayer == CandyMachineNavLayer.Detail
-                        && knownMoves != null
-                        && knownMoves.CachedKnown.Count > 0;
+                        && (hasPendingStamp || reviewedRequest != null
+                            || (enoughRam && knownMoves != null && knownMoves.CachedKnown.Count > 0));
+                }
+                SyncPrimaryPulse(stampInFlight);
+                if (label != null)
+                    label.color = primaryButton.interactable ? ButtonInk : ButtonInkMuted;
+                if (!primaryButton.interactable)
+                {
+                    PlayerMenuChromeButtonVisual chromeVisual =
+                        primaryButton.GetComponent<PlayerMenuChromeButtonVisual>();
+                    chromeVisual?.SetSelected(false);
                 }
             }
+        }
+
+        /// <summary>Roll CTA. Short RAM uses the same gray plate as Stamp.</summary>
+        public static string ResolveRollPrimaryLabel(bool enoughRam) =>
+            enoughRam ? "ROLL" : "INSUFFICIENT RAM";
+
+        /// <summary>
+        /// Stamp CTA copy. CONFIRM is local only; PREPARING... covers ownership_prepare_stamp;
+        /// STAMP submits the prepared transaction.
+        /// </summary>
+        public static string ResolveStampPrimaryLabel(
+            bool reconciling,
+            bool preparing,
+            bool prepared,
+            bool committing,
+            bool pendingNeedsSignature,
+            bool hasPendingStamp,
+            bool enoughRam,
+            bool moveSelected)
+        {
+            if (reconciling)
+                return "CHECKING";
+            if (preparing)
+                return "PREPARING...";
+            if (prepared)
+                return committing ? "STAMPING..." : "STAMP";
+            if (pendingNeedsSignature)
+                return "RESUME STAMP";
+            if (hasPendingStamp)
+                return "CHECK STATUS";
+            if (!enoughRam)
+                return "INSUFFICIENT RAM";
+            return moveSelected ? "CONFIRM" : "SELECT A MOVE";
+        }
+
+        private void SyncPrimaryPulse(bool pulse)
+        {
+            TMP_Text label = primaryButton != null ? primaryButton.GetComponentInChildren<TMP_Text>(true) : null;
+            if (!pulse || label == null || !Application.isPlaying)
+            {
+                if (primaryPulse != null)
+                {
+                    primaryPulse.Kill();
+                    primaryPulse = null;
+                    if (label != null)
+                        label.transform.localScale = Vector3.one;
+                }
+                return;
+            }
+
+            if (primaryPulse != null && primaryPulse.IsActive())
+                return;
+            label.transform.localScale = Vector3.one;
+            primaryPulse = label.transform
+                .DOScale(1.07f, 0.45f)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetUpdate(true);
+        }
+
+        private void PunchPrimary()
+        {
+            if (primaryButton == null || !Application.isPlaying)
+                return;
+            Transform target = primaryButton.transform;
+            DOTween.Kill(target, true);
+            target.localScale = Vector3.one;
+            target.DOPunchScale(new Vector3(0.12f, -0.08f, 0f), 0.3f, 8, 0.7f)
+                .SetUpdate(true)
+                .SetTarget(target);
+        }
+
+        private void ApplyStampFinalizationGate()
+        {
+            bool finalizing = stampReconciliationRunning || PendingStampIsFinalizing(ownershipService?.PendingStamp);
+            if (browseColumnRoot != null)
+                browseColumnRoot.gameObject.SetActive(!finalizing);
+            if (detailColumnRoot != null)
+                detailColumnRoot.gameObject.SetActive(!finalizing);
+            if (!finalizing)
+                return;
+
+            if (folioTabButton != null)
+                folioTabButton.interactable = false;
+            if (stampTabButton != null)
+                stampTabButton.interactable = false;
+            if (primaryButton != null)
+                primaryButton.interactable = false;
+            for (int i = 0; i < knownRowButtons.Count; i++)
+                if (knownRowButtons[i] != null) knownRowButtons[i].interactable = false;
+
+            detailBodyView?.Show(
+                CandyMachineDetailBodyMode.Confirm,
+                "STAMP FINALIZATION IN PROGRESS",
+                "PLEASE WAIT TO USE THE CANDY MACHINE AGAIN. THIS STAMP WILL RESUME AUTOMATICALLY.",
+                "CANDY MACHINE LOCKED");
         }
 
         private void ShowReview(StampTransactionReview review)
@@ -1111,16 +1498,21 @@ namespace SignalJam.UI.MenuNavigation
                 return;
             detailBodyView?.Show(
                 CandyMachineDetailBodyMode.Confirm,
-                $"STAMP REVIEW | {review.cluster}",
+                $"STAMP READY | {review.cluster}",
                 $"RAM {review.ramCost} | FEE {review.estimatedNetworkFeeLamports} LAMPORTS\n{review.simulationMessage}",
-                "PRESS CONFIRM TO SIGN AND STAMP");
+                "PRESS STAMP TO SIGN | CANDY MACHINE LOCKED UNTIL DONE");
         }
 
-        private async Task ResumePendingStampAsync(PendingStampRecord pending)
+        private async Task ResumePendingStampAsync(PendingStampRecord pending, bool playSettlementPull)
         {
             if (pending == null || stampReconciliationRunning)
                 return;
-            BeginSettlementPull();
+            if (PendingStampRequiresWalletSignature(pending))
+            {
+                AlignSelectionWithPreparedStamp();
+                RefreshPresentation();
+                return;
+            }
             await ReconcileStampUntilSettledAsync(new StampMoveResult
             {
                 success = true,
@@ -1132,14 +1524,16 @@ namespace SignalJam.UI.MenuNavigation
                 assetAddress = pending.assetAddress,
                 signature = pending.signature,
                 message = pending.message,
-            });
+            }, playSettlementPull);
         }
 
-        private async Task ReconcileStampUntilSettledAsync(StampMoveResult pending)
+        private async Task ReconcileStampUntilSettledAsync(StampMoveResult pending, bool playSettlementPull)
         {
             if (ownershipService == null || stampReconciliationRunning)
                 return;
 
+            if (playSettlementPull)
+                BeginSettlementPull();
             stampReconciliationRunning = true;
             CancelStampReconciliation();
             stampReconciliationCancellation = new CancellationTokenSource();
@@ -1147,6 +1541,7 @@ namespace SignalJam.UI.MenuNavigation
             presentationState = CandyMachinePresentationState.Committing;
             SetBlockedInputMuted(true);
             reviewedRequest = null;
+            RefreshPresentation();
             int[] delaysMs = { 0, 750, 1250, 2000, 3000 };
             try
             {
@@ -1170,7 +1565,17 @@ namespace SignalJam.UI.MenuNavigation
                         && ContainsCachedStamp(result.verifiedAsset.assetAddress))
                     {
                         selectedKnownIndex = 0;
-                        BeginCommittedPull(BuildStampReveal(result.verifiedAsset));
+                        CandyMachineRevealData reveal = BuildStampReveal(result.verifiedAsset, stampHostAcquisition);
+                        if (playSettlementPull)
+                            BeginCommittedPull(reveal);
+                        else
+                            BeginRecoveredReveal(reveal);
+                        return;
+                    }
+
+                    if (!result.pending)
+                    {
+                        ShowNoPendingStampState(result.message);
                         return;
                     }
 
@@ -1192,7 +1597,7 @@ namespace SignalJam.UI.MenuNavigation
             {
                 stampReconciliationRunning = false;
                 if (showing)
-                    RefreshActions();
+                    RefreshPresentation();
             }
         }
 
@@ -1203,12 +1608,60 @@ namespace SignalJam.UI.MenuNavigation
             SetBlockedInputMuted(false);
             detailBodyView?.Show(
                 CandyMachineDetailBodyMode.Confirm,
-                "STAMP CONFIRMED",
+                "STAMP FINALIZATION IN PROGRESS",
                 string.IsNullOrWhiteSpace(pending?.message)
                     ? "TRUSTED ASSET INDEXING IS STILL IN PROGRESS."
                     : pending.message.ToUpperInvariant(),
-                "YOU MAY CLOSE; THIS SAME STAMP RESUMES ON RETURN");
-            RefreshActions();
+                "YOU MAY CLOSE; FINALIZATION WILL RESUME AUTOMATICALLY");
+            RefreshPresentation();
+        }
+
+        private void ShowNoPendingStampState(string message)
+        {
+            RestoreAfterSettlementPull();
+            ResetStampHold();
+            presentationState = CandyMachinePresentationState.Browse;
+            SetBlockedInputMuted(false);
+            RefreshPresentation();
+            detailBodyView?.Show(
+                CandyMachineDetailBodyMode.Confirm,
+                "STAMP STATUS",
+                string.IsNullOrWhiteSpace(message)
+                    ? "NO PENDING STAMP REMAINS. INVENTORY HAS BEEN REFRESHED."
+                    : message.ToUpperInvariant(),
+                "READY");
+        }
+
+        public static bool PendingStampRequiresWalletSignature(PendingStampRecord pending)
+        {
+            return pending != null
+                && string.Equals(pending.operationStatus, "prepared", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(pending.signature);
+        }
+
+        public static bool PendingStampIsFinalizing(PendingStampRecord pending) =>
+            pending != null && !PendingStampRequiresWalletSignature(pending);
+
+        public static bool HasSufficientRam(long ramBalance, int requiredRam) =>
+            requiredRam <= 0 || ramBalance >= requiredRam;
+
+        private void AlignSelectionWithPreparedStamp()
+        {
+            PendingStampRecord pending = ownershipService?.PendingStamp;
+            if (!PendingStampRequiresWalletSignature(pending) || knownMoves?.CachedKnown == null)
+                return;
+
+            for (int i = 0; i < knownMoves.CachedKnown.Count; i++)
+            {
+                if (string.Equals(
+                    knownMoves.CachedKnown[i].instanceId,
+                    pending.knownInstanceId,
+                    StringComparison.Ordinal))
+                {
+                    selectedKnownIndex = i;
+                    return;
+                }
+            }
         }
 
         private void CancelStampReconciliation()
@@ -1314,6 +1767,27 @@ namespace SignalJam.UI.MenuNavigation
             settlementPullStarted = false;
             pullAnimationReady = false;
 
+            BeginRevealPresentation();
+        }
+
+        private void BeginRecoveredReveal(CandyMachineRevealData reveal)
+        {
+            if (!showing || reveal == null)
+                return;
+            RestoreAfterSettlementPull();
+            pendingReveal = reveal;
+            mode = CandyMachineMode.Stamp;
+            navLayer = CandyMachineNavLayer.Detail;
+            reviewedRequest = null;
+            RefreshModeVisuals();
+            BeginRevealPresentation();
+        }
+
+        private void BeginRevealPresentation()
+        {
+            if (!showing || pendingReveal == null)
+                return;
+
             SetBrowseRevealVisibility(false);
             resultView?.Prepare(pendingReveal);
             if (presentationGroup != null)
@@ -1356,7 +1830,7 @@ namespace SignalJam.UI.MenuNavigation
             presentationState = CandyMachinePresentationState.Revealing;
             revealLog.Clear();
             string[] subtitles = pendingReveal.Mode == CandyMachineMode.GetKnown
-                ? new[] { "Reading move type", "Locking rarity", "Materializing folio entry" }
+                ? new[] { "Reading move type", "Locking rarity", "Materializing move entry" }
                 : new[] { "Browsing archives", "Locking mod rarity", "Imprinting the modifier" };
 
             for (int stage = 1; stage <= 3; stage++)
@@ -1408,7 +1882,7 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (!showing)
                 return false;
-            if (IsInteractionLocked())
+            if (IsExitLocked())
                 return true;
             if (navLayer == CandyMachineNavLayer.Mode)
                 return false;
@@ -1445,6 +1919,7 @@ namespace SignalJam.UI.MenuNavigation
             StopRevealCoroutine();
             pullDirector?.RestoreAfterReveal();
             pendingReveal = null;
+            ResetStampHold();
             presentationState = CandyMachinePresentationState.Browse;
             navLayer = mode == CandyMachineMode.Stamp
                 ? CandyMachineNavLayer.Browse
@@ -1481,11 +1956,18 @@ namespace SignalJam.UI.MenuNavigation
         private void ShowOperationError(string message)
         {
             RestoreAfterSettlementPull();
+            stampPreparing = false;
             presentationState = reviewedRequest != null
                 ? CandyMachinePresentationState.Review
                 : CandyMachinePresentationState.Browse;
+            if (reviewedRequest == null)
+                ReleaseStampRamHold();
             SetBlockedInputMuted(false);
             SetPending(false, message);
+            RefreshModeVisuals();
+            RefreshNavigation();
+            if (grantPanel != null && !IsExitLocked())
+                grantPanel.RefreshVisibility();
             detailBodyView?.Show(
                 CandyMachineDetailBodyMode.Error,
                 "CANDY MACHINE ERROR",
@@ -1508,7 +1990,7 @@ namespace SignalJam.UI.MenuNavigation
             if (tab == null)
                 return;
             PlayerMenuChromeButtonVisual visual = tab.GetComponent<PlayerMenuChromeButtonVisual>();
-            visual?.SetStickySelected(active);
+            visual?.SetStickySelected(active, false);
         }
 
         private static void ClearStickyModeChrome(Button tab)
@@ -1521,6 +2003,8 @@ namespace SignalJam.UI.MenuNavigation
 
         private void StepBack()
         {
+            if (IsExitLocked())
+                return;
             if (navLayer == CandyMachineNavLayer.Detail && mode == CandyMachineMode.Stamp)
             {
                 reviewedRequest = null;
@@ -1601,9 +2085,9 @@ namespace SignalJam.UI.MenuNavigation
             string rarity = move != null
                 ? move.rarity.ToString()
                 : devInventory != null ? devInventory.ResolveMove(record.moveId).rarity.ToString() : "UNKNOWN";
-            string description = move != null ? move.description : "Known move added to the folio.";
+            string description = move != null ? move.description : "Known move added to your moves.";
             RarityTier rarityTier = move != null ? move.rarity : RarityTier.Common;
-            return new CandyMachineRevealData(
+            CandyMachineRevealData reveal = new CandyMachineRevealData(
                 CandyMachineMode.GetKnown,
                 "TYPE",
                 type,
@@ -1619,9 +2103,11 @@ namespace SignalJam.UI.MenuNavigation
                 displayName,
                 LibraryCardLayout.FormatStatsInk(move, description),
                 moveRarity: rarityTier);
+            reveal.Acquisition = LibraryCardFaces.Normalize(record != null ? record.acquisition : null);
+            return reveal;
         }
 
-        private CandyMachineRevealData BuildStampReveal(StampedMoveRecord record)
+        private CandyMachineRevealData BuildStampReveal(StampedMoveRecord record, string acquisition = null)
         {
             MoveDefinitionSO move = moveDatabase != null ? moveDatabase.GetById(record.moveId) : null;
             string firstEffect = ResolveModifierDescription(
@@ -1643,7 +2129,7 @@ namespace SignalJam.UI.MenuNavigation
             RarityTier moveRarity = move != null ? move.rarity : RarityTier.Common;
             RarityTier stampRarity = ParseRarity(record.rarity, moveRarity);
             bool hasSecond = !string.IsNullOrWhiteSpace(record.modifier2Id);
-            return new CandyMachineRevealData(
+            CandyMachineRevealData reveal = new CandyMachineRevealData(
                 CandyMachineMode.Stamp,
                 "HOST MOVE",
                 ResolveMoveName(record.moveId),
@@ -1667,6 +2153,28 @@ namespace SignalJam.UI.MenuNavigation
                 stampRarity,
                 hasSecond,
                 stampRarity);
+            reveal.Acquisition = LibraryCardFaces.Normalize(
+                !string.IsNullOrWhiteSpace(acquisition)
+                    ? acquisition
+                    : !string.IsNullOrWhiteSpace(record.acquisition)
+                        ? record.acquisition
+                        : FindKnownAcquisition(record.knownInstanceId));
+            return reveal;
+        }
+
+        private string FindKnownAcquisition(string instanceId)
+        {
+            IReadOnlyList<KnownMoveRecord> records = knownMoves != null ? knownMoves.CachedKnown : null;
+            if (records == null || string.IsNullOrWhiteSpace(instanceId))
+                return LibraryCardFaces.CandyRoll;
+            for (int i = 0; i < records.Count; i++)
+            {
+                KnownMoveRecord known = records[i];
+                if (known != null && string.Equals(known.instanceId, instanceId, StringComparison.Ordinal))
+                    return known.acquisition;
+            }
+
+            return LibraryCardFaces.CandyRoll;
         }
 
         private string ResolveModifierDescription(string modifierId, float lockedValue, bool hasLockedValue)
@@ -1857,6 +2365,14 @@ namespace SignalJam.UI.MenuNavigation
             || presentationState == CandyMachinePresentationState.Revealing
             || presentationState == CandyMachinePresentationState.AwaitingConfirm;
 
+        /// <summary>A prepared Stamp is waiting on STAMP; Primary stays live, everything else is held.</summary>
+        private bool IsStampHoldLocked() =>
+            mode == CandyMachineMode.Stamp
+            && reviewedRequest != null
+            && presentationState == CandyMachinePresentationState.Review;
+
+        private bool IsExitLocked() => IsInteractionLocked() || IsStampHoldLocked();
+
         private static bool IsVerifiedKnown(KnownMoveRecord value) =>
             value != null
             && !string.IsNullOrWhiteSpace(value.instanceId)
@@ -1904,6 +2420,13 @@ namespace SignalJam.UI.MenuNavigation
             if (marker != null)
                 marker.color = active ? TabActiveColor : TabIdleColor;
             SetTabLabelInk(tab, active);
+        }
+
+        private static void SetTabLabelText(Button tab, string value)
+        {
+            TMP_Text label = tab != null ? tab.transform.Find("Label")?.GetComponent<TMP_Text>() : null;
+            if (label != null && label.text != value)
+                label.text = value;
         }
 
         private static void SetTabLabelInk(Button tab, bool active)
@@ -2007,9 +2530,26 @@ namespace SignalJam.UI.MenuNavigation
             }
         }
 
-        private void OnGetKnownMode() => SetMode(CandyMachineMode.GetKnown);
+        private void OnGetKnownMode() => OnModeTab(CandyMachineMode.GetKnown);
 
-        private void OnStampMode() => SetMode(CandyMachineMode.Stamp);
+        private void OnStampMode() => OnModeTab(CandyMachineMode.Stamp);
+
+        /// <summary>
+        /// Mode pick commits the tab. After commit, tapping a tab steps back to the hub so the
+        /// 1.25x chooser stays the only place a mode is picked (touch has no Back key).
+        /// </summary>
+        private void OnModeTab(CandyMachineMode next)
+        {
+            if (IsExitLocked())
+                return;
+            if (navLayer == CandyMachineNavLayer.Mode)
+            {
+                SetMode(next);
+                return;
+            }
+
+            ReturnToModeHub();
+        }
 
         private void OnPrimary()
         {
@@ -2023,8 +2563,115 @@ namespace SignalJam.UI.MenuNavigation
 
         private void HandleCancel()
         {
-            if (!IsInteractionLocked())
+            if (!IsExitLocked())
                 CloseImmediate();
+        }
+
+        private void SyncColumnReveal()
+        {
+            if (!Application.isPlaying)
+                return;
+            bool reveal = navLayer != CandyMachineNavLayer.Mode;
+            if (columnsRevealed == reveal)
+                return;
+
+            bool animate = columnsRevealed.HasValue && showing;
+            columnsRevealed = reveal;
+            DOTween.Kill(columnTweenId, true);
+            if (reveal)
+                PlayColumnReveal(animate);
+            else
+                PlayColumnHide(animate);
+        }
+
+        private void PlayColumnReveal(bool animate)
+        {
+            SetSlotInput(slotBrowseGroup, true);
+            SetSlotInput(slotDetailGroup, true);
+            if (!animate)
+            {
+                SnapSlot(slotBrowseGroup, true);
+                SnapSlot(slotDetailGroup, true);
+                SetModeColumnScale(1f);
+                return;
+            }
+
+            Sequence sequence = DOTween.Sequence().SetUpdate(true).SetTarget(columnTweenId);
+            if (modeColumnRoot != null)
+            {
+                sequence.Append(modeColumnRoot.DOScale(ModePickScale * 1.08f, 0.09f).SetEase(Ease.OutQuad));
+                sequence.Append(modeColumnRoot.DOScale(1f, 0.28f).SetEase(Ease.OutBack, 2.2f));
+            }
+
+            Button committedTab = mode == CandyMachineMode.Stamp ? stampTabButton : folioTabButton;
+            if (committedTab != null)
+            {
+                committedTab.transform.localScale = Vector3.one;
+                sequence.Insert(0f, committedTab.transform.DOPunchScale(new Vector3(0.14f, -0.12f, 0f), 0.3f, 8, 0.7f));
+            }
+
+            InsertSlotReveal(sequence, slotBrowseGroup, 0.2f);
+            InsertSlotReveal(sequence, slotDetailGroup, 0.27f);
+        }
+
+        private void PlayColumnHide(bool animate)
+        {
+            SetSlotInput(slotBrowseGroup, false);
+            SetSlotInput(slotDetailGroup, false);
+            if (!animate)
+            {
+                SnapSlot(slotBrowseGroup, false);
+                SnapSlot(slotDetailGroup, false);
+                SetModeColumnScale(ModePickScale);
+                return;
+            }
+
+            Sequence sequence = DOTween.Sequence().SetUpdate(true).SetTarget(columnTweenId);
+            InsertSlotHide(sequence, slotBrowseGroup, 0f);
+            InsertSlotHide(sequence, slotDetailGroup, 0.03f);
+            if (modeColumnRoot != null)
+                sequence.Insert(0.08f, modeColumnRoot.DOScale(ModePickScale, 0.3f).SetEase(Ease.OutBack, 1.6f));
+        }
+
+        private static void InsertSlotReveal(Sequence sequence, CanvasGroup group, float at)
+        {
+            if (group == null)
+                return;
+            Transform slot = group.transform;
+            slot.localScale = Vector3.zero;
+            group.alpha = 0f;
+            sequence.Insert(at, slot.DOScale(1f, 0.38f).SetEase(Ease.OutBack, 1.8f));
+            sequence.Insert(at, group.DOFade(1f, 0.16f).SetEase(Ease.OutQuad));
+        }
+
+        private static void InsertSlotHide(Sequence sequence, CanvasGroup group, float at)
+        {
+            if (group == null)
+                return;
+            sequence.Insert(at, group.transform.DOScale(0f, 0.16f).SetEase(Ease.InBack));
+            sequence.Insert(at, group.DOFade(0f, 0.14f).SetEase(Ease.InQuad));
+        }
+
+        private static void SetSlotInput(CanvasGroup group, bool enabled)
+        {
+            if (group == null)
+                return;
+            group.interactable = enabled;
+            group.blocksRaycasts = enabled;
+        }
+
+        private static void SnapSlot(CanvasGroup group, bool visible)
+        {
+            if (group == null)
+                return;
+            group.alpha = visible ? 1f : 0f;
+            group.transform.localScale = visible ? Vector3.one : Vector3.zero;
+        }
+
+        private void SetModeColumnScale(float scale)
+        {
+            if (modeColumnRoot != null)
+                modeColumnRoot.localScale = new Vector3(scale, scale, 1f);
         }
 
         private void AcquireInputLock()
@@ -2167,7 +2814,7 @@ namespace SignalJam.UI.MenuNavigation
             tabLayout.childForceExpandWidth = true;
             tabLayout.childForceExpandHeight = true;
 
-            folioTabButton = EnsureButton("FolioTab", tabs, "FOLIO");
+            folioTabButton = EnsureButton("FolioTab", tabs, "ROLL");
             Size(folioTabButton.gameObject, -1f, -1f, 1f, 0f);
             folioTabMarker = EnsureMarker(folioTabButton, "ActiveBar");
             CandyMachineTextStyle.ApplyTitle(folioTabButton.transform.Find("Label")?.GetComponent<TMP_Text>());
@@ -2263,7 +2910,7 @@ namespace SignalJam.UI.MenuNavigation
             tabLayout.childForceExpandWidth = true;
             tabLayout.childForceExpandHeight = true;
 
-            folioTabButton = EnsureButton("FolioTab", tabs, "FOLIO");
+            folioTabButton = EnsureButton("FolioTab", tabs, "ROLL");
             Size(folioTabButton.gameObject, -1f, -1f, 1f, 0f);
             folioTabMarker = EnsureMarker(folioTabButton, "ActiveBar");
             stampTabButton = EnsureButton("StampTab", tabs, "STAMP");
@@ -2290,7 +2937,7 @@ namespace SignalJam.UI.MenuNavigation
             Size(column.gameObject, 0f, -1f, 0.4f, 1f);
             ConfigureStack(column.gameObject, 12, 20);
 
-            browseHeader = EnsureText("BrowseHeader", column, "FOLIO BROWSE", 26f, TextAlignmentOptions.MidlineLeft, false);
+            browseHeader = EnsureText("BrowseHeader", column, "MOVE BROWSE", 26f, TextAlignmentOptions.MidlineLeft, false);
             Size(browseHeader.gameObject, -1f, 32f, 1f, 0f);
             browseSubheader = EnsureText(
                 "BrowseSubheader",
@@ -2400,7 +3047,7 @@ namespace SignalJam.UI.MenuNavigation
             if (staleCost != null)
                 DestroyView(staleCost.gameObject);
 
-            detailHeader = EnsureText("DetailHeader", column, "FOLIO / GET KNOWN", 26f, TextAlignmentOptions.MidlineLeft, false);
+            detailHeader = EnsureText("DetailHeader", column, "ROLL A MOVE", 26f, TextAlignmentOptions.MidlineLeft, false);
             Size(detailHeader.gameObject, -1f, 32f, 1f, 0f);
             detailSubheader = EnsureText(
                 "DetailSubheader",
@@ -2463,7 +3110,7 @@ namespace SignalJam.UI.MenuNavigation
             tokensLabel = EnsureChip(folioMetaRow, "TokensChip", "TOKENS", "0", "TokensLabel");
             reviewHint = EnsureChip(folioMetaRow, "ReviewChip", "REVIEW", "CONFIRM", "ReviewHint");
 
-            primaryButton = EnsureButton("PrimaryButton", column, "GET KNOWN");
+            primaryButton = EnsureButton("PrimaryButton", column, "ROLL");
             Size(primaryButton.gameObject, -1f, 88f, 1f, 0f);
             CandyMachineTextStyle.ApplyTitle(primaryButton.transform.Find("Label")?.GetComponent<TMP_Text>());
             OrderChildren(
@@ -2798,6 +3445,12 @@ namespace SignalJam.UI.MenuNavigation
                     ? "SafeAreaPanel/SafeContent/BodyRow/Slot_Detail/DetailColumn"
                     : "SafeAreaPanel/SafeContent/BodyRow/DetailColumn";
 
+            browseColumnRoot = browseColumnRoot != null ? browseColumnRoot : FindRect(Browse);
+            detailColumnRoot = detailColumnRoot != null ? detailColumnRoot : FindRect(Detail);
+            modeColumnRoot = modeColumnRoot != null ? modeColumnRoot : FindRect(Mode);
+            slotBrowseGroup = slotBrowseGroup != null ? slotBrowseGroup : EnsureSlotGroup("Slot_Browse");
+            slotDetailGroup = slotDetailGroup != null ? slotDetailGroup : EnsureSlotGroup("Slot_Detail");
+
             if (bodyRow == null)
             {
                 RectTransform body = FindRect("SafeAreaPanel/SafeContent/BodyRow");
@@ -2923,6 +3576,19 @@ namespace SignalJam.UI.MenuNavigation
                 inputContext = GetComponent<MenuInputContextController>();
             if (defaultSelection == null)
                 defaultSelection = folioTabButton;
+        }
+
+        /// <summary>
+        /// Mode pick hides the side slots through a CanvasGroup; the slot must stay active so the
+        /// BodyRow HorizontalLayoutGroup keeps its flex widths.
+        /// </summary>
+        private CanvasGroup EnsureSlotGroup(string slotName)
+        {
+            Transform slot = transform.Find($"SafeAreaPanel/SafeContent/BodyRow/{slotName}");
+            if (slot == null)
+                return null;
+            CanvasGroup group = slot.GetComponent<CanvasGroup>();
+            return group != null ? group : slot.gameObject.AddComponent<CanvasGroup>();
         }
 
         private TMP_Text FindText(string path)

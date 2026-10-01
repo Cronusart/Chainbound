@@ -20,7 +20,7 @@ MonoBehaviour:
   rarity: 0
   targeting: 1
   contactType: 1
-  power: 20
+  power: 16
   apCost: 2
   accuracy: 95
   hitCountMin: 1
@@ -114,6 +114,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

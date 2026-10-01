@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 306
   displayName: Surging
-  effectSummary: Next move +25% power
+  effectSummary: Next move deals +25% power. Holds through the next turn if unused.
   statusClass: 3
   origin: 1
   defaultDuration: 1

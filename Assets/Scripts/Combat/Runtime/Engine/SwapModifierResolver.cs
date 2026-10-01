@@ -26,8 +26,8 @@ namespace Chainbound.Combat
         private const string S64G = "6.4-g";
         private const string S64H = "6.4-h";
         private const string S64I = "6.4-i";
-        private const int MITIGATION_DURATION_TURNS = 1;
-        private const int ACCURACY_DURATION_TURNS = 1;
+        // Swap phase runs before attacks. Duration 1 covers the combat that follows, then expires.
+        private const int REST_OF_TURN_TURNS = 1;
 
         private struct SwapModifierRef
         {
@@ -65,7 +65,8 @@ namespace Chainbound.Combat
                 log,
                 rng,
                 modifierCatalog,
-                apService);
+                apService,
+                incoming);
 
             ProcessModifiersForChainling(
                 incoming,
@@ -99,7 +100,8 @@ namespace Chainbound.Combat
             CombatEventLog log,
             CombatRng rng,
             ModifierCatalogSO modifierCatalog,
-            CombatApService apService)
+            CombatApService apService,
+            ChainlingInstance replacement = null)
         {
             if (source == null || source.moves == null)
                 return;
@@ -132,6 +134,7 @@ namespace Chainbound.Combat
                         source,
                         selfTarget,
                         allyTarget,
+                        replacement,
                         turn,
                         log,
                         rng,
@@ -212,6 +215,7 @@ namespace Chainbound.Combat
             ChainlingInstance source,
             ChainlingInstance selfTarget,
             ChainlingInstance allyTarget,
+            ChainlingInstance replacement,
             int turn,
             CombatEventLog log,
             CombatRng rng,
@@ -234,6 +238,8 @@ namespace Chainbound.Combat
             }
 
             ChainlingInstance target = targetsAlly ? allyTarget : selfTarget;
+            if (IsFadeGuard(modRef) && replacement != null && replacement.isAlive)
+                target = replacement;
             if (target == null || !target.isAlive)
                 return false;
 
@@ -274,11 +280,11 @@ namespace Chainbound.Combat
             else if (IsAccuracyBoost(modRef))
             {
                 float accuracyBonus = ResolvePercentValue(modRef, rng, 0.05f, 0.10f);
-                target.AddAccuracySource(accuracyBonus, ACCURACY_DURATION_TURNS, $"SwapModifier.{modRef.sectionId}");
+                target.AddAccuracySource(accuracyBonus, REST_OF_TURN_TURNS, $"SwapModifier.{modRef.sectionId}");
 
                 log.LogMessage(
                     CombatEventType.SystemMessage,
-                    $"{target.displayName} gained +{accuracyBonus * 100f:F1}% accuracy for {ACCURACY_DURATION_TURNS} turn ({modRef.sectionId})",
+                    $"{target.displayName} gained +{accuracyBonus * 100f:F1}% accuracy for the rest of this turn ({modRef.sectionId})",
                     turn);
                 applied = true;
             }
@@ -291,10 +297,10 @@ namespace Chainbound.Combat
                     ResolveLegacyMitigation(modRef.sectionId));
                 if (mitigationValue > 0f)
                 {
-                    target.AddMitigationSource(mitigationValue, MITIGATION_DURATION_TURNS, $"SwapModifier.{modRef.sectionId}");
+                    target.AddMitigationSource(mitigationValue, REST_OF_TURN_TURNS, $"SwapModifier.{modRef.sectionId}");
                     log.LogMessage(
                         CombatEventType.SystemMessage,
-                        $"{target.displayName} gained {mitigationValue * 100f:F1}% mitigation for {MITIGATION_DURATION_TURNS} turn ({modRef.sectionId})",
+                        $"{target.displayName} gained {mitigationValue * 100f:F1}% mitigation for the rest of this turn ({modRef.sectionId})",
                         turn);
                     applied = true;
                 }
@@ -392,6 +398,11 @@ namespace Chainbound.Combat
                 return true;
 
             return string.Equals(modRef.sectionId, S64H, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsFadeGuard(SwapModifierRef modRef)
+        {
+            return string.Equals(modRef.sectionId, S64G, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsMitigation(SwapModifierRef modRef)

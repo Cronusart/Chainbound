@@ -4,7 +4,7 @@ import {
   str, supabaseAdmin,
 } from "../_shared/account_helpers.ts";
 import {
-  fetchAndVerifyStampedAsset, loadRollConfig, loadOwnershipConfig, OwnershipConfigurationError,
+  fetchAndVerifyStampedAsset, loadRollConfig, loadOwnershipConfig, normalizeAcquisition, OwnershipConfigurationError,
 } from "../_shared/ownership_spine.ts";
 
 serve(async (req: Request) => {
@@ -20,7 +20,8 @@ serve(async (req: Request) => {
       .eq("player_profile_id", profile.player_profile_id).is("consumed_at", null).order("created_at", { ascending: true });
     if (knownError) throw knownError;
     const known = (knownRows ?? []).map((row: JsonMap) => ({ instanceId: str(row.known_id), moveId: str(row.move_id),
-      modifierCount: 0, generatorVersion: Number(row.generator_version), poolHash: str(row.pool_hash) }));
+      modifierCount: 0, generatorVersion: Number(row.generator_version), poolHash: str(row.pool_hash),
+      acquisition: normalizeAcquisition(str(row.acquisition)) }));
     const activeWallet = await getActiveWallet(supabase, profile.player_profile_id);
     const requestedWallet = str(body.wallet_address) || str(body.wallet_public_key);
     const wallet = activeWallet ? str(activeWallet.wallet_public_key) : "";

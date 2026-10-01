@@ -15,13 +15,13 @@ MonoBehaviour:
   configVersion: 3
   koXpStandard: 20
   koXpElite: 45
-  koXpBoss: 90
+  koXpBoss: 0
   completionBonusStandard: 20
   completionBonusElite: 40
-  completionBonusBoss: 80
-  ramStandard: 3
+  completionBonusBoss: 100
+  ramStandard: 5
   ramElite: 15
-  ramBoss: 50
+  ramBoss: 25
   activeXpShare: 1
   benchXpShare: 0.5
   kodReceivesXp: 1

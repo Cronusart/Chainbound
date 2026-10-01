@@ -103,18 +103,11 @@ namespace Chainbound.Combat
 
             ResolveDamageStats(move, modifierContext, out CoreStat atkStat, out CoreStat defStat);
 
-            for (int m = 0; move.modifiers != null && m < move.modifiers.Count; m++)
-            {
-                if (move.modifiers[m].category == ModifierCategory.TRX &&
-                    move.modifiers[m].scope == ModifierScope.Active)
-                {
-                    // TODO: Implement stat substitution per Spec 05 TRX rules.
-                }
-            }
-
             float atk = attacker.GetEffectiveStat(atkStat);
             float def = defender.GetEffectiveStat(defStat);
             if (def < 1f) def = 1f;
+            if (modifierContext != null && modifierContext.inverseAttackScaling)
+                atk = ApplyInverseAttackScaling(atk, def);
 
             float randomMin = resolvedConfig.randomRollMin;
             float randomMax = resolvedConfig.randomRollMax;
@@ -235,6 +228,16 @@ namespace Chainbound.Combat
             return finalDamage;
         }
 
+        /// <summary>
+        /// Soft Hands (5.2-d). Equal attack and defense are unchanged.
+        /// Attack above the defender's defense lowers the stat used; attack below it raises it.
+        /// </summary>
+        public static float ApplyInverseAttackScaling(float attackStat, float defenseStat)
+        {
+            float pivot = Math.Max(1f, defenseStat);
+            return Math.Max(1f, (pivot * pivot) / Math.Max(1f, attackStat));
+        }
+
         public static void ResolveDamageStats(MoveInstance move, out CoreStat atkStat, out CoreStat defStat)
         {
             bool isMelee = move.category == MoveCategory.DamagingMelee;
@@ -343,14 +346,6 @@ namespace Chainbound.Combat
 
             float stageBonus = MoveResolveProfileUtility.PercentOrFraction(tuning.critChancePerStagePercent);
             critRate += attacker.stageCritRate * stageBonus;
-
-            for (int m = 0; move.modifiers != null && m < move.modifiers.Count; m++)
-            {
-                if (move.modifiers[m].category == ModifierCategory.POT)
-                {
-                    // TODO: Check specific crit modifier section IDs.
-                }
-            }
 
             if (modifierContext != null)
                 critRate += Math.Max(0f, modifierContext.critChanceBonus);

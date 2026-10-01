@@ -16,7 +16,8 @@ import {
   forwardDasRequest,
   HELIUS_DAS_URL_ENV,
   prepareDasRequest,
-  requireHeliusDevnetUrl,
+  requireHeliusDasUrl,
+  requireOwnershipCluster,
 } from "../_shared/ownership_das_proxy.ts";
 
 serve(async (req: Request) => {
@@ -38,7 +39,8 @@ serve(async (req: Request) => {
 
     const trustedMovesCollection = str(Deno.env.get("CHAINBOUND_CORE_MOVES_COLLECTION"));
     const prepared = prepareDasRequest(body, trustedMovesCollection, linkedWallet);
-    const endpoint = requireHeliusDevnetUrl(Deno.env.get(HELIUS_DAS_URL_ENV));
+    const cluster = requireOwnershipCluster(Deno.env.get("CHAINBOUND_SOLANA_CLUSTER"));
+    const endpoint = requireHeliusDasUrl(Deno.env.get(HELIUS_DAS_URL_ENV), cluster);
     const result = await forwardDasRequest(endpoint, prepared);
     return jsonResponse({ success: true, result });
   } catch (error) {

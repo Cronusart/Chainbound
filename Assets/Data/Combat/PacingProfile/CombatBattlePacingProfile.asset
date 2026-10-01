@@ -17,17 +17,17 @@ MonoBehaviour:
   turnEndDelay: 0.4
   moveAnnounceHold: 0.22
   utilityCastHold: 0.33
-  damageHold: 0.25
-  healHold: 0.25
-  missDodgeHold: 0.25
-  apFeedbackHold: 0.33
-  statusLabelHold: 0.35
-  stageLabelHold: 0.35
-  passiveLabelHold: 0.35
-  modifierLabelHold: 0.35
-  noApHold: 0.4
-  barrierBlockedHold: 0.4
-  barrierRaisedHold: 0.35
+  damageHold: 0.9
+  healHold: 0.9
+  missDodgeHold: 0.75
+  apFeedbackHold: 0.6
+  statusLabelHold: 0.8
+  stageLabelHold: 0.8
+  passiveLabelHold: 0.95
+  modifierLabelHold: 0.9
+  noApHold: 0.55
+  barrierBlockedHold: 1
+  barrierRaisedHold: 0.9
   swapSettleDelay: 1
   faintPostImpactDelay: 0.25
   showMoveCostApFeedback: 0

@@ -123,6 +123,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}
@@ -131,4 +132,5 @@ MonoBehaviour:
   releaseSound: {fileID: 0}
   travelSound: {fileID: 0}
   impactAccentSound: {fileID: 0}
-  designNotes: Cofi Lootwak charge-up. RechargeTurns 2 skips the next turn after EOT tick so Utility AI leads with sip, then Bean Beam.
+  designNotes: Cofi Lootwak charge-up. RechargeTurns 2 skips the next turn after
+    EOT tick so Utility AI leads with sip, then Bean Beam.

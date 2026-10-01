@@ -150,8 +150,19 @@ namespace Chainbound.Combat
         [Header("Identity")]
         public string zoneId;
 
+        [Tooltip("Scenery id inside the shared combat scene (loomville, link1, jungle). Empty uses loomville.")]
+        public string combatStageId;
+
         [Tooltip("Optional parent area that supplies base table and defaults.")]
         public EncounterAreaSO area;
+
+        /// <summary>
+        /// Stage activated in the shared combat scene. Empty authored values use <see cref="CombatStageIds.Default"/>.
+        /// </summary>
+        public string ResolveCombatStageId()
+        {
+            return CombatStageIds.Normalize(combatStageId);
+        }
 
         [Header("Encounter Chance")]
         [Tooltip("Probability of an encounter per roll. Negative = inherit from area (or 0.15).")]
@@ -215,5 +226,15 @@ namespace Chainbound.Combat
 
         [Tooltip("Fallback variant pool when an entry has none.")]
         public WildVariantPoolSO defaultVariantPool;
+
+        [Header("Capture Known Move")]
+        [Tooltip("Species database used to roll a captured Chainling's starting Known move from that species' progression pool.")]
+        public SpeciesDatabaseSO speciesDatabase;
+
+        [Tooltip("Star-gate odds for that capture roll. Empty uses the built-in 10/20/30/40/50 table.")]
+        public ChainlingProgressionRewardTablesSO progressionRewardTables;
+
+        [Tooltip("Rarity weights applied to progression pool entries during folio and capture rolls. Empty treats every rarity weight as 1.")]
+        public ProgressionConfigSO progressionConfig;
     }
 }

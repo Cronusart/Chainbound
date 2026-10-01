@@ -14,7 +14,8 @@ namespace Chainbound.Combat
     /// </summary>
     public sealed class SupabaseAnonymousAuthSessionProvider : MonoBehaviour, IAccountAuthSessionProvider
     {
-        private const string SessionStorageKey = "signaljam.supabase.anonymous.v1";
+        private const string LegacySessionStorageKey = "signaljam.supabase.anonymous.v1";
+        private const string ScopedSessionStoragePrefix = "signaljam.supabase.anonymous.v2";
         private const int RefreshSkewSeconds = 45;
 
         [SerializeField] private bool enableDebugLogs;
@@ -27,6 +28,7 @@ namespace Chainbound.Combat
 
         public async Task<AccountAuthSessionResult> BootstrapAsync(SupabaseConfigSO config)
         {
+            config = PlatformContext.ResolveSupabaseConfig(config);
             if (config == null || string.IsNullOrWhiteSpace(config.supabaseUrl) || string.IsNullOrWhiteSpace(config.supabaseAnonKey))
                 return AccountAuthSessionResult.Failed("Profile service configuration is unavailable.");
 
@@ -65,6 +67,8 @@ namespace Chainbound.Combat
             cached = default;
             SupabaseAuthSessionContext.AccessToken = "";
             SecureCredentialStore.Delete(SessionStorageKey);
+            if (PlatformContext.ResolveOwnershipEnvironment() == OwnershipDeploymentEnvironment.DevnetOwnership)
+                SecureCredentialStore.Delete(LegacySessionStorageKey);
         }
 
         private AccountAuthSessionResult StoreAndReturn(AuthResponseDto response, bool restored)
@@ -108,9 +112,19 @@ namespace Chainbound.Combat
             return session.expires_at_unix <= DateTimeOffset.UtcNow.ToUnixTimeSeconds() + RefreshSkewSeconds;
         }
 
-        private static CachedSession LoadCachedSession()
+        private CachedSession LoadCachedSession()
         {
             string json = SecureCredentialStore.Get(SessionStorageKey);
+            if (string.IsNullOrWhiteSpace(json) &&
+                PlatformContext.ResolveOwnershipEnvironment() == OwnershipDeploymentEnvironment.DevnetOwnership)
+            {
+                json = SecureCredentialStore.Get(LegacySessionStorageKey);
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    SecureCredentialStore.Set(SessionStorageKey, json);
+                    SecureCredentialStore.Delete(LegacySessionStorageKey);
+                }
+            }
             if (string.IsNullOrWhiteSpace(json))
                 return default;
 
@@ -125,6 +139,8 @@ namespace Chainbound.Combat
             }
             return stored;
         }
+
+        private string SessionStorageKey => PlatformContext.BuildScopedStorageKey(ScopedSessionStoragePrefix);
 
         private async Task<AuthResponse> SendAuthRequestAsync(SupabaseConfigSO config, string relativePath, string jsonBody)
         {

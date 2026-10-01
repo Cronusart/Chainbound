@@ -286,6 +286,7 @@ public static class QuestInteractionResolver
         }
 
         return FlagPredicatesMatch(rule.flagPredicates, npcMemory)
+            && WorldFlagPredicatesMatch(rule.worldFlagPredicates)
             && CounterPredicatesMatch(rule.counterPredicates, npcMemory)
             && TimePredicateMatches(rule, timeOfDayService, contextLabel, ruleIndex, out warning);
     }
@@ -462,6 +463,51 @@ public static class QuestInteractionResolver
                 return exists && npcMemory.GetFlag(predicate.key);
             case QuestInteractionMemoryFlagComparison.IsFalse:
                 return exists && !npcMemory.GetFlag(predicate.key);
+            default:
+                return false;
+        }
+    }
+
+    private static bool WorldFlagPredicatesMatch(IReadOnlyList<QuestInteractionWorldFlagPredicate> predicates)
+    {
+        if (predicates == null || predicates.Count == 0)
+            return true;
+
+        ProfileWorldFlagStateService flags = ProfileWorldFlagStateService.Instance;
+        if (flags == null)
+            return false;
+
+        for (int i = 0; i < predicates.Count; i++)
+        {
+            if (!WorldFlagPredicateMatches(predicates[i], flags))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool WorldFlagPredicateMatches(
+        QuestInteractionWorldFlagPredicate predicate,
+        ProfileWorldFlagStateService flags)
+    {
+        if (predicate == null)
+            return true;
+
+        if (string.IsNullOrWhiteSpace(predicate.key) || flags == null)
+            return false;
+
+        bool exists = flags.HasFlag(predicate.key);
+        bool value = exists && flags.GetFlag(predicate.key);
+        switch (predicate.comparison)
+        {
+            case QuestInteractionMemoryFlagComparison.Exists:
+                return exists;
+            case QuestInteractionMemoryFlagComparison.Missing:
+                return !exists;
+            case QuestInteractionMemoryFlagComparison.IsTrue:
+                return value;
+            case QuestInteractionMemoryFlagComparison.IsFalse:
+                return !value;
             default:
                 return false;
         }

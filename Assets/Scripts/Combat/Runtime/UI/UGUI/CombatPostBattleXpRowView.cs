@@ -111,7 +111,6 @@ namespace Chainbound.Combat
             if (starRatingDisplay != null)
             {
                 starRatingDisplay.Configure(starArt);
-                starRatingDisplay.BuildDefaultLayoutForEditor();
                 starRatingDisplay.SetRating(_previousStars, true, false);
             }
 
