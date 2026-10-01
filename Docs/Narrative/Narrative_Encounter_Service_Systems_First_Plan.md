@@ -1,6 +1,8 @@
 # Narrative Encounter Service — Systems-First Improvement Plan
 
-This document aligns future work on encounter orchestration with [.cursor/rules/systems-first-architecture.mdc](../../.cursor/rules/systems-first-architecture.mdc) and the **systems-first-architecture** Cursor skill.
+> **Status:** Partial. `NarrativeEncounterService` is a child object on `Assets/Prefabs/GameServices/GameServices.prefab`. Later checklist items in this file were not re-verified for this hackathon pass.
+
+This document aligns future work on encounter orchestration with the systems-first architecture rule. That rule file is not in this public snapshot.
 
 ---
 

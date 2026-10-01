@@ -25,3 +25,5 @@
 - Client is untrusted: never place service-role keys or private signing keys in Unity assets.
 - Edge Functions/backend are trusted: keep sensitive secrets in env/secret managers only.
 - Repo-safe defaults use devnet public endpoint and sample config placeholders.
+
+Mechanic paths and implementation status: [INDEX.md](INDEX.md).

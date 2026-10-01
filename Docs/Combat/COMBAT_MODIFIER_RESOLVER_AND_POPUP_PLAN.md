@@ -2,7 +2,7 @@
 
 > **Purpose:** Codex / implementation planning reference.  
 > **Scope:** Complete modifier resolver logic and turn-memory foundation first; then fix modifier popup presentation so flashes match **real effect moments**.  
-> **Status:** Planning only — no implementation yet.  
+> **Status:** Resolver and popup coverage exists (`CombatModifierResolverAndPopupTests` and related runtime). This file is the original plan. Open TODO rows inside it are not a promise that every item shipped. Where it disagrees with code, the code wins.  
 > **Data source of truth:** `Docs/Specs/Combat/Data/Modifiers.csv`
 
 ---
@@ -76,7 +76,7 @@ Do **not** polish modifier popups on top of incomplete or turn-blind resolver lo
 
 | Sections | Category | Design (from CSV) | Blocker |
 |----------|----------|-------------------|---------|
-| `3.2-a/b/c` | EFF bonus action | Repeat move / auto-use at EOT | Needs queued-action resolver ([RuntimeFollowups](COMBAT_RuntimeFollowups.md)) |
+| `3.2-a/b/c` | EFF bonus action | Repeat move / auto-use at EOT | Needs queued-action resolver ([RuntimeFollowups](../Specs/Combat/COMBAT_RuntimeFollowups.md)) |
 | `4.2-a` | AUG bounce | Hit bounces to adjacent target | Needs targeting expansion |
 | `6.3-c` | TRG OnLowHP | Mitigation when HP &lt; 30% | No handler |
 | `6.3-d` | TRG OnAllyKO | Power buff after ally KO | No modifier handler (passive trigger exists separately) |
@@ -465,7 +465,7 @@ Reuse patterns from `CombatPopupVisualTests.cs`, `CombatRuntimeFixTests.cs`.
 
 | Plan | Relationship |
 |------|--------------|
-| [COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md](../Camera/COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md) | Orthogonal — DoF/render path for popups; do after or in parallel with Phase C |
+| [COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md](../review-unimplemented/Camera/COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md) | Orthogonal — DoF/render path for popups; do after or in parallel with Phase C |
 | [COMBAT_SFX_FOUNDATION_PLAN.md](../Guides/COMBAT_SFX_FOUNDATION_PLAN.md) | Modifier outcome events can later feed SFX orchestrator |
 | [COMBAT_RuntimeFollowups.md](../Specs/Combat/COMBAT_RuntimeFollowups.md) | This plan **implements** several listed follow-ups |
 

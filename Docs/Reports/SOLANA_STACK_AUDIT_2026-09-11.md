@@ -233,6 +233,6 @@ Do not hand-wire only the CPI account list or macros. Delegation, routing, commi
 - Metaplex Core single-account asset model: <https://www.metaplex.com/docs/smart-contracts/core/what-is-an-asset>
 - Metaplex Core collection transfer and freeze/delegate behavior: <https://www.metaplex.com/docs/smart-contracts/core/transfer>
 - MagicBlock ER delegate/commit/undelegate quickstart: <https://docs.magicblock.gg/pages/ephemeral-rollups-ers/how-to-guide/quickstart>
-- Repository escrow design: `Docs/Guides/PVP_02_Ranked_Escrow_And_Ladder.md`
+- Repository escrow design: `Docs/review-unimplemented/Guides/PVP_02_Ranked_Escrow_And_Ladder.md`
 - Foundation security/testing guidance: installed `solana-dev` skill v1.1.0 (`references/security.md`, `references/testing.md`).
 

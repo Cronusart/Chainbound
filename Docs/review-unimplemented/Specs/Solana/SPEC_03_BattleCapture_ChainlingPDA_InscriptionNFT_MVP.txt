@@ -1,0 +1,147 @@
+> **Parked for review.** Probably scrap. Per-capture inscription NFT conflicts with profile-first capture and the ownership spine. Review list: [../../README.md](../../README.md).
+
+SPEC 03 — Battle Capture (Chainling PDA) + 1 Random “Equipped Inscription” NFT per Capture (MVP)
+=========================================================================================================
+
+CAPTURE-REWARD CONFLICT (Economy vs MVP):
+- ECONOMY_01 long-term design: standard captures do NOT mint finished inscriptions; entangled may grant premium rewards.
+- This MVP spec: every capture mints 1 inscription NFT (hackathon compromise for demo loop).
+- Authoritative for long-term: ECONOMY_01. MVP implementation should document this as a known deviation.
+
+Goal (hackathon MVP)
+-------------------
+In BattleScene:
+- Player can attempt “Capture” (hardware-wallet themed action).
+- Capture success depends on:
+  - target HP state
+  - species/rarity base capture rate
+  - (optional) status modifiers
+- On successful capture:
+  1) Save the Chainling as a PDA (cheap updates; NOT an NFT in demo)
+  2) Mint exactly 1 Inscription as a compressed NFT/cNFT (random), and mark it as
+     the Chainling’s “equipped inscription” at capture time.
+- Player can later store/equip/burn that inscription NFT (ownership belongs to player).
+- This becomes the primary grind loop for rare inscriptions + rare modifiers (MVP only; long-term economy shifts toward star-up/mastery ordinals per ECONOMY_01).
+
+IMPORTANT DEMO CONSTRAINT
+-------------------------
+We will cap Chainling level in the hackathon build so Chainlings never reach the
+“evolution stage” that would trigger minting the Chainling into an NFT.
+However, the data model should reserve the path for post-hackathon:
+- Chainling PDA contains fields that make future “promote-to-NFT” possible.
+
+Design decisions (MVP)
+----------------------
+A) Chainlings are NOT minted as NFTs at capture time.
+- They are stored as `ChainlingAccount` PDA for cheap stat/XP updates.
+- Future: promote to NFT (out of scope for demo).
+
+B) Each captured wild Chainling grants 1 Inscription NFT immediately.
+- This document is legacy context. Current Chainbound taxonomy treats Inscriptions
+  as compressed NFTs/cNFTs, not Metaplex Core Assets. Runes and cosmetics use
+  Metaplex Core.
+- It is assigned to the captured Chainling as “equipped” in the Chainling PDA.
+- It is also in the player’s wallet inventory as an owned asset.
+
+Randomness requirement
+----------------------
+Capture success and inscription selection must be verifiable.
+
+MVP randomness strategy (recommended):
+- Use MagicBlock VRF for capture roll and inscription selection, using a 2-phase
+  request + callback consume pattern.
+
+Pragmatic alternative (only if time is too tight):
+- Use the Encounter VRF randomness as the seed for inscription selection ONLY,
+  but still use a dedicated VRF roll for capture success.
+  (This reduces VRF calls but must be documented as a design tradeoff.)
+
+On-chain data model (MVP)
+-------------------------
+1) ChainlingAccount PDA (per captured Chainling)
+- owner: Pubkey
+- chainling_id: u64 (unique; can be derived from encounter request id + counter)
+- species_id: u32
+- level: u16
+- xp: u32
+- ivs: [u16; STAT_COUNT]
+- types: [u16; 2] or compact bitfield
+- mutated_type_flag: bool
+- entangled_flag: bool
+- equipped_inscription_asset_id: Pubkey (cNFT asset id)  <-- key field for MVP
+- captured_at_slot: u64
+- schema_version: u16
+
+Rules:
+- This PDA is the authoritative “owned creature state” during the demo.
+- Must be blocked from staking/wager escrow until those systems exist (stub checks ok).
+
+2) Inscription NFT (compressed NFT/cNFT)
+Metadata schema (minimum):
+- inscription_id
+- rarity (C/U/R/E/L/M)
+- type / element (if applicable)
+- modifiers[] (or encoded form)
+- schema_version
+- minted_at_slot
+- source_context:
+  - captured_species_id
+  - encounter_zone_id (optional)
+  - chainling_id (link back to the PDA)
+
+Capture rate model (simple + tunable)
+-------------------------------------
+Implement a capture probability P:
+
+Inputs:
+- BaseRate (species constant; Cassette-Beasts-like discrete values are fine)
+- HPFactor (lower HP => higher chance)
+- StatusFactor (optional; default 1.0 for MVP)
+- DeviceModifier (optional; default 1.0 for MVP)
+
+Example MVP formula:
+- hpRatio = currentHP / maxHP
+- hpBonus = clamp01(1.0 - hpRatio)
+- effectiveRate = BaseRate * (0.5 + 0.5 * hpBonus)
+- P = effectiveRate / 100
+
+Then: VRF roll in [0,1) determines success.
+
+BattleScene integration (Unity)
+-------------------------------
+UI/UX:
+- Capture button appears when rules allow.
+- On click:
+  - show tx lifecycle UI:
+    - “Requesting capture roll…” (tx 1)
+    - “Awaiting verification…” (PendingRandomness)
+    - “Finalizing capture…” (consume callback + finalize)
+  - success: show capture animation + “Inscription minted!”
+  - fail: show failure feedback + continue battle
+
+Flow on success (authoritative)
+1) Resolve capture success via VRF
+2) Create ChainlingAccount PDA
+3) Select 1 inscription definition via randomness:
+   - choose rarity bucket using AcquisitionRarity tables
+   - choose inscription id within bucket
+   - choose modifiers based on rarity rules
+4) Mint cNFT Inscription to player wallet
+5) Write `equipped_inscription_asset_id` into ChainlingAccount PDA
+
+Acceptance criteria (MVP)
+-------------------------
+- Player can attempt capture in battle
+- Success/failure uses VRF-backed roll
+- On successful capture:
+  - ChainlingAccount PDA is created and contains IVs/types/flags
+  - Exactly one inscription cNFT is minted to the player wallet
+  - ChainlingAccount references that inscription as equipped
+- Captured chainling appears in player storage UI after battle
+- Inscription appears in wallet inventory UI after battle
+
+Out of scope (post-hackathon)
+-----------------------------
+- Promote Chainling PDA -> Chainling NFT mint at evolution stage
+- Advanced capture modifiers / multiple capture tools
+- PvP inscription wagering escrow + staking enforcement

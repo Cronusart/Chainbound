@@ -114,7 +114,7 @@ The Bootstrap scene must be created manually in Unity Editor. Follow these steps
 ## Next Steps
 
 After Bootstrap is set up:
-1. Configure animation sets (see LOADING_SCREEN_SETUP.md)
-2. Add tips (see LOADING_SCREEN_SETUP.md)
+1. Configure animation sets (see `Docs/Guides/LOADING_SCREEN_SETUP.md`)
+2. Add tips (see `Docs/Guides/LOADING_SCREEN_SETUP.md`)
 3. Test scene transitions
 4. Add ISceneWarmup to large scenes if needed

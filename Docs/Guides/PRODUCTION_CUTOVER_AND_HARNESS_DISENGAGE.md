@@ -135,7 +135,7 @@ Prefer a future `profile_dev_grant_items` (gated) over leaving ad-hoc SQL as the
 - [ ] Core ownership cache populated for any Core bag item under test
 - [ ] Never treat client ownership lists as authority
 
-See [`WALLET_CONNECTION_SETUP.md`](WALLET_CONNECTION_SETUP.md) and [`MAIN_MENU_SOLANA_WALLET_SETUP_NOTES.md`](MAIN_MENU_SOLANA_WALLET_SETUP_NOTES.md).
+See [`WALLET_CONNECTION_SETUP.md`](WALLET_CONNECTION_SETUP.md). The older main-menu wallet notes file is not in this public snapshot.
 
 ---
 

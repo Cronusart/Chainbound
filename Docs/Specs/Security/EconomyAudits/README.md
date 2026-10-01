@@ -15,15 +15,15 @@ The highest-severity pattern is **client-authored grant payloads** accepted by J
 
 | # | File | Mechanism | Live? |
 |---|---|---|---|
-| 01 | [01_RAM_ledger_and_balances.md](./01_RAM_ledger_and_balances.md) | Profile + on-chain RAM dual ledger, daily cap, battle faucet/sink | Live (profile); on-chain grant Devnet/smoke |
-| 02 | [02_Known_roll_and_grants.md](./02_Known_roll_and_grants.md) | Candy Known roll (5 RAM), event Known grant, progression ordinals | Live |
-| 03 | [03_Stamp_prepare_confirm_mint.md](./03_Stamp_prepare_confirm_mint.md) | Prepare ticket → wallet Stamp → confirm + Known consume | Live Edge/program; Unity flags OFF |
-| 04 | [04_Second_stamp_deferred.md](./04_Second_stamp_deferred.md) | Add-mod / second Stamp @ 150 RAM | Deferred / not implemented |
-| 05 | [05_Encounter_rewards_and_VRF.md](./05_Encounter_rewards_and_VRF.md) | PvE battle outcome, MagicBlock encounter VRF, victory Known | Live (profile battle); VRF on-chain |
-| 06 | [06_Chainling_IV_and_progression.md](./06_Chainling_IV_and_progression.md) | Capture, IVs, stars/XP, rebirth RAM sinks | Live |
-| 07 | [07_Items_inventory.md](./07_Items_inventory.md) | Catalog stacks, world pickups, field use, core consume | Live |
-| 08 | [08_Bind_archive.md](./08_Bind_archive.md) | Bindery archive Bind @ 250 RAM pin | Program present; Unity/live spine OFF / config-only |
-| 09 | [09_Admin_debug_grant_paths.md](./09_Admin_debug_grant_paths.md) | Dev candy grants, smoke RAM grant, entitlement stub | Mixed |
+| 01 | [01_RAM_ledger_and_balances.md](01_RAM_ledger_and_balances.md) | Profile + on-chain RAM dual ledger, daily cap, battle faucet/sink | Live (profile); on-chain grant Devnet/smoke |
+| 02 | [02_Known_roll_and_grants.md](02_Known_roll_and_grants.md) | Candy Known roll (5 RAM), event Known grant, progression ordinals | Live |
+| 03 | [03_Stamp_prepare_confirm_mint.md](03_Stamp_prepare_confirm_mint.md) | Prepare ticket → wallet Stamp → confirm + Known consume | Live Edge/program; Unity flags OFF |
+| 04 | [04_Second_stamp_deferred.md](04_Second_stamp_deferred.md) | Add-mod / second Stamp @ 150 RAM | Deferred / not implemented |
+| 05 | [05_Encounter_rewards_and_VRF.md](05_Encounter_rewards_and_VRF.md) | PvE battle outcome, MagicBlock encounter VRF, victory Known | Live (profile battle); VRF on-chain |
+| 06 | [06_Chainling_IV_and_progression.md](06_Chainling_IV_and_progression.md) | Capture, IVs, stars/XP, rebirth RAM sinks | Live |
+| 07 | [07_Items_inventory.md](07_Items_inventory.md) | Catalog stacks, world pickups, field use, core consume | Live |
+| 08 | [08_Bind_archive.md](08_Bind_archive.md) | Bindery archive Bind @ 250 RAM pin | Program present; Unity/live spine OFF / config-only |
+| 09 | [09_Admin_debug_grant_paths.md](09_Admin_debug_grant_paths.md) | Dev candy grants, smoke RAM grant, entitlement stub | Mixed |
 
 ## Mechanisms searched but not found as live player faucets/sinks
 
@@ -70,7 +70,7 @@ The highest-severity pattern is **client-authored grant payloads** accepted by J
 - `Supabase/migrations/20260919064343_ownership_spine_phase1_authority.sql`
 - `Supabase/migrations/20260920010000_ownership_bootstrap_ram_grant.sql`
 - `backend/chainbound_game/programs/chainbound_game/src/lib.rs`
-- `Docs/Specs/Economy/OWNERSHIP_SPINE_v1.md`, `ECONOMY_01_EconomyAndProgression_v1.md`, `OWNERSHIP_SPINE_LIVE_MATRIX_PLAN.md`
+- `Docs/Specs/Economy/OWNERSHIP_SPINE_v1.md`, `ECONOMY_01_EconomyAndProgression_v1.md`, `Docs/review-unimplemented/Specs/Economy/OWNERSHIP_SPINE_LIVE_MATRIX_PLAN.md`
 
 ## Reviewer notes / access limits
 

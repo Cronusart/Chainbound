@@ -93,4 +93,4 @@ The Chainlings Party Tab **Stats** summary binds a compact career subset of this
 
 See [`CHAINLINGS_PARTY_TAB.md`](../UI/CHAINLINGS_PARTY_TAB.md) §5.6.
 
-Competitive / seasonal ranks are **out of scope** for this career record. Do not treat `pve.damage_*` as ranked skill. Groundwork: [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](COMPETITIVE_LADDER_AND_SEASONS_v1.md).
+Competitive / seasonal ranks are **out of scope** for this career record. Do not treat `pve.damage_*` as ranked skill. Groundwork: [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../../review-unimplemented/Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md).

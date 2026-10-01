@@ -1,8 +1,8 @@
 # Narrative system inventory (current layout)
 
-**Purpose:** Single reference for what exists today in Signal Jam 3D narrative: sequences, conditions, variables, branching, state, events, and interact/NPC/quest/time-of-day touchpoints. Aligns with [.cursor/rules/systems-first-architecture.mdc](../../.cursor/rules/systems-first-architecture.mdc) (data-driven steps, IDs, composable primitives).
+**Purpose:** Single reference for what exists today in Signal Jam 3D narrative: sequences, conditions, variables, branching, state, events, and interact/NPC/quest/time-of-day touchpoints. Aligns with the systems-first architecture rule (data-driven steps, IDs, composable primitives). That rule file is not in this public snapshot.
 
-**Related docs:** [SEQUENCE_AUTHORING_GUIDE.md](../SEQUENCE_AUTHORING_GUIDE.md), [INTERACTABLE_SETUP.md](../INTERACTABLE_SETUP.md), [CHAINBOUND_INTRO_QUEST_SETUP.md](../CHAINBOUND_INTRO_QUEST_SETUP.md). Older [SEQUENCE_SYSTEMS_SUMMARY.md](../SEQUENCE_SYSTEMS_SUMMARY.md) is partially superseded for step lists.
+**Related docs:** [SEQUENCE_AUTHORING_GUIDE.md](SEQUENCE_AUTHORING_GUIDE.md), [INTERACTABLE_SETUP.md](INTERACTABLE_SETUP.md), [CHAINBOUND_INTRO_QUEST_SETUP.md](CHAINBOUND_INTRO_QUEST_SETUP.md). Older [SEQUENCE_SYSTEMS_SUMMARY.md](SEQUENCE_SYSTEMS_SUMMARY.md) is partially superseded for step lists.
 
 ---
 

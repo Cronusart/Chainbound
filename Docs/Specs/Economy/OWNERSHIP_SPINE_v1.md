@@ -66,13 +66,13 @@ Bindery: Chainling + cover + (Stamped OR cosmetic) + RAM → Bound Archive
 
 | Spec | Role |
 |---|---|
-| [`Docs/Specs/Combat/MOVE_TIER_PLAYER_FACING_v1.md`](../../Combat/MOVE_TIER_PLAYER_FACING_v1.md) | Player-facing Known / Stamped / Bound language |
-| [`Docs/Specs/Solana/CHAINBOUND_SOLANA_ASSET_TAXONOMY.md`](../../Solana/CHAINBOUND_SOLANA_ASSET_TAXONOMY.md) | Asset kinds, Core collections, attributes, no Bubblegum |
-| [`Docs/Specs/UI/CHAINLING_ARCHIVE_ENCYCLOPEDIA.md`](../../UI/CHAINLING_ARCHIVE_ENCYCLOPEDIA.md) | Bound archive / encyclopedia presentation |
-| [`Docs/Specs/Economy/BINDERY_FOLIO_AND_PRESS_CHARGE_v1.md`](./BINDERY_FOLIO_AND_PRESS_CHARGE_v1.md) | Bindery Bind-only contract (no Press Charge) |
-| [`Docs/Specs/Economy/ECONOMY_01_EconomyAndProgression_v1.md`](./ECONOMY_01_EconomyAndProgression_v1.md) | Faucets, sinks, candy dual role, salvage, rebirth |
-| [`Docs/Specs/Solana/CASE_BINDING_COVER_ART_DROPS_v1.md`](../../Solana/CASE_BINDING_COVER_ART_DROPS_v1.md) | Book-cover Core drops |
-| [`Docs/Specs/Combat/CHAINLING_PROGRESSION_GRANTS.md`](../../Combat/CHAINLING_PROGRESSION_GRANTS.md) | Star / mastery Known grant tables |
+| [`Docs/Specs/Combat/MOVE_TIER_PLAYER_FACING_v1.md`](../Combat/MOVE_TIER_PLAYER_FACING_v1.md) | Player-facing Known / Stamped / Bound language |
+| [`Docs/Specs/Solana/CHAINBOUND_SOLANA_ASSET_TAXONOMY.md`](../Solana/CHAINBOUND_SOLANA_ASSET_TAXONOMY.md) | Asset kinds, Core collections, attributes, no Bubblegum |
+| [`Docs/Specs/UI/CHAINLING_ARCHIVE_ENCYCLOPEDIA.md`](../UI/CHAINLING_ARCHIVE_ENCYCLOPEDIA.md) | Bound archive / encyclopedia presentation |
+| [`Docs/Specs/Economy/BINDERY_FOLIO_AND_PRESS_CHARGE_v1.md`](BINDERY_FOLIO_AND_PRESS_CHARGE_v1.md) | Bindery Bind-only contract (no Press Charge) |
+| [`Docs/Specs/Economy/ECONOMY_01_EconomyAndProgression_v1.md`](ECONOMY_01_EconomyAndProgression_v1.md) | Faucets, sinks, candy dual role, salvage, rebirth |
+| [`Docs/Specs/Solana/CASE_BINDING_COVER_ART_DROPS_v1.md`](../Solana/CASE_BINDING_COVER_ART_DROPS_v1.md) | Book-cover Core drops |
+| [`Docs/Specs/Combat/CHAINLING_PROGRESSION_GRANTS.md`](../Combat/CHAINLING_PROGRESSION_GRANTS.md) | Star / mastery Known grant tables |
 
 Agents and skills must point here first, then to the row above for detail.
 

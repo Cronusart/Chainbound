@@ -1,6 +1,6 @@
 # Combat Data Resync & Resolve-Time Evaluation Plan
 
-> **Implementation note:** The beta species-pool gap closure is implemented by [Resolver Seven Buckets](../../.cursor/plans/resolver_seven_buckets_66dcc1ed.plan.md). The 118-move routing snapshot lives in [combat_species_pool_routing_inventory.md](Audits/combat_species_pool_routing_inventory.md).
+> **Implementation note:** The beta species-pool gap closure is recorded in [resolver seven-buckets playtest](Audits/resolver_seven_buckets_playtest.md) and [combat_species_pool_routing_inventory.md](Audits/combat_species_pool_routing_inventory.md). The original planning note under `.cursor/plans/` is not in this public snapshot.
 
 > **Purpose:** Codex / implementation planning reference.  
 > **Scope:** Comprehensive audit and resync of `Moves.csv` and `Modifiers.csv` against runtime move assets; ensure every claimed utility/effect has a resolver path and a defined evaluation timing.  

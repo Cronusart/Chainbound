@@ -7,7 +7,7 @@ Chainbound is a Unity-built creature battler that combines party-based combat, s
 - Combat test harness for iterating on move timing, VFX, camera behavior, and UX without full progression setup
 - Wallet-aware service layer with devnet-safe defaults and local config overrides
 - Supabase edge functions for profile bootstrap and progression flags
-- Optional Solana/Anchor workspace for on-chain experimentation
+- Optional Solana/Anchor program for the ownership spine (Known / Stamped moves). The closed-beta client does not expose mint, stamp, or wager instructions.
 
 ## Tech Stack
 - Unity `6000.0.24f1`
@@ -44,8 +44,8 @@ Chainbound is a Unity-built creature battler that combines party-based combat, s
   - Owns combat flow, scene presentation, UI, exploration systems, and wallet/service orchestration.
 - Supabase edge layer:
   - Handles trusted profile mutations that should not run with client-side credentials.
-- Optional on-chain/backend workspace:
-  - Houses Anchor-based experiments and backend-side Solana workflows without blocking the local Unity gameplay loop.
+- Optional on-chain workspace:
+  - `backend/chainbound_game` contains the Anchor program (profile, vault, Known roll, Stamp, Bind, and gated encounter instructions). Local Unity combat does not require it. The player beta policy only allows profile and vault setup instructions.
 
 ## Config And Security
 - No service-role keys, wallet seed phrases, or private RPC credentials should be committed.
@@ -54,12 +54,14 @@ Chainbound is a Unity-built creature battler that combines party-based combat, s
 - See [SECURITY_NOTES.md](SECURITY_NOTES.md) for the repo's secret-handling policy.
 
 ## Current State And Limitations
-- The Unity client is the primary deliverable; backend and on-chain pieces are optional and still evolving.
-- Some flows are designed for devnet or local demo use rather than production deployment.
-- Supabase functions cover targeted profile actions, not a full backend platform.
-- The combat harness is the fastest way to evaluate gameplay systems without full progression setup.
+- The Unity client is the primary deliverable: combat, overworld narrative, menus, and profile-backed capture.
+- Supabase edge functions cover account, party, inventory, capture, and ownership calls. They are not a full live-service platform.
+- The Anchor program implements the ownership spine. A devnet report in `Docs/Specs/Economy/` still marks player-facing ownership flags NO-GO, and `ClosedBetaFeaturePolicy` blocks stamp, bind, vending, and wager instructions in the beta client.
+- PvP lobby, ranked escrow, tournaments, and a competitive ladder are not playable modes. Client wager types exist and stay off the closed-beta path. The design notes are parked under `Docs/review-unimplemented/`.
+- The combat harness is the fastest way to evaluate battle presentation without full progression setup.
 
 ## Documentation
+- [Docs/INDEX.md](Docs/INDEX.md) — mechanics map and what is actually implemented
 - [Docs/README.md](Docs/README.md)
 - [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md)
 - [Docs/HOW_TO_PLAY.md](Docs/HOW_TO_PLAY.md)

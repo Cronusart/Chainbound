@@ -420,7 +420,7 @@ Combat FX       3 equipped
 ### 5.6 Stats (service record)
 
 **Status:** Summary composition locked (v0.10).  
-**Data source:** PvE service-record metrics in [`CHAINLING_PVE_SERVICE_RECORD.md`](../Combat/CHAINLING_PVE_SERVICE_RECORD.md). Competitive ladder / seasons groundwork (not shown as exact global ranks on this summary yet): [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md).
+**Data source:** PvE service-record metrics in [`CHAINLING_PVE_SERVICE_RECORD.md`](../Combat/CHAINLING_PVE_SERVICE_RECORD.md). Competitive ladder / seasons groundwork (not shown as exact global ranks on this summary yet): [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../../review-unimplemented/Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md).
 
 **Job:** Compact **career service record** for the focused Chainling — not Attributes math, not Archive badge hunting, not a live leaderboard.
 
@@ -569,7 +569,7 @@ stateDiagram-v2
 | **PvP vs PvE stats** | `ChainlingBattleStats` is undifferentiated | Extend DTO + Supabase schema: separate PvP service record or `battleMode` tagged events; party summary stays aggregate until then |
 | **Damage dealt/taken/mitigated** | Tracked on PvE service record | Party summary shows dealt/taken + balance bar; mitigated/heal in drill-down |
 | **Badges / milestones** | Evaluator + catalog exist; strip removed from Stats summary | Keep evaluator; surface badges in Archive / Full Stat Sheet only (§7.4) |
-| **Competitive ladder ranks** | No materialized ranks | Groundwork in [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md); no exact `#N` on summary until soft launch |
+| **Competitive ladder ranks** | No materialized ranks | Groundwork in [`COMPETITIVE_LADDER_AND_SEASONS_v1.md`](../../review-unimplemented/Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md); no exact `#N` on summary until soft launch |
 | **Encounter zone reverse lookup** | Zones forward-map species | Build `EncounterCatalogIndex` from all `EncounterZoneSO` assets at boot |
 | **Combat Role** | Resolved — `SpeciesCombatRole` + optional override | Entry summary binds preferred role |
 | **Party Sync / Field Bond** | Not designed for v1 Entry | Deferred — do not block Entry UI |
@@ -1249,7 +1249,7 @@ For `MovesView`, `Column_1/Views/MovesView` is the canonical authored source for
 | **CardChrome** | `cardChromeImage` (+ optional `PartyTabFrameAnimator`) | Filled slot with equipped variant frame/chrome |
 | **ColumnDimOverlay** | `columnDimOverlay` | Navigation-state dimming only |
 
-Equip via **ChainlingStylePanel â†’ Party Column** (Appearance group). After shell sync, run **Ensure Party Column Shell Cosmetic Layers** once to add/rebind `TypeBackground`, `CardChrome`, and pedestal refs. Author variant assets under `Assets/Data/Combat/ChainlingSpecies/Visual/Cosmetics/ChainlingPartyColumnVariant_*.asset` and register them on `ChainlingVisualIdentityDatabase.asset`. Tune per-type background/pedestal colors in `Assets/Data/UI/PartyTab/ChainlingPartyTypeChromePalette.asset`. See [`COSMETIC_CORE_NFT_ADAPTABILITY_SPEC.md`](../Solana/COSMETIC_CORE_NFT_ADAPTABILITY_SPEC.md) for ownership flow.
+Equip via **ChainlingStylePanel â†’ Party Column** (Appearance group). After shell sync, run **Ensure Party Column Shell Cosmetic Layers** once to add/rebind `TypeBackground`, `CardChrome`, and pedestal refs. Author variant assets under `Assets/Data/Combat/ChainlingSpecies/Visual/Cosmetics/ChainlingPartyColumnVariant_*.asset` and register them on `ChainlingVisualIdentityDatabase.asset`. Tune per-type background/pedestal colors in `Assets/Data/UI/PartyTab/ChainlingPartyTypeChromePalette.asset`. Live ownership model: [`CHAINBOUND_SOLANA_ASSET_TAXONOMY.md`](../Solana/CHAINBOUND_SOLANA_ASSET_TAXONOMY.md). Older adaptability notes are parked in [`COSMETIC_CORE_NFT_ADAPTABILITY_SPEC.md`](../../review-unimplemented/Specs/Solana/COSMETIC_CORE_NFT_ADAPTABILITY_SPEC.md).
 
 **Data:** `filled = ChainlingProgressionUtility.NormalizeStars(snapshot.stars)`; `max = CombatConstants.STAR_MAX`.
 
