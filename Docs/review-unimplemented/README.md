@@ -16,7 +16,3 @@ Open a file here only if you are deciding whether to build it. For what the repo
 | [Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md](Specs/Combat/COMPETITIVE_LADDER_AND_SEASONS_v1.md) | Season/ladder groundwork. `RankedLoadoutValidator` exists; there is no ladder or season service. |
 | [Camera/COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md](Camera/COMBAT_POPUP_OVERLAY_CAMERA_PLAN.md) | Plan for a combat popup camera that is not blurred by depth of field. No overlay-camera type in the combat scripts. |
 | [Guides/COMBAT_SFX_ADVANCED_SEQUENCING_PLAN.md](Guides/COMBAT_SFX_ADVANCED_SEQUENCING_PLAN.md) | Recipe/role combat audio. The foundation (`CombatSfxOrchestrator`) shipped; this model did not. |
-| [Specs/Economy/OWNERSHIP_SPINE_LIVE_MATRIX_PLAN.md](Specs/Economy/OWNERSHIP_SPINE_LIVE_MATRIX_PLAN.md) | Operator test plan marked PLAN ONLY / NO-GO. Not a player feature. |
-| [Suggestion/EncounterBannerVFX.txt](Suggestion/EncounterBannerVFX.txt) | Banner polish suggestion, not a built VFX spec. |
-| [Narrative/narrative_system_v_2_spec_and_cursor_prompt.md](Narrative/narrative_system_v_2_spec_and_cursor_prompt.md) | Broader narrative V2 spec. Child tracks exist on `SequenceRunner`; this file goes past that and is not the authoring guide. |
-| [Narrative/Interaction_Guard_And_Parallel_Tracks_Summary_For_Refinement.md](Narrative/Interaction_Guard_And_Parallel_Tracks_Summary_For_Refinement.md) | Proposed direction for parallel quest routing. Not a built system. |

@@ -893,5 +893,5 @@ operator has separately approved the flag change.
 ### Follow-on docs (2026-09-19)
 
 - Editor read-only probe menu: `Assets/Editor/Ownership/MovesCollectionDasProbeMenu.cs` ? **Chainbound/Ownership/Probe Moves Collection (DAS read-only)**
-- Live matrix plan (NO-GO until explicit GO): `Docs/review-unimplemented/Specs/Economy/OWNERSHIP_SPINE_LIVE_MATRIX_PLAN.md`
+- The separate live-matrix plan file was removed. The NO-GO in this report still stands until an explicit operator GO.
 - Helius DAS proxy design (key server-side only): `Docs/Specs/Economy/OWNERSHIP_SPINE_HELIUS_DAS_PROXY_DESIGN.md`

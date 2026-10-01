@@ -74,5 +74,5 @@ Smoke already on-chain with cap — good. Entitlements should stay off-chain wit
 - `Assets/Scripts/Combat/Runtime/Services/DevCandyMachineInventory.cs` — `IsDevSurfaceAllowed => Debug.isDebugBuild`
 - `Supabase/functions/ownership_prepare_devnet_smoke_grant/index.ts`
 - `Supabase/functions/entitlement_validate_and_grant/index.ts`
-- `Docs/review-unimplemented/Specs/Economy/OWNERSHIP_SPINE_LIVE_MATRIX_PLAN.md`
+- `Docs/Specs/Economy/OWNERSHIP_SPINE_PHASE1_DEVNET.md` (live-matrix plan file was removed; this report remains NO-GO)
 - `Assets/Scripts/Combat/Tests/SolanaMobileReleaseSecurityTests.cs` (gated symbols)

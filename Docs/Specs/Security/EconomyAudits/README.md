@@ -70,7 +70,7 @@ The highest-severity pattern is **client-authored grant payloads** accepted by J
 - `Supabase/migrations/20260919064343_ownership_spine_phase1_authority.sql`
 - `Supabase/migrations/20260920010000_ownership_bootstrap_ram_grant.sql`
 - `backend/chainbound_game/programs/chainbound_game/src/lib.rs`
-- `Docs/Specs/Economy/OWNERSHIP_SPINE_v1.md`, `ECONOMY_01_EconomyAndProgression_v1.md`, `Docs/review-unimplemented/Specs/Economy/OWNERSHIP_SPINE_LIVE_MATRIX_PLAN.md`
+- `Docs/Specs/Economy/OWNERSHIP_SPINE_v1.md`, `ECONOMY_01_EconomyAndProgression_v1.md`, `Docs/Specs/Economy/OWNERSHIP_SPINE_PHASE1_DEVNET.md`
 
 ## Reviewer notes / access limits
 
