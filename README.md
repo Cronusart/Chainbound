@@ -1,4 +1,4 @@
-# Chainbound (Signal Jam 3D)
+# Chainbound
 
 Chainbound is a Unity-built creature battler that combines party-based combat, stylized world exploration, and optional Solana-backed progression. This repo is structured as a public hackathon monorepo: the Unity client is the center of gravity, with Supabase edge functions and an optional Anchor workspace included for the backend and on-chain side of the stack.
 
