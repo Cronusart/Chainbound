@@ -55,7 +55,7 @@ flowchart LR
 | **1** | `COMBAT_TypeProfiles.md` — roles, ChemAdv/ChemDis lists, no mutuals | **Done** |
 | **2** | Direction-only **ChemAdv grid** (13×13, Meme excluded) | **Done** |
 | **3** | **ChemDis grid** (reverse-lookup resist texture) | **Done** |
-| **4** | Status + stack count per forward cell | **Done** — v2 effect suggestions are parked in [`COMBAT_CHEMISTRY_REACTION_REDESIGN_SUGGESTIONS.md`](../review-unimplemented/Combat/COMBAT_CHEMISTRY_REACTION_REDESIGN_SUGGESTIONS.md), not the live chart |
+| **4** | Status + stack count per forward cell | **Done** — live chart is `COMBAT_Chemistry.txt` and `COMBAT_TypeProfiles.md`. The separate reaction-redesign suggestion file was removed. |
 | **5** | New CSV spec + `TypeChemistryMatrix.asset` import | **Done** |
 | **6** | PvP mirror tests, stack normalization | Initial tests added |
 

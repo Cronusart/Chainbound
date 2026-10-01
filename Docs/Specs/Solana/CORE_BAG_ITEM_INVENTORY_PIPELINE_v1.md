@@ -2,7 +2,7 @@
 
 **Status:** Scaffolding — Unity + Supabase seams live; Metaplex Core burn tx builder deferred.  
 **Date:** 2026-07-25  
-**Related:** `CHAINBOUND_SOLANA_ASSET_TAXONOMY.md` (live asset model), `Docs/review-unimplemented/Specs/Solana/COSMETIC_CORE_NFT_ADAPTABILITY_SPEC.md` (older findings, parked), `Docs/Specs/Economy/PLAYER_ITEM_CATALOG_AND_INVENTORY_v1.md`, `Docs/Guides/PRODUCTION_CUTOVER_AND_HARNESS_DISENGAGE.md`
+**Related:** `CHAINBOUND_SOLANA_ASSET_TAXONOMY.md` (live asset model), `Docs/Specs/Economy/PLAYER_ITEM_CATALOG_AND_INVENTORY_v1.md`, `Docs/Guides/PRODUCTION_CUTOVER_AND_HARNESS_DISENGAGE.md`
 
 ---
 
