@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Kodiax
+  m_EditorClassIdentifier: 
+  speciesId: kodiax
+  displayName: Kodiax
+  description: Mined melee bruiser. A slow bear whose hatchet is the chop that cracks
+    a tank.
+  primaryType: 8
+  secondaryType: 0
+  baseMaxHP: 124
+  baseMeleeAtk: 70
+  baseMeleeDef: 52
+  baseRangedAtk: 36
+  baseRangedDef: 48
+  baseSpeed: 46
+  maxEvolutionStages: 1
+  offTypeMoveExceptions:
+  - {fileID: 11400000, guid: 1cddb08c81321fe42901e8234a4c6fcf, type: 2}
+  learnableMoves:
+  - {fileID: 11400000, guid: 7bc8b700c4a81fa45a6c26e2ac5630b4, type: 2}
+  - {fileID: 11400000, guid: f3188f4611f9eec4d8f39c243f6c51e2, type: 2}
+  - {fileID: 11400000, guid: 0a058e7d9b5d7504a840158e7365cc03, type: 2}
+  - {fileID: 11400000, guid: 62dbaaef789b73e48b70a7732ab5e5e3, type: 2}
+  - {fileID: 11400000, guid: 1cddb08c81321fe42901e8234a4c6fcf, type: 2}
+  learnLevels: 0100000001000000010000000100000001000000
+  exclusiveMoves: []
+  flagshipMove: {fileID: 11400000, guid: 7bc8b700c4a81fa45a6c26e2ac5630b4, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: 0a058e7d9b5d7504a840158e7365cc03, type: 2}
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 7bc8b700c4a81fa45a6c26e2ac5630b4, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f3188f4611f9eec4d8f39c243f6c51e2, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 0a058e7d9b5d7504a840158e7365cc03, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 62dbaaef789b73e48b70a7732ab5e5e3, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 1cddb08c81321fe42901e8234a4c6fcf, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 0
+  defaultCaptureProfile: 1
+  rarity: 1
+  combatRoleOverride: 1
+  designNotes: Uncommon Mined melee bruiser. Net 376. Hatchet 70, ranged defense
+    48, speed 46 so it outruns Humpacked and Cinislug. Ranged attack stays 36. Kit
+    is Titan Crash, Pickaxe Flurry, Solid Strike, and Stone Barrage.

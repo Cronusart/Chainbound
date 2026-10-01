@@ -329,6 +329,36 @@ namespace Chainbound.Combat.Tests
             Assert.AreNotEqual(default, profile.apDrainColor);
         }
 
+        [Test]
+        public void NextActionStatusSurvivesTheGrantingTurnTick()
+        {
+            var surging = new StatusInstance(StatusId.Surging, StatusClass.Consumed, StatusOrigin.General, 1, "crit_feed");
+            surging.HoldThroughGrantTurn(4);
+
+            Assert.IsTrue(surging.Tick(4));
+            Assert.IsFalse(surging.IsExpired);
+
+            Assert.IsFalse(surging.Tick(5));
+            Assert.IsTrue(surging.IsExpired);
+        }
+
+        [Test]
+        public void RestOfTurnStatusExpiresOnTheGrantingTurnTick()
+        {
+            var swarm = new StatusInstance(StatusId.BotSwarm, StatusClass.Duration, StatusOrigin.General, 1, "bot_swarm");
+
+            Assert.IsFalse(swarm.Tick(4));
+            Assert.IsTrue(swarm.IsExpired);
+        }
+
+        [Test]
+        public void SoftHandsInverseScalingUsesDefenseAsPivot()
+        {
+            Assert.AreEqual(50f, DamageCalculator.ApplyInverseAttackScaling(50f, 50f), 0.01f);
+            Assert.Less(DamageCalculator.ApplyInverseAttackScaling(80f, 50f), 50f);
+            Assert.Greater(DamageCalculator.ApplyInverseAttackScaling(30f, 50f), 50f);
+        }
+
         /// <summary>
         /// Play Mode smoke checks (manual):
         /// confirm delay after selection, melee/ranged impact hold, AP gain/drain outline flash,

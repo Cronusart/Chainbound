@@ -18,6 +18,7 @@ namespace SignalJam.UI.MenuNavigation
     {
         [SerializeField] private RectTransform cardRoot;
         [SerializeField] private Image cardFace;
+        [SerializeField] private Sprite learnedCardFace;
         [SerializeField] private Image typeIcon;
         [SerializeField] private Image moveNameStamp;
         [SerializeField] private Image statsStamp;
@@ -53,6 +54,7 @@ namespace SignalJam.UI.MenuNavigation
         CandyMachineRevealData bound;
         bool entrancePlayed;
         float fitScale = 1f;
+        Sprite rolledCardFace;
 
         public void Bind(
             RectTransform root,
@@ -84,6 +86,11 @@ namespace SignalJam.UI.MenuNavigation
             if (font != null)
                 stampFont = font;
             ApplyLayout();
+        }
+
+        public void SetLearnedCardFace(Sprite learned)
+        {
+            learnedCardFace = learned;
         }
 
         public void ApplyLayout()
@@ -132,6 +139,7 @@ namespace SignalJam.UI.MenuNavigation
             entrancePlayed = false;
             ReleaseStrips();
             ApplyLayout();
+            ApplyCardFace();
             FitCard();
             HideAllInk();
             if (data != null && data.IsStamp)
@@ -209,8 +217,8 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             var beat = DOTween.Sequence();
-            ShowStrip(beat, moveNameStamp, bound != null ? bound.MoveName : null, LibraryCardLayout.NameFontSize, LibraryCardLayout.NameMaxWidth, 11, tier);
-            ShowStatsStrip(beat, bound != null ? bound.StatsInk : null, tier, parallel: true);
+            ShowStrip(beat, moveNameStamp, bound != null ? bound.MoveName : null, LibraryCardLayout.NameFontSize, LibraryCardLayout.NameMaxWidth, 11, tier, distress: !UsesLearnedFace());
+            ShowStatsStrip(beat, bound != null ? bound.StatsInk : null, tier, parallel: true, distress: !UsesLearnedFace());
             sequence.Append(beat);
         }
 
@@ -240,7 +248,8 @@ namespace SignalJam.UI.MenuNavigation
                     LibraryCardLayout.ModFontSize,
                     LibraryCardLayout.ModMaxWidth,
                     41,
-                    bound.Mod1Rarity);
+                    bound.Mod1Rarity,
+                    distress: true);
             }
 
             if (bound.HasMod2Rarity)
@@ -253,7 +262,8 @@ namespace SignalJam.UI.MenuNavigation
                     LibraryCardLayout.ModMaxWidth,
                     42,
                     bound.Mod2Rarity,
-                    parallel: bound.HasMod1Rarity);
+                    parallel: bound.HasMod1Rarity,
+                    distress: true);
             }
 
             sequence.Append(names);
@@ -263,8 +273,9 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (bound == null)
                 return;
-            AssignStrip(moveNameStamp, bound.MoveName, LibraryCardLayout.NameFontSize, LibraryCardLayout.NameMaxWidth, 11);
-            AssignStatsStrip(bound.StatsInk);
+            bool hostDistress = !UsesLearnedFace();
+            AssignStrip(moveNameStamp, bound.MoveName, LibraryCardLayout.NameFontSize, LibraryCardLayout.NameMaxWidth, 11, distress: hostDistress);
+            AssignStatsStrip(bound.StatsInk, hostDistress);
             if (typeIcon != null)
             {
                 typeIcon.sprite = bound.TypeIcon;
@@ -309,11 +320,11 @@ namespace SignalJam.UI.MenuNavigation
             sequence.Append(dot.DOFade(1f, InkDuration).SetEase(Ease.InOutSine));
         }
 
-        void ShowStrip(Sequence sequence, Image target, string text, float fontSize, float maxWidth, int seed, RarityTier flashTier, bool parallel = false, float lineHeight = 0f)
+        void ShowStrip(Sequence sequence, Image target, string text, float fontSize, float maxWidth, int seed, RarityTier flashTier, bool parallel = false, float lineHeight = 0f, bool distress = true)
         {
             if (target == null || string.IsNullOrWhiteSpace(text))
                 return;
-            AssignStrip(target, text, fontSize, maxWidth, seed, lineHeight);
+            AssignStrip(target, text, fontSize, maxWidth, seed, lineHeight, distress);
             if (target.sprite == null)
                 return;
             Color color = target.color;
@@ -336,7 +347,7 @@ namespace SignalJam.UI.MenuNavigation
             sequence.Append(target.DOFade(1f, InkDuration).SetEase(Ease.InOutSine));
         }
 
-        void ShowStatsStrip(Sequence sequence, string text, RarityTier flashTier, bool parallel = false)
+        void ShowStatsStrip(Sequence sequence, string text, RarityTier flashTier, bool parallel = false, bool distress = true)
         {
             if (LibraryCardLayout.IsEffectStatsInk(text))
             {
@@ -349,14 +360,15 @@ namespace SignalJam.UI.MenuNavigation
                     23,
                     flashTier,
                     parallel,
-                    LibraryCardLayout.EffectLineHeight);
+                    LibraryCardLayout.EffectLineHeight,
+                    distress);
                 return;
             }
 
-            ShowStrip(sequence, statsStamp, text, LibraryCardLayout.StatsFontSize, LibraryCardLayout.NameMaxWidth, 23, flashTier, parallel);
+            ShowStrip(sequence, statsStamp, text, LibraryCardLayout.StatsFontSize, LibraryCardLayout.NameMaxWidth, 23, flashTier, parallel, distress: distress);
         }
 
-        void AssignStatsStrip(string text)
+        void AssignStatsStrip(string text, bool distress = true)
         {
             if (LibraryCardLayout.IsEffectStatsInk(text))
             {
@@ -366,18 +378,20 @@ namespace SignalJam.UI.MenuNavigation
                     LibraryCardLayout.EffectStatsFontSize,
                     LibraryCardLayout.NameMaxWidth,
                     23,
-                    LibraryCardLayout.EffectLineHeight);
+                    LibraryCardLayout.EffectLineHeight,
+                    distress);
                 return;
             }
 
-            AssignStrip(statsStamp, text, LibraryCardLayout.StatsFontSize, LibraryCardLayout.NameMaxWidth, 23);
+            AssignStrip(statsStamp, text, LibraryCardLayout.StatsFontSize, LibraryCardLayout.NameMaxWidth, 23, distress: distress);
         }
 
-        void AssignStrip(Image target, string text, float fontSize, float maxWidth, int seed, float lineHeight = 0f)
+        void AssignStrip(Image target, string text, float fontSize, float maxWidth, int seed, float lineHeight = 0f, bool distress = true)
         {
             if (target == null)
                 return;
-            Sprite sprite = LibraryCardStampStrip.Bake(text, fontSize, maxWidth, seed, stampFont, lineHeight);
+            Color32 ink = UsesLearnedFace() ? LibraryCardFaces.LearnedInk : LibraryCardFaces.SageInk;
+            Sprite sprite = LibraryCardStampStrip.Bake(text, fontSize, maxWidth, seed, stampFont, lineHeight, ink, distress);
             if (sprite == null)
             {
                 SetVisible(target, false);
@@ -420,6 +434,21 @@ namespace SignalJam.UI.MenuNavigation
             sequence.Join(cardRoot.DOLocalRotate(new Vector3(0f, 0f, settleTilt), entranceDuration).SetEase(Ease.OutQuad));
             sequence.Join(cardRoot.DOScale(fitScale * 1.02f, entranceDuration * 0.72f).SetEase(Ease.OutCubic));
             sequence.Append(cardRoot.DOScale(fitScale, 0.12f).SetEase(Ease.OutQuad));
+        }
+
+        bool UsesLearnedFace()
+        {
+            return bound != null && bound.UsesLearnedFace;
+        }
+
+        void ApplyCardFace()
+        {
+            if (cardFace == null)
+                return;
+            if (rolledCardFace == null)
+                rolledCardFace = cardFace.sprite;
+            bool learned = UsesLearnedFace() && learnedCardFace != null;
+            cardFace.sprite = learned ? learnedCardFace : rolledCardFace;
         }
 
         void PoseOffscreen()

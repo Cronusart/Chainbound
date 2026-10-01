@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.4-a
   displayName: Brace
-  effectDescription: Self gains +10-15% mitigation 1 turn
+  effectDescription: On swap in, gain 10-15% mitigation for the rest of this turn
   category: 5
   scope: 1
   minimumRarity: 0

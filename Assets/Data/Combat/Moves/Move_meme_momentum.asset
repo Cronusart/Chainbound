@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: meme_momentum
   displayName: Meme Momentum
-  description: Passive - crits grant +1 AP; misses lose 1 AP; floor 0.
+  description: Passive - a landed hit raises both Atk by 2 and grants +2 AP. A miss
+    drops them by 1.
   category: 4
   baseType: 14
-  rarity: 5
+  rarity: 2
   targeting: 4
   contactType: 2
   power: 0
@@ -110,13 +111,14 @@ MonoBehaviour:
       bonusMultiplierPerCount: 0
       maxMultiplier: 0
       randomMultipliers: []
-  triggerCondition: 0
+  triggerCondition: 6
   hpThresholdPercent: 0
   triggerOncePerBattle: 0
   healPercentMaxHP: 0
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

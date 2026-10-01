@@ -125,8 +125,8 @@ namespace Chainbound.Combat
         {
             var profile = ResolvePacingProfile();
             if (profile != null)
-                return Mathf.Max(0.08f, profile.apFeedbackHold * 0.45f);
-            return ResolveApFeedbackHold() * 0.45f;
+                return Mathf.Max(0.5f, profile.apFeedbackHold * 0.85f);
+            return Mathf.Max(0.5f, ResolveApFeedbackHold() * 0.85f);
         }
 
         private float ResolveSwapSettleDelay()

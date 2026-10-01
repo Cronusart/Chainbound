@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.4-h
   displayName: Spotter
-  effectDescription: Ally gains +5-10% accuracy 1 turn
+  effectDescription: On swap out, an ally gains 5-10% accuracy for the rest of this turn
   category: 5
   scope: 1
   minimumRarity: 2

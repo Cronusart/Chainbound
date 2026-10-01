@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Marrowhead
+  m_EditorClassIdentifier: 
+  speciesId: marrowhead
+  displayName: Marrowhead
+  description: Shard ranged striker. One aimed shot, then the follow-up.
+  primaryType: 13
+  secondaryType: 0
+  baseMaxHP: 108
+  baseMeleeAtk: 40
+  baseMeleeDef: 42
+  baseRangedAtk: 78
+  baseRangedDef: 44
+  baseSpeed: 64
+  maxEvolutionStages: 1
+  offTypeMoveExceptions:
+  - {fileID: 11400000, guid: 267d5232cfb255542b11d9806d989e6f, type: 2}
+  learnableMoves:
+  - {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
+  - {fileID: 11400000, guid: eb74129d74ee4f742aa2541e3279ca82, type: 2}
+  - {fileID: 11400000, guid: ede028aacaa70d147b9667d09957fd14, type: 2}
+  - {fileID: 11400000, guid: b3aef408d024b3044a13114c16c961d8, type: 2}
+  - {fileID: 11400000, guid: 267d5232cfb255542b11d9806d989e6f, type: 2}
+  learnLevels: 0100000001000000010000000100000001000000
+  exclusiveMoves: []
+  flagshipMove: {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: eb74129d74ee4f742aa2541e3279ca82, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: ede028aacaa70d147b9667d09957fd14, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: b3aef408d024b3044a13114c16c961d8, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 267d5232cfb255542b11d9806d989e6f, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 0
+  defaultCaptureProfile: 1
+  rarity: 1
+  combatRoleOverride: 3
+  designNotes: Uncommon Shard ranged striker. Net 376. Bow 78, speed 64, defense
+    floor 42/44. Single-target, not a spreader. Signature is Partition Shot.
+    Progression pool is that shot, Field Split, Shattered Armor, Isolation Tool,
+    and off-type Precision Strike.

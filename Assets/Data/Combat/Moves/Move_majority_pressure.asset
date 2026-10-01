@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: majority_pressure
   displayName: Majority Pressure
-  description: Apply 51% Attacked; all foes lose Speed and Acc.
+  description: Foes lose Speed for the rest of this turn.
   category: 2
   baseType: 8
   rarity: 0
@@ -122,6 +122,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

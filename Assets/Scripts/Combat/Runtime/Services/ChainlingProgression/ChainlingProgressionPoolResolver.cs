@@ -147,7 +147,10 @@ namespace Chainbound.Combat
                 float rarityWeight = progressionConfig != null
                     ? progressionConfig.GetMoveLearnRarityWeight(source.move.rarity)
                     : 1f;
-                int weight = Mathf.Max(0, Mathf.RoundToInt(source.weight * rarityWeight));
+                int authoredWeight = source.weight;
+                if (starIndex >= CombatConstants.STAR_MAX && source.useWeightAtStarFive)
+                    authoredWeight = source.weightAtStarFive;
+                int weight = Mathf.Max(0, Mathf.RoundToInt(authoredWeight * rarityWeight));
                 if (weight <= 0)
                     continue;
 

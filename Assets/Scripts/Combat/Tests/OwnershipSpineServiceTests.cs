@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -115,9 +116,129 @@ namespace Chainbound.Combat.Tests
 
             Assert.IsTrue(settled.confirmed);
             Assert.NotNull(settled.verifiedAsset);
+            Assert.AreEqual(LibraryCardFaces.ProgressionLearn, settled.acquisition);
+            Assert.AreEqual(LibraryCardFaces.ProgressionLearn, settled.verifiedAsset.acquisition);
             Assert.AreEqual(0, service.CachedKnown.Count);
             Assert.AreEqual(1, gateway.SubmitCalls, "reconciliation must not ask the wallet to sign again");
             Assert.AreEqual(1, gateway.ReconcileCalls);
+        }
+
+        [Test]
+        public async Task ReconcileNoneRecoversConfirmedAssetAndClearsStalePendingState()
+        {
+            var gateway = new FakeGateway { IsWalletConnected = true, SubmitPending = true };
+            var service = Create(gateway);
+            await service.GetKnownAsync("roll-1");
+            await service.StampMoveAsync(Request());
+            Assert.NotNull(service.PendingStamp);
+
+            gateway.SubmitPending = false;
+            gateway.ReconcileReturnsNone = true;
+            gateway.Known.Clear();
+            gateway.RamBalance -= 75;
+            gateway.Verified.Add(TrustedStamped());
+
+            StampMoveResult settled = await service.ReconcilePendingStampAsync("stamp-1");
+
+            Assert.IsTrue(settled.success);
+            Assert.IsTrue(settled.confirmed);
+            Assert.IsFalse(settled.pending);
+            Assert.NotNull(settled.verifiedAsset);
+            Assert.AreEqual(LibraryCardFaces.ProgressionLearn, settled.acquisition);
+            Assert.AreEqual(LibraryCardFaces.ProgressionLearn, settled.verifiedAsset.acquisition);
+            Assert.IsNull(service.PendingStamp);
+            Assert.AreEqual(0, service.CachedKnown.Count);
+            Assert.AreEqual(1, service.CachedStamped.Count);
+        }
+
+        [Test]
+        public async Task ReconcileNoneWithoutAssetClearsStalePendingAndKeepsKnown()
+        {
+            var gateway = new FakeGateway { IsWalletConnected = true, SubmitPending = true };
+            var service = Create(gateway);
+            await service.GetKnownAsync("roll-1");
+            await service.StampMoveAsync(Request());
+            Assert.NotNull(service.PendingStamp);
+
+            gateway.SubmitPending = false;
+            gateway.ReconcileReturnsNone = true;
+
+            StampMoveResult settled = await service.ReconcilePendingStampAsync("stamp-1");
+
+            Assert.IsTrue(settled.success);
+            Assert.IsFalse(settled.confirmed);
+            Assert.IsFalse(settled.pending);
+            Assert.IsNull(service.PendingStamp);
+            Assert.AreEqual(1, service.CachedKnown.Count);
+            Assert.AreEqual(0, service.CachedStamped.Count);
+        }
+
+        [Test]
+        public async Task ReconcileFailedIntentClearsPendingAndKeepsKnown()
+        {
+            var gateway = new FakeGateway { IsWalletConnected = true, SubmitPending = true };
+            var service = Create(gateway);
+            await service.GetKnownAsync("roll-1");
+            await service.StampMoveAsync(Request());
+            Assert.NotNull(service.PendingStamp);
+
+            gateway.SubmitPending = false;
+            gateway.ReconcileReturnsFailed = true;
+            StampMoveResult settled = await service.ReconcilePendingStampAsync("stamp-1");
+
+            Assert.IsTrue(settled.success);
+            Assert.AreEqual("failed", settled.operationStatus);
+            Assert.IsNull(service.PendingStamp);
+            Assert.AreEqual(1, service.CachedKnown.Count);
+        }
+
+        [Test]
+        public void PreparedStampRequiresWalletSignatureButSubmittedStampDoesNot()
+        {
+            Assert.IsTrue(CandyMachineScreen.PendingStampRequiresWalletSignature(new PendingStampRecord
+            {
+                operationStatus = "prepared",
+            }));
+            Assert.IsFalse(CandyMachineScreen.PendingStampRequiresWalletSignature(new PendingStampRecord
+            {
+                operationStatus = "prepared",
+                signature = "wallet-signature",
+            }));
+            Assert.IsFalse(CandyMachineScreen.PendingStampRequiresWalletSignature(new PendingStampRecord
+            {
+                operationStatus = "submitted",
+            }));
+            Assert.IsFalse(CandyMachineScreen.PendingStampIsFinalizing(new PendingStampRecord
+            {
+                operationStatus = "prepared",
+            }));
+            Assert.IsTrue(CandyMachineScreen.PendingStampIsFinalizing(new PendingStampRecord
+            {
+                operationStatus = "submitted",
+                signature = "wallet-signature",
+            }));
+        }
+
+        [Test]
+        public async Task InsufficientRamBlocksReviewAndSubmitBeforeWalletOrGateway()
+        {
+            var gateway = new FakeGateway { IsWalletConnected = true, RamBalance = 60 };
+            var service = Create(gateway);
+            await service.GetKnownAsync("roll-low-ram");
+            Assert.AreEqual(55, service.RamBalance);
+            Assert.IsFalse(CandyMachineScreen.HasSufficientRam(service.RamBalance, service.StampRamCost));
+
+            InvalidOperationException reviewError = Assert.ThrowsAsync<InvalidOperationException>(
+                async () => await service.ReviewStampAsync(Request()));
+            StringAssert.Contains("75 RAM is required", reviewError.Message);
+            Assert.AreEqual(0, gateway.SimulateCalls);
+            Assert.AreEqual(0, walletCoordinator.Calls);
+
+            StampMoveResult submit = await service.StampMoveAsync(Request());
+            Assert.IsFalse(submit.success);
+            StringAssert.Contains("75 RAM is required", submit.error);
+            Assert.AreEqual(0, gateway.SubmitCalls);
+            Assert.AreEqual(0, walletCoordinator.Calls);
         }
 
         [Test]
@@ -195,6 +316,7 @@ namespace Chainbound.Combat.Tests
             schemaVersion = 1,
             generatorVersion = 1,
             poolHash = "hash",
+            acquisition = LibraryCardFaces.ProgressionLearn,
             isCoreAsset = true,
         };
 
@@ -203,7 +325,10 @@ namespace Chainbound.Combat.Tests
             public bool IsWalletConnected { get; set; }
             public bool SubmitSuccess { get; set; }
             public bool SubmitPending { get; set; }
+            public bool ReconcileReturnsNone { get; set; }
+            public bool ReconcileReturnsFailed { get; set; }
             public int SubmitCalls { get; private set; }
+            public int SimulateCalls { get; private set; }
             public int ReconcileCalls { get; private set; }
             public int FetchStateCalls { get; private set; }
             public long RamBalance { get; set; } = 100;
@@ -215,6 +340,7 @@ namespace Chainbound.Combat.Tests
                 var record = new KnownMoveRecord
                 {
                     instanceId = "known-1", moveId = "jab", modifierCount = 0, generatorVersion = 1, poolHash = "hash",
+                    acquisition = LibraryCardFaces.CandyRoll,
                 };
                 if (Known.Find(item => item.instanceId == record.instanceId) == null)
                     Known.Add(record);
@@ -241,8 +367,11 @@ namespace Chainbound.Combat.Tests
             public Task<IReadOnlyList<KnownMoveRecord>> FetchKnownAsync() =>
                 Task.FromResult<IReadOnlyList<KnownMoveRecord>>(Known);
 
-            public Task<StampTransactionReview> SimulateStampAsync(StampMoveRequest request) =>
-                Task.FromResult(new StampTransactionReview { simulationSucceeded = true });
+            public Task<StampTransactionReview> SimulateStampAsync(StampMoveRequest request)
+            {
+                SimulateCalls++;
+                return Task.FromResult(new StampTransactionReview { simulationSucceeded = true });
+            }
 
             public Task<StampMoveResult> SubmitStampAsync(StampMoveRequest request)
             {
@@ -278,6 +407,27 @@ namespace Chainbound.Combat.Tests
             public Task<StampMoveResult> ReconcileStampAsync(string idempotencyKey = null)
             {
                 ReconcileCalls++;
+                if (ReconcileReturnsNone)
+                {
+                    return Task.FromResult(new StampMoveResult
+                    {
+                        success = true,
+                        pending = false,
+                        confirmed = false,
+                        operationStatus = "none",
+                    });
+                }
+                if (ReconcileReturnsFailed)
+                {
+                    return Task.FromResult(new StampMoveResult
+                    {
+                        success = true,
+                        pending = false,
+                        confirmed = false,
+                        operationStatus = "failed",
+                        message = "The Stamp transaction failed. No RAM or Known move was consumed.",
+                    });
+                }
                 if (SubmitPending)
                 {
                     return Task.FromResult(new StampMoveResult

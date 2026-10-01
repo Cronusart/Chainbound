@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: precision_focus
   displayName: Precision Focus
-  description: Passive - misses have 25% chance to refund AP cost.
+  description: Passive - a miss has a 75% chance to refund 1 AP.
   category: 4
   baseType: 0
   rarity: 0
@@ -116,6 +116,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

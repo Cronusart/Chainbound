@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: shattered_armor
   displayName: Shattered Armor
-  description: Passive - super-effective hits are mitigated and grant Def +1 plus
-    AP +1.
+  description: Passive - a super-effective hit grants 5% mitigation this turn and
+    +1 AP.
   category: 4
   baseType: 13
   rarity: 0
@@ -28,11 +28,7 @@ MonoBehaviour:
   hitCountMax: 1
   rechargeTurns: 0
   statusEffects: []
-  stageChanges:
-  - stat: 2
-    stages: 1
-    chance: 1
-    targetsSelf: 1
+  stageChanges: []
   tags:
   - PAS
   - TRIG
@@ -115,13 +111,14 @@ MonoBehaviour:
       bonusMultiplierPerCount: 0
       maxMultiplier: 0
       randomMultipliers: []
-  triggerCondition: 2
+  triggerCondition: 8
   hpThresholdPercent: 0
   triggerOncePerBattle: 0
   healPercentMaxHP: 0
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

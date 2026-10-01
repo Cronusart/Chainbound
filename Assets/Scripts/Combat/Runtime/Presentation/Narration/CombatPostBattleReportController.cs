@@ -6,7 +6,9 @@ using DG.Tweening;
 using SignalJam.UI.MobileControls;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace Chainbound.Combat
@@ -109,6 +111,13 @@ namespace Chainbound.Combat
         private InputLockHandle _inputLock;
         private MobileInputManager _mobileInput;
         private bool _latchedCancel;
+        private bool _latchedConfirm;
+        private GameObject _lastFocusedButton;
+        private Image _logOverflowFade;
+        private Image _rewardsIntroPlate;
+        private Image _rewardsSpoilsPlate;
+        private ScrollRect _rewardsScroll;
+        private Image _rewardsOverflowFade;
         private Sprite[] _bannerFrames;
         private int _bannerFrameIndex;
         private float _bannerFrameTimer;
@@ -117,6 +126,7 @@ namespace Chainbound.Combat
         private readonly List<CombatPostBattleXpRowView> _xpRows = new List<CombatPostBattleXpRowView>();
         private readonly List<ChainlingXpReward> _xpRowRewards = new List<ChainlingXpReward>();
 
+        private const string XpRowTemplateName = "XpRowTemplate";
         private const float RewardsRowAppearDelay = 0.16f;
         private const float RewardsRowStagger = 0.1f;
         private const float RewardsXpFillDuration = 0.5f;
@@ -290,6 +300,8 @@ namespace Chainbound.Combat
         {
             _dismissRequested = false;
             _latchedCancel = false;
+            _latchedConfirm = false;
+            _lastFocusedButton = null;
             ShowPage(page);
             yield return PlayPageEnter(page);
             try
@@ -299,6 +311,13 @@ namespace Chainbound.Combat
                     SetAdvanceButtonInteractable(_rewardsContinue, false);
                     yield return PlayRewardsRowReveal();
                     SetAdvanceButtonInteractable(_rewardsContinue, true);
+                    EnablePageInteraction(_rewardsGroup);
+                    FocusButton(_rewardsContinue);
+                }
+                else if (page == FlowPage.Report)
+                {
+                    EnablePageInteraction(_reportGroup);
+                    FocusButton(_continueButton);
                 }
 
                 if (page == FlowPage.Banner)
@@ -308,26 +327,40 @@ namespace Chainbound.Combat
                     float lockout = bannerProfile != null ? Mathf.Max(0f, bannerProfile.initialLockoutSeconds) : 0.8f;
                     if (_bannerPrompt != null)
                         _bannerPrompt.gameObject.SetActive(false);
-                    SetAdvanceButtonInteractable(_bannerContinue, false);
-                    SetButtonSelected(_bannerContinue, false);
                     if (lockout > 0f)
                         yield return new WaitForSecondsRealtime(lockout);
                     _bannerUnlocked = true;
                     _latchedCancel = false;
+                    _latchedConfirm = false;
                     if (_bannerPrompt != null)
                     {
                         _bannerPrompt.gameObject.SetActive(true);
-                        _bannerPrompt.text = "PRESS CONFIRM";
+                        if (string.IsNullOrWhiteSpace(_bannerPrompt.text))
+                            _bannerPrompt.text = "PRESS ANY BUTTON TO CONTINUE";
                     }
-                    SetAdvanceButtonInteractable(_bannerContinue, true);
-                    SetButtonSelected(_bannerContinue, true);
                 }
 
                 yield return null;
                 while (!_dismissRequested)
                 {
-                    if ((page != FlowPage.Banner || _bannerUnlocked) && AdvancePressed())
+                    if (page == FlowPage.Banner)
+                    {
+                        if (_bannerUnlocked && BannerAdvancePressed())
+                            _dismissRequested = true;
+                    }
+                    else if (PageAdvancePressed(page))
+                    {
                         _dismissRequested = true;
+                    }
+                    else
+                    {
+                        if (page == FlowPage.Report)
+                            TickReportScroll();
+                        else if (page == FlowPage.Rewards)
+                            TickRewardsScroll();
+                        SyncFocusedButtonVisual();
+                    }
+
                     yield return null;
                 }
             }
@@ -374,7 +407,7 @@ namespace Chainbound.Combat
                     _bannerAnimating = false;
                     CacheMenuPanelRest(_reportSurface, ref _reportGroup, ref _reportRestScale, ref _reportRestCached);
                     RefreshContent();
-                    SetButtonSelected(_continueButton, true);
+                    ConfigureAdvanceNavigation();
                     CombatMenuPanelReveal.ApplyClosedState(
                         _reportSurface != null ? _reportSurface.transform as RectTransform : null,
                         _reportRestScale,
@@ -387,7 +420,7 @@ namespace Chainbound.Combat
                     _bannerAnimating = false;
                     CacheMenuPanelRest(_rewardsSurface, ref _rewardsGroup, ref _rewardsRestScale, ref _rewardsRestCached);
                     BindRewards();
-                    SetButtonSelected(_rewardsContinue, true);
+                    ConfigureAdvanceNavigation();
                     CombatMenuPanelReveal.ApplyClosedState(
                         _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
                         _rewardsRestScale,
@@ -411,9 +444,8 @@ namespace Chainbound.Combat
                             _bannerCard,
                             _bannerCardRestPosition,
                             _bannerCardRestScale,
-                            ResolveBannerStripSettings());
-                        if (_bannerContents != null)
-                            _bannerContents.alpha = 1f;
+                            ResolveBannerStripSettings(),
+                            contents: _bannerContents);
                     }
                     break;
                 case FlowPage.Report:
@@ -528,7 +560,7 @@ namespace Chainbound.Combat
 
         private CombatBannerStripMotion.Settings ResolveBannerStripSettings()
         {
-            CombatBannerStripMotion.Settings settings = CombatBannerStripMotion.Settings.Default;
+            CombatBannerStripMotion.Settings settings = CombatBannerStripMotion.Settings.PostBattle;
             if (bannerProfile != null)
                 settings.stripScaleY = Mathf.Clamp(bannerProfile.stripScaleY, 0.02f, 0.25f);
             return settings;
@@ -557,7 +589,7 @@ namespace Chainbound.Combat
                 _bannerCardRestScale,
                 ResolveBannerStripSettings());
             if (_bannerContents != null)
-                _bannerContents.alpha = 1f;
+                _bannerContents.alpha = 0f;
         }
 
         private void CacheMenuPanelRest(
@@ -693,6 +725,7 @@ namespace Chainbound.Combat
             BindRamTicker(defeatPage);
             BindLootRow();
             BindXpRows(defeatPage);
+            EnsureRewardPlates();
         }
 
         private string BuildRewardsIntro()
@@ -873,8 +906,16 @@ namespace Chainbound.Combat
 
             _xpRows.Clear();
             _xpRowRewards.Clear();
+            Transform template = _xpRowsRoot.Find(XpRowTemplateName);
+            if (template != null)
+                template.gameObject.SetActive(false);
             for (int i = _xpRowsRoot.childCount - 1; i >= 0; i--)
-                Destroy(_xpRowsRoot.GetChild(i).gameObject);
+            {
+                Transform child = _xpRowsRoot.GetChild(i);
+                if (child.name == XpRowTemplateName)
+                    continue;
+                Destroy(child.gameObject);
+            }
 
             if (defeatPage || _rewardSummary?.chainlingRewards == null)
                 return;
@@ -892,16 +933,16 @@ namespace Chainbound.Combat
                     continue;
                 CreateXpRow(reward, progression, speciesDb, font);
             }
+
+            EnsureRewardsListScroll();
         }
 
         private void ConfigureXpRowsLayout()
         {
-            if (_xpRowsRoot == null)
+            if (_xpRowsRoot == null || _xpRowsRoot.GetComponent<VerticalLayoutGroup>() != null)
                 return;
 
-            VerticalLayoutGroup layout = _xpRowsRoot.GetComponent<VerticalLayoutGroup>();
-            if (layout == null)
-                layout = _xpRowsRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+            VerticalLayoutGroup layout = _xpRowsRoot.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 12f;
             layout.padding = new RectOffset(8, 8, 4, 4);
             layout.childAlignment = TextAnchor.UpperCenter;
@@ -911,17 +952,68 @@ namespace Chainbound.Combat
             layout.childForceExpandHeight = false;
         }
 
+        /// <summary>
+        /// Plates, scroll viewports, and fades stay on the prefab. Missing ones are left missing
+        /// so runtime does not invent a second layout on top of the authored rewards surface.
+        /// </summary>
+        private void EnsureRewardPlates()
+        {
+            if (_rewardsSurface == null)
+                return;
+
+            _rewardsIntroPlate = FindRewardPlate("RewardsIntroPlate");
+            _rewardsSpoilsPlate = FindRewardPlate("RewardsSpoilsPlate");
+        }
+
+        private Image FindRewardPlate(string name)
+        {
+            Transform found = _rewardsSurface.transform.Find(name);
+            return found != null ? found.GetComponent<Image>() : null;
+        }
+
+        private void EnsureRewardsListScroll()
+        {
+            if (_xpRowsRoot == null)
+                return;
+
+            RectTransform content = (RectTransform)_xpRowsRoot.transform;
+            if (content.parent == null || content.parent.name != "RewardsListViewport")
+                return;
+
+            RectTransform viewportRect = (RectTransform)content.parent;
+            ScrollRect scroll = viewportRect.GetComponent<ScrollRect>();
+            if (scroll == null)
+                return;
+
+            scroll.content = content;
+            scroll.viewport = viewportRect;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            _rewardsScroll = scroll;
+
+            Transform existingFade = viewportRect.Find("RewardsOverflowFade");
+            _rewardsOverflowFade = existingFade != null ? existingFade.GetComponent<Image>() : null;
+            if (_rewardsOverflowFade != null)
+                _rewardsOverflowFade.enabled = false;
+        }
+
+        private void UpdateRewardsOverflowFade()
+        {
+            if (_rewardsOverflowFade == null || _rewardsScroll == null || _rewardsScroll.content == null || _rewardsScroll.viewport == null)
+                return;
+
+            float range = _rewardsScroll.content.rect.height - _rewardsScroll.viewport.rect.height;
+            bool moreBelow = range > 8f && _rewardsScroll.verticalNormalizedPosition > 0.02f;
+            _rewardsOverflowFade.enabled = moreBelow;
+        }
+
         private void CreateXpRow(
             ChainlingXpReward reward,
             ProgressionConfigSO progression,
             SpeciesDatabaseSO speciesDb,
             TMP_FontAsset font)
         {
-            CombatPostBattleXpRowView row = CombatPostBattleXpRowView.Create(
-                _xpRowsRoot,
-                xpRowBackground,
-                xpBarSprite,
-                font);
+            CombatPostBattleXpRowView row = InstantiateXpRow(font);
 
             BattleParticipant participant = FindParticipant(reward);
             SpeciesDefinitionSO species = speciesDb != null && !string.IsNullOrWhiteSpace(reward.speciesId)
@@ -937,6 +1029,24 @@ namespace Chainbound.Combat
                 progression);
             _xpRows.Add(row);
             _xpRowRewards.Add(reward);
+        }
+
+        private CombatPostBattleXpRowView InstantiateXpRow(TMP_FontAsset font)
+        {
+            Transform template = _xpRowsRoot != null ? _xpRowsRoot.Find(XpRowTemplateName) : null;
+            if (template == null)
+            {
+                return CombatPostBattleXpRowView.Create(
+                    _xpRowsRoot,
+                    xpRowBackground,
+                    xpBarSprite,
+                    font);
+            }
+
+            GameObject copy = Instantiate(template.gameObject, _xpRowsRoot);
+            copy.name = "XpRow";
+            copy.SetActive(true);
+            return copy.GetComponent<CombatPostBattleXpRowView>();
         }
 
         private IEnumerator PlayRewardsRowReveal()
@@ -1059,15 +1169,16 @@ namespace Chainbound.Combat
             float elapsed = 0f;
             while (!done && reveal.IsActive() && elapsed < 12f)
             {
-                if (ConfirmPressed())
+                if (ConsumeConfirm())
                     progressionFolioReveal.Accelerate();
                 elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
 
+            progressionFolioReveal?.FocusContinueButton();
             while (progressionFolioReveal != null && progressionFolioReveal.AwaitingContinue && !_dismissRequested)
             {
-                if (ConfirmPressed())
+                if (ConsumeConfirm() || ConsumeCancel())
                     progressionFolioReveal.ConfirmContinue();
                 yield return null;
             }
@@ -1178,6 +1289,7 @@ namespace Chainbound.Combat
             _rewardsContinue = rewardsContinueButton != null ? rewardsContinueButton : FindButton(_overlay.transform, "RewardsContinueButton");
             _reportGroup = _reportSurface != null ? _reportSurface.GetComponent<CanvasGroup>() : null;
             _rewardsGroup = _rewardsSurface != null ? _rewardsSurface.GetComponent<CanvasGroup>() : null;
+            EnsureLogOverflowFade();
 
             if (_title == null || _content == null)
                 return false;
@@ -1217,6 +1329,8 @@ namespace Chainbound.Combat
                 _rewardsContinue.onClick.RemoveAllListeners();
                 _rewardsContinue.onClick.AddListener(Dismiss);
             }
+
+            ConfigureAdvanceNavigation();
         }
 
         private void BuildFallbackVisuals()
@@ -1282,13 +1396,8 @@ namespace Chainbound.Combat
             promptRect.offsetMin = Vector2.zero;
             promptRect.offsetMax = Vector2.zero;
             _bannerPrompt.color = Color.white;
-            _bannerContinue = CreateButton("BannerContinueButton", contents.transform, "CONFIRM", Dismiss);
-            bannerContinueButton = _bannerContinue;
-            RectTransform continueRect = (RectTransform)_bannerContinue.transform;
-            continueRect.anchorMin = new Vector2(0.32f, 0.18f);
-            continueRect.anchorMax = new Vector2(0.68f, 0.30f);
-            continueRect.offsetMin = Vector2.zero;
-            continueRect.offsetMax = Vector2.zero;
+            _bannerPrompt.text = "PRESS ANY BUTTON TO CONTINUE";
+            _bannerPrompt.raycastTarget = false;
         }
 
         private void BuildReportFallback()
@@ -1357,6 +1466,7 @@ namespace Chainbound.Combat
             _scroll.vertical = true;
             _scroll.movementType = ScrollRect.MovementType.Clamped;
             _scroll.scrollSensitivity = 32f;
+            EnsureLogOverflowFade();
 
             _continueButton = CreateButton("ContinueButton", _reportSurface.transform, "CONTINUE", Dismiss);
             continueButton = _continueButton;
@@ -1431,8 +1541,14 @@ namespace Chainbound.Combat
 
         private void SetTab(bool showLog)
         {
+            if (_showingLog == showLog && _content != null && _content.text.Length > 0)
+            {
+                return;
+            }
+
             _showingLog = showLog;
             RefreshContent();
+            ConfigureAdvanceNavigation();
         }
 
         private void RefreshContent()
@@ -1504,22 +1620,78 @@ namespace Chainbound.Combat
             return builder.ToString();
         }
 
+        private bool ConsumeConfirm()
+        {
+            bool pressed = ConfirmPressed() || _latchedConfirm;
+            _latchedConfirm = false;
+            return pressed;
+        }
+
+        private bool ConsumeCancel()
+        {
+            bool pressed = CancelPressed() || _latchedCancel;
+            _latchedCancel = false;
+            return pressed;
+        }
+
         private static bool ConfirmPressed()
         {
             return (Keyboard.current != null && (Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame)) ||
                    (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame);
         }
 
-        private bool AdvancePressed()
+        private bool BannerAdvancePressed()
         {
-            if (ConfirmPressed() || CancelPressed())
+            if (ConsumeConfirm() || ConsumeCancel() || PointerPressed())
                 return true;
 
-            if (!_latchedCancel)
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.anyKey.wasPressedThisFrame)
+                return true;
+
+            Gamepad pad = Gamepad.current;
+            if (pad == null)
                 return false;
 
-            _latchedCancel = false;
-            return true;
+            return pad.buttonWest.wasPressedThisFrame ||
+                   pad.buttonNorth.wasPressedThisFrame ||
+                   pad.startButton.wasPressedThisFrame ||
+                   pad.selectButton.wasPressedThisFrame ||
+                   pad.leftShoulder.wasPressedThisFrame ||
+                   pad.rightShoulder.wasPressedThisFrame ||
+                   pad.dpad.up.wasPressedThisFrame ||
+                   pad.dpad.down.wasPressedThisFrame ||
+                   pad.dpad.left.wasPressedThisFrame ||
+                   pad.dpad.right.wasPressedThisFrame;
+        }
+
+        private bool PageAdvancePressed(FlowPage page)
+        {
+            if (ConsumeCancel())
+                return true;
+
+            if (!ConsumeConfirm())
+                return false;
+
+            Button focused = CurrentFocusedButton();
+            if (focused == null || !focused.IsInteractable() || !focused.gameObject.activeInHierarchy)
+                return true;
+
+            if (page == FlowPage.Report && (focused == _summaryTab || focused == _logTab))
+            {
+                FocusButton(_continueButton);
+                return false;
+            }
+
+            focused.onClick.Invoke();
+            return _dismissRequested;
+        }
+
+        private static bool PointerPressed()
+        {
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+                return true;
+            return Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame;
         }
 
         private static bool CancelPressed()
@@ -1531,6 +1703,196 @@ namespace Chainbound.Combat
         private void HandleMobileCancelPressed()
         {
             _latchedCancel = true;
+        }
+
+        private void HandleMobileConfirmPressed()
+        {
+            _latchedConfirm = true;
+        }
+
+        private void ConfigureAdvanceNavigation()
+        {
+            Button tabUp = _showingLog && _logTab != null ? _logTab : _summaryTab;
+            SetExplicitNavigation(_summaryTab, _logTab, _logTab, null, _continueButton);
+            SetExplicitNavigation(_logTab, _summaryTab, _summaryTab, null, _continueButton);
+            SetExplicitNavigation(_continueButton, null, null, tabUp, null);
+            if (_rewardsContinue != null)
+            {
+                _rewardsContinue.navigation = new Navigation { mode = Navigation.Mode.None };
+            }
+        }
+
+        private static void SetExplicitNavigation(Button button, Button left, Button right, Button up, Button down)
+        {
+            if (button == null)
+                return;
+
+            button.navigation = new Navigation
+            {
+                mode = Navigation.Mode.Explicit,
+                selectOnLeft = left,
+                selectOnRight = right,
+                selectOnUp = up,
+                selectOnDown = down,
+            };
+        }
+
+        private static void EnablePageInteraction(CanvasGroup group)
+        {
+            if (group == null)
+                return;
+
+            group.alpha = 1f;
+            group.interactable = true;
+            group.blocksRaycasts = true;
+        }
+
+        private void FocusButton(Button button)
+        {
+            if (button == null)
+                return;
+
+            EnsureUiInputReady();
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null)
+                return;
+
+            _lastFocusedButton = null;
+            eventSystem.SetSelectedGameObject(null);
+            eventSystem.SetSelectedGameObject(button.gameObject);
+            SyncFocusedButtonVisual();
+        }
+
+        private Button CurrentFocusedButton()
+        {
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null || eventSystem.currentSelectedGameObject == null)
+                return null;
+            return eventSystem.currentSelectedGameObject.GetComponent<Button>();
+        }
+
+        private void SyncFocusedButtonVisual()
+        {
+            EventSystem eventSystem = EventSystem.current;
+            GameObject focusedObject = eventSystem != null ? eventSystem.currentSelectedGameObject : null;
+            if (focusedObject == _lastFocusedButton)
+                return;
+
+            _lastFocusedButton = focusedObject;
+            Button focused = focusedObject != null ? focusedObject.GetComponent<Button>() : null;
+            if (focused == _summaryTab || focused == _logTab)
+                SetTab(focused == _logTab);
+            if (_continueButton != null)
+                SetButtonSelected(_continueButton, focused == null || focused == _continueButton);
+            if (focused == _summaryTab || focused == _logTab)
+            {
+                SetButtonSelected(_summaryTab, focused == _summaryTab);
+                SetButtonSelected(_logTab, focused == _logTab);
+            }
+            else
+            {
+                SetButtonSelected(_summaryTab, !_showingLog);
+                SetButtonSelected(_logTab, _showingLog);
+            }
+
+            if (_rewardsContinue != null)
+                SetButtonSelected(_rewardsContinue, focused == null || focused == _rewardsContinue);
+        }
+
+        private static void EnsureUiInputReady()
+        {
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null)
+                return;
+
+            if (!eventSystem.enabled)
+                eventSystem.enabled = true;
+
+            InputSystemUIInputModule inputModule = eventSystem.GetComponent<InputSystemUIInputModule>();
+            if (inputModule != null && !inputModule.enabled)
+                inputModule.enabled = true;
+        }
+
+        private void TickReportScroll()
+        {
+            ApplyReadingScroll(_scroll);
+            UpdateLogOverflowFade();
+        }
+
+        private void TickRewardsScroll()
+        {
+            ApplyReadingScroll(_rewardsScroll);
+            UpdateRewardsOverflowFade();
+        }
+
+        private static void ApplyReadingScroll(ScrollRect scroll)
+        {
+            if (scroll == null || scroll.content == null || scroll.viewport == null)
+                return;
+
+            float contentHeight = scroll.content.rect.height;
+            float viewHeight = scroll.viewport.rect.height;
+            float range = contentHeight - viewHeight;
+            if (range <= 1f)
+                return;
+
+            float delta = 0f;
+            Gamepad pad = Gamepad.current;
+            if (pad != null)
+            {
+                float stick = pad.rightStick.y.ReadValue();
+                if (Mathf.Abs(stick) > 0.28f)
+                    delta += stick * 520f * Time.unscaledDeltaTime;
+                if (pad.leftShoulder.wasPressedThisFrame)
+                    delta += viewHeight * 0.85f;
+                if (pad.rightShoulder.wasPressedThisFrame)
+                    delta -= viewHeight * 0.85f;
+            }
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null)
+            {
+                if (keyboard.pageUpKey.wasPressedThisFrame)
+                    delta += viewHeight * 0.85f;
+                if (keyboard.pageDownKey.wasPressedThisFrame)
+                    delta -= viewHeight * 0.85f;
+            }
+
+            if (Mathf.Abs(delta) < 0.01f)
+                return;
+
+            scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + (delta / range));
+        }
+
+        private void EnsureLogOverflowFade()
+        {
+            if (_scroll == null || _scroll.viewport == null)
+                return;
+            if (_logOverflowFade != null)
+                return;
+
+            Transform existing = _scroll.viewport.Find("LogOverflowFade");
+            if (existing == null)
+                return;
+
+            Image image = existing.GetComponent<Image>();
+            if (image == null)
+                return;
+
+            _logOverflowFade = image;
+            image.enabled = false;
+        }
+
+        private void UpdateLogOverflowFade()
+        {
+            if (_logOverflowFade == null)
+                EnsureLogOverflowFade();
+            if (_logOverflowFade == null || _scroll == null || _scroll.content == null || _scroll.viewport == null)
+                return;
+
+            float range = _scroll.content.rect.height - _scroll.viewport.rect.height;
+            bool moreBelow = range > 8f && _scroll.verticalNormalizedPosition > 0.02f;
+            _logOverflowFade.enabled = moreBelow;
         }
 
         private static void SetAdvanceButtonInteractable(Button button, bool interactable)
@@ -1592,33 +1954,36 @@ namespace Chainbound.Combat
             if (service == null)
                 return;
             _inputLock = service.AcquireLock("CombatPostBattleFlow", InputLockChannel.All, this);
-            SubscribeMobileCancel();
+            SubscribeMobileAdvance();
         }
 
         private void ReleaseInputLock()
         {
-            UnsubscribeMobileCancel();
+            UnsubscribeMobileAdvance();
             if (_inputLock.IsValid)
                 _inputLock.Release();
             _inputLock = default;
             _latchedCancel = false;
+            _latchedConfirm = false;
         }
 
-        private void SubscribeMobileCancel()
+        private void SubscribeMobileAdvance()
         {
-            UnsubscribeMobileCancel();
+            UnsubscribeMobileAdvance();
             _mobileInput = FindFirstObjectByType<MobileInputManager>(FindObjectsInactive.Include);
             if (_mobileInput == null)
                 return;
 
+            _mobileInput.OnAPressed += HandleMobileConfirmPressed;
             _mobileInput.OnBPressed += HandleMobileCancelPressed;
         }
 
-        private void UnsubscribeMobileCancel()
+        private void UnsubscribeMobileAdvance()
         {
             if (_mobileInput == null)
                 return;
 
+            _mobileInput.OnAPressed -= HandleMobileConfirmPressed;
             _mobileInput.OnBPressed -= HandleMobileCancelPressed;
             _mobileInput = null;
         }

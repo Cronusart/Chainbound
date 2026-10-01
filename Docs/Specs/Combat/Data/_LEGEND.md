@@ -405,6 +405,8 @@ Armed triggers are `FoeKO`, `EnemyMiss`, `IncomingDebuff`, `IncomingHit`, and `O
 
 1. Open `SpeciesMovePools.csv`.
 2. Find or add the species row.
-3. List `MoveId` values in `LearnableMoves` (pipe-separated).
-4. List the newly granted/equipped move IDs in `InitialMoves`. Every initial move must also exist in that species' learnable or exclusive pool.
-5. Re-import: `Import Species Pools (CSV)`.
+3. List the 4-5 progression moves in `LearnableMoves` (pipe-separated). Put species-locked moves in `ExclusiveMoves` instead.
+4. Set `FlagshipMove` to the signature. Import gives it weight 8, and weight 24 at 5 stars. Every other pool move gets weight 23.
+5. List `InitialMoves`. Every initial move must also exist in that species' learnable or exclusive pool.
+6. List 0-2 typed theme exceptions in `OffTypeMoves`. These equip even when the type does not match. They may also sit in the progression pool.
+7. Re-import: `Import Species Pools (CSV)`.

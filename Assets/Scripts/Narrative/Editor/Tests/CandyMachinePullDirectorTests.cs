@@ -57,7 +57,7 @@ public sealed class CandyMachinePullDirectorTests
     }
 
     [Test]
-    public void DisableCancelsWithoutCompletingAndRestoresPose()
+    public void CancelCancelsWithoutCompletingAndRestoresPose()
     {
         GameObject root = BuildDirector(out CandyMachinePullDirector director, out _, out Transform spheres,
             out Transform glow, out Transform door);
@@ -67,7 +67,10 @@ public sealed class CandyMachinePullDirectorTests
         try
         {
             director.BeginPull(() => completions++);
-            director.enabled = false;
+            // EditMode does not guarantee MonoBehaviour.OnDisable when only
+            // the enabled flag changes. Exercise the public cancellation
+            // contract that OnDisable and OnDestroy both delegate to.
+            director.CancelAndRestore();
 
             Assert.That(completions, Is.Zero);
             Assert.That(director.IsPlaying, Is.False);

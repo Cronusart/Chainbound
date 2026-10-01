@@ -978,8 +978,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 555.18756, y: -64}
-  m_SizeDelta: {x: 362.12503, y: 128}
+  m_AnchoredPosition: {x: 512.0877, y: -64}
+  m_SizeDelta: {x: 333.3918, y: 128}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7059287060088448427
 CanvasRenderer:
@@ -1211,6 +1211,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3019459822411895847}
   - component: {fileID: 6710470387893675359}
+  - component: {fileID: 5372384478066763123}
   m_Layer: 0
   m_Name: Slot_Detail
   m_TagString: Untagged
@@ -1258,6 +1259,18 @@ MonoBehaviour:
   m_FlexibleWidth: 0.3
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!225 &5372384478066763123
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 861545027657375382}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &890841157422414521
 GameObject:
   m_ObjectHideFlags: 0
@@ -1323,7 +1336,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: FOLIO
+  m_text: ROLL
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
   m_sharedMaterial: {fileID: -494342321409102770, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
@@ -2198,7 +2211,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: this is where we
+  m_text: ROLL A NEW MOVE, OR STAMP A MOVE YOU ALREADY KNOW.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
   m_sharedMaterial: {fileID: -494342321409102770, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
@@ -2576,8 +2589,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 181.06252, y: -16}
-  m_SizeDelta: {x: 298.12503, y: 22}
+  m_AnchoredPosition: {x: 166.6959, y: -16}
+  m_SizeDelta: {x: 269.3918, y: 22}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &3702659034601035604
 CanvasRenderer:
@@ -3256,7 +3269,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: FOLIO BROWSE
+  m_text: MOVE BROWSE
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
   m_sharedMaterial: {fileID: -494342321409102770, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
@@ -3406,6 +3419,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardRoot: {fileID: 7547795619643575466}
   cardFace: {fileID: 3081669862468784310}
+  learnedCardFace: {fileID: 21300000, guid: acff54fba868e564c8fc1a9f62f9ff9b, type: 3}
   typeIcon: {fileID: 3407829892649020472}
   moveNameStamp: {fileID: 5099814178210053608}
   statsStamp: {fileID: 4909380508686510187}
@@ -3701,8 +3715,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 32
-    m_Right: 32
+    m_Left: 64
+    m_Right: 64
     m_Top: 32
     m_Bottom: 50
   m_ChildAlignment: 0
@@ -4997,7 +5011,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: PRESS A TO PULL
+  m_text: LEFT / RIGHT TO PICK | CONFIRM TO SELECT
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
   m_sharedMaterial: {fileID: -494342321409102770, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
@@ -5514,7 +5528,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -400, y: 0}
+  m_SizeDelta: {x: -240, y: 0}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!222 &7963656231908221734
 CanvasRenderer:
@@ -6234,6 +6248,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3492833929273767247}
   - component: {fileID: 7288298475502393900}
+  - component: {fileID: 6127588601697240126}
   m_Layer: 0
   m_Name: Slot_Browse
   m_TagString: Untagged
@@ -6281,6 +6296,18 @@ MonoBehaviour:
   m_FlexibleWidth: 0.3
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!225 &6127588601697240126
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519039095829603357}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &4545783371002689458
 GameObject:
   m_ObjectHideFlags: 0
@@ -6630,8 +6657,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 181.06252, y: -16}
-  m_SizeDelta: {x: 298.12503, y: 22}
+  m_AnchoredPosition: {x: 166.6959, y: -16}
+  m_SizeDelta: {x: 269.3918, y: 22}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &6146400342104986845
 CanvasRenderer:
@@ -7674,7 +7701,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: GET KNOWN
+  m_text: ROLL
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
   m_sharedMaterial: {fileID: -494342321409102770, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
@@ -8200,7 +8227,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: FOLIO
+  m_text: CHOOSE A MODE
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
   m_sharedMaterial: {fileID: -494342321409102770, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
@@ -8920,8 +8947,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 32
-    m_Right: 32
+    m_Left: 64
+    m_Right: 64
     m_Top: 32
     m_Bottom: 32
   m_ChildAlignment: 0
@@ -9055,8 +9082,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 400.12503, y: -294}
-  m_SizeDelta: {x: 736.25006, y: 128}
+  m_AnchoredPosition: {x: 403.3918, y: -294}
+  m_SizeDelta: {x: 678.7836, y: 128}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &7241756773373610743
 MonoBehaviour:
@@ -9159,6 +9186,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07074cb7bb2a0e04d93921d0401f0606, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  runtimeMode: 0
   enableDevnetOwnershipSpine: 0
   ownershipGateway: {fileID: 0}
   solanaConfig: {fileID: 0}
@@ -9176,6 +9204,7 @@ MonoBehaviour:
   stampTabButton: {fileID: 1349791247265592223}
   folioTabMarker: {fileID: 0}
   stampTabMarker: {fileID: 0}
+  browseColumnRoot: {fileID: 0}
   browseHeader: {fileID: 3396481694354456973}
   browseSubheader: {fileID: 9005262080683476208}
   folioBrowse: {fileID: 6701986889025907269}
@@ -9185,6 +9214,7 @@ MonoBehaviour:
   recentContent: {fileID: 5640663121025943080}
   listContent: {fileID: 6427047154166088450}
   listFooter: {fileID: 3320441613009073579}
+  detailColumnRoot: {fileID: 0}
   detailHeader: {fileID: 0}
   detailSubheader: {fileID: 0}
   previewCaption: {fileID: 0}
@@ -9203,6 +9233,9 @@ MonoBehaviour:
   tokensLabel: {fileID: 0}
   reviewHint: {fileID: 0}
   primaryButton: {fileID: 0}
+  modeColumnRoot: {fileID: 3822866466108673580}
+  slotBrowseGroup: {fileID: 6127588601697240126}
+  slotDetailGroup: {fileID: 5372384478066763123}
   bodyRow: {fileID: 3625319980684951427}
   detailBodyView: {fileID: 7549944978016269610}
   resultView: {fileID: 4201609972865262514}
@@ -9758,8 +9791,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 181.06252, y: -64}
-  m_SizeDelta: {x: 362.12503, y: 128}
+  m_AnchoredPosition: {x: 166.6959, y: -64}
+  m_SizeDelta: {x: 333.3918, y: 128}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1135957702852088923
 CanvasRenderer:
@@ -11725,8 +11758,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 181.06252, y: -77}
-  m_SizeDelta: {x: 298.12503, y: 70}
+  m_AnchoredPosition: {x: 166.6959, y: -77}
+  m_SizeDelta: {x: 269.3918, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2746688298291264077
 CanvasRenderer:
@@ -11974,8 +12007,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 181.06252, y: -77}
-  m_SizeDelta: {x: 298.12503, y: 70}
+  m_AnchoredPosition: {x: 166.6959, y: -77}
+  m_SizeDelta: {x: 269.3918, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7770597551958833535
 CanvasRenderer:
@@ -12319,7 +12352,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: FOLIO / GET KNOWN
+  m_text: ROLL A MOVE
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}
   m_sharedMaterial: {fileID: -494342321409102770, guid: 11a8f4b20f5060542ada712ec877cea3, type: 2}

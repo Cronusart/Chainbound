@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_momo_beer_sequence
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_momo_beer_sequence
+  startCheckpointId: coffee_momo_idle
+  safeResumeLabel: coffee_momo_idle
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 1
+  autoStartQuestId: coffee_and_beer
+  autoStartLifecycleMask: 8
+  autoStartSkipWorldFlagKey: world.coffee.cold_beer_granted
+  autoStartRequiredWorldFlagKey: world.coffee.zeb_departed
+  steps:
+  - {fileID: 11400000, guid: bac508a429832cf47aff6bf56a86977b, type: 2}
+  - {fileID: 11400000, guid: 51c1903d6297a174e9de24b0f00506c5, type: 2}
+  - {fileID: 11400000, guid: 9f342bd20a914ce408e67ee31564ecde, type: 2}
+  - {fileID: 11400000, guid: 6ea2e81edea62cc46aa2affd5c222392, type: 2}
+  - {fileID: 11400000, guid: d851ae64ec3406349a55688733e68e55, type: 2}
+  - {fileID: 11400000, guid: 20bf885334d4ba44cbc14261c1435529, type: 2}
+  - {fileID: 11400000, guid: 69708c6b4595ec846983519f57af535a, type: 2}
+  - {fileID: 11400000, guid: 7052ec8e47c6e524380861ccd2758e18, type: 2}
+  - {fileID: 11400000, guid: d0bd18606cd3d6a4b8b17efb09673efa, type: 2}
+  - {fileID: 11400000, guid: b842e422eedf27347aedd1aad307907d, type: 2}
+  - {fileID: 11400000, guid: 401402519b83e22409404c2c9ca68d48, type: 2}
+  - {fileID: 11400000, guid: bbf967f53d9c8eb49b561ebc2ea66cd2, type: 2}
+  - {fileID: 11400000, guid: f0e864c99817f3a4eb71ae441a3031d8, type: 2}
+  - {fileID: 11400000, guid: 3b536b350e3dc584d9bf599d708e297d, type: 2}
+  - {fileID: 11400000, guid: 52dae4f65670f204fbcb3594c5a38948, type: 2}
+  - {fileID: 11400000, guid: a422388ada2546f4a914cc1d240cc01d, type: 2}
+  - {fileID: 11400000, guid: aa37f06eefb20c94d83ba2b4d7e2cb1a, type: 2}
+  - {fileID: 11400000, guid: db822cdd6207d85489b4062a05a697e7, type: 2}

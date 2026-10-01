@@ -27,6 +27,7 @@ LAYERS = TEMPLATES / "layers"
 EXAMPLES = KIT / "examples"
 FONT_PATH = REPO / "Assets/Sprites/UI/PixeloidSans.ttf"
 CARD_FRONT = REPO / "Assets/Sprites/UI/LibraryCards/librarycard_front.png"
+CARD_FRONT_LEARNED = REPO / "Assets/Sprites/UI/LibraryCards/librarycard_learned_front.png"
 SCANLINE_BG = REPO / "Assets/Sprites/UI/LibraryCards/card_scanline_bg.gif"
 CARD_CONTENT_HEIGHT = 640
 
@@ -53,6 +54,7 @@ def rgba(key: str, default: list[int] | None = None) -> tuple[int, int, int, int
 
 SAGE = rgba("sage")
 INK = rgba("ink")
+LEARNED_INK = rgba("learned_ink")
 MOD_GHOST = rgba("mod_ghost")
 STICKER_OUTLINE = rgba("sticker_outline", [245, 240, 228, 255])
 
@@ -254,11 +256,38 @@ def draw_rotated_box_L(
     blit_L(mask, patch, (x, y))
 
 
-def stamp_glyphs(base: Image.Image, draw_fn, seed: int = 11, color: tuple[int, int, int, int] | None = None) -> Image.Image:
-    """Draw white glyphs into a mask, distress, tint as rubber-stamp ink."""
+def face_front(face: str) -> Path:
+    if face == "learned" and CARD_FRONT_LEARNED.is_file():
+        return CARD_FRONT_LEARNED
+    return CARD_FRONT if CARD_FRONT.is_file() else TEMPLATES / "card_front_base.png"
+
+
+def face_ink(face: str) -> tuple[int, int, int, int]:
+    return LEARNED_INK if face == "learned" else INK
+
+
+def stamp_glyphs(
+    base: Image.Image,
+    draw_fn,
+    seed: int = 11,
+    color: tuple[int, int, int, int] | None = None,
+    distress: bool = True,
+) -> Image.Image:
+    """Draw white glyphs into a mask, optionally distress, then tint as ink."""
     tint = color or INK
     mask = Image.new("L", base.size, 0)
     draw_fn(mask)
+    if not distress:
+        ink = Image.new("RGBA", base.size, (0, 0, 0, 0))
+        ip = ink.load()
+        mp = mask.load()
+        w, h = base.size
+        for y in range(h):
+            for x in range(w):
+                a = mp[x, y]
+                if a:
+                    ip[x, y] = (tint[0], tint[1], tint[2], a)
+        return Image.alpha_composite(base, ink)
 
     dilate = int(INK_CFG.get("edge_dilate", 3))
     erode = int(INK_CFG.get("edge_erode", 3))
@@ -397,6 +426,15 @@ def paste_sticker_icon(card: Image.Image, icon_path: str) -> None:
     card.alpha_composite(sticker, (sx, sy))
 
 
+def render_type_sticker_overlay(icon_path: str) -> Image.Image:
+    """Render one reusable transparent sticker layer for the square card canvas."""
+    front_path = CARD_FRONT if CARD_FRONT.is_file() else TEMPLATES / "card_front_base.png"
+    size = Image.open(front_path).size
+    overlay = Image.new("RGBA", size, (0, 0, 0, 0))
+    paste_sticker_icon(overlay, icon_path)
+    return overlay
+
+
 
 def format_mod_effect(mod: dict) -> str:
     """Prefer stamp-locked exact magnitude; fall back to catalog range text."""
@@ -447,8 +485,10 @@ def format_mod_label(mod: dict | None, slot: int) -> tuple[str, bool]:
     return format_mod_line(mod), True
 
 
-def render_front(data: dict) -> Image.Image:
-    front_path = CARD_FRONT if CARD_FRONT.is_file() else TEMPLATES / "card_front_base.png"
+def render_front(data: dict, face: str = "rolled") -> Image.Image:
+    front_path = face_front(face)
+    ink = face_ink(face)
+    clean = face == "learned"
     card = Image.open(front_path).convert("RGBA")
     paste_sticker_icon(card, str(data.get("typeIconPath") or ""))
 
@@ -462,7 +502,7 @@ def render_front(data: dict) -> Image.Image:
         font = fit_font(probe, name, int(LAYOUT["name_font_size"]), int(LAYOUT["name_max_width"]))
         draw_rotated_text_L(mask, name, name_xy, font, name_angle)
 
-    card = stamp_glyphs(card, draw_name, seed=hash(str(data.get("moveId", name))) % 997)
+    card = stamp_glyphs(card, draw_name, seed=hash(str(data.get("moveId", name))) % 997, color=ink, distress=not clean)
 
     stats_y = int(LAYOUT["stats_y"]) + y_shift
     stats_x = int(LAYOUT["stats_power_x"])
@@ -500,7 +540,7 @@ def render_front(data: dict) -> Image.Image:
                     stats_angle,
                 )
 
-    card = stamp_glyphs(card, draw_stats, seed=23)
+    card = stamp_glyphs(card, draw_stats, seed=23, color=ink, distress=not clean)
 
     mods = {int(m["slot"]): m for m in data.get("mods") or []}
     mod_x = int(LAYOUT["mod_x"])
@@ -524,16 +564,17 @@ def render_front(data: dict) -> Image.Image:
         ) -> None:
             draw_rotated_text_L(mask, _text, _origin, _font, _angle)
 
-        card = stamp_glyphs(card, draw_mod, seed=40 + slot)
+        card = stamp_glyphs(card, draw_mod, seed=40 + slot, color=ink, distress=True)
 
     card = stamp_rarity_dots(card, data, mods)
     return card
 
 
-def render_modifier_overlay(mod: dict, slot: int = 1) -> Image.Image:
-    """Render canonical Pixeloid/distressed modifier ink onto a transparent square layer."""
-    base = Image.open(CARD_FRONT).convert("RGBA")
+def render_modifier_overlay(mod: dict, slot: int = 1, face: str = "rolled") -> Image.Image:
+    """Render canonical Pixeloid modifier ink onto a transparent square layer."""
+    base = Image.open(face_front(face)).convert("RGBA")
     layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    ink = face_ink(face)
     label = format_mod_line(mod)
     if not label:
         return layer
@@ -549,6 +590,7 @@ def render_modifier_overlay(mod: dict, slot: int = 1) -> Image.Image:
         layer,
         lambda mask: draw_rotated_text_L(mask, label, origin, font, angle),
         seed=40 + slot,
+        color=ink,
     )
 
 

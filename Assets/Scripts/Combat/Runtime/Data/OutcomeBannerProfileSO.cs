@@ -24,8 +24,9 @@ namespace Chainbound.Combat
         public Sprite[] captureFrames;
 
         [Header("Strip Motion")]
+        [Tooltip("Height of the banner while it slides in, as a fraction of its rest height. 0.028 reads as a thin sliver.")]
         [Range(0.02f, 0.25f)]
-        public float stripScaleY = 0.07f;
+        public float stripScaleY = 0.028f;
 
         [Header("Timing")]
         [Tooltip("Frames per second for the sprite animation.")]

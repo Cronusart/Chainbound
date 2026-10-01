@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: automated_pressure
   displayName: Automated Pressure
-  description: Passive - end turn has 25% chance to lower a random foe stat.
+  description: Passive - end of turn lowers one random stat on a random foe by 1.
   category: 4
   baseType: 11
   rarity: 0
@@ -44,7 +44,7 @@ MonoBehaviour:
     statusId: 0
     statusDuration: 0
     targetOverride: 6
-    chance: 0.25
+    chance: 1
     reflectPercent: 0
     stageStat: 0
     stageAmount: -1
@@ -137,6 +137,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

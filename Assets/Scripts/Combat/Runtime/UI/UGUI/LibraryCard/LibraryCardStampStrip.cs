@@ -27,8 +27,18 @@ namespace Chainbound.Combat
         static int atlasHeight;
         static bool atlasUsesAlpha = true;
 
-        public static Sprite Bake(string text, float fontSize, float maxWidth, int seed, TMP_FontAsset font = null, float lineHeight = 0f)
+        public static Sprite Bake(
+            string text,
+            float fontSize,
+            float maxWidth,
+            int seed,
+            TMP_FontAsset font = null,
+            float lineHeight = 0f,
+            Color32 ink = default,
+            bool distress = true)
         {
+            if (ink.a == 0)
+                ink = Ink;
             text = (text ?? string.Empty).ToUpperInvariant().Replace("\r\n", "\n").Replace('\r', '\n');
             if (text.Length == 0)
                 return null;
@@ -102,7 +112,10 @@ namespace Chainbound.Combat
                 }
             }
 
-            Distress(pixels, width, height, seed);
+            if (distress)
+                Distress(pixels, width, height, seed, ink);
+            else
+                Tint(pixels, ink);
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
             {
                 filterMode = FilterMode.Point,
@@ -236,7 +249,21 @@ namespace Chainbound.Combat
             }
         }
 
-        static void Distress(Color32[] pixels, int width, int height, int seed)
+        static void Tint(Color32[] pixels, Color32 ink)
+        {
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                if (pixels[i].a < 8)
+                {
+                    pixels[i] = new Color32(0, 0, 0, 0);
+                    continue;
+                }
+
+                pixels[i] = new Color32(ink.r, ink.g, ink.b, pixels[i].a);
+            }
+        }
+
+        static void Distress(Color32[] pixels, int width, int height, int seed, Color32 ink)
         {
             var dilated = new Color32[pixels.Length];
             Filter(pixels, dilated, width, height, true);
@@ -257,7 +284,7 @@ namespace Chainbound.Combat
                 int alpha = Math.Max(0, pixels[i].a - n);
                 pixels[i] = alpha < 8
                     ? new Color32(0, 0, 0, 0)
-                    : new Color32(Ink.r, Ink.g, Ink.b, (byte)alpha);
+                    : new Color32(ink.r, ink.g, ink.b, (byte)alpha);
             }
         }
 

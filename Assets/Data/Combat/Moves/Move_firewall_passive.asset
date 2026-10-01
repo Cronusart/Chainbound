@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: firewall_passive
   displayName: Firewall Passive
-  description: Passive - take 25% less damage from projectile moves.
+  description: Passive - projectile hits including spread deal 25% less damage.
   category: 4
   baseType: 4
-  rarity: 0
+  rarity: 1
   targeting: 4
   contactType: 2
   power: 0
@@ -137,6 +137,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

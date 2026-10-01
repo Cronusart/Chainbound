@@ -79,7 +79,7 @@ namespace Chainbound.Combat
                         break;
 
                     case UtilityEffectType.DrainAP:
-                        _apService?.Drain(ResolveUtilityTarget(source, target, effect), ResolveApAmount(effect), turn, move.definitionId);
+                        DrainApEffect(source, target, move, effect, turn, context);
                         break;
 
                     case UtilityEffectType.StealAP:
@@ -847,6 +847,42 @@ namespace Chainbound.Combat
             if (hits < 0)
                 return "unlimited hits";
             return $"{hits} hit{(hits == 1 ? string.Empty : "s")}";
+        }
+
+        private void DrainApEffect(
+            ChainlingInstance source,
+            ChainlingInstance target,
+            MoveInstance move,
+            UtilityEffectPayload effect,
+            int turn,
+            UtilityEffectExecutionContext context)
+        {
+            int amount = ResolveApAmount(effect);
+            if (amount <= 0 || _apService == null)
+                return;
+
+            if (effect != null && effect.targetOverride == MoveTargeting.AllEnemies)
+            {
+                TeamState foes = context?.targetTeam;
+                if (foes == null)
+                    return;
+                System.Collections.Generic.List<ChainlingInstance> activeFoes = foes.GetActiveChainlings();
+                if (activeFoes == null || activeFoes.Count == 0)
+                    return;
+                bool higherApOnly = string.Equals(move.definitionId, "fee_collector", StringComparison.Ordinal);
+                for (int i = 0; i < activeFoes.Count; i++)
+                {
+                    ChainlingInstance foe = activeFoes[i];
+                    if (foe == null || !foe.isAlive || foe == source)
+                        continue;
+                    if (higherApOnly && foe.currentAP <= source.currentAP)
+                        continue;
+                    _apService.Drain(foe, amount, turn, move.definitionId);
+                }
+                return;
+            }
+
+            _apService.Drain(ResolveUtilityTarget(source, target, effect), amount, turn, move.definitionId);
         }
 
         private static int ResolveApAmount(UtilityEffectPayload effect)

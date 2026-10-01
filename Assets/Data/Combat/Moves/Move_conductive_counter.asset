@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: conductive_counter
   displayName: Conductive Counter
-  description: Passive - on contact hit counter 10% damage and gain +1 AP.
+  description: Passive - once a turn counter 15% of contact damage taken and gain
+    +1 AP.
   category: 4
   baseType: 7
-  rarity: 1
+  rarity: 2
   targeting: 4
   contactType: 2
   power: 0
@@ -117,6 +118,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

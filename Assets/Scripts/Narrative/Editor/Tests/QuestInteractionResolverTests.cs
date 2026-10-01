@@ -579,6 +579,68 @@ public class QuestInteractionResolverTests
     }
 
     [Test]
+    public void Resolve_WorldFlagIsFalseWhenAbsentAndIsTrueWhenSet()
+    {
+        QuestService service = NarrativeTestUtility.CreateQuestService();
+        cleanup.Add(service.gameObject);
+
+        QuestDefinitionSO definition = NarrativeTestUtility.CreateQuestDefinition(
+            "coffee_flags",
+            NarrativeTestUtility.CreateObjective("talk", targetAmount: 1, currentProgress: 0));
+        cleanup.Add(definition);
+        NarrativeTestUtility.SetQuestLifecycle(service, definition, QuestLifecycleState.Active);
+
+        DialogueSequenceSO beerDialogue = NarrativeTestUtility.CreateDialogue("beer");
+        DialogueSequenceSO fallbackDialogue = NarrativeTestUtility.CreateDialogue("fallback");
+        cleanup.Add(beerDialogue);
+        cleanup.Add(fallbackDialogue);
+
+        QuestInteractionRule beerRule = new QuestInteractionRule
+        {
+            label = "beer",
+            dialogue = beerDialogue,
+            triggerId = "trigger_beer",
+            worldFlagPredicates = new List<QuestInteractionWorldFlagPredicate>
+            {
+                new QuestInteractionWorldFlagPredicate
+                {
+                    key = "world.coffee.zeb_departed",
+                    comparison = QuestInteractionMemoryFlagComparison.IsTrue
+                },
+                new QuestInteractionWorldFlagPredicate
+                {
+                    key = "world.coffee.cold_beer_granted",
+                    comparison = QuestInteractionMemoryFlagComparison.IsFalse
+                }
+            }
+        };
+
+        QuestInteractionProfileSO profile = NarrativeTestUtility.CreateProfile(
+            definition.QuestId,
+            new[] { beerRule },
+            activeFallbackDialogue: fallbackDialogue,
+            activeFallbackTriggerId: "fallback_trigger");
+        cleanup.Add(profile);
+
+        ProfileWorldFlagStateService flags = ProfileWorldFlagStateService.Instance;
+        cleanup.Add(flags.gameObject);
+
+        QuestInteractionResolver.QuestInteractionResolution before = QuestInteractionResolver.Resolve(
+            service, null, null, null, null, profile);
+        Assert.That(before.TriggerId, Is.EqualTo("fallback_trigger"));
+
+        flags.SetFlag("world.coffee.zeb_departed", true);
+        QuestInteractionResolver.QuestInteractionResolution ready = QuestInteractionResolver.Resolve(
+            service, null, null, null, null, profile);
+        Assert.That(ready.TriggerId, Is.EqualTo("trigger_beer"));
+
+        flags.SetFlag("world.coffee.cold_beer_granted", true);
+        QuestInteractionResolver.QuestInteractionResolution after = QuestInteractionResolver.Resolve(
+            service, null, null, null, null, profile);
+        Assert.That(after.TriggerId, Is.EqualTo("fallback_trigger"));
+    }
+
+    [Test]
     public void SequenceProgressPredicate_UsesLabelCompletionBoundary()
     {
         SequenceAsset sequence = ScriptableObject.CreateInstance<SequenceAsset>();

@@ -83,7 +83,7 @@ public static class LoomvilleEncounterZoneAuthoring
 
         Debug.Log(
             "[LoomvilleEncounterAuthoring] Authored five quest-gated grass triggers. " +
-            "Day/Dawn: cinislug, caw, snek. Dusk/Night: kreechank, ghosty, deghoul. " +
+            "Day/Dawn: cinislug, forkrook, rattlestake. Dusk/Night: kreechank, keyper, deghoul. " +
             "Starter species are excluded.");
     }
 
@@ -108,6 +108,7 @@ public static class LoomvilleEncounterZoneAuthoring
         WildMovePoolSO rangedPool)
     {
         zone.zoneId = "loomville_grass";
+        zone.combatStageId = CombatStageIds.Loomville;
         zone.area = area;
         zone.encounterChance = -1f;
         zone.cadence = EncounterCadence.PerSecond;
@@ -122,12 +123,12 @@ public static class LoomvilleEncounterZoneAuthoring
         {
             CreateEntry("cinislug", 50, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 60,
                 SegmentWeight(TimeSegment.Dawn, 0.8f), SegmentWeight(TimeSegment.Day, 1.2f)),
-            CreateEntry("caw", 30, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55,
+            CreateEntry("forkrook", 30, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55,
                 SegmentWeight(TimeSegment.Dawn, 1.2f), SegmentWeight(TimeSegment.Day, 0.8f)),
-            CreateEntry("snek", 20, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
+            CreateEntry("rattlestake", 20, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
             CreateEntry("kreechank", 50, TimeSegmentMask.Dusk | TimeSegmentMask.Night, meleePool, 55,
                 SegmentWeight(TimeSegment.Dusk, 1.2f), SegmentWeight(TimeSegment.Night, 0.8f)),
-            CreateEntry("ghosty", 35, TimeSegmentMask.Dusk | TimeSegmentMask.Night, rangedPool, 50,
+            CreateEntry("keyper", 35, TimeSegmentMask.Dusk | TimeSegmentMask.Night, rangedPool, 50,
                 SegmentWeight(TimeSegment.Dusk, 0.8f), SegmentWeight(TimeSegment.Night, 1.2f)),
             CreateEntry("deghoul", 15, TimeSegmentMask.Night, meleePool, 45),
         };
@@ -137,6 +138,7 @@ public static class LoomvilleEncounterZoneAuthoring
         zone.ivMaxOverride = int.MinValue;
         zone.defaultMovePool = null;
         zone.defaultVariantPool = null;
+        AssignCaptureRollConfig(zone);
         EditorUtility.SetDirty(zone);
     }
 
@@ -341,6 +343,16 @@ public static class LoomvilleEncounterZoneAuthoring
 
         if (!hasDay || !hasEvening)
             throw new InvalidOperationException("Loomville encounters must define both daytime and evening species tables.");
+    }
+
+    private static void AssignCaptureRollConfig(EncounterZoneSO zone)
+    {
+        zone.speciesDatabase = AssetDatabase.LoadAssetAtPath<SpeciesDatabaseSO>(
+            "Assets/Data/Combat/ChainlingSpecies/Database/SpeciesDatabase.asset");
+        zone.progressionRewardTables = AssetDatabase.LoadAssetAtPath<ChainlingProgressionRewardTablesSO>(
+            "Assets/Data/Combat/ChainlingProgressionRewardTables.asset");
+        zone.progressionConfig = AssetDatabase.LoadAssetAtPath<ProgressionConfigSO>(
+            "Assets/Data/Combat/Config/ProgressionConfig_Default.asset");
     }
 
     private static T EnsureAsset<T>(string path) where T : ScriptableObject

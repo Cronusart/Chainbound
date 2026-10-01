@@ -12,6 +12,7 @@ namespace Chainbound.Combat
         public int modifierCount;
         public int generatorVersion;
         public string poolHash;
+        public string acquisition;
     }
 
     [Serializable]
@@ -23,6 +24,7 @@ namespace Chainbound.Combat
         public string updateAuthority;
         public string moveId;
         public string knownInstanceId;
+        public string acquisition;
         public string rarity;
         public string modifier1Id;
         public float modifier1EffectValue;
@@ -73,6 +75,7 @@ namespace Chainbound.Combat
         public string operationStatus;
         public string knownInstanceId;
         public string idempotencyKey;
+        public string acquisition;
         public string assetAddress;
         public string message;
         public string signature;
@@ -88,6 +91,7 @@ namespace Chainbound.Combat
         public string operationStatus;
         public string knownInstanceId;
         public string idempotencyKey;
+        public string acquisition;
         public string assetAddress;
         public string signature;
         public string message;
@@ -105,6 +109,7 @@ namespace Chainbound.Combat
     public sealed class OwnershipSpineSnapshot
     {
         public long ramBalance;
+        public int stampRamCost;
         public List<KnownMoveRecord> known = new List<KnownMoveRecord>();
         public List<StampedMoveRecord> stamped = new List<StampedMoveRecord>();
         public PendingStampRecord pendingStamp;
@@ -152,6 +157,7 @@ namespace Chainbound.Combat
     public interface IOwnershipSpineRuntimeService : IKnownMoveService, IStampedMoveService
     {
         long RamBalance { get; }
+        int StampRamCost { get; }
         PendingStampRecord PendingStamp { get; }
         Task RefreshAsync();
         Task<StampMoveResult> ReconcilePendingStampAsync(string idempotencyKey = null);
@@ -181,6 +187,8 @@ namespace Chainbound.Combat
     /// </summary>
     public sealed class OwnershipSpineService : IOwnershipSpineRuntimeService
     {
+        public const int DefaultFirstStampRamCost = 75;
+
         private readonly IOwnershipSpineGateway gateway;
         private readonly string trustedCollection;
         private readonly string trustedUpdateAuthority;
@@ -209,6 +217,7 @@ namespace Chainbound.Combat
         public IReadOnlyList<KnownMoveRecord> CachedKnown => known;
         public IReadOnlyList<StampedMoveRecord> CachedStamped => stamped;
         public long RamBalance { get; private set; }
+        public int StampRamCost { get; private set; } = DefaultFirstStampRamCost;
         public PendingStampRecord PendingStamp { get; private set; }
 
         public async Task<KnownMoveRecord> GetKnownAsync(string idempotencyKey)
@@ -245,6 +254,8 @@ namespace Chainbound.Combat
         public async Task<StampTransactionReview> ReviewStampAsync(StampMoveRequest request)
         {
             ValidateStampRequest(request);
+            await RefreshAsync();
+            EnsureSufficientRamForStamp();
             WalletAccessResult access = await EnsureWalletAccessAsync("review this Stamp");
             if (access.kind != WalletAccessResultKind.Ready)
                 throw new InvalidOperationException(access.message ?? "Wallet access was not authorized.");
@@ -256,6 +267,15 @@ namespace Chainbound.Combat
         public async Task<StampMoveResult> StampMoveAsync(StampMoveRequest request)
         {
             ValidateStampRequest(request);
+            await RefreshAsync();
+            if (RamBalance < StampRamCost)
+            {
+                return new StampMoveResult
+                {
+                    error = $"{StampRamCost} RAM is required to Stamp a move. Current balance: {RamBalance}.",
+                    ramBalance = RamBalance,
+                };
+            }
             WalletAccessResult access = await EnsureWalletAccessAsync("confirm this Stamp transaction");
             if (access.kind != WalletAccessResultKind.Ready)
                 return new StampMoveResult { error = access.message ?? "Wallet access was not authorized." };
@@ -276,6 +296,7 @@ namespace Chainbound.Combat
 
         public async Task<StampMoveResult> ReconcilePendingStampAsync(string idempotencyKey = null)
         {
+            PendingStampRecord pendingBeforeReconcile = PendingStamp;
             StampMoveResult reconciled = await gateway.ReconcileStampAsync(idempotencyKey);
             if (reconciled != null && reconciled.success && reconciled.pending)
             {
@@ -283,11 +304,58 @@ namespace Chainbound.Combat
                 return reconciled;
             }
             if (reconciled == null || !reconciled.success || !reconciled.confirmed)
+            {
+                if (reconciled != null && reconciled.success && !reconciled.pending
+                    && (string.Equals(reconciled.operationStatus, "none", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(reconciled.operationStatus, "failed", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return await RecoverSettledStampFromInventoryAsync(pendingBeforeReconcile, reconciled);
+                }
+
                 return reconciled ?? new StampMoveResult { error = "Stamp reconciliation failed." };
+            }
             string knownInstanceId = !string.IsNullOrWhiteSpace(reconciled.knownInstanceId)
                 ? reconciled.knownInstanceId
-                : PendingStamp?.knownInstanceId;
+                : pendingBeforeReconcile?.knownInstanceId;
             return await HydrateConfirmedStampAsync(knownInstanceId, reconciled);
+        }
+
+        private async Task<StampMoveResult> RecoverSettledStampFromInventoryAsync(
+            PendingStampRecord previousPending,
+            StampMoveResult reconciled)
+        {
+            OwnershipSpineSnapshot snapshot = await gateway.FetchStateAsync();
+            if (snapshot == null)
+                return new StampMoveResult { error = "Ownership authority returned no inventory state." };
+
+            StampedMoveRecord match = FindTrustedStamped(
+                snapshot.stamped,
+                previousPending?.knownInstanceId,
+                previousPending?.assetAddress);
+            ApplySnapshot(snapshot);
+            if (match == null)
+            {
+                // There is no durable open intent anymore. Clear stale client state
+                // and return a terminal, non-error result so the machine unlocks.
+                PendingStamp = null;
+                reconciled.pending = false;
+                reconciled.confirmed = false;
+                if (string.IsNullOrWhiteSpace(reconciled.message))
+                    reconciled.message = "No pending Stamp remains. Authoritative inventory was refreshed.";
+                return reconciled;
+            }
+
+            reconciled.confirmed = true;
+            reconciled.pending = false;
+            reconciled.operationStatus = "confirmed";
+            reconciled.knownInstanceId = match.knownInstanceId;
+            reconciled.assetAddress = match.assetAddress;
+            reconciled.acquisition = match.acquisition;
+            reconciled.verifiedAsset = match;
+            reconciled.ramBalance = RamBalance;
+            reconciled.message = "Recovered confirmed Stamp from authoritative inventory.";
+            PendingStamp = null;
+            return reconciled;
         }
 
         private async Task<StampMoveResult> HydrateConfirmedStampAsync(string knownInstanceId, StampMoveResult submitted)
@@ -301,6 +369,7 @@ namespace Chainbound.Combat
             // move for another attempt.
             if (IsTrustedStamped(submitted.verifiedAsset))
             {
+                submitted.acquisition = submitted.verifiedAsset.acquisition;
                 known.RemoveAll(item => string.Equals(item.instanceId, knownInstanceId, StringComparison.Ordinal));
                 stamped.RemoveAll(item => string.Equals(
                     item.assetAddress,
@@ -334,13 +403,45 @@ namespace Chainbound.Combat
 
             ApplySnapshot(snapshot);
             submitted.ramBalance = RamBalance;
+            submitted.acquisition = match.acquisition;
             submitted.verifiedAsset = match;
             return submitted;
+        }
+
+        private StampedMoveRecord FindTrustedStamped(
+            IReadOnlyList<StampedMoveRecord> records,
+            string knownInstanceId,
+            string assetAddress)
+        {
+            if (records == null)
+                return null;
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                StampedMoveRecord candidate = records[i];
+                if (!IsTrustedStamped(candidate))
+                    continue;
+                if (!string.IsNullOrWhiteSpace(knownInstanceId)
+                    && string.Equals(candidate.knownInstanceId, knownInstanceId, StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
+                if (!string.IsNullOrWhiteSpace(assetAddress)
+                    && string.Equals(candidate.assetAddress, assetAddress, StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
 
         private void ApplySnapshot(OwnershipSpineSnapshot snapshot)
         {
             RamBalance = Math.Max(0L, snapshot.ramBalance);
+            StampRamCost = snapshot.stampRamCost > 0
+                ? snapshot.stampRamCost
+                : DefaultFirstStampRamCost;
             PendingStamp = snapshot.pendingStamp;
             known.Clear();
             if (snapshot.known != null)
@@ -351,12 +452,22 @@ namespace Chainbound.Combat
             ReplaceStamped(snapshot.stamped);
         }
 
+        private void EnsureSufficientRamForStamp()
+        {
+            if (RamBalance < StampRamCost)
+            {
+                throw new InvalidOperationException(
+                    $"{StampRamCost} RAM is required to Stamp a move. Current balance: {RamBalance}.");
+            }
+        }
+
         private static PendingStampRecord ToPendingRecord(StampMoveResult result) => new PendingStampRecord
         {
             operationId = result.operationId,
             operationStatus = result.operationStatus,
             knownInstanceId = result.knownInstanceId,
             idempotencyKey = result.idempotencyKey,
+            acquisition = result.acquisition ?? result.verifiedAsset?.acquisition,
             assetAddress = result.assetAddress,
             signature = result.signature,
             message = result.message,

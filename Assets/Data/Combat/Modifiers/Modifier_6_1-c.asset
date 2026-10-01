@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.1-c
   displayName: Suppress
-  effectDescription: '15-25% chance: target next move -10% power'
+  effectDescription: '15-25% chance: target''s next move deals -10% power. Holds through next turn if they already acted.'
   category: 5
   scope: 0
   minimumRarity: 2

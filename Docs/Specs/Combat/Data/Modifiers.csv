@@ -43,35 +43,35 @@ SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCatego
 # 6.1 On-Hit
 6.1-a,Leech,TRG,Active,Rare,12,16,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 12-16% of damage dealt,0,0,,None
 6.1-b,AP Siphon,TRG,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,0.2,15-25% chance to drain 1 AP on hit,0,0,,None
-6.1-c,Suppress,TRG,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,0.2,15-25% chance: target next move -10% power,0,0,,None
+6.1-c,Suppress,TRG,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,0.2,15-25% chance: target's next move deals -10% power. Holds through next turn if they already acted.,0,0,,None
 6.1-d,Siphon Soft,TRG,Active,Common,5,8,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 5-8% of damage dealt as HP,0,0,,None
 6.1-e,Steady Leech,TRG,Active,Uncommon,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 8-12% of damage dealt as HP,0,0,,None
 6.1-f,Heavy Leech,TRG,Active,Epic,16,20,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 16-20% of damage dealt as HP,0,0,,None
 # 6.2 On-Crit
 6.2-a,Crit Wallet,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: gain +1 AP,0,0,,None
 6.2-b,Crit Shatter,TRG,Active,Epic,2,2,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: target -2 Def stages,0,0,,None
-6.2-c,Crit Feed,TRG,Active,Legendary,25,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: next move gains +25% power,0,0,,None
+6.2-c,Crit Feed,TRG,Active,Legendary,25,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: your next move deals +25% power. Holds through next turn.,0,0,,None
 # 6.3 Conditional
 6.3-a,Execute,TRG,Active,Rare,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,+25-35% damage if target HP < 50%,0,0,,None
 6.3-b,Underdog,TRG,Active,Rare,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,+25-35% damage if your HP < target,0,0,,None
-6.3-c,Grit Guard,TRG,Active,Rare,15,25,,,0,false,false,MeleeAtk,OnHPBelow30,1.0,When HP < 30%: gain 15-25% mitigation for 1 turn,0,0,,None
-6.3-d,Revenge Spark,TRG,Active,Epic,20,30,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnAllyKO,1.0,+20-30% power for 1 turn after ally KO'd,0,0,,None
+6.3-c,Grit Guard,TRG,Active,Rare,15,25,,,0,false,false,MeleeAtk,OnHPBelow30,1.0,When HP < 30%: gain 15-25% mitigation for the rest of this turn,0,0,,None
+6.3-d,Revenge Spark,TRG,Active,Epic,20,30,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnAllyKO,1.0,After an ally is knocked out, your later moves this turn deal +20-30% power,0,0,,None
 6.3-e,Punish Miss,TRG,Active,Rare,20,20,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,If target missed last turn: +20% accuracy +15% power,0,0,,None
 # 6.4 Swap-In
-6.4-a,Brace,TRG,Passive,Common,10,15,,,0,false,false,MeleeAtk,OnSwapIn,1.0,Self gains +10-15% mitigation 1 turn,0,0,,None
+6.4-a,Brace,TRG,Passive,Common,10,15,,,0,false,false,MeleeAtk,OnSwapIn,1.0,On swap in, gain 10-15% mitigation for the rest of this turn,0,0,,None
 6.4-b,Warm Welcome,TRG,Passive,Uncommon,1,1,,,0,false,false,MeleeAtk,OnSwapIn,1.0,Self gains +1 AP on swap in,0,0,,None
 6.4-c,Flex In,TRG,Passive,Rare,1,1,,,0,false,false,MeleeAtk,OnSwapIn,1.0,Self gains +1 random stat stage,0,0,,None
-6.4-d,Cover Ally,TRG,Passive,Uncommon,8,12,Support,,0,false,false,MeleeAtk,OnSwapIn,1.0,Ally gains +8-12% mitigation 1 turn,0,0,,None
+6.4-d,Cover Ally,TRG,Passive,Uncommon,8,12,Support,,0,false,false,MeleeAtk,OnSwapIn,1.0,On swap in, an ally gains 8-12% mitigation for the rest of this turn,0,0,,None
 6.4-e,Hand-Off,TRG,Passive,Epic,1,1,Support,,0,false,false,MeleeAtk,OnSwapIn,1.0,Ally gains +1 AP on your swap in,0,0,,None
 # 6.4 Swap-Out
 6.4-f,Parting Gift,TRG,Passive,Common,1,1,,,0,false,false,MeleeAtk,OnSwapOut,1.0,Self gains +1 AP on swap out,0,0,,None
-6.4-g,Fade Guard,TRG,Passive,Uncommon,5,10,,,0,false,false,MeleeAtk,OnSwapOut,1.0,Self gains +5-10% mitigation 1 turn,0,0,,None
-6.4-h,Spotter,TRG,Passive,Rare,5,10,Support,,0,false,false,MeleeAtk,OnSwapOut,1.0,Ally gains +5-10% accuracy 1 turn,0,0,,None
+6.4-g,Fade Guard,TRG,Passive,Uncommon,5,10,,,0,false,false,MeleeAtk,OnSwapOut,1.0,On swap out, the replacement gains 5-10% mitigation for the rest of this turn,0,0,,None
+6.4-h,Spotter,TRG,Passive,Rare,5,10,Support,,0,false,false,MeleeAtk,OnSwapOut,1.0,On swap out, an ally gains 5-10% accuracy for the rest of this turn,0,0,,None
 6.4-i,Cheer,TRG,Passive,Epic,1,1,Support,,0,false,false,MeleeAtk,OnSwapOut,1.0,Ally gains +1 random stat stage,0,0,,None
 # Section 7 ? Synergy (SYN)
 # 7.1 Team
 7.1-a,Duo Boost,SYN,Active,Uncommon,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+8-12% power per buffed partner,0,0,,None
-7.1-b,Shield Link,SYN,Active,Rare,12,18,Support,,0,false,false,MeleeAtk,None,0,+12-18% mitigation to ally when used,0,0,,None
+7.1-b,Shield Link,SYN,Active,Rare,12,18,Support,,0,false,false,MeleeAtk,None,0,On use, an ally gains 12-18% mitigation for the rest of this turn,0,0,,None
 7.1-c,Hype Pass,SYN,Active,Rare,1,1,Support,,0,false,false,MeleeAtk,None,0,Ally gains +1 random stat stage when move used,0,0,,None
 7.1-d,Mind-Meld,SYN,Active,Epic,0,0,StatusUtility,,0,false,false,MeleeAtk,None,0,Effect also applies to partner (self-buff only),0,0,,None
 # 7.2 Combo
@@ -134,7 +134,7 @@ SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCatego
 6.8-b,Pre-Emptive,TRG,Active,Rare,5,12,StatusUtility|Support|Passive,6.8-c,0,false,false,MeleeAtk,OnBattleStart,0,{n}% chance to cast this move at battle start,0,0,,None,1
 6.8-c,Riposte,TRG,Active,Rare,5,12,StatusUtility|Support|Passive,6.8-b,0,false,false,MeleeAtk,OnIncomingHit,0,{n}% chance to cast this move when hit,0,0,,None,1
 6.8-d,Sticky Mirror,TRG,Passive,Uncommon,5,15,Passive,,0,false,false,MeleeAtk,None,0,{n}% boost to reflect / status-mirror chance,0,0,,None,1
-6.8-e,Sparse Ward,TRG,Active,Uncommon,3,8,StatusUtility|Support|Passive,,0,false,false,MeleeAtk,None,0,+{n}% mitigation per empty bench slot (1 turn),0,0,,None,1
+6.8-e,Sparse Ward,TRG,Active,Uncommon,3,8,StatusUtility|Support|Passive,,0,false,false,MeleeAtk,None,0,+{n}% mitigation per empty bench slot for the rest of this turn,0,0,,None,1
 6.8-f,Cleanse Soft,TRG,Active,Uncommon,5,15,StatusUtility|Support|Passive,,0,false,false,MeleeAtk,None,0,{n}% chance to clear 1 self debuff,0,0,,None,1
-6.8-g,Spotlight,TRG,Active,Uncommon,5,12,Support|StatusUtility,,0,false,false,MeleeAtk,None,1.0,On use: ally +{n}% accuracy for 1 turn,0,0,,None,1
+6.8-g,Spotlight,TRG,Active,Uncommon,5,12,Support|StatusUtility,,0,false,false,MeleeAtk,None,1.0,On use: ally +{n}% accuracy for the rest of this turn,0,0,,None,1
 7.3-a,Shared Buff,SYN,Active,Epic,0,0,StatusUtility|Support,7.1-d,0,false,false,MeleeAtk,None,0,Self-buff also applies to ally,0,0,,None,1

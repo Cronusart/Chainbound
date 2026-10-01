@@ -14,17 +14,68 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   questDefinition: {fileID: 11400000, guid: e4f5a6b7c8d9012a3b4c5d6e7f8091a2, type: 2}
   questId: 
-  rules: []
+  rules:
+  - label: "delivery ready \u2014 stall"
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.holding_tobys_delivery
+      comparison: 2
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: d75db05ec5de89e469c606565cf70a13, type: 2}
+    useDialogueCamera: 1
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  - label: beans before Reynard brews
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.holding_coffee_beans
+      comparison: 2
+    - key: world.coffee.reynard_brewed
+      comparison: 3
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: b79ca60b1cc4b6e4196cc57cd5ecd906, type: 2}
+    useDialogueCamera: 1
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
   inactiveDialogue: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0002, type: 2}
   inactiveTriggerId: 
   inactiveNpcBehavior:
-    mode: 0
+    mode: 1
     behaviorOverride: {fileID: 0}
   activeFallbackDialogue: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0002, type: 2}
   activeFallbackTriggerId: 
   activeFallbackNpcBehavior:
-    mode: 0
+    mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: While coffee_and_beer is Active, Toby nags the player to keep moving on his order.
+  designerNotes: Beans before the brew get a sarcastic redirect. Toby's packed delivery
+    stalls until the next cinematic pass. Otherwise he nags.
   activateQuestOnInactiveInteract: 0
   completeObjectiveOnActivate: 

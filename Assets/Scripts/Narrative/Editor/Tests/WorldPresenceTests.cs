@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
@@ -138,10 +139,42 @@ public sealed class WorldPresenceTests
         NarrativeTestUtility.SetPrivateField(binding, "target", target);
         NarrativeTestUtility.SetPrivateField(binding, "activeWhenTrue", false);
         host.SetActive(true);
+        InvokeBindingLifecycle(binding, "OnEnable");
 
         Assert.That(target.activeSelf, Is.True);
 
         service.SetFlag("world.obstacle.link1.canopy_block", true);
+        Assert.That(target.activeSelf, Is.False);
+    }
+
+    [Test]
+    public async Task Binding_ApplyOnEnableOnly_WaitsForNextEnable()
+    {
+        ProfileWorldFlagStateService service = await HydrateServiceAsync("presence-deferred");
+
+        var host = new GameObject("DeferredPresenceHost");
+        var target = new GameObject("Zeb");
+        host.SetActive(false);
+        cleanup.Add(host);
+        cleanup.Add(target);
+        target.SetActive(true);
+
+        WorldPresenceBinding binding = host.AddComponent<WorldPresenceBinding>();
+        NarrativeTestUtility.SetPrivateField(binding, "presenceId", "world.coffee.zeb_departed");
+        NarrativeTestUtility.SetPrivateField(binding, "target", target);
+        NarrativeTestUtility.SetPrivateField(binding, "activeWhenTrue", false);
+        NarrativeTestUtility.SetPrivateField(binding, "applyOnEnableOnly", true);
+        host.SetActive(true);
+        InvokeBindingLifecycle(binding, "OnEnable");
+
+        Assert.That(target.activeSelf, Is.True);
+        service.SetFlag("world.coffee.zeb_departed", true);
+        Assert.That(target.activeSelf, Is.True, "A deferred presence stays through the current visit.");
+
+        host.SetActive(false);
+        InvokeBindingLifecycle(binding, "OnDisable");
+        host.SetActive(true);
+        InvokeBindingLifecycle(binding, "OnEnable");
         Assert.That(target.activeSelf, Is.False);
     }
 
@@ -183,6 +216,15 @@ public sealed class WorldPresenceTests
         cleanup.Add(service.gameObject);
         await service.HydrateProfileAsync(identity, forceOffline: true);
         return service;
+    }
+
+    private static void InvokeBindingLifecycle(WorldPresenceBinding binding, string methodName)
+    {
+        MethodInfo method = typeof(WorldPresenceBinding).GetMethod(
+            methodName,
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null, methodName);
+        method.Invoke(binding, null);
     }
 
     private static void DestroyLingering<T>() where T : UnityEngine.Object

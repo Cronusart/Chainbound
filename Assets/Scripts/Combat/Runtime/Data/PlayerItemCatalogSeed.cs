@@ -110,6 +110,10 @@ namespace Chainbound.Combat
                 Def("archive_key", "Archive Key", "Detaches an item from a Chainling Archive.", PlayerItemCategory.Archive, PlayerItemEffectFamily.UnbindArchiveItem, ownership: PlayerItemOwnershipKind.CoreCollectible, coreKind: "archive_key", ram: 50),
                 Def("signature_extract", "Signature Extract", "Removes an individual move from a bound encyclopedia.", PlayerItemCategory.Archive, PlayerItemEffectFamily.ExtractBookMove, ownership: PlayerItemOwnershipKind.CoreCollectible, coreKind: "signature_extract", ram: 75),
                 Def("archive_severance", "Archive Severance", "Fully unbinds a bound encyclopedia back to a dossier.", PlayerItemCategory.Archive, PlayerItemEffectFamily.UnbindArchiveBook, ownership: PlayerItemOwnershipKind.CoreCollectible, coreKind: "archive_severance", ram: 200),
+
+                Def("coffee_beans", "Coffee Beans", "Zeb's recovered bean bag. Reynard brews these for Toby.", PlayerItemCategory.Quest, PlayerItemEffectFamily.None, maxStack: 1),
+                Def("cold_beer", "Cold Beer", "A cold beer from Momo. Toby wants it with his coffee, still hot.", PlayerItemCategory.Quest, PlayerItemEffectFamily.None, maxStack: 1),
+                Def("tobys_delivery", "Toby's Delivery", "Two brewed blacks and a cold beer, packed for Professor Toby.", PlayerItemCategory.Quest, PlayerItemEffectFamily.None, maxStack: 1),
             };
         }
 

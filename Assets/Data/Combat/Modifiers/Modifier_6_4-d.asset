@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.4-d
   displayName: Cover Ally
-  effectDescription: Ally gains +8-12% mitigation 1 turn
+  effectDescription: On swap in, an ally gains 8-12% mitigation for the rest of this turn
   category: 5
   scope: 1
   minimumRarity: 1

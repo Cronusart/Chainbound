@@ -28,18 +28,18 @@ public class LoomvilleEncounterContentTests
         Assert.That(day.entries.Select(entry => entry.speciesId), Is.EquivalentTo(new[]
         {
             "cinislug",
-            "caw",
-            "snek",
+            "forkrook",
+            "rattlestake",
         }));
         Assert.That(dusk.entries.Select(entry => entry.speciesId), Is.EquivalentTo(new[]
         {
             "kreechank",
-            "ghosty",
+            "keyper",
         }));
         Assert.That(night.entries.Select(entry => entry.speciesId), Is.EquivalentTo(new[]
         {
             "kreechank",
-            "ghosty",
+            "keyper",
             "deghoul",
         }));
 
@@ -59,10 +59,10 @@ public class LoomvilleEncounterContentTests
         var expectedMoves = new Dictionary<string, string>
         {
             { "cinislug", "baseline_shot" },
-            { "caw", "baseline_shot" },
-            { "snek", "baseline_shot" },
+            { "forkrook", "baseline_shot" },
+            { "rattlestake", "baseline_shot" },
             { "kreechank", "baseline_striker" },
-            { "ghosty", "baseline_shot" },
+            { "keyper", "baseline_shot" },
             { "deghoul", "baseline_striker" },
         };
 

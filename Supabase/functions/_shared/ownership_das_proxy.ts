@@ -3,6 +3,8 @@ type JsonMap = Record<string, unknown>;
 const SOLANA_BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 export const HELIUS_DAS_URL_ENV = "HELIUS_DAS_URL";
+export const SUPPORTED_OWNERSHIP_CLUSTERS = ["devnet", "mainnet-beta"] as const;
+export type OwnershipCluster = typeof SUPPORTED_OWNERSHIP_CLUSTERS[number];
 export const MAX_DAS_LIMIT = 50;
 export const MAX_DAS_PAGE = 1000;
 export const DEFAULT_DAS_LIMIT = 20;
@@ -96,20 +98,32 @@ export function prepareDasRequest(
   throw new DasProxyRequestError("das_method_not_allowed", 400);
 }
 
-export function requireHeliusDevnetUrl(value: string | undefined): string {
+export function requireOwnershipCluster(value: string | undefined): OwnershipCluster {
+  const cluster = str(value);
+  if (cluster === "devnet" || cluster === "mainnet-beta") return cluster;
+  throw new DasProxyConfigurationError("invalid_env:CHAINBOUND_SOLANA_CLUSTER");
+}
+
+export function requireHeliusDasUrl(value: string | undefined, cluster: OwnershipCluster): string {
   const raw = str(value);
   if (!raw) throw new DasProxyConfigurationError(`missing_env:${HELIUS_DAS_URL_ENV}`);
 
   try {
     const url = new URL(raw);
     const apiKey = str(url.searchParams.get("api-key"));
-    if (url.protocol !== "https:" || url.hostname.toLowerCase() !== "devnet.helius-rpc.com" || !apiKey) {
+    const expectedHost = cluster === "mainnet-beta" ? "mainnet.helius-rpc.com" : "devnet.helius-rpc.com";
+    if (url.protocol !== "https:" || url.hostname.toLowerCase() !== expectedHost || !apiKey) {
       throw new Error("invalid");
     }
     return url.toString();
   } catch {
     throw new DasProxyConfigurationError(`invalid_env:${HELIUS_DAS_URL_ENV}`);
   }
+}
+
+/** Backward-compatible Devnet-only helper for the dedicated smoke-grant path. */
+export function requireHeliusDevnetUrl(value: string | undefined): string {
+  return requireHeliusDasUrl(value, "devnet");
 }
 
 export async function forwardDasRequest(endpoint: string, request: PreparedDasRequest): Promise<unknown> {

@@ -10,10 +10,14 @@ import {
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
 import {
+  ensureOwnershipRpcCluster,
   fetchAndVerifyStampedAsset,
+  isOwnershipWalletAllowed,
   loadOwnershipConfig,
   loadRollConfig,
+  normalizeAcquisition,
   OwnershipConfigurationError,
+  stampEffectFieldsFromOperation,
   verifiedStampedAssetMatchesOperation,
 } from "../_shared/ownership_spine.ts";
 
@@ -27,6 +31,7 @@ serve(async (req: Request) => {
   if (!profile) return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
   try {
     loadRollConfig();
+    const config = loadOwnershipConfig();
     const { data: profileState, error: profileError } = await supabase.from("player_profiles")
       .select("ram_balance").eq("player_profile_id", profile.player_profile_id).maybeSingle();
     if (profileError) throw profileError;
@@ -43,6 +48,7 @@ serve(async (req: Request) => {
       modifierCount: 0,
       generatorVersion: Number(row.generator_version),
       poolHash: str(row.pool_hash),
+      acquisition: normalizeAcquisition(str(row.acquisition)),
     }));
     const activeWallet = await getActiveWallet(supabase, profile.player_profile_id);
     const requestedWallet = str(body.wallet_address) || str(body.wallet_public_key);
@@ -50,10 +56,23 @@ serve(async (req: Request) => {
     if (requestedWallet && requestedWallet !== wallet) {
       return jsonResponse({ success: false, error: "wallet_not_linked_to_profile" }, 403);
     }
-    if (!wallet) return jsonResponse({ success: true, ramBalance, known, stamped: [], pendingStamp: null });
+    if (!wallet) {
+      return jsonResponse({
+        success: true,
+        ramBalance,
+        stampRamCost: config.stampRamCost,
+        known,
+        stamped: [],
+        pendingStamp: null,
+      });
+    }
+    if (!isOwnershipWalletAllowed(config.cluster, wallet)) {
+      return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
+    }
+    await ensureOwnershipRpcCluster(config);
 
     const { data: pendingOperation, error: pendingError } = await supabase.from("ownership_stamp_operations")
-      .select("operation_id,known_id,idempotency_key,status,signature,stamped_asset_address")
+      .select("operation_id,known_id,idempotency_key,status,signature,stamped_asset_address,acquisition")
       .eq("player_profile_id", profile.player_profile_id)
       .eq("wallet_address", wallet)
       .in("status", ["prepared", "submitted", "chain_confirmed", "das_pending"])
@@ -67,13 +86,15 @@ serve(async (req: Request) => {
         operationStatus: str(pendingOperation.status),
         signature: str(pendingOperation.signature),
         assetAddress: str(pendingOperation.stamped_asset_address),
-        message: str(pendingOperation.status) === "das_pending"
+        acquisition: normalizeAcquisition(str(pendingOperation.acquisition)),
+        message: str(pendingOperation.status) === "prepared" && !str(pendingOperation.signature)
+          ? "A prepared Stamp is awaiting wallet review and signature."
+          : str(pendingOperation.status) === "das_pending"
           ? "Transaction confirmed; trusted asset indexing is pending."
           : "A Stamp operation is in progress and will resume automatically.",
       }
       : null;
 
-    const config = loadOwnershipConfig();
     const { data: operations, error: operationError } = await supabase.from("ownership_stamp_operations")
       .select("*").eq("player_profile_id", profile.player_profile_id).eq("wallet_address", wallet).eq(
         "status",
@@ -93,18 +114,23 @@ serve(async (req: Request) => {
           new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200)),
         ]);
       } catch (error) {
-        console.warn("[ownership_get_inventory] DAS refresh deferred", error instanceof Error ? error.message : "unknown");
+        console.warn(
+          "[ownership_get_inventory] DAS refresh deferred",
+          error instanceof Error ? error.message : "unknown",
+        );
       }
       const verified = indexed && verifiedStampedAssetMatchesOperation(indexed, operation) ? indexed : cached;
       const item: JsonMap = {
         ...verified,
+        ...stampEffectFieldsFromOperation(operation),
         knownInstanceId: str(operation.known_id),
         moveId: str(cached.moveId) || str(verified.moveId),
+        acquisition: normalizeAcquisition(str(operation.acquisition) || str(cached.acquisition)),
       };
       delete item.knownOnchainInstanceId;
       return item;
     }))).filter((item): item is JsonMap => item != null);
-    return jsonResponse({ success: true, ramBalance, known, stamped, pendingStamp });
+    return jsonResponse({ success: true, ramBalance, stampRamCost: config.stampRamCost, known, stamped, pendingStamp });
   } catch (error) {
     if (error instanceof OwnershipConfigurationError) return jsonResponse({ success: false, error: error.code }, 503);
     console.error("[ownership_get_inventory]", error instanceof Error ? error.message : "unknown_error");

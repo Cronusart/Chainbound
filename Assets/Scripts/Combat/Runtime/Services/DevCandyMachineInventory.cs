@@ -230,6 +230,7 @@ namespace Chainbound.Combat
                 assetAddress = $"dev-stamped-{Guid.NewGuid():N}",
                 moveId = selected.moveId,
                 knownInstanceId = selected.instanceId,
+                acquisition = LibraryCardFaces.Normalize(selected.acquisition),
                 modifier1Id = first.sectionId,
                 modifier1EffectValue = first.effectValue,
                 modifier1EffectValueLocked = true,
@@ -251,6 +252,7 @@ namespace Chainbound.Combat
             {
                 success = true,
                 confirmed = true,
+                acquisition = record.acquisition,
                 verifiedAsset = record,
             };
         }
@@ -283,6 +285,7 @@ namespace Chainbound.Combat
                 modifierCount = 0,
                 generatorVersion = Mathf.Max(1, config.generatorVersion),
                 poolHash = config.ComputeConfigHash(),
+                acquisition = LibraryCardFaces.CandyRoll,
             };
         }
 

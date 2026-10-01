@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.3-c
   displayName: Grit Guard
-  effectDescription: 'When HP < 30%: gain 15-25% mitigation for 1 turn'
+  effectDescription: 'When HP < 30%: gain 15-25% mitigation for the rest of this turn'
   category: 5
   scope: 0
   minimumRarity: 2

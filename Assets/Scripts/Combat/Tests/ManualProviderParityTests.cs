@@ -78,6 +78,7 @@ namespace Chainbound.Combat.Tests
             species.baseRangedDef = 40;
             species.baseSpeed = 50;
             Assert.AreEqual(150, species.BaseCombatStatTotal);
+            Assert.AreEqual(1149, species.BaseNetStatTotal);
         }
 
         [Test]

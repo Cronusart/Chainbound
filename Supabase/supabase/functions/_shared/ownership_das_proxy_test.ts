@@ -7,7 +7,9 @@ import {
   MAX_DAS_LIMIT,
   MAX_DAS_PAGE,
   prepareDasRequest,
+  requireHeliusDasUrl,
   requireHeliusDevnetUrl,
+  requireOwnershipCluster,
 } from "./ownership_das_proxy.ts";
 
 const MOVES = "AUQuvgpFDUekeVh2GHri99A59G4YY5LUWdGw9fKTB9wC";
@@ -125,6 +127,25 @@ Deno.test("Helius endpoint is credentialed Devnet HTTPS only", () => {
   }
 });
 
+Deno.test("Helius endpoint is pinned to the explicitly selected ownership cluster", () => {
+  assertEquals(requireOwnershipCluster("devnet"), "devnet");
+  assertEquals(requireOwnershipCluster("mainnet-beta"), "mainnet-beta");
+  assertThrows(() => requireOwnershipCluster("mainnet"), DasProxyConfigurationError);
+
+  assertEquals(
+    requireHeliusDasUrl("https://mainnet.helius-rpc.com/?api-key=redacted-test-value", "mainnet-beta"),
+    "https://mainnet.helius-rpc.com/?api-key=redacted-test-value",
+  );
+  assertThrows(
+    () => requireHeliusDasUrl("https://devnet.helius-rpc.com/?api-key=x", "mainnet-beta"),
+    DasProxyConfigurationError,
+  );
+  assertThrows(
+    () => requireHeliusDasUrl("https://mainnet.helius-rpc.com/?api-key=x", "devnet"),
+    DasProxyConfigurationError,
+  );
+});
+
 Deno.test("upstream forwarding emits only the prepared JSON-RPC request", async () => {
   const originalFetch = globalThis.fetch;
   let forwardedBody = "";
@@ -178,9 +199,11 @@ Deno.test("upstream failures collapse to a secret-free error", async () => {
 Deno.test("Edge handler authenticates through the shared profile resolver before reading Helius config", async () => {
   const source = await Deno.readTextFile(new URL("../ownership_das_proxy/index.ts", import.meta.url));
   const authIndex = source.indexOf("resolveAuthenticatedProfile(req, supabase, body)");
-  const endpointIndex = source.indexOf("const endpoint = requireHeliusDevnetUrl");
+  const clusterIndex = source.indexOf("const cluster = requireOwnershipCluster");
+  const endpointIndex = source.indexOf("const endpoint = requireHeliusDasUrl");
 
   assertEquals(authIndex >= 0, true);
+  assertEquals(clusterIndex > authIndex, true);
   assertEquals(endpointIndex > authIndex, true);
   assertEquals(source.includes("resolveProfileFromBody"), false);
   assertEquals(source.includes("error.message"), false);

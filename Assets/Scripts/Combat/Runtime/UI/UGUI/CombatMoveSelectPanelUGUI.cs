@@ -187,6 +187,7 @@ namespace Chainbound.Combat
         private Tween _panelNudgeTween;
         private MonoBehaviour _cachedUiSfxBehaviour;
         private MonoBehaviour _cachedAudioBridgeBehaviour;
+        private readonly List<GameObject> _hiddenForTargetingPrompt = new List<GameObject>(8);
 
         private void Awake()
         {
@@ -206,9 +207,52 @@ namespace Chainbound.Combat
             ResetAllRowSelectionVisuals();
         }
 
+        /// <summary>
+        /// Keeps this panel active so the shared targeting label can show, and hides the move-list chrome.
+        /// </summary>
+        public void HoldOpenForTargetingPrompt(GameObject promptObject)
+        {
+            EnsureBuilt();
+            RestoreTargetingPromptHide();
+            if (root == null)
+                return;
+
+            ProjectedPanelReveal effect = projectedReveal != null ? projectedReveal : GetComponent<ProjectedPanelReveal>();
+            if (effect != null)
+                effect.CancelHideKeepVisible();
+            else
+                root.gameObject.SetActive(true);
+
+            CanvasGroup group = root.GetComponent<CanvasGroup>();
+            if (group != null)
+                group.alpha = 1f;
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                GameObject child = root.GetChild(i).gameObject;
+                bool keep = promptObject != null &&
+                    (child == promptObject || promptObject.transform.IsChildOf(child.transform));
+                if (keep)
+                {
+                    child.SetActive(true);
+                    CanvasGroup promptGroup = child.GetComponent<CanvasGroup>();
+                    if (promptGroup != null)
+                        promptGroup.alpha = 1f;
+                    continue;
+                }
+
+                if (!child.activeSelf)
+                    continue;
+
+                child.SetActive(false);
+                _hiddenForTargetingPrompt.Add(child);
+            }
+        }
+
         public void SetVisible(bool visible)
         {
             EnsureBuilt();
+            RestoreTargetingPromptHide();
             if (root == null)
                 return;
 
@@ -249,6 +293,17 @@ namespace Chainbound.Combat
                 else
                     root.gameObject.SetActive(false);
             }
+        }
+
+        private void RestoreTargetingPromptHide()
+        {
+            for (int i = 0; i < _hiddenForTargetingPrompt.Count; i++)
+            {
+                if (_hiddenForTargetingPrompt[i] != null)
+                    _hiddenForTargetingPrompt[i].SetActive(true);
+            }
+
+            _hiddenForTargetingPrompt.Clear();
         }
 
         private void ScheduleTypewriters()

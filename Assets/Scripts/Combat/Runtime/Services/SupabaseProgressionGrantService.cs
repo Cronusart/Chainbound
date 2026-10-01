@@ -73,6 +73,7 @@ namespace Chainbound.Combat
                 success = payload.success,
                 alreadyApplied = payload.already_applied,
                 moveItemId = payload.move_item_id,
+                knownInstanceId = payload.known_id,
                 moveId = payload.move_id,
                 ownedCopyCount = payload.owned_copy_count,
                 error = payload.error,
@@ -101,6 +102,7 @@ namespace Chainbound.Combat
             public bool success;
             public bool already_applied;
             public string move_item_id;
+            public string known_id;
             public string move_id;
             public int owned_copy_count;
             public string error;

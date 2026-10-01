@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: patience_passive
   displayName: Patience Passive
-  description: Passive - non-attack turns build Def; at +3 heal 5%.
+  description: Passive - end of turn grants Def +1. No attack heals 5% MaxHP.
   category: 4
   baseType: 9
-  rarity: 0
+  rarity: 1
   targeting: 4
   contactType: 2
   power: 0
@@ -49,31 +49,10 @@ MonoBehaviour:
     stageStat: 1
     stageAmount: 1
     stageAmountMax: 0
-    stageCap: 3
+    stageCap: 6
     threshold: 0
     armedTrigger: 0
     healPercentMaxHP: 0
-    counterDamagePercentMaxHP: 0
-    affectAllAllies: 0
-    contactFilter: 0
-  - effectType: 23
-    magnitude: 0
-    turnBudget: 0
-    hitBudget: 0
-    apGain: 0
-    stackKey: patience_heal
-    statusId: 0
-    statusDuration: 0
-    targetOverride: 4
-    chance: 1
-    reflectPercent: 0
-    stageStat: 1
-    stageAmount: 0
-    stageAmountMax: 0
-    stageCap: 0
-    threshold: 3
-    armedTrigger: 0
-    healPercentMaxHP: 0.05
     counterDamagePercentMaxHP: 0
     affectAllAllies: 0
     contactFilter: 0
@@ -81,13 +60,7 @@ MonoBehaviour:
     primaryTiming: 1
     utilityExecutionTiming: 0
     conditionalEffectPolicy: 0
-    resolveConditions:
-    - subject: 0
-      conditionType: 21
-      threshold: 0
-      statusId: 0
-      stat: 1
-      comparisonStat: 1
+    resolveConditions: []
     requireAllResolveConditions: 1
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
@@ -160,10 +133,11 @@ MonoBehaviour:
   triggerCondition: 6
   hpThresholdPercent: 0
   triggerOncePerBattle: 0
-  healPercentMaxHP: 5
+  healPercentMaxHP: 0
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

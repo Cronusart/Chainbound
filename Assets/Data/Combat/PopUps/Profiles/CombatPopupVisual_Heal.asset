@@ -32,9 +32,9 @@ MonoBehaviour:
   spriteSortingOrder: 120
   spriteColorPropertyName: _Color
   worldYOffset: 0
-  duration: 1.1
+  duration: 1.25
   startDelay: 0
-  holdBeforeFade: 0.08
+  holdBeforeFade: 0.45
   useUnscaledTime: 1
   motionMode: 0
   moveOffset: {x: 0, y: 0.5, z: 0}

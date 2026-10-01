@@ -109,8 +109,23 @@ public static class MomoAcademyNpcAuthoring
         serialized.FindProperty("questDefinition").objectReferenceValue = quest;
         serialized.FindProperty("questId").stringValue = "";
         SerializedProperty rules = serialized.FindProperty("rules");
-        rules.arraySize = 1;
-        SerializedProperty rule = rules.GetArrayElementAtIndex(0);
+        int introIndex = -1;
+        for (int i = 0; i < rules.arraySize; i++)
+        {
+            if (rules.GetArrayElementAtIndex(i).FindPropertyRelative("label").stringValue == "academy introduction")
+            {
+                introIndex = i;
+                break;
+            }
+        }
+
+        if (introIndex < 0)
+        {
+            rules.InsertArrayElementAtIndex(rules.arraySize);
+            introIndex = rules.arraySize - 1;
+        }
+
+        SerializedProperty rule = rules.GetArrayElementAtIndex(introIndex);
         rule.FindPropertyRelative("label").stringValue = "academy introduction";
         rule.FindPropertyRelative("lifecycleScope").enumValueIndex = (int)QuestInteractionRuleLifecycleScope.UseLifecycleMask;
         rule.FindPropertyRelative("lifecycleMask").intValue = (int)(NarrativeQuestLifecycleMask.Active | NarrativeQuestLifecycleMask.Available | NarrativeQuestLifecycleMask.Completed);
@@ -122,6 +137,7 @@ public static class MomoAcademyNpcAuthoring
         ClearArray(rule, "sequenceProgressPredicates");
         ClearArray(rule, "resolutionPredicates");
         ClearArray(rule, "flagPredicates");
+        ClearArray(rule, "worldFlagPredicates");
         ClearArray(rule, "counterPredicates");
         SetNpcBehaviorMode(rule.FindPropertyRelative("npcBehavior"));
 

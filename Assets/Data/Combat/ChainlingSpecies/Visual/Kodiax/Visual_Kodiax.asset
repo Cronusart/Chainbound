@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eaf81ad1c3ed874f92ba7c3910d8b7d, type: 3}
+  m_Name: Visual_Kodiax
+  m_EditorClassIdentifier: 
+  speciesId: kodiax
+  displayName: Kodiax
+  idleSequence:
+    sprites:
+    - {fileID: 21300000, guid: cdd08209e870f4c4896897e698bb3b46, type: 3}
+    - {fileID: 21300000, guid: e3e16d1f68f5f6e49a4e6ef4dc808e54, type: 3}
+    - {fileID: 21300000, guid: 3869a052ecab6b144aec34bb9d1ee99b, type: 3}
+    - {fileID: 21300000, guid: 58f94ee47fd0a084488d73c2e10d722f, type: 3}
+    - {fileID: 21300000, guid: 4af549b9f7a83604984755b4e1aeb9e3, type: 3}
+    - {fileID: 21300000, guid: d7c8228488c3f8143927f379c5eb9f9d, type: 3}
+    - {fileID: 21300000, guid: 8993deb97af0595449952d35b4033c90, type: 3}
+  idleFPS: 8
+  meleeAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: cdd08209e870f4c4896897e698bb3b46, type: 3}
+    - {fileID: 21300000, guid: e3e16d1f68f5f6e49a4e6ef4dc808e54, type: 3}
+    - {fileID: 21300000, guid: 3869a052ecab6b144aec34bb9d1ee99b, type: 3}
+    - {fileID: 21300000, guid: 58f94ee47fd0a084488d73c2e10d722f, type: 3}
+    - {fileID: 21300000, guid: 4af549b9f7a83604984755b4e1aeb9e3, type: 3}
+    - {fileID: 21300000, guid: d7c8228488c3f8143927f379c5eb9f9d, type: 3}
+    - {fileID: 21300000, guid: 8993deb97af0595449952d35b4033c90, type: 3}
+  meleeAttackFPS: 8
+  rangedAttackSequence:
+    sprites:
+    - {fileID: 21300000, guid: cdd08209e870f4c4896897e698bb3b46, type: 3}
+  rangedAttackFPS: 8
+  hitSequence:
+    sprites:
+    - {fileID: 21300000, guid: 3869a052ecab6b144aec34bb9d1ee99b, type: 3}
+  hitFPS: 8
+  swapInSequence:
+    sprites: []
+  swapInFPS: 10
+  swapOutSequence:
+    sprites: []
+  swapOutFPS: 10
+  koSequence:
+    sprites: []
+  koFPS: 10
+  animationAlternates: []
+  spriteSize: {x: 5, y: 5}
+  useSpritePivot: 1
+  spritePivotWorldOffset: {x: 0, y: 0}
+  presentationTrack: {fileID: 0}
+  anchorOffsets: []
+  spawnSound: {fileID: 0}
+  swapInSound: {fileID: 0}
+  meleeAttackFallbackSound: {fileID: 0}
+  rangedAttackFallbackSound: {fileID: 0}
+  hitReactionSound: {fileID: 0}
+  koSound: {fileID: 0}
+  portrait: {fileID: 21300000, guid: cdd08209e870f4c4896897e698bb3b46, type: 3}
+  useCustomActionOutlineColor: 0
+  actionOutlineColor: {r: 0.15, g: 0.8, b: 1, a: 0.8}

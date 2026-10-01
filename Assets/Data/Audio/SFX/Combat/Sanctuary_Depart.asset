@@ -21,7 +21,7 @@ MonoBehaviour:
   volumeMax: 0.85
   pitchMin: 0.78
   pitchMax: 0.88
-  is3D: 1
+  is3D: 0
   spatialBlend: 0.85
   minDistance: 2
   maxDistance: 28

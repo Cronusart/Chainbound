@@ -12943,6 +12943,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 746446034}
     m_Modifications:
+    - target: {fileID: 200420300025008083, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 413887652856343405, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
       propertyPath: sfxRouter
       value: 
@@ -13069,6 +13073,54 @@ PrefabInstance:
       objectReference: {fileID: 746446038}
     - target: {fileID: 6345402729931513730, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
       propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6547958325795015559, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6547958325795015559, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6547958325795015559, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6547958325795015559, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6547958325795015559, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6547958325795015559, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6903269126644509510, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6903269126644509510, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6903269126644509510, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6903269126644509510, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6903269126644509510, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6903269126644509510, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
+      propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7937743396915289192, guid: 16f4e9e861455d84e96282525239d08e, type: 3}
@@ -13258,6 +13310,10 @@ PrefabInstance:
     - target: {fileID: 1425778909257809557, guid: c22fa9ef6a9b57b4f9b20be98ee5fec2, type: 3}
       propertyPath: m_Name
       value: WalletConnectionPrompt
+      objectReference: {fileID: 0}
+    - target: {fileID: 1425778909257809557, guid: c22fa9ef6a9b57b4f9b20be98ee5fec2, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1929484344042555727, guid: c22fa9ef6a9b57b4f9b20be98ee5fec2, type: 3}
       propertyPath: m_Pivot.x

@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fb4cfd04089004fbc962e79078e3c3, type: 3}
+  m_Name: Hopoch
+  m_EditorClassIdentifier: 
+  speciesId: hopoch
+  displayName: Hopoch
+  description: Staked melee striker. A naginata duelist that stays on one target
+    and leeches.
+  primaryType: 9
+  secondaryType: 0
+  baseMaxHP: 120
+  baseMeleeAtk: 72
+  baseMeleeDef: 58
+  baseRangedAtk: 36
+  baseRangedDef: 52
+  baseSpeed: 58
+  maxEvolutionStages: 1
+  offTypeMoveExceptions:
+  - {fileID: 11400000, guid: 3f4b63353209ed54090eada861357e09, type: 2}
+  learnableMoves:
+  - {fileID: 11400000, guid: 13aca51cf10e14d448312f3ae955f983, type: 2}
+  - {fileID: 11400000, guid: cf4f56ebb1698694a8778c9964ceceb9, type: 2}
+  - {fileID: 11400000, guid: 72cced2bf963ad9428082b8d9eb73a91, type: 2}
+  - {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+  - {fileID: 11400000, guid: 9a098dcd2dece13429ce3dd20174b5e3, type: 2}
+  learnLevels: 0100000001000000010000000100000001000000
+  exclusiveMoves: []
+  flagshipMove: {fileID: 11400000, guid: 13aca51cf10e14d448312f3ae955f983, type: 2}
+  initialMoves:
+  - {fileID: 11400000, guid: 72cced2bf963ad9428082b8d9eb73a91, type: 2}
+  progressionMovePool:
+  - move: {fileID: 11400000, guid: 13aca51cf10e14d448312f3ae955f983, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: cf4f56ebb1698694a8778c9964ceceb9, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 72cced2bf963ad9428082b8d9eb73a91, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 9a098dcd2dece13429ce3dd20174b5e3, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  isStarter: 0
+  defaultCaptureProfile: 1
+  rarity: 2
+  combatRoleOverride: 1
+  designNotes: Rare Staked melee striker. Net 396. Naginata 72, defenses 58/52, speed
+    58. Not a wall. Signature is Patience Passive. Progression pool is that passive,
+    Yield Spike, Stake Strike, Stake Heal, and Yield Cycle. Deep Reap is the
+    off-type equip exception.

@@ -132,6 +132,20 @@ public class QuestInteractionMemoryFlagPredicate
 }
 
 /// <summary>
+/// One profile world-flag predicate within a quest interaction rule.
+/// These flags are shared across NPCs and scenes. They are not NPC memory.
+/// </summary>
+[Serializable]
+public class QuestInteractionWorldFlagPredicate
+{
+    [Tooltip("Profile world flag key, e.g. world.coffee.zeb_departed.")]
+    public string key = "";
+
+    [Tooltip("IsTrue requires the flag to exist and be true. IsFalse matches when it is absent or false.")]
+    public QuestInteractionMemoryFlagComparison comparison = QuestInteractionMemoryFlagComparison.IsTrue;
+}
+
+/// <summary>
 /// One NPC memory counter predicate within a quest interaction rule.
 /// </summary>
 [Serializable]
@@ -234,6 +248,9 @@ public class QuestInteractionRule
 
     [Tooltip("All flag predicates must pass for this rule to match.")]
     public List<QuestInteractionMemoryFlagPredicate> flagPredicates = new List<QuestInteractionMemoryFlagPredicate>();
+
+    [Tooltip("All profile world-flag predicates must pass. IsTrue requires the flag to exist and be true. IsFalse matches when the flag is absent or false.")]
+    public List<QuestInteractionWorldFlagPredicate> worldFlagPredicates = new List<QuestInteractionWorldFlagPredicate>();
 
     [Tooltip("All counter predicates must pass for this rule to match.")]
     public List<QuestInteractionMemoryCounterPredicate> counterPredicates = new List<QuestInteractionMemoryCounterPredicate>();

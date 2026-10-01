@@ -10,14 +10,18 @@ import {
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
 import {
+  ensureOwnershipRpcCluster,
   fetchAndVerifyStampReceipt,
   findConfirmedSignatureForAddress,
   FIRST_STAMP_RAM_COST,
   hashMoveId,
+  isOwnershipWalletAllowed,
   isSolanaSignature,
   loadOwnershipConfig,
+  normalizeAcquisition,
   OwnershipConfigurationError,
-  signatureIsConfirmed,
+  signatureOutcome,
+  stampEffectFieldsFromOperation,
 } from "../_shared/ownership_spine.ts";
 
 const OPEN_INTENT_STATUSES = ["prepared", "submitted", "chain_confirmed", "das_pending"];
@@ -39,6 +43,12 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "wallet_not_linked_to_profile" }, 403);
     }
 
+    const config = loadOwnershipConfig();
+    if (!isOwnershipWalletAllowed(config.cluster, walletAddress)) {
+      return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
+    }
+    await ensureOwnershipRpcCluster(config);
+
     let query = supabase.from("ownership_stamp_operations").select("*")
       .eq("player_profile_id", profile.player_profile_id).in("status", OPEN_INTENT_STATUSES);
     const requestedKey = str(body.idempotency_key);
@@ -51,10 +61,9 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "stamp_operation_wallet_mismatch" }, 409);
     }
 
-    const config = loadOwnershipConfig();
     const knownId = str(operation.known_id);
     const { data: knownRow, error: knownError } = await supabase.from("ownership_known_moves")
-      .select("move_id,onchain_move_id").eq("known_id", knownId).single();
+      .select("move_id,onchain_move_id,acquisition").eq("known_id", knownId).single();
     if (knownError) throw knownError;
     const modifierIds = Array.isArray(operation.modifier_ids)
       ? operation.modifier_ids.map((value: unknown) => str(value))
@@ -72,7 +81,8 @@ serve(async (req: Request) => {
     });
     let signature = str(body.signature);
     if (!isSolanaSignature(signature)) signature = str(operation.signature);
-    let chainConfirmed = isSolanaSignature(signature) && await signatureIsConfirmed(config.rpcUrl, signature);
+    let outcome = isSolanaSignature(signature) ? await signatureOutcome(config.rpcUrl, signature) : "missing";
+    let chainConfirmed = outcome === "confirmed";
     if (!chainConfirmed || !isSolanaSignature(signature)) {
       const discovered = await findConfirmedSignatureForAddress(
         config.rpcUrl,
@@ -80,6 +90,7 @@ serve(async (req: Request) => {
       );
       if (discovered) {
         signature = discovered;
+        outcome = "confirmed";
         chainConfirmed = true;
       }
     }
@@ -87,6 +98,35 @@ serve(async (req: Request) => {
 
     const now = new Date().toISOString();
     if (!chainConfirmed) {
+      const expiredUnsignedPrepare = str(operation.status) === "prepared" &&
+        !isSolanaSignature(signature) &&
+        !!operation.expires_at &&
+        new Date(String(operation.expires_at)).getTime() <= Date.now();
+      if (outcome === "failed" || expiredUnsignedPrepare) {
+        const failureCode = outcome === "failed" ? "transaction_failed" : "unsigned_intent_expired";
+        const { error: failedUpdateError } = await supabase.from("ownership_stamp_operations").update({
+          status: "failed",
+          failure_code: failureCode,
+          last_reconciled_at: now,
+          updated_at: now,
+        }).eq("operation_id", operation.operation_id).neq("status", "confirmed");
+        if (failedUpdateError) throw failedUpdateError;
+        return jsonResponse({
+          success: true,
+          confirmed: false,
+          pending: false,
+          operation_status: "failed",
+          operation_id: str(operation.operation_id),
+          known_instance_id: str(operation.known_id),
+          idempotency_key: str(operation.idempotency_key),
+          acquisition: normalizeAcquisition(str(operation.acquisition)),
+          stamped_asset_address: str(operation.stamped_asset_address),
+          signature,
+          message: outcome === "failed"
+            ? "The Stamp transaction failed. No RAM or Known move was consumed."
+            : "The unsigned Stamp review expired. No RAM or Known move was consumed.",
+        });
+      }
       await supabase.from("ownership_stamp_operations").update({
         last_reconciled_at: now,
         updated_at: now,
@@ -99,6 +139,7 @@ serve(async (req: Request) => {
         operation_id: str(operation.operation_id),
         known_instance_id: str(operation.known_id),
         idempotency_key: str(operation.idempotency_key),
+        acquisition: normalizeAcquisition(str(operation.acquisition)),
         stamped_asset_address: str(operation.stamped_asset_address),
         signature,
         message: "The same Stamp intent is still awaiting a confirmed transaction.",
@@ -124,13 +165,20 @@ serve(async (req: Request) => {
         operation_id: str(operation.operation_id),
         known_instance_id: knownId,
         idempotency_key: str(operation.idempotency_key),
+        acquisition: normalizeAcquisition(str(operation.acquisition)),
         stamped_asset_address: str(operation.stamped_asset_address),
         signature,
         message: "The transaction is confirmed and the on-chain Stamp receipt is still propagating.",
       }, 202);
     }
 
-    const publicAsset: JsonMap = { ...verified, knownInstanceId: knownId, moveId: str(knownRow?.move_id) };
+    const publicAsset: JsonMap = {
+      ...verified,
+      ...stampEffectFieldsFromOperation(operation),
+      knownInstanceId: knownId,
+      moveId: str(knownRow?.move_id),
+      acquisition: normalizeAcquisition(str(operation.acquisition) || str(knownRow?.acquisition)),
+    };
     delete publicAsset.knownOnchainInstanceId;
     delete publicAsset.ticketAddress;
     delete publicAsset.idempotencyHash;
@@ -153,6 +201,7 @@ serve(async (req: Request) => {
       operation_id: str(operation.operation_id),
       known_instance_id: knownId,
       idempotency_key: str(operation.idempotency_key),
+      acquisition: normalizeAcquisition(str(operation.acquisition)),
       stamped_asset_address: str(operation.stamped_asset_address),
       idempotent: settlement?.replayed === true,
       signature: str(settlement?.signature) || signature,

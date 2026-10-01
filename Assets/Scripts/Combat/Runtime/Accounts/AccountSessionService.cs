@@ -8,7 +8,8 @@ namespace Chainbound.Combat
     [DisallowMultipleComponent]
     public class AccountSessionService : MonoBehaviour
     {
-        private const string OfflineProfileSnapshotStorageKey = "signaljam.profile.snapshot.v1";
+        private const string LegacyOfflineProfileSnapshotStorageKey = "signaljam.profile.snapshot.v1";
+        private const string ScopedOfflineProfileSnapshotPrefix = "signaljam.profile.snapshot.v2";
 
         private static AccountSessionService instance;
 
@@ -78,6 +79,7 @@ namespace Chainbound.Combat
             }
 
             instance = this;
+            supabaseConfig = PlatformContext.ResolveSupabaseConfig(supabaseConfig);
             if (Application.isPlaying)
             {
                 if (transform.parent != null)
@@ -594,6 +596,16 @@ namespace Chainbound.Combat
         {
             session = null;
             string json = SecureCredentialStore.Get(OfflineProfileSnapshotStorageKey);
+            if (string.IsNullOrWhiteSpace(json) &&
+                PlatformContext.ResolveOwnershipEnvironment() == OwnershipDeploymentEnvironment.DevnetOwnership)
+            {
+                json = SecureCredentialStore.Get(LegacyOfflineProfileSnapshotStorageKey);
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    SecureCredentialStore.Set(OfflineProfileSnapshotStorageKey, json);
+                    SecureCredentialStore.Delete(LegacyOfflineProfileSnapshotStorageKey);
+                }
+            }
             if (string.IsNullOrWhiteSpace(json))
                 return false;
 
@@ -726,6 +738,9 @@ namespace Chainbound.Combat
             session.walletProofVerifiedAt = "";
             session.walletProofExpiresAt = "";
         }
+
+        private static string OfflineProfileSnapshotStorageKey =>
+            PlatformContext.BuildScopedStorageKey(ScopedOfflineProfileSnapshotPrefix);
 
         private static string GetOrCreateInstallId()
         {

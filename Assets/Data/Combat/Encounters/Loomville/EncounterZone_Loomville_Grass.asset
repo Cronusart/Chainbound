@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: EncounterZone_Loomville_Grass
   m_EditorClassIdentifier: 
   zoneId: loomville_grass
+  combatStageId: loomville
   area: {fileID: 11400000, guid: 4a9739df2e4bc30419ed9e4f80294ffc, type: 2}
   encounterChance: -1
   cadence: 1
@@ -24,7 +25,7 @@ MonoBehaviour:
   maxEncounterPartySize: -1
   entryMergeMode: 1
   entries:
-  - speciesId: caw
+  - speciesId: forkrook
     weight: 30
     allowedSegments: 6
     segmentWeights:
@@ -42,7 +43,7 @@ MonoBehaviour:
     variantRarityTable: {fileID: 0}
     variantPool: {fileID: 0}
     inlineVariantPool: []
-  - speciesId: snek
+  - speciesId: rattlestake
     weight: 20
     allowedSegments: 6
     segmentWeights: []
@@ -74,7 +75,7 @@ MonoBehaviour:
     variantRarityTable: {fileID: 0}
     variantPool: {fileID: 0}
     inlineVariantPool: []
-  - speciesId: ghosty
+  - speciesId: keyper
     weight: 20
     allowedSegments: 9
     segmentWeights:
@@ -114,3 +115,6 @@ MonoBehaviour:
     mythic: -1
   defaultMovePool: {fileID: 0}
   defaultVariantPool: {fileID: 0}
+  speciesDatabase: {fileID: 11400000, guid: 30d36b2ab437f37498a64868dc46ed1c, type: 2}
+  progressionRewardTables: {fileID: 11400000, guid: 4e76389e000000000000000000000101, type: 2}
+  progressionConfig: {fileID: 11400000, guid: 1d2f29e91c254f539382360868e1a3ee, type: 2}

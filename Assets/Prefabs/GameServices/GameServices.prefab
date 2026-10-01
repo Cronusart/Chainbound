@@ -15842,7 +15842,7 @@ Light:
   serializedVersion: 11
   m_Type: 1
   m_Color: {r: 0.94717145, g: 0.90891623, b: 0.7559379, a: 1}
-  m_Intensity: 0.6254749
+  m_Intensity: 0.5828875
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -18838,6 +18838,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8401194005784205707, guid: c22fa9ef6a9b57b4f9b20be98ee5fec2, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -182,6 +182,13 @@ namespace Chainbound.Combat
         /// <summary>Set of move instance IDs that have already triggered (for once-per-battle passives).</summary>
         public HashSet<string> triggeredPassiveIds;
 
+        /// <summary>Connecting hits taken this turn. Immutable Ledger uses only the first.</summary>
+        public int hitsTakenThisTurn;
+
+        /// <summary>Once-per-turn passive keys. Cleared when the stamped turn changes.</summary>
+        public int oncePerTurnStamp = -1;
+        public List<string> oncePerTurnPassiveIds;
+
         public ChainlingInstance()
         {
             instanceId = Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -194,12 +201,31 @@ namespace Chainbound.Combat
             barriers = new List<BarrierInstance>();
             pendingTurnStartStatuses = new List<PendingStatusApplication>();
             triggeredPassiveIds = new HashSet<string>();
+            oncePerTurnPassiveIds = new List<string>();
             isAlive = true;
             primaryType = ChainlingType.None;
             secondaryType = ChainlingType.None;
             coatingType = ChainlingType.None;
             visualIdentity = ChainlingVisualIdentity.CreateDefault();
             rebirthIvBonuses = new int[CombatConstants.STAT_COUNT];
+        }
+
+        /// <summary>Returns true the first time this key is used on the given turn.</summary>
+        public bool MarkOncePerTurn(string key, int turn)
+        {
+            if (string.IsNullOrEmpty(key))
+                return false;
+            if (oncePerTurnPassiveIds == null)
+                oncePerTurnPassiveIds = new List<string>();
+            if (oncePerTurnStamp != turn)
+            {
+                oncePerTurnStamp = turn;
+                oncePerTurnPassiveIds.Clear();
+            }
+            if (oncePerTurnPassiveIds.Contains(key))
+                return false;
+            oncePerTurnPassiveIds.Add(key);
+            return true;
         }
 
         // â”€â”€ Computed Properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

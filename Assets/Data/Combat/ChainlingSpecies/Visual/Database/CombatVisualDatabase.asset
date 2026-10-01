@@ -36,24 +36,42 @@ MonoBehaviour:
   - speciesId: cinislug
     visualVariantId: base
     profile: {fileID: 11400000, guid: e5209c64e7b54fe4e90835d13cc4a98c, type: 2}
-  - speciesId: snek
+  - speciesId: rattlestake
     visualVariantId: base
     profile: {fileID: 11400000, guid: 14502d42e23a4f8fb9cf1f2b495ec248, type: 2}
-  - speciesId: whale
+  - speciesId: humpacked
     visualVariantId: base
     profile: {fileID: 11400000, guid: dfd034acebed4e21a9f1aa2b5acecbaa, type: 2}
-  - speciesId: lad
+  - speciesId: crackett
     visualVariantId: base
     profile: {fileID: 11400000, guid: 31bd5746e6334c4fa820493cde515dbc, type: 2}
-  - speciesId: ghosty
+  - speciesId: keyper
     visualVariantId: base
     profile: {fileID: 11400000, guid: 1412a8c97fb6483c8c06e869a21ee441, type: 2}
   - speciesId: deghoul
     visualVariantId: base
     profile: {fileID: 11400000, guid: 4d56e7b01d064ab68b9eb0145a30abaf, type: 2}
-  - speciesId: caw
+  - speciesId: forkrook
     visualVariantId: base
     profile: {fileID: 11400000, guid: 05c5665a1d914a0ea4585cafc0eac6f9, type: 2}
+  - speciesId: blockwyrm
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: a11b000000000001aaaabbbbcccc0011, type: 2}
+  - speciesId: hopoch
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: a11b000000000001aaaabbbbcccc0012, type: 2}
+  - speciesId: minefolk
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: a11b000000000001aaaabbbbcccc0013, type: 2}
+  - speciesId: marrowhead
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: a11b000000000001aaaabbbbcccc0014, type: 2}
+  - speciesId: kodiax
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: a11b000000000001aaaabbbbcccc0015, type: 2}
+  - speciesId: balloom
+    visualVariantId: base
+    profile: {fileID: 11400000, guid: a11b000000000001aaaabbbbcccc0016, type: 2}
   - speciesId: cofi_lootwak
     visualVariantId: base
     entangledType: 0

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.2-c
   displayName: Crit Feed
-  effectDescription: 'On crit: next move gains +25% power'
+  effectDescription: 'On crit: your next move deals +25% power. Holds through next turn.'
   category: 5
   scope: 0
   minimumRarity: 4

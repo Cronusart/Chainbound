@@ -8,7 +8,7 @@ REVISION NOTES:
 - Slot progression moved from evolution stages to star progression
 - Duplicate move rule changed from zero duplicates to max 2 copies per Chainling
 - Mythic equip caps removed; competitive rune cap added instead
-- Exclusive move rules updated to source-species acquisition plus same-type equip
+- Exclusive move rules lock starter exclusives to their source species for equip and learning
 - Secondary type references removed from pool eligibility
 
 ===============================================================================
@@ -246,9 +246,9 @@ AUGMENTATION / TRANSMUTATION RULE:
 4.6 Exclusive And Limited Move Rules
 
 - Exclusive and limited-event moves count toward normal slot totals.
-- Any Chainling matching the move's current type may equip the move.
-- Only the designated source species can acquire an exclusive move via star-up or mastery.
-- If the source species is Entangled, the exclusive move inherits that Entangled type.
+- A starter exclusive equips only on its source species.
+- Only that species can roll the exclusive from its progression pool.
+- An Entangled specimen of the source species can still equip it. A different species cannot, even with a matching entangled type.
 - Only exclusive and limited-event moves may be permanently learned / locked.
 - Non-exclusive, non-limited moves remain freely removable.
 - Current shipped content only includes starter exclusives, but the system allows future event-based exclusives.
@@ -263,18 +263,18 @@ A Chainling can equip moves from:
 1. Its primary type pool
 2. The typeless pool
 3. Any documented off-type exceptions
-4. Any eligible exclusive or limited moves whose current type matches the Chainling
+4. Exclusives owned by that species
 
 5.2 Species Pool Eligibility
 
 A species may have:
 - 1-2 source-exclusive moves
-- 1-3 off-type exceptions that fit theme and mechanics
+- 1-2 off-type exceptions that fit theme and mechanics
 
 EXCLUSIVE RULES:
 - The source species is the only species that can roll the exclusive move.
-- Once acquired, any matching-type Chainling may equip it.
-- Entangled source species convert the exclusive move to the Entangled type for acquisition and equip checks.
+- Only that species can equip it.
+- Entangled type on another species does not unlock it.
 - Current shipped exclusives belong only to starters.
 - Future event-based exclusives are allowed by design.
 
@@ -291,7 +291,7 @@ Meme-type Chainlings can equip any typed move in addition to:
 
 5.4 Pool Restrictions
 
-- Exclusive moves are source-species locked for acquisition, not for equip.
+- Exclusive moves are locked to the source species for acquisition and equip.
 - Event and limited moves may have time-based availability windows.
 - Some moves may require achievements to unlock.
 - Rune-tier competitive limits are enforced separately from rarity.
@@ -321,7 +321,7 @@ v1.1
 - Replaced evolution-based slot progression with star-based slot progression
 - Allowed duplicate moves up to 2 copies
 - Replaced mythic caps with competitive rune cap
-- Updated exclusive move rules to source-species acquisition plus same-type equip
+- Updated exclusive move rules so starter exclusives equip only on their source species
 - Removed secondary type assumptions from pool eligibility
 
 v1.0

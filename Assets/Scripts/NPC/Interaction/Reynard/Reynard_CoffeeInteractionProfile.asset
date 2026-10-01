@@ -15,7 +15,85 @@ MonoBehaviour:
   questDefinition: {fileID: 11400000, guid: e4f5a6b7c8d9012a3b4c5d6e7f8091a2, type: 2}
   questId: coffee_and_beer
   rules:
-  - label: after check-in — find Zeb
+  - label: order already brewed
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.reynard_brewed
+      comparison: 2
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: 68628b05d1366b74e8907074bdc4b624, type: 2}
+    useDialogueCamera: 1
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  - label: "beans and beer \u2014 brew"
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.holding_coffee_beans
+      comparison: 2
+    - key: world.coffee.holding_cold_beer
+      comparison: 2
+    - key: world.coffee.reynard_brewed
+      comparison: 3
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: 215401f238947d44688d76c74b7d4f5b, type: 2}
+    useDialogueCamera: 1
+    triggerId: trigger_coffee_reynard_brew
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  - label: beans without beer
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.holding_coffee_beans
+      comparison: 2
+    - key: world.coffee.holding_cold_beer
+      comparison: 3
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: e26c3ef025ee9bb41990811ccc1a6fc5, type: 2}
+    useDialogueCamera: 1
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  - label: "after check-in \u2014 find Zeb"
     lifecycleScope: 1
     lifecycleMask: 8
     objectiveId: talk_to_reynard
@@ -24,6 +102,7 @@ MonoBehaviour:
     sequenceProgressPredicates: []
     resolutionPredicates: []
     flagPredicates: []
+    worldFlagPredicates: []
     counterPredicates: []
     timeOfDay:
       allowedSegments: 0
@@ -46,6 +125,7 @@ MonoBehaviour:
   activeFallbackNpcBehavior:
     mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: First interact starts coffee_and_beer and sends the player after courier Zeb. Repeat talks remind who and where.
+  designerNotes: Check-in sends the player after Zeb. Later rules ask for the beer,
+    brew the order, or remind Toby's parcel is packed.
   activateQuestOnInactiveInteract: 1
   completeObjectiveOnActivate: talk_to_reynard

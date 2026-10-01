@@ -28,3 +28,21 @@ MonoBehaviour:
     fallbackTint: {r: 0, g: 0, b: 0, a: 0}
     accentColor: {r: 0, g: 0, b: 0, a: 0}
     displayNameOverride: Signal Orb
+  - itemId: coffee_beans
+    rowIcon: {fileID: 21300000, guid: 7a5634541f146e846810933917c799a4, type: 3}
+    detailPortrait: {fileID: 21300000, guid: 7a5634541f146e846810933917c799a4, type: 3}
+    fallbackTint: {r: 0, g: 0, b: 0, a: 0}
+    accentColor: {r: 0, g: 0, b: 0, a: 0}
+    displayNameOverride: Coffee Beans
+  - itemId: cold_beer
+    rowIcon: {fileID: 21300000, guid: 7971ffff6ae4b424f86e7b14f4f2101f, type: 3}
+    detailPortrait: {fileID: 21300000, guid: 7971ffff6ae4b424f86e7b14f4f2101f, type: 3}
+    fallbackTint: {r: 0, g: 0, b: 0, a: 0}
+    accentColor: {r: 0, g: 0, b: 0, a: 0}
+    displayNameOverride: Cold Beer
+  - itemId: tobys_delivery
+    rowIcon: {fileID: 0}
+    detailPortrait: {fileID: 0}
+    fallbackTint: {r: 0, g: 0, b: 0, a: 0}
+    accentColor: {r: 0, g: 0, b: 0, a: 0}
+    displayNameOverride: Toby's Delivery

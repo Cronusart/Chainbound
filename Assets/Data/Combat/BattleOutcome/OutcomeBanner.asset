@@ -16,6 +16,7 @@ MonoBehaviour:
   defeatFrames: []
   drawFrames: []
   captureFrames: []
+  stripScaleY: 0.028
   fps: 6
   loopIntervalSeconds: 4
   initialLockoutSeconds: 3

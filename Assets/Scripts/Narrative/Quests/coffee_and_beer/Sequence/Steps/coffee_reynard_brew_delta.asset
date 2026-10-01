@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b832c17656287e448c1f7433176e635, type: 3}
+  m_Name: coffee_reynard_brew_delta
+  m_EditorClassIdentifier: 
+  stepName: coffee_reynard_brew_delta
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 2728e437-b654-47e2-a778-19d469b4fc45
+  idempotencyKey: quest:coffee_and_beer:reynard_brew
+  grants:
+  - itemId: tobys_delivery
+    quantity: 1
+  consumes:
+  - itemId: coffee_beans
+    quantity: 1
+  - itemId: cold_beer
+    quantity: 1
+  resultVariableName: lastItemDeltaOk

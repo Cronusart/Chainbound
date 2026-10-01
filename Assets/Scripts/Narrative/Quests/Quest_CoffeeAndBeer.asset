@@ -16,7 +16,7 @@ MonoBehaviour:
   questName: The Professor's Order
   description: Check in with Reynard and fetch Professor Toby two black coffees and
     one beer.
-  contentVersion: 3
+  contentVersion: 4
   autoCompleteWhenObjectivesComplete: 1
   objectives:
   - objectiveId: talk_to_reynard
@@ -32,11 +32,15 @@ MonoBehaviour:
     targetAmount: 1
     currentProgress: 0
   - objectiveId: fetch_coffee
-    description: Collect 2 coffees
-    targetAmount: 2
+    description: Recover Zeb's coffee beans from Cofi Lootwak
+    targetAmount: 1
     currentProgress: 0
   - objectiveId: fetch_beer
-    description: Collect 1 beer
+    description: Pick up Toby's cold beer from Momo
+    targetAmount: 1
+    currentProgress: 0
+  - objectiveId: deliver_to_toby
+    description: Bring Toby's delivery to the lab
     targetAmount: 1
     currentProgress: 0
   defaultResolutionId: standard

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b6dc3de35875d34db28fcf8d85fdf1d, type: 3}
+  m_Name: coffee_cofi_if_win
+  m_EditorClassIdentifier: 
+  stepName: coffee_cofi_if_win
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: bb38ed64-481d-4ae2-a736-a420a614af83
+  condition: {fileID: 11400000, guid: a950077beb7bbe84f87514f95af886c5, type: 2}
+  trueLabel: coffee_cofi_grant
+  falseLabel: 

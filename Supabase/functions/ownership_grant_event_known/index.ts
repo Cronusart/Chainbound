@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import {
+  getActiveWallet,
   JsonMap,
   jsonResponse,
   readJsonBody,
@@ -9,6 +10,7 @@ import {
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
 import {
+  isOwnershipWalletAllowed,
   loadRollConfig,
   OwnershipConfigurationError,
   resolveEventKnownAuthority,
@@ -34,6 +36,13 @@ serve(async (req: Request) => {
 
   try {
     const config = loadRollConfig();
+    if (config.cluster === "mainnet-beta") {
+      const activeWallet = await getActiveWallet(supabase, profile.player_profile_id);
+      const walletAddress = str(activeWallet?.wallet_public_key);
+      if (!walletAddress || !isOwnershipWalletAllowed(config.cluster, walletAddress)) {
+        return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
+      }
+    }
     const authority = resolveEventKnownAuthority(moveId);
     const { data, error } = await supabase.rpc("ownership_grant_event_known_atomic", {
       p_player_profile_id: profile.player_profile_id,

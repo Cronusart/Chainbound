@@ -15,6 +15,7 @@ Player-facing name for every granted move in this flow: **Known** (`MOVE_TIER_PL
 
 - Global gate tables: `Assets/Data/Combat/ChainlingProgressionRewardTables.asset`
 - Per-species weighted pools: `SpeciesDefinitionSO.progressionMovePool`
+- Each pool entry has `weight`. Enable `useWeightAtStarFive` and set `weightAtStarFive` when the 5-star odd should differ. `isSignature` marks the signature move; it does not change the odd by itself.
 - Event overlays: `Assets/Data/Combat/ProgressionEvents/ChainlingProgressionEventCatalog.asset`
 
 Legacy `learnableMoves` and `exclusiveMoves` remain for equip fallback. `SpeciesDefinitionSO.OnValidate` seeds `progressionMovePool` from those lists when the pool is empty.
@@ -40,7 +41,13 @@ The combat router prepares one authoritative `BattleRewardSummary` before the re
 
 Owned moves stay in the weighted denominator by default. Probability and ownership are independent (`12% · Owned ×2`) because repeatable copies are intentional. `excludeIfOwned` defaults to false and is reserved for explicitly authored one-time/event grants.
 
-The Chainlings tab uses `Next-star folio chance: N%` below five stars and `Five-star mastery folio chance: N%` at five stars. Starter-exclusive moves remain eligible in their species pool and can be learned repeatedly.
+The Chainlings tab uses `Next-star folio chance: N%` below five stars and `Five-star mastery folio chance: N%` at five stars. Starter-exclusive moves remain eligible in their species pool and can be learned repeatedly. They equip only on that species.
+
+## Capture Known Move
+
+A captured Chainling rolls the same progression pool with the same star-gate percent as a folio at that star. A star-0 wild uses the first-star gate. A hit grants one Known move and equips it in loadout slot 0. A miss grants no move. The wild battle kit stays on the encounter zone and is not the capture grant.
+
+`EncounterZoneSO.speciesDatabase`, `progressionRewardTables`, and `progressionConfig` point the roll at the live species pool and odds. `Supabase/migrations/20261001180000_capture_progression_known_move.sql` stops the server from substituting `baseline_jab` when the client sends an empty move id. That migration is not applied yet.
 
 ## Event Workflow
 

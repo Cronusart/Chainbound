@@ -3,7 +3,7 @@ import {
   JsonMap, jsonResponse, readJsonBody, requirePost, resolveAuthenticatedProfile, str, supabaseAdmin,
 } from "../_shared/account_helpers.ts";
 import {
-  authoritySecretBytes, deriveKnownResult, KNOWN_ROLL_RAM_COST, loadRollConfig, OwnershipConfigurationError,
+  authoritySecretBytes, deriveKnownResult, KNOWN_ROLL_RAM_COST, loadRollConfig, normalizeAcquisition, OwnershipConfigurationError,
 } from "../_shared/ownership_spine.ts";
 
 serve(async (req: Request) => {
@@ -52,5 +52,6 @@ serve(async (req: Request) => {
 
 function knownResponse(row: JsonMap): JsonMap {
   return { instanceId: str(row.known_id), moveId: str(row.move_id), modifierCount: 0,
-    generatorVersion: Number(row.generator_version), poolHash: str(row.pool_hash) };
+    generatorVersion: Number(row.generator_version), poolHash: str(row.pool_hash),
+    acquisition: normalizeAcquisition(str(row.acquisition)) };
 }

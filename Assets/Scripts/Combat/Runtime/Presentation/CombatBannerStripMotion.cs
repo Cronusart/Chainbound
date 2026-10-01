@@ -5,12 +5,14 @@ namespace Chainbound.Combat
 {
     /// <summary>
     /// Shared CRT banner strip motion for encounter intro and post-battle outcome banners.
-    /// Enter: slide in from the right as a ~7% Y strip, then overshoot-scale to rest.
-    /// Exit: collapse to the strip while contents fade, then slide out left.
+    /// Encounter intro slides in as a ~7% Y strip. Post-battle slides in as a thin sliver,
+    /// then snaps open with an exaggerated overshoot. Exit collapses to the same strip
+    /// while contents fade, then slides out left.
     /// </summary>
     public static class CombatBannerStripMotion
     {
         public const float DefaultStripScaleY = 0.07f;
+        public const float PostBattleStripScaleY = 0.028f;
 
         public struct Settings
         {
@@ -38,6 +40,21 @@ namespace Chainbound.Combat
                 settleEase = Ease.OutQuad,
                 collapseDuration = 0.12f,
                 slideOutDuration = 0.16f,
+                slideOutEase = Ease.InCubic,
+            };
+
+            public static Settings PostBattle => new Settings
+            {
+                stripScaleY = PostBattleStripScaleY,
+                slideInDuration = 0.14f,
+                slideInEase = Ease.OutExpo,
+                growDuration = 0.12f,
+                growEase = Ease.OutExpo,
+                overshootScale = 1.28f,
+                settleDuration = 0.1f,
+                settleEase = Ease.OutQuad,
+                collapseDuration = 0.1f,
+                slideOutDuration = 0.14f,
                 slideOutEase = Ease.InCubic,
             };
 
@@ -96,7 +113,8 @@ namespace Chainbound.Combat
             Vector2 restPosition,
             Vector3 restScale,
             Settings settings,
-            bool useUnscaledTime = true)
+            bool useUnscaledTime = true,
+            CanvasGroup contents = null)
         {
             var sequence = DOTween.Sequence().SetUpdate(useUnscaledTime);
             if (banner == null)
@@ -104,13 +122,18 @@ namespace Chainbound.Combat
 
             Vector3 overshoot = restScale * Mathf.Max(1.01f, settings.overshootScale);
             ApplyEnterStart(banner, restPosition, restScale, settings);
+            if (contents != null)
+                contents.alpha = 0f;
 
+            float grow = Mathf.Max(0.04f, settings.growDuration);
             sequence.Append(
                 banner.DOAnchorPos(restPosition, Mathf.Max(0.04f, settings.slideInDuration))
                     .SetEase(settings.slideInEase));
             sequence.Append(
-                banner.DOScale(overshoot, Mathf.Max(0.04f, settings.growDuration))
+                banner.DOScale(overshoot, grow)
                     .SetEase(settings.growEase));
+            if (contents != null)
+                sequence.Join(contents.DOFade(1f, grow).SetEase(Ease.OutQuad));
             sequence.Append(
                 banner.DOScale(restScale, Mathf.Max(0.04f, settings.settleDuration))
                     .SetEase(settings.settleEase));

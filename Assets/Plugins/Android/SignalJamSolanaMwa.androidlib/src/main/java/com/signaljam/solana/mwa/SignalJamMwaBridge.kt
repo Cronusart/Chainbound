@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.solana.mobilewalletadapter.clientlib.ConnectionIdentity
 import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
+import com.solana.mobilewalletadapter.clientlib.RpcCluster
 import com.solana.mobilewalletadapter.clientlib.TransactionResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
@@ -63,6 +64,7 @@ object SignalJamMwaBridge {
 
     private class PendingRequest(
         val operation: Operation,
+        val cluster: String,
         val identityUri: String,
         val iconUri: String,
         val identityName: String,
@@ -115,6 +117,7 @@ object SignalJamMwaBridge {
     @JvmStatic
     fun connect(
         activity: Activity,
+        cluster: String,
         identityUri: String,
         iconUri: String,
         identityName: String,
@@ -124,6 +127,7 @@ object SignalJamMwaBridge {
         activity,
         PendingRequest(
             Operation.CONNECT,
+            cluster,
             identityUri,
             iconUri,
             identityName,
@@ -136,6 +140,7 @@ object SignalJamMwaBridge {
     @JvmStatic
     fun disconnect(
         activity: Activity,
+        cluster: String,
         identityUri: String,
         iconUri: String,
         identityName: String,
@@ -145,6 +150,7 @@ object SignalJamMwaBridge {
         activity,
         PendingRequest(
             Operation.DISCONNECT,
+            cluster,
             identityUri,
             iconUri,
             identityName,
@@ -157,6 +163,7 @@ object SignalJamMwaBridge {
     @JvmStatic
     fun signMessage(
         activity: Activity,
+        cluster: String,
         identityUri: String,
         iconUri: String,
         identityName: String,
@@ -169,6 +176,7 @@ object SignalJamMwaBridge {
             activity,
             PendingRequest(
                 Operation.SIGN_MESSAGE,
+                cluster,
                 identityUri,
                 iconUri,
                 identityName,
@@ -182,6 +190,7 @@ object SignalJamMwaBridge {
     @JvmStatic
     fun signAndSendTransaction(
         activity: Activity,
+        cluster: String,
         identityUri: String,
         iconUri: String,
         identityName: String,
@@ -199,6 +208,7 @@ object SignalJamMwaBridge {
             activity,
             PendingRequest(
                 Operation.SIGN_AND_SEND_TRANSACTION,
+                cluster,
                 identityUri,
                 iconUri,
                 identityName,
@@ -344,7 +354,12 @@ object SignalJamMwaBridge {
                     ?.signatures
                     ?.firstOrNull()
                     ?: return request.error("EMPTY_SIGNATURE", "Wallet returned no message signature.")
-                request.success(JSONObject().put("signatureBase64", encode(signature)).toString())
+                request.success(
+                    JSONObject()
+                        .put("signatureBase64", encode(signature))
+                        .put("authToken", adapter.authToken ?: "")
+                        .toString(),
+                )
             }
             is TransactionResult.NoWalletFound -> request.error("NO_WALLET_FOUND", result.message)
             is TransactionResult.Failure -> request.error("SIGN_MESSAGE_FAILED", failureMessage(result))
@@ -363,7 +378,12 @@ object SignalJamMwaBridge {
             is TransactionResult.Success -> {
                 val signature = result.payload.signatures.firstOrNull()
                     ?: return request.error("EMPTY_SIGNATURE", "Wallet returned no transaction signature.")
-                request.success(JSONObject().put("signatureBase64", encode(signature)).toString())
+                request.success(
+                    JSONObject()
+                        .put("signatureBase64", encode(signature))
+                        .put("authToken", adapter.authToken ?: "")
+                        .toString(),
+                )
             }
             is TransactionResult.NoWalletFound -> request.error("NO_WALLET_FOUND", result.message)
             is TransactionResult.Failure -> request.error("SIGN_AND_SEND_FAILED", failureMessage(result))
@@ -378,11 +398,21 @@ object SignalJamMwaBridge {
                 identityName = request.identityName,
             ),
         ).also { adapter ->
+            // Selecting the RPC cluster also selects the MWA blockchain identifier. This
+            // must happen before restoring a token because changing blockchain clears it.
+            adapter.rpcCluster = when (request.cluster) {
+                "devnet" -> RpcCluster.Devnet
+                "mainnet-beta" -> RpcCluster.MainnetBeta
+                else -> throw IllegalArgumentException("Unsupported Solana cluster.")
+            }
             if (request.authToken.isNotBlank()) adapter.authToken = request.authToken
         }
     }
 
     private fun validate(request: PendingRequest): String? {
+        if (request.cluster != "devnet" && request.cluster != "mainnet-beta") {
+            return "Cluster must be devnet or mainnet-beta."
+        }
         val identity = Uri.parse(request.identityUri)
         if (identity.scheme != "https" || identity.host.isNullOrBlank()) {
             return "Identity URI must be an absolute HTTPS URL."

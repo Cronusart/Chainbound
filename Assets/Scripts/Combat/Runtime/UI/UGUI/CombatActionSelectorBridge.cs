@@ -735,8 +735,7 @@ namespace Chainbound.Combat
                 GetCurrentActor(),
                 eligible,
                 HandleCaptureTargetConfirmed,
-                HandleCaptureTargetSelectionCanceled,
-                "Select a Chainling to capture");
+                HandleCaptureTargetSelectionCanceled);
         }
 
         private void HandleCaptureTargetConfirmed(string targetInstanceId)

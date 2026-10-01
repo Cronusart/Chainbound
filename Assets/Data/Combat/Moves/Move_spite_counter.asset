@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: spite_counter
   displayName: Spite Counter
-  description: Passive - 25% chance to mirror received debuffs to attacker.
+  description: Passive - 33% chance to mirror a received debuff onto the attacker.
   category: 4
   baseType: 0
   rarity: 2
@@ -116,6 +116,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

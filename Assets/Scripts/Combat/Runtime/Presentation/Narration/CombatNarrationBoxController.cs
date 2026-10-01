@@ -96,32 +96,7 @@ namespace Chainbound.Combat
             }
 
             _view.AllowImmediateAdvance();
-            float elapsed = 0f;
-            CombatNarrationAdvanceMode mode = profile != null
-                ? profile.AdvanceMode
-                : CombatNarrationAdvanceMode.AutoWithOptionalAdvance;
-
-            while (true)
-            {
-                PollAdvanceInput();
-                if (_advanceRequested)
-                {
-                    _advanceRequested = false;
-                    if (mode != CombatNarrationAdvanceMode.Automatic &&
-                        _view.RequestAdvance() == DialogueBoxAdvanceResult.Advanced)
-                    {
-                        yield break;
-                    }
-                }
-
-                elapsed += Time.unscaledDeltaTime;
-                if (mode != CombatNarrationAdvanceMode.ConfirmEveryPage &&
-                    elapsed >= Mathf.Max(0f, page.minimumDisplaySeconds))
-                {
-                    yield break;
-                }
-                yield return null;
-            }
+            yield return WaitForReadablePage(page, allowAutoAdvance: true);
         }
 
         public IEnumerator PresentUntilAdvanced(CombatNarrationPage page)
@@ -132,7 +107,7 @@ namespace Chainbound.Combat
             _advanceRequested = false;
             _inputEligibleFrame = Time.frameCount + 1;
             _view.Show();
-            float charactersPerSecond = profile != null ? profile.CharactersPerSecond : 60f;
+            float charactersPerSecond = profile != null ? profile.CharactersPerSecond : 48f;
             IEnumerator reveal = _view.PresentLine(page.speaker, page.text, charactersPerSecond);
             while (reveal.MoveNext())
             {
@@ -146,14 +121,41 @@ namespace Chainbound.Combat
             }
 
             _view.AllowImmediateAdvance();
+            yield return WaitForReadablePage(page, allowAutoAdvance: false);
+        }
+
+        private IEnumerator WaitForReadablePage(CombatNarrationPage page, bool allowAutoAdvance)
+        {
+            float elapsed = 0f;
+            float lockout = Mathf.Max(0f, page.skipLockoutSeconds);
+            float autoHold = Mathf.Max(0f, page.minimumDisplaySeconds);
+            CombatNarrationAdvanceMode mode = profile != null
+                ? profile.AdvanceMode
+                : CombatNarrationAdvanceMode.AutoWithOptionalAdvance;
+
             while (true)
             {
+                bool lockoutActive = elapsed < lockout;
                 PollAdvanceInput();
                 if (_advanceRequested)
                 {
                     _advanceRequested = false;
-                    if (_view.RequestAdvance() == DialogueBoxAdvanceResult.Advanced)
+                    if (!lockoutActive &&
+                        mode != CombatNarrationAdvanceMode.Automatic &&
+                        _view.RequestAdvance() == DialogueBoxAdvanceResult.Advanced)
+                    {
                         yield break;
+                    }
+                }
+
+                elapsed += Time.unscaledDeltaTime;
+                lockoutActive = elapsed < lockout;
+                if (allowAutoAdvance &&
+                    !lockoutActive &&
+                    mode != CombatNarrationAdvanceMode.ConfirmEveryPage &&
+                    elapsed >= autoHold)
+                {
+                    yield break;
                 }
                 yield return null;
             }

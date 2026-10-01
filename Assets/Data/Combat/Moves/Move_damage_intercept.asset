@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: damage_intercept
   displayName: Damage Intercept
-  description: Take the next single-target hit aimed at a partner.
+  description: Take the next single-target hit aimed at a partner. Holds through
+    next turn.
   category: 3
   baseType: 0
   rarity: 0
@@ -115,6 +116,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
+    wallSfxId: 
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

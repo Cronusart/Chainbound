@@ -13,12 +13,18 @@ import {
 import {
   authoritySecretBytes,
   buildStampTransaction,
-  CHAINBOUND_PROGRAM_ID,
   CORE_PROGRAM_ID,
+  deriveStampLockForModifiers,
   deriveStampResult,
+  ensureOwnershipRpcCluster,
+  findConfirmedSignatureForAddress,
+  isOwnershipWalletAllowed,
   loadOwnershipConfig,
+  normalizeAcquisition,
   OwnershipConfigurationError,
+  parseModifierEffectValues,
   sha256Hex,
+  simulateStampTransaction,
 } from "../_shared/ownership_spine.ts";
 import { publishStampedMetadata } from "../_shared/ownership_metadata.ts";
 
@@ -50,6 +56,53 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "wallet_not_linked_to_profile" }, 403);
     }
     const config = loadOwnershipConfig();
+    if (!isOwnershipWalletAllowed(config.cluster, walletAddress)) {
+      return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
+    }
+    await ensureOwnershipRpcCluster(config);
+    const now = new Date().toISOString();
+
+    // A transaction that was never signed cannot remain an open lock after its
+    // ticket/blockhash window. Retire only unsigned prepared rows; submitted
+    // transactions must go through reconciliation.
+    const { data: expiredPrepared, error: expiredPreparedError } = await supabase
+      .from("ownership_stamp_operations")
+      .select("operation_id,stamped_asset_address")
+      .eq("player_profile_id", profile.player_profile_id)
+      .eq("status", "prepared").is("signature", null).lt("expires_at", now)
+      .order("created_at", { ascending: true }).limit(1).maybeSingle();
+    if (expiredPreparedError) throw expiredPreparedError;
+    if (expiredPrepared) {
+      const recoveredSignature = await findConfirmedSignatureForAddress(
+        config.rpcUrl,
+        str(expiredPrepared.stamped_asset_address),
+      );
+      const recovered = !!recoveredSignature;
+      const { error: expiryError } = await supabase.from("ownership_stamp_operations").update({
+        status: recovered ? "submitted" : "failed",
+        signature: recoveredSignature || null,
+        failure_code: recovered ? null : "unsigned_intent_expired",
+        submitted_at: recovered ? now : null,
+        last_reconciled_at: now,
+        updated_at: now,
+      }).eq("operation_id", expiredPrepared.operation_id).eq("status", "prepared").is("signature", null);
+      if (expiryError) throw expiryError;
+    }
+
+    // Fail before result derivation, metadata publication, or intent creation.
+    // The on-chain program remains the final authority and repeats this check.
+    const { data: profileState, error: profileStateError } = await supabase.from("player_profiles")
+      .select("ram_balance").eq("player_profile_id", profile.player_profile_id).single();
+    if (profileStateError) throw profileStateError;
+    const ramBalance = Math.max(0, Number(profileState?.ram_balance ?? 0));
+    if (ramBalance < config.stampRamCost) {
+      return jsonResponse({
+        success: false,
+        error: "insufficient_ram",
+        ram_balance: ramBalance,
+        ram_cost: config.stampRamCost,
+      }, 409);
+    }
     const { data: known, error: knownError } = await supabase.from("ownership_known_moves").select("*")
       .eq("known_id", knownId).eq("player_profile_id", profile.player_profile_id).maybeSingle();
     if (knownError) throw knownError;
@@ -105,16 +158,32 @@ serve(async (req: Request) => {
     }
 
     const canonicalIdempotencyKey = existing ? str(existing.idempotency_key) : requestedIdempotencyKey;
-    const result = existing
-      ? { modifierIds: existing.modifier_ids as string[], rarity: Number(existing.rarity) }
-      : await deriveStampResult(
+    const derived = await deriveStampResult(
+      authoritySecretBytes(config.resultAuthority),
+      profile.player_profile_id,
+      knownId,
+      modifierCount,
+      config.generatorVersion,
+      config.modifierPoolHash,
+    );
+    const storedIds = existing && Array.isArray(existing.modifier_ids)
+      ? existing.modifier_ids.map((value: unknown) => str(value))
+      : derived.modifierIds;
+    const storedRarity = existing ? Number(existing.rarity) : derived.rarity;
+    const storedValues = existing ? parseModifierEffectValues(existing.modifier_effect_values) : null;
+    const modifierEffectValues = storedValues && storedValues.length === storedIds.length
+      ? storedValues
+      : storedIds.join("\0") === derived.modifierIds.join("\0")
+      ? derived.modifierEffectValues
+      : await deriveStampLockForModifiers(
         authoritySecretBytes(config.resultAuthority),
         profile.player_profile_id,
         knownId,
-        modifierCount,
+        storedIds,
         config.generatorVersion,
         config.modifierPoolHash,
       );
+    const result = { modifierIds: storedIds, rarity: storedRarity, modifierEffectValues };
     const built = await buildStampTransaction({
       config,
       walletAddress,
@@ -127,6 +196,8 @@ serve(async (req: Request) => {
       modifierIds: result.modifierIds,
       rarity: result.rarity,
     });
+    await simulateStampTransaction(config.rpcUrl, built.transactionBase64);
+    const acquisition = normalizeAcquisition(str(known.acquisition));
     // The Core URI is immutable once signed. Publish and publicly verify its
     // asset-specific card + JSON before the transaction is exposed to Unity.
     const publishedMetadata = await publishStampedMetadata(supabase, config.metadataUriBase, {
@@ -140,12 +211,14 @@ serve(async (req: Request) => {
       rarity: result.rarity,
       generatorVersion: config.generatorVersion,
       poolHash: config.modifierPoolHash,
+      acquisition,
+      modifierEffectValues: result.modifierEffectValues,
+      cluster: config.cluster,
     });
     if (existing && String(existing.onchain_instance_id) !== built.onchainInstanceId.toString()) {
       return jsonResponse({ success: false, error: "stamp_reconciliation_required" }, 409);
     }
 
-    const now = new Date().toISOString();
     const operation = {
       player_profile_id: profile.player_profile_id,
       known_id: knownId,
@@ -154,9 +227,11 @@ serve(async (req: Request) => {
       idempotency_hash: await sha256Hex(canonicalIdempotencyKey),
       modifier_count: 1,
       modifier_ids: result.modifierIds,
+      modifier_effect_values: result.modifierEffectValues,
       rarity: result.rarity,
       generator_version: config.generatorVersion,
       pool_hash: config.modifierPoolHash,
+      acquisition,
       onchain_instance_id: built.onchainInstanceId.toString(),
       ticket_address: built.ticketAddress,
       stamped_asset_address: built.stampedAssetAddress,
@@ -190,6 +265,7 @@ serve(async (req: Request) => {
       operation_status: "prepared",
       idempotency_key: canonicalIdempotencyKey,
       known_instance_id: knownId,
+      acquisition,
       transaction_base64: built.transactionBase64,
       ticket_address: built.ticketAddress,
       stamped_asset_address: built.stampedAssetAddress,
@@ -197,14 +273,14 @@ serve(async (req: Request) => {
       review: {
         cluster: config.cluster,
         feePayer: walletAddress,
-        chainboundProgram: CHAINBOUND_PROGRAM_ID,
+        chainboundProgram: config.programId.toBase58(),
         coreProgram: CORE_PROGRAM_ID,
         knownInstanceId: knownId,
         ramCost: config.stampRamCost,
         outputCollection: config.movesCollection.toBase58(),
         estimatedNetworkFeeLamports: built.estimatedNetworkFeeLamports,
-        simulationSucceeded: false,
-        simulationMessage: "Not yet simulated by the client RPC.",
+        simulationSucceeded: true,
+        simulationMessage: "Server preflight passed. Wallet signature is required.",
         metadataPublished: true,
         metadataUri: publishedMetadata.metadataUri,
         imageUri: publishedMetadata.imageUri,
@@ -213,6 +289,12 @@ serve(async (req: Request) => {
   } catch (error) {
     if (error instanceof OwnershipConfigurationError) return jsonResponse({ success: false, error: error.code }, 503);
     const message = error instanceof Error ? error.message : "unknown_error";
+    if (message === "insufficient_ram") {
+      return jsonResponse({ success: false, error: message }, 409);
+    }
+    if (message === "stamp_simulation_failed") {
+      return jsonResponse({ success: false, error: message }, 412);
+    }
     if (message.startsWith("metadata_") || message.startsWith("metadata")) {
       console.error("[ownership_prepare_stamp] metadata publication", message);
       return jsonResponse({ success: false, error: "stamp_metadata_publication_failed" }, 503);
@@ -220,6 +302,9 @@ serve(async (req: Request) => {
     if (
       [
         "move_vault_not_initialized",
+        "player_profile_not_initialized",
+        "player_profile_wrong_program_owner",
+        "player_profile_owner_mismatch",
         "known_onchain_instance_missing",
         "invalid_move_vault_account",
         "invalid_move_vault_layout",

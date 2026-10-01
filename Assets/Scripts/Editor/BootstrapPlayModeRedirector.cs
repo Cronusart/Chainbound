@@ -14,6 +14,7 @@ public static class BootstrapPlayModeRedirector
     private const string RestoreStartSceneAfterPlayKey = "SignalJam.Loading.RestoreStartSceneAfterPlay";
     public const string BootstrapPath = "Assets/Scenes/Bootstrap.unity";
     public const string MainMenuSceneId = "main_menu";
+    private const string UnityTestScenePrefix = "InitTestScene";
 
     static BootstrapPlayModeRedirector()
     {
@@ -59,6 +60,15 @@ public static class BootstrapPlayModeRedirector
 
     private static void ApplyPlayModeStartScene()
     {
+        // Unity Test Framework creates a transient InitTestScene before entering
+        // PlayMode. Redirecting that scene through Bootstrap prevents the test
+        // runner from ever attaching and leaves async runs stuck at "running".
+        if (IsUnityGeneratedTestScene(SceneManager.GetActiveScene()))
+        {
+            EditorSceneManager.playModeStartScene = null;
+            return;
+        }
+
         if (!IsEnabled)
         {
             EditorSceneManager.playModeStartScene = null;
@@ -94,6 +104,13 @@ public static class BootstrapPlayModeRedirector
 
         if (state != PlayModeStateChange.ExitingEditMode)
             return;
+
+        if (IsUnityGeneratedTestScene(SceneManager.GetActiveScene()))
+        {
+            EditorSceneManager.playModeStartScene = null;
+            SessionState.EraseString(BootstrapStartupController.EditorLaunchSceneSessionKey);
+            return;
+        }
 
         string oneShotDestination = SessionState.GetString(OneShotLaunchDestinationKey, string.Empty);
         if (!string.IsNullOrWhiteSpace(oneShotDestination))
@@ -144,5 +161,24 @@ public static class BootstrapPlayModeRedirector
 
         warning = $"[Bootstrap Editor] '{scene.path}' is not an enabled Build Settings scene; starting at main_menu.";
         return MainMenuSceneId;
+    }
+
+    private static bool IsUnityGeneratedTestScene(Scene scene)
+    {
+        if (!scene.IsValid())
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(scene.name) &&
+            scene.name.StartsWith(UnityTestScenePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(scene.path))
+            return false;
+
+        string normalizedPath = scene.path.Replace('\\', '/');
+        string fileName = Path.GetFileNameWithoutExtension(normalizedPath);
+        return fileName.StartsWith(UnityTestScenePrefix, StringComparison.OrdinalIgnoreCase);
     }
 }

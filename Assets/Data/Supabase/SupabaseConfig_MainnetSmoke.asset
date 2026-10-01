@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea671a0b4e2eab748a03f5692a2b2d54, type: 3}
+  m_Name: SupabaseConfig_MainnetSmoke
+  m_EditorClassIdentifier: 
+  supabaseUrl: https://vznasgdkcrfwupsayybn.supabase.co
+  supabaseAnonKey: sb_publishable_lIpkaoOv-y87V7Rfpte1vA_7suWpNIu
+  edgeFunctionBaseUrl: 
+  requestTimeoutSeconds: 10
+  maxRetries: 1
+  enableDebugLogs: 0

@@ -44,9 +44,10 @@ namespace Chainbound.Combat
             };
 
             string speaker = GetSpeaker(profile);
-            float actionHold = profile != null ? profile.ActionLeadSeconds : 0.22f;
-            float resolutionHold = profile != null ? profile.PrimaryResolutionSeconds : 0.70f;
-            float consequenceHold = profile != null ? profile.ConsequenceSeconds : 0.55f;
+            float actionHold = profile != null ? profile.ActionLeadSeconds : 0.4f;
+            float resolutionHold = profile != null ? profile.PrimaryResolutionSeconds : 1.7f;
+            float consequenceHold = profile != null ? profile.ConsequenceSeconds : 1.45f;
+            float effectLockout = profile != null ? profile.EffectPageSkipLockoutSeconds : 1.15f;
 
             CombatEvent? actionEvent = null;
             var damageByTarget = new Dictionary<string, DamageSummary>(StringComparer.Ordinal);
@@ -231,9 +232,9 @@ namespace Chainbound.Combat
             if (!string.IsNullOrWhiteSpace(actionText))
                 plan.actionPage = NewPage(CombatNarrationPageKind.Action, speaker, actionText, actionHold);
             if (!string.IsNullOrWhiteSpace(resolutionText))
-                plan.resolutionPage = NewPage(CombatNarrationPageKind.Resolution, speaker, resolutionText, resolutionHold);
+                plan.resolutionPage = NewPage(CombatNarrationPageKind.Resolution, speaker, resolutionText, resolutionHold, effectLockout);
             if (!string.IsNullOrWhiteSpace(consequenceText))
-                plan.consequencePage = NewPage(CombatNarrationPageKind.Consequence, speaker, consequenceText, consequenceHold);
+                plan.consequencePage = NewPage(CombatNarrationPageKind.Consequence, speaker, consequenceText, consequenceHold, effectLockout);
 
             AppendTranscript(plan, plan.actionPage);
             AppendTranscript(plan, plan.resolutionPage);
@@ -691,7 +692,12 @@ namespace Chainbound.Combat
             return builder.ToString();
         }
 
-        private static CombatNarrationPage NewPage(CombatNarrationPageKind kind, string speaker, string text, float hold)
+        private static CombatNarrationPage NewPage(
+            CombatNarrationPageKind kind,
+            string speaker,
+            string text,
+            float hold,
+            float skipLockout = 0f)
         {
             return new CombatNarrationPage
             {
@@ -699,6 +705,7 @@ namespace Chainbound.Combat
                 speaker = speaker,
                 text = NormalizeSentence(text),
                 minimumDisplaySeconds = Math.Max(0f, hold),
+                skipLockoutSeconds = Math.Max(0f, skipLockout),
             };
         }
 

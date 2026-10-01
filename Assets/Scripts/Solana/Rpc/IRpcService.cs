@@ -50,6 +50,11 @@ namespace Chainbound.Combat
         Task<string> GetLatestBlockhashAsync();
 
         /// <summary>
+        /// Returns the base58 genesis hash identifying the connected cluster.
+        /// </summary>
+        Task<string> GetGenesisHashAsync();
+
+        /// <summary>
         /// Get the cluster's current unix timestamp (seconds) via getSlot + getBlockTime.
         /// Returns null if the RPC call fails.
         /// </summary>

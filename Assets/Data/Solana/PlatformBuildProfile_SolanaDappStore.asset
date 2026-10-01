@@ -24,5 +24,11 @@ MonoBehaviour:
     supportsOnChainMinting: 1
     supportsExternalWalletOnly: 1
     supportsExperimentalCryptoCommerce: 1
-  backendEnvironment: production
+  backendEnvironment: devnet
   walletForwardStart: 0
+  ownershipEnvironment: 1
+  solanaConfig: {fileID: 11400000, guid: 10eafe33a35188647b52da52df5301c2, type: 2}
+  supabaseConfig: {fileID: 11400000, guid: ade43a952186e6e4cb200c77d99919b7, type: 2}
+  ownershipMetadataBaseUrl: https://jhzqcbrzkausrrtcavuu.supabase.co/storage/v1/object/public/chainbound-ownership-metadata
+  enableOwnershipRuntime: 1
+  allowDevelopmentTools: 1

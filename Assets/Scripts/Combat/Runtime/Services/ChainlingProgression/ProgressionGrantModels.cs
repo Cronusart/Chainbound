@@ -69,6 +69,7 @@ namespace Chainbound.Combat
         public bool success;
         public bool alreadyApplied;
         public string moveItemId;
+        public string knownInstanceId;
         public string moveId;
         public int ownedCopyCount;
         public string error;

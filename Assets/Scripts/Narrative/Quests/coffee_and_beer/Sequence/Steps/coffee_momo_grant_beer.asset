@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b832c17656287e448c1f7433176e635, type: 3}
+  m_Name: coffee_momo_grant_beer
+  m_EditorClassIdentifier: 
+  stepName: coffee_momo_grant_beer
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: ff922430-fe85-4202-9ad3-94ac3892a071
+  idempotencyKey: quest:coffee_and_beer:cold_beer
+  grants:
+  - itemId: cold_beer
+    quantity: 1
+  consumes: []
+  resultVariableName: lastItemDeltaOk

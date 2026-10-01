@@ -116,6 +116,18 @@ namespace Chainbound.Combat
                     visual.auraId = mutationId;
                 visual.Normalize();
 
+                string knownMoveId = moveRoll.knownMoveId ?? "";
+                if (zone.speciesDatabase != null)
+                {
+                    knownMoveId = ProgressionKnownMoveRoll.TryRoll(
+                        zone.speciesDatabase.GetById(picked.speciesId),
+                        stars,
+                        traits.isEntangled,
+                        rng,
+                        zone.progressionRewardTables,
+                        zone.progressionConfig);
+                }
+
                 slots.Add(new ZoneEncounterSlot
                 {
                     speciesId = picked.speciesId,
@@ -124,14 +136,14 @@ namespace Chainbound.Combat
                     level = 0,
                     baseCaptureRate = picked.baseCaptureRate,
                     moveIds = moveRoll.battleMoveIds ?? new List<string>(),
-                    knownMoveId = moveRoll.knownMoveId ?? "",
+                    knownMoveId = knownMoveId,
                     visualIdentity = visual,
                 });
 
                 logParts.Add(
                     $"{picked.speciesId} stars={stars} ivs=[{string.Join(",", traits.ivs)}] " +
                     $"mut={traits.isMutated}:{traits.mutationId} ent={traits.isEntangled}:{traits.entangledType} " +
-                    $"moves=[{string.Join(",", moveRoll.battleMoveIds)}] Known={moveRoll.knownMoveId} " +
+                    $"moves=[{string.Join(",", moveRoll.battleMoveIds)}] Known={knownMoveId} " +
                     $"variant={visual.visualVariantId}");
             }
 

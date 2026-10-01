@@ -89,6 +89,7 @@ namespace Chainbound.Combat
             string jsonBody,
             string accessToken)
         {
+            config = PlatformContext.ResolveSupabaseConfig(config);
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
 

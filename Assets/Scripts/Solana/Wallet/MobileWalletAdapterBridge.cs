@@ -17,14 +17,26 @@ namespace Chainbound.Combat
         public string AuthToken;
     }
 
+    internal sealed class MobileWalletMessageSignature
+    {
+        public byte[] Signature;
+        public string AuthToken;
+    }
+
+    internal sealed class MobileWalletTransactionSubmission
+    {
+        public string Signature;
+        public string AuthToken;
+    }
+
     internal interface IMobileWalletAdapterBridge
     {
         bool IsAvailable { get; }
         void CancelActiveRequest();
-        Task<MobileWalletAuthorization> ConnectAsync(string identityUri, string iconUri, string identityName, string authToken);
-        Task DisconnectAsync(string identityUri, string iconUri, string identityName, string authToken);
-        Task<byte[]> SignMessageAsync(string identityUri, string iconUri, string identityName, string authToken, byte[] message);
-        Task<string> SignAndSendTransactionAsync(string identityUri, string iconUri, string identityName, string authToken, byte[] transaction);
+        Task<MobileWalletAuthorization> ConnectAsync(string cluster, string identityUri, string iconUri, string identityName, string authToken);
+        Task DisconnectAsync(string cluster, string identityUri, string iconUri, string identityName, string authToken);
+        Task<MobileWalletMessageSignature> SignMessageAsync(string cluster, string identityUri, string iconUri, string identityName, string authToken, byte[] message);
+        Task<MobileWalletTransactionSubmission> SignAndSendTransactionAsync(string cluster, string identityUri, string iconUri, string identityName, string authToken, byte[] transaction);
     }
 
     /// <summary>
@@ -74,6 +86,7 @@ namespace Chainbound.Combat
         }
 
         public async Task<MobileWalletAuthorization> ConnectAsync(
+            string cluster,
             string identityUri,
             string iconUri,
             string identityName,
@@ -81,6 +94,7 @@ namespace Chainbound.Combat
         {
             NativePayload payload = await InvokeAsync(
                 "connect",
+                cluster,
                 identityUri,
                 iconUri,
                 identityName,
@@ -99,6 +113,7 @@ namespace Chainbound.Combat
         }
 
         public async Task DisconnectAsync(
+            string cluster,
             string identityUri,
             string iconUri,
             string identityName,
@@ -106,6 +121,7 @@ namespace Chainbound.Combat
         {
             await InvokeAsync(
                 "disconnect",
+                cluster,
                 identityUri,
                 iconUri,
                 identityName,
@@ -113,7 +129,8 @@ namespace Chainbound.Combat
                 null);
         }
 
-        public async Task<byte[]> SignMessageAsync(
+        public async Task<MobileWalletMessageSignature> SignMessageAsync(
+            string cluster,
             string identityUri,
             string iconUri,
             string identityName,
@@ -125,6 +142,7 @@ namespace Chainbound.Combat
 
             NativePayload payload = await InvokeAsync(
                 "signMessage",
+                cluster,
                 identityUri,
                 iconUri,
                 identityName,
@@ -134,10 +152,15 @@ namespace Chainbound.Combat
             byte[] signature = DecodeRequired(payload.signatureBase64, "message signature");
             if (signature.Length != 64)
                 throw new InvalidOperationException("MWA returned a message signature with an invalid length.");
-            return signature;
+            return new MobileWalletMessageSignature
+            {
+                Signature = signature,
+                AuthToken = payload.authToken ?? string.Empty,
+            };
         }
 
-        public async Task<string> SignAndSendTransactionAsync(
+        public async Task<MobileWalletTransactionSubmission> SignAndSendTransactionAsync(
+            string cluster,
             string identityUri,
             string iconUri,
             string identityName,
@@ -149,6 +172,7 @@ namespace Chainbound.Combat
 
             NativePayload payload = await InvokeAsync(
                 "signAndSendTransaction",
+                cluster,
                 identityUri,
                 iconUri,
                 identityName,
@@ -158,11 +182,16 @@ namespace Chainbound.Combat
             byte[] signature = DecodeRequired(payload.signatureBase64, "transaction signature");
             if (signature.Length != 64)
                 throw new InvalidOperationException("MWA returned a transaction signature with an invalid length.");
-            return Base58.Encode(signature);
+            return new MobileWalletTransactionSubmission
+            {
+                Signature = Base58.Encode(signature),
+                AuthToken = payload.authToken ?? string.Empty,
+            };
         }
 
         private async Task<NativePayload> InvokeAsync(
             string method,
+            string cluster,
             string identityUri,
             string iconUri,
             string identityName,
@@ -185,6 +214,7 @@ namespace Chainbound.Combat
                         bridge.CallStatic(
                             method,
                             activity,
+                            cluster,
                             identityUri,
                             iconUri,
                             identityName,
@@ -196,6 +226,7 @@ namespace Chainbound.Combat
                         bridge.CallStatic(
                             method,
                             activity,
+                            cluster,
                             identityUri,
                             iconUri,
                             identityName,

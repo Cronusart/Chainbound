@@ -17,105 +17,73 @@ MonoBehaviour:
   description: Ash-coated slug who walls for allies and scorches from afar.
   primaryType: 5
   secondaryType: 0
-  baseMaxHP: 115
+  baseMaxHP: 134
   baseMeleeAtk: 31
   baseMeleeDef: 54
   baseRangedAtk: 63
   baseRangedDef: 42
   baseSpeed: 28
   maxEvolutionStages: 1
+  offTypeMoveExceptions: []
   learnableMoves:
-  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
-  - {fileID: 11400000, guid: 9895a2381377a634296fdce28030a062, type: 2}
-  - {fileID: 11400000, guid: c3cee192ebf6d1448b87fd911bbc1943, type: 2}
-  - {fileID: 11400000, guid: 5f90d34b27eb95944a2fc362695f6a50, type: 2}
-  - {fileID: 11400000, guid: cfb1ff4502dd4c941a729f33c20a35f1, type: 2}
-  - {fileID: 11400000, guid: 710d30e8c4b815c48912c495365bd626, type: 2}
-  - {fileID: 11400000, guid: df5a4728afaea7d4683279ae3aca5ee5, type: 2}
-  - {fileID: 11400000, guid: 977421cd43c1a1e4e9386e113ef2b282, type: 2}
   - {fileID: 11400000, guid: 0be8d1f145e1b9040b1df038b2891fb3, type: 2}
-  - {fileID: 11400000, guid: 8a18f5ce6fbabc14781c7e0ef8cfb36e, type: 2}
-  - {fileID: 11400000, guid: 5876169bfa266bf41b876bd8f3149a1e, type: 2}
-  - {fileID: 11400000, guid: 07f1911b3a623cd4d81319de8a57b603, type: 2}
-  learnLevels: 010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  - {fileID: 11400000, guid: c3cee192ebf6d1448b87fd911bbc1943, type: 2}
+  - {fileID: 11400000, guid: cfb1ff4502dd4c941a729f33c20a35f1, type: 2}
+  - {fileID: 11400000, guid: 9895a2381377a634296fdce28030a062, type: 2}
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
   flagshipMove: {fileID: 11400000, guid: 0be8d1f145e1b9040b1df038b2891fb3, type: 2}
-  initialMoves: []
+  initialMoves:
+  - {fileID: 11400000, guid: c3cee192ebf6d1448b87fd911bbc1943, type: 2}
   progressionMovePool:
-  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 9895a2381377a634296fdce28030a062, type: 2}
-    weight: 10
+  - move: {fileID: 11400000, guid: 0be8d1f145e1b9040b1df038b2891fb3, type: 2}
+    weight: 8
+    useWeightAtStarFive: 1
+    weightAtStarFive: 24
+    isSignature: 1
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: c3cee192ebf6d1448b87fd911bbc1943, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 5f90d34b27eb95944a2fc362695f6a50, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: cfb1ff4502dd4c941a729f33c20a35f1, type: 2}
-    weight: 10
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 710d30e8c4b815c48912c495365bd626, type: 2}
-    weight: 10
+  - move: {fileID: 11400000, guid: 9895a2381377a634296fdce28030a062, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: df5a4728afaea7d4683279ae3aca5ee5, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 977421cd43c1a1e4e9386e113ef2b282, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 0be8d1f145e1b9040b1df038b2891fb3, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 8a18f5ce6fbabc14781c7e0ef8cfb36e, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 5876169bfa266bf41b876bd8f3149a1e, type: 2}
-    weight: 10
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 07f1911b3a623cd4d81319de8a57b603, type: 2}
-    weight: 10
+  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
   isStarter: 0
   defaultCaptureProfile: 1
+  rarity: 0
   combatRoleOverride: 0
-  designNotes: 'Wild catch. Sol Slug-inspired Burned wall/ranged archetype. Total
-    base stats: 340.'
+  designNotes: Wild catch. Common. Burned ranged attrition. Net 352.

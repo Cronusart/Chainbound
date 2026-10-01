@@ -40,7 +40,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Zeb
-    text: I am not going back in there. You want Toby's coffee, you face that beast yourself.
+    text: I am not going back in there. You want Toby's coffee, you face that beast
+      yourself.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

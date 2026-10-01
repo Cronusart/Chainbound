@@ -193,6 +193,16 @@ namespace Chainbound.Combat
             return blockhash;
         }
 
+        public async Task<string> GetGenesisHashAsync()
+        {
+            JObject response = await PostAsync("getGenesisHash", new JArray());
+            string genesisHash = response["result"]?.Value<string>();
+            byte[] decoded = Base58.Decode(genesisHash ?? string.Empty);
+            if (decoded.Length != 32)
+                throw new InvalidOperationException("RPC returned an invalid genesis hash.");
+            return genesisHash;
+        }
+
         public async Task<long?> GetBlockTimeAsync()
         {
             try

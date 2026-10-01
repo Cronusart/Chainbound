@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_zeb_return_sequence
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_zeb_return_sequence
+  startCheckpointId: coffee_zeb_return_idle
+  safeResumeLabel: coffee_zeb_return_idle
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 1
+  autoStartQuestId: coffee_and_beer
+  autoStartLifecycleMask: 8
+  autoStartSkipWorldFlagKey: world.coffee.zeb_departed
+  autoStartRequiredWorldFlagKey: world.coffee.cofi_lootwak.defeated
+  steps:
+  - {fileID: 11400000, guid: 5e756c561208c354d8e05081c718bda0, type: 2}
+  - {fileID: 11400000, guid: 1eae4888e491ae54885f7d5bdff39206, type: 2}
+  - {fileID: 11400000, guid: 247c9f679658cd146a9956755556b00e, type: 2}
+  - {fileID: 11400000, guid: 90363d68f06cd254583cc8ca0670d35e, type: 2}
+  - {fileID: 11400000, guid: 2d69e381c3a29274fa55fce5f6f3b0d8, type: 2}
+  - {fileID: 11400000, guid: a89bee7caaa7434429af4637f9afbf08, type: 2}

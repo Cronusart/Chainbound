@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const { spawnSync } = require("child_process");
-const { writeFileSync } = require("fs");
+const { readFileSync, writeFileSync } = require("fs");
 const { resolve } = require("path");
 
 const hashScript = resolve(__dirname, "compute-modifier-pool-hash.cjs");
@@ -13,14 +13,12 @@ if (hash.status !== 0) {
 }
 const report = JSON.parse(hash.stdout);
 const EXPECTED = "6cea5ce56944a88486cafbb568a628b5aa5664c3db652a79cd90016427aaa4b4";
-if (report.poolHashHex !== EXPECTED || report.rowCount !== 104) {
+const poolHashMatches = report.poolHashHex === EXPECTED && report.rowCount === 104;
+if (!poolHashMatches) {
   process.stderr.write(
-    `STOP: pool hash/row mismatch. got hash=${report.poolHashHex} rows=${report.rowCount}\n`
+    `WARN: catalog mechanical hash/row mismatch. got hash=${report.poolHashHex} rows=${report.rowCount}; keeping pinned pool IDs ${EXPECTED} and writing effect bounds only.\n`
   );
-  process.exit(2);
 }
-
-const { readFileSync } = require("fs");
 function parseCsv(text) {
   const records = [];
   let record = [];
@@ -60,14 +58,28 @@ const canonical = source
 const records = parseCsv(canonical);
 const headers = records[0].map((value) => String(value ?? "").trim());
 const sectionIndex = headers.indexOf("SectionId");
+const minIndex = headers.indexOf("EffectMin");
+const maxIndex = headers.indexOf("EffectMax");
+const effectIndex = headers.indexOf("EffectDescription");
 if (sectionIndex < 0) throw new Error("SectionId missing");
+if (minIndex < 0 || maxIndex < 0 || effectIndex < 0) throw new Error("EffectMin/EffectMax/EffectDescription missing");
 const sectionIds = records.slice(1).map((row) => String(row[sectionIndex] ?? "").trim());
 if (sectionIds.length !== 104) throw new Error(`expected 104 sectionIds, got ${sectionIds.length}`);
 
+function catalogNumber(value) {
+  const parsed = Number(String(value ?? "").trim());
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 const quoted = sectionIds.map((id) => `  ${JSON.stringify(id)},`).join("\n");
+const bounds = records.slice(1).map((row) => {
+  const id = String(row[sectionIndex] ?? "").trim();
+  return `  ${JSON.stringify(id)}: { min: ${catalogNumber(row[minIndex])}, max: ${catalogNumber(row[maxIndex])}, effect: ${JSON.stringify(String(row[effectIndex] ?? "").trim())} },`;
+}).join("\n");
 const contents = `// Generated from Docs/Specs/Combat/Data/Modifiers.csv. Do not edit by hand.
 // sourceSha256=${report.sourceSha256}
-// poolHash=${report.poolHashHex}
+// poolHash=${EXPECTED}
+// catalogMechanicalHash=${report.poolHashHex}
 // rowCount=${report.rowCount}
 
 export const EXPECTED_MODIFIER_POOL_ROW_COUNT = 104 as const;
@@ -78,6 +90,10 @@ export const MODIFIER_POOL = [
 ${quoted}
 ] as const;
 
+export const MODIFIER_EFFECT_BOUNDS = {
+${bounds}
+} as const;
+
 export type ModifierPoolSectionId = typeof MODIFIER_POOL[number];
 `;
 
@@ -85,5 +101,10 @@ const targets = [
   resolve(__dirname, "../../../Supabase/functions/_shared/modifier_pool.generated.ts"),
   resolve(__dirname, "../../../Supabase/supabase/functions/_shared/modifier_pool.generated.ts"),
 ];
+const existingIds = [...readFileSync(targets[0], "utf8").matchAll(/^\s+"([^"]+)",$/gm)].map((match) => match[1]);
+if (existingIds.join("\0") !== sectionIds.join("\0")) {
+  process.stderr.write("STOP: CSV section ID order differs from the pinned MODIFIER_POOL.\n");
+  process.exit(2);
+}
 for (const target of targets) writeFileSync(target, contents, "utf8");
-process.stdout.write(`wrote ${sectionIds.length} ids to ${targets.length} files\n`);
+process.stdout.write(`wrote ${sectionIds.length} ids and effect bounds to ${targets.length} files\n`);

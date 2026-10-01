@@ -128,6 +128,19 @@ public class ProjectedPanelReveal : MonoBehaviour
         _seq.Play();
     }
 
+    /// <summary>
+    /// Stops a hide that would deactivate this panel, and leaves it visible for a prompt that lives on it.
+    /// </summary>
+    public void CancelHideKeepVisible()
+    {
+        Kill();
+        gameObject.SetActive(true);
+        if (canvasGroup != null)
+            canvasGroup.alpha = 1f;
+        if (panelRoot != null)
+            panelRoot.localScale = Vector3.one;
+    }
+
     private void EnsureParentActive()
     {
         var t = transform.parent;

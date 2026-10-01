@@ -36,8 +36,20 @@ namespace Chainbound.Combat
         /// <summary>Primary type of the owning Chainling.</summary>
         public ChainlingType primaryType;
 
-        /// <summary>Secondary type (None if mono-type).</summary>
+        /// <summary>Secondary type (None if mono-type). Equip checks do not treat this as a second type.</summary>
         public ChainlingType secondaryType;
+
+        /// <summary>Species asset used for exclusive and off-type equip checks. Null skips those checks.</summary>
+        public SpeciesDefinitionSO speciesDefinition;
+
+        /// <summary>Specimen entangled flag. Entangled type is per Chainling, not species.secondaryType.</summary>
+        public bool isEntangled;
+
+        /// <summary>Rolled entangled type when <see cref="isEntangled"/> is set.</summary>
+        public ChainlingType entangledType = ChainlingType.None;
+
+        /// <summary>Used to block exclusives that belong to a different species.</summary>
+        public SpeciesDatabaseSO speciesDatabase;
 
         /// <summary>Current evolution stage (1-based). Does not determine move slot count.</summary>
         public int evolutionStage;
@@ -125,6 +137,19 @@ namespace Chainbound.Combat
             if (move == null)
                 return LoadoutValidationResult.Fail(LoadoutValidationError.DuplicateMove,
                     "Move is null.");
+
+            if (speciesDefinition != null)
+            {
+                LoadoutValidationResult eligibility = SpeciesMoveEquipRules.Evaluate(
+                    speciesDefinition,
+                    isEntangled,
+                    entangledType,
+                    move.definitionId,
+                    move.baseType,
+                    speciesDatabase);
+                if (!eligibility.isValid)
+                    return eligibility;
+            }
 
             // 1. Duplicate check (COMBAT_04 Section 4.2: no duplicate Stamped moves)
             for (int i = 0; i < equipped.Count; i++)

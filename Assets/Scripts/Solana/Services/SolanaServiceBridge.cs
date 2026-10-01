@@ -130,13 +130,16 @@ namespace Chainbound.Combat
             }
             _instance = this;
 
+            solanaConfig = PlatformContext.ResolveSolanaConfig(solanaConfig);
+
             InitializeServices();
             EnsureSupabaseCombatPersistence();
         }
 
         private void EnsureSupabaseCombatPersistence()
         {
-            SupabaseConfigSO config = Resources.Load<SupabaseConfigSO>("SupabaseConfig");
+            SupabaseConfigSO config = PlatformContext.ResolveSupabaseConfig(
+                Resources.Load<SupabaseConfigSO>("SupabaseConfig"));
             if (config == null)
                 return;
 
@@ -176,6 +179,24 @@ namespace Chainbound.Combat
 
         private bool ValidateConfig()
         {
+            PlatformBuildProfileSO deployment = PlatformContext.ResolveActiveBuildProfile();
+            if (!Application.isEditor && deployment == null)
+            {
+                Debug.LogError("[SolanaServiceBridge] No explicit deployment profile is active in this player build.");
+                return false;
+            }
+            if (deployment != null)
+            {
+                var deploymentErrors = OwnershipDeploymentProfileRules.Validate(
+                    deployment,
+                    requireComplete: !Application.isEditor);
+                if (deploymentErrors.Count > 0)
+                {
+                    Debug.LogError("[SolanaServiceBridge] Deployment profile is invalid: " + string.Join(" | ", deploymentErrors));
+                    return false;
+                }
+            }
+
             if (solanaConfig == null)
             {
                 Debug.LogError("[SolanaServiceBridge] SolanaConfigSO is null. Assign it in the Inspector.");
@@ -307,6 +328,7 @@ namespace Chainbound.Combat
 
         private string ResolveRpcEndpoint()
         {
+#if UNITY_EDITOR
             string envEndpoint = Environment.GetEnvironmentVariable(RpcEndpointEnvVar);
             if (!string.IsNullOrWhiteSpace(envEndpoint))
                 return envEndpoint.Trim();
@@ -326,6 +348,7 @@ namespace Chainbound.Combat
             {
                 Debug.LogWarning($"[SolanaServiceBridge] Failed to read StreamingAssets/{RuntimeConfigFileName}: {ex.Message}");
             }
+#endif
 
             return solanaConfig != null ? NormalizeConfigValue(solanaConfig.rpcEndpoint) : string.Empty;
         }

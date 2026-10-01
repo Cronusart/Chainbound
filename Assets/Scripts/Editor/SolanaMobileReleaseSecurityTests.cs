@@ -13,6 +13,16 @@ public sealed class SolanaMobileReleaseSecurityTests
     private const string MainManifestPath = "Assets/Plugins/Android/AndroidManifest.xml";
     private const string MwaManifestPath = "Assets/Plugins/Android/SignalJamSolanaMwa.androidlib/src/main/AndroidManifest.xml";
     private const string MwaGradlePath = "Assets/Plugins/Android/SignalJamSolanaMwa.androidlib/build.gradle";
+    private const string MwaBridgePath = "Assets/Plugins/Android/SignalJamSolanaMwa.androidlib/src/main/java/com/signaljam/solana/mwa/SignalJamMwaBridge.kt";
+    private const string WalletServicePath = "Assets/Scripts/Solana/Wallet/SolanaWalletService.cs";
+    private const string ClusterGuardPath = "Assets/Scripts/Solana/Config/SolanaClusterGuard.cs";
+    private const string PlatformContextPath = "Assets/Scripts/Combat/Runtime/Accounts/PlatformContext.cs";
+    private const string OwnershipGatewayPath = "Assets/Scripts/Combat/Runtime/Services/SupabaseOwnershipSpineGateway.cs";
+    private const string CandyMachinePath = "Assets/Scripts/UI/MenuNavigation/CandyMachine/CandyMachineScreen.cs";
+    private const string AndroidBuildCommandPath = "Assets/Scripts/Editor/DevelopmentAndroidBuildCommand.cs";
+    private const string SupabaseAuthPath = "Assets/Scripts/Combat/Runtime/Accounts/Supabase/SupabaseAnonymousAuthSessionProvider.cs";
+    private const string DevnetProfilePath = "Assets/Resources/DeploymentProfiles/DevnetOwnership.asset";
+    private const string MainnetProfilePath = "Assets/Resources/DeploymentProfiles/MainnetSmoke.asset";
     private const string ReleaseValidatorPath = "Assets/Scripts/Editor/SolanaMobileReleaseValidator.cs";
     private const string SolanaBridgePath = "Assets/Scripts/Solana/Services/SolanaServiceBridge.cs";
     private const string WalletPromptPath = "Assets/Scripts/UI/MainMenu/WalletConnectionPromptService.cs";
@@ -56,6 +66,107 @@ public sealed class SolanaMobileReleaseSecurityTests
         string validator = File.ReadAllText(ReleaseValidatorPath);
         StringAssert.Contains("KotlinPluginVersion = \"2.1.10\"", validator);
         StringAssert.Contains("version '{KotlinPluginVersion}' apply false", validator);
+    }
+
+    [Test]
+    public void AndroidWalletClient_SelectsClusterBeforeRestoringAuthorization()
+    {
+        string nativeBridge = File.ReadAllText(MwaBridgePath);
+        int clusterAssignment = nativeBridge.IndexOf("adapter.rpcCluster =", System.StringComparison.Ordinal);
+        int tokenRestore = nativeBridge.IndexOf("adapter.authToken = request.authToken", System.StringComparison.Ordinal);
+
+        StringAssert.Contains("val cluster: String", nativeBridge);
+        StringAssert.Contains("RpcCluster.Devnet", nativeBridge);
+        StringAssert.Contains("RpcCluster.MainnetBeta", nativeBridge);
+        Assert.That(clusterAssignment, Is.GreaterThanOrEqualTo(0));
+        Assert.That(tokenRestore, Is.GreaterThan(clusterAssignment),
+            "MWA clears authorization when blockchain changes, so cluster selection must happen first.");
+
+        string walletService = File.ReadAllText(WalletServicePath);
+        StringAssert.Contains("mwa.authToken.", walletService);
+        StringAssert.Contains("never consider it for Mainnet authorization", walletService);
+        StringAssert.Contains("PersistAuthorizationToken(submission.AuthToken)", walletService);
+        StringAssert.Contains("PersistAuthorizationToken(signedMessage.AuthToken)", walletService);
+    }
+
+    [Test]
+    public void WalletService_NormalizesSupportedMwaClustersAndScopesTokenKeys()
+    {
+        System.Reflection.MethodInfo normalize = typeof(SolanaWalletService).GetMethod(
+            "NormalizeMwaCluster",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        System.Reflection.MethodInfo tokenKey = typeof(SolanaWalletService).GetMethod(
+            "GetAuthTokenStorageKey",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(normalize);
+        Assert.NotNull(tokenKey);
+        Assert.AreEqual("devnet", normalize.Invoke(null, new object[] { " DEVNET " }));
+        Assert.AreEqual("mainnet-beta", normalize.Invoke(null, new object[] { "mainnet" }));
+        Assert.AreEqual("mainnet-beta", normalize.Invoke(null, new object[] { "mainnet-beta" }));
+        Assert.AreEqual("mwa.authToken.devnet", tokenKey.Invoke(null, new object[] { "devnet" }));
+        Assert.AreEqual("mwa.authToken.mainnet-beta", tokenKey.Invoke(null, new object[] { "mainnet" }));
+
+        var error = Assert.Throws<System.Reflection.TargetInvocationException>(
+            () => normalize.Invoke(null, new object[] { "testnet" }));
+        Assert.IsInstanceOf<System.InvalidOperationException>(error.InnerException);
+    }
+
+    [Test]
+    public void DeploymentProfiles_KeepDevnetOperationalAndMainnetFailClosedUntilProvisioned()
+    {
+        PlatformBuildProfileSO devnet = AssetDatabase.LoadAssetAtPath<PlatformBuildProfileSO>(DevnetProfilePath);
+        PlatformBuildProfileSO mainnet = AssetDatabase.LoadAssetAtPath<PlatformBuildProfileSO>(MainnetProfilePath);
+
+        Assert.NotNull(devnet);
+        Assert.NotNull(mainnet);
+        Assert.AreEqual(OwnershipDeploymentEnvironment.DevnetOwnership, devnet.OwnershipEnvironment);
+        Assert.AreEqual(OwnershipDeploymentEnvironment.MainnetSmoke, mainnet.OwnershipEnvironment);
+        Assert.AreEqual("devnet", devnet.BackendEnvironment);
+        Assert.AreEqual("mainnet-smoke", mainnet.BackendEnvironment);
+        Assert.IsTrue(devnet.AllowDevelopmentTools);
+        Assert.IsFalse(mainnet.AllowDevelopmentTools);
+        Assert.AreNotSame(devnet.SolanaConfig, mainnet.SolanaConfig);
+        Assert.AreNotSame(devnet.SupabaseConfig, mainnet.SupabaseConfig);
+        Assert.IsEmpty(OwnershipDeploymentProfileRules.Validate(devnet, requireComplete: true));
+        Assert.IsNotEmpty(OwnershipDeploymentProfileRules.Validate(mainnet, requireComplete: true),
+            "Mainnet Smoke must remain non-buildable until its real isolated infrastructure is supplied.");
+    }
+
+    [Test]
+    public void DeploymentBoundary_RequiresExplicitSelectionAndNeverAutoEnablesMainnetDevTools()
+    {
+        string buildCommand = File.ReadAllText(AndroidBuildCommandPath);
+        string context = File.ReadAllText(PlatformContextPath);
+        string gateway = File.ReadAllText(OwnershipGatewayPath);
+        string candy = File.ReadAllText(CandyMachinePath);
+
+        StringAssert.Contains("CHAINBOUND_DEVNET_OWNERSHIP", buildCommand);
+        StringAssert.Contains("CHAINBOUND_MAINNET_SMOKE", buildCommand);
+        StringAssert.Contains("CHAINBOUND_DEVNET_OWNERSHIP || CHAINBOUND_MAINNET_SMOKE", context);
+        StringAssert.Contains("return Application.isEditor ? fallback : null", context);
+        StringAssert.Contains("opposite Mainnet deployment define", File.ReadAllText(ReleaseValidatorPath));
+        StringAssert.Contains("opposite Devnet deployment define", File.ReadAllText(ReleaseValidatorPath));
+        StringAssert.DoesNotContain("#if DEVELOPMENT_BUILD", gateway);
+        StringAssert.Contains("ResolveOwnershipRuntimeEnabled", gateway);
+        StringAssert.Contains("ResolveAllowDevelopmentTools", candy);
+    }
+
+    [Test]
+    public void WalletAndProfileCaches_AreEnvironmentScopedAndRpcGenesisIsVerified()
+    {
+        string wallet = File.ReadAllText(WalletServicePath);
+        string guard = File.ReadAllText(ClusterGuardPath);
+        string account = File.ReadAllText(AccountSessionPath);
+        string auth = File.ReadAllText(SupabaseAuthPath);
+
+        StringAssert.Contains("SolanaClusterGuard.EnsureExpectedClusterAsync", wallet);
+        StringAssert.Contains("getGenesisHash", File.ReadAllText("Assets/Scripts/Solana/Rpc/SolanaRpcService.cs"));
+        StringAssert.Contains("RPC cluster mismatch", guard);
+        StringAssert.Contains("BuildScopedStorageKey", account);
+        StringAssert.Contains("BuildScopedStorageKey", auth);
+        StringAssert.Contains("DevnetOwnership", auth,
+            "Only Devnet may migrate the legacy unscoped auth cache.");
     }
 
     [Test]
