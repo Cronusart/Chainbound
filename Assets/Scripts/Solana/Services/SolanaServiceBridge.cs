@@ -82,25 +82,12 @@ namespace Chainbound.Combat
         public IMoveVaultService MoveVaultService => _moveVaultService;
         public IChainlingVaultService ChainlingVaultService => _chainlingVaultService;
         public IEquippedMoveRegistryService EquippedRegistryService => _equippedRegistryService;
-        /// <summary>Profile-first wild capture (Supabase dossier + Known move).</summary>
-        [Obsolete("Use CombatSessionService/ICaptureSession. This probability RPC remains only for unsupported legacy clients.")]
-        public ICaptureService CaptureService => ResolveCaptureService();
         public ICombatSessionService CombatSessionService => ResolveAuthoritativeCombatService();
         public ICaptureLoadoutService CaptureLoadoutService => ResolveAuthoritativeCombatService();
         public IAuthoritativeCombatAvailability CombatAuthorityAvailability => ResolveAuthoritativeCombatService();
 
         /// <summary>Shared move database used by wild encounter move rolls.</summary>
         public MoveDatabaseSO MoveDatabase => moveDatabase;
-
-        private ICaptureService ResolveCaptureService()
-        {
-            SupabaseProfileCaptureService profileCapture =
-                FindFirstObjectByType<SupabaseProfileCaptureService>(FindObjectsInactive.Include);
-            if (profileCapture != null)
-                return profileCapture;
-
-            return SupabaseProfileCaptureService.ResolveOrCreate();
-        }
 
         private AuthoritativeCombatSessionService ResolveAuthoritativeCombatService()
         {

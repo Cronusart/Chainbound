@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: ManualPartyProvider
   m_EditorClassIdentifier: 
   roster:
-  - speciesId: cinislug
-    displayName: WAFFLEZ
+  - speciesId: validape
+    displayName: mankey
     stars: 1
     rebirthCount: 0
     masteryXp: 0
     evolutionStage: 1
     visualIdentity:
-      visualVariantId: 
+      visualVariantId: base
       auraId: 
       hudCardVariantId: default
       partyColumnVariantId: default
@@ -53,16 +53,18 @@ MonoBehaviour:
     pickRangedDef: 0
     pickSpeed: 0
     isMutated: 0
+    mutationId: none
     isEntangled: 0
+    entangledType: 0
     currentHp: -1
-  - speciesId: humpacked
-    displayName: CATALINA
+  - speciesId: hopoch
+    displayName: Pepe
     stars: 1
     rebirthCount: 0
     masteryXp: 0
     evolutionStage: 1
     visualIdentity:
-      visualVariantId: 
+      visualVariantId: base
       auraId: 
       hudCardVariantId: default
       partyColumnVariantId: default
@@ -98,6 +100,8 @@ MonoBehaviour:
     pickRangedDef: 0
     pickSpeed: 0
     isMutated: 0
+    mutationId: none
     isEntangled: 0
+    entangledType: 0
     currentHp: -1
   teamName: Player

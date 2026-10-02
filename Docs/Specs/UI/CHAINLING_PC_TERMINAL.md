@@ -1,5 +1,13 @@
 # Chainling PC Terminal
 
+## Capacity contract
+
+The PC reads `profile_get_chainlings`; it does not grant or mutate captured
+Chainlings. It displays `Stored X / 22`, while the backing profile has a hard
+total cap of 25 (three party slots plus 22 PC slots). A confirmed authoritative
+capture publishes a roster refresh signal so an open PC refreshes immediately;
+the party tab refreshes when next shown.
+
 ## Purpose
 
 PC terminals are the storage and party-management hub for owned Chainlings. The

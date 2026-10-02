@@ -26,6 +26,8 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private RectTransform equippedRoot;
         [SerializeField] private RectTransform availableRoot;
         [SerializeField] private Button refreshButton;
+        [Tooltip("Authored dossier loadout rows. When set, Bind only writes names and does not spawn buttons.")]
+        [SerializeField] private TMP_Text[] loadoutRowLabels;
 
         private readonly List<Button> equippedButtons = new List<Button>();
         private readonly List<Button> availableButtons = new List<Button>();
@@ -34,10 +36,24 @@ namespace SignalJam.UI.MenuNavigation
         private PlayerRosterEntry entry;
         private MoveInventorySnapshot inventory;
         private bool isBusy;
+        private bool readOnly;
 
         public event Action LoadoutChanged;
+        public event Action NavigationChanged;
+
+        public void SetReadOnly(bool value)
+        {
+            readOnly = value;
+            RefreshLabels();
+            RefreshMoveButtons();
+        }
 
         private void Awake()
+        {
+            EnsureBuilt();
+        }
+
+        public void BuildDefaultLayoutForEditor()
         {
             EnsureBuilt();
         }
@@ -113,7 +129,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private async void EquipMove(MenuMoveItem move)
         {
-            if (isBusy || move == null || entry == null || entry.snapshot == null)
+            if (readOnly || isBusy || move == null || entry == null || entry.snapshot == null)
                 return;
 
             ChainlingLoadout loadout = BuildLoadout();
@@ -137,7 +153,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private async void UnequipMove(MenuMoveItem move)
         {
-            if (isBusy || move == null || entry == null || entry.snapshot == null)
+            if (readOnly || isBusy || move == null || entry == null || entry.snapshot == null)
                 return;
 
             if (move.locked)
@@ -281,7 +297,7 @@ namespace SignalJam.UI.MenuNavigation
                 ? (!string.IsNullOrWhiteSpace(entry.snapshot.displayName) ? entry.snapshot.displayName : entry.snapshot.speciesId)
                 : "Chainling";
             if (headingLabel != null)
-                headingLabel.text = $"Moves - {name}";
+                headingLabel.text = readOnly ? $"Move List - {name}" : $"Moves - {name}";
 
             ChainlingLoadout loadout = BuildLoadout();
             if (slotSummaryLabel != null)
@@ -295,8 +311,19 @@ namespace SignalJam.UI.MenuNavigation
             }
         }
 
+        private bool UsesAuthoredWireframe =>
+            transform.Find("Content") != null ||
+            (loadoutRowLabels != null && loadoutRowLabels.Length > 0 && loadoutRowLabels[0] != null);
+
         private void RefreshMoveButtons()
         {
+            if (UsesAuthoredWireframe)
+            {
+                BindAuthoredLoadout();
+                NavigationChanged?.Invoke();
+                return;
+            }
+
             EnsureButtonCount(equippedButtons, equippedRoot, equippedMoves.Count);
             for (int i = 0; i < equippedButtons.Count; i++)
             {
@@ -308,7 +335,7 @@ namespace SignalJam.UI.MenuNavigation
 
                 MenuMoveItem move = equippedMoves[i];
                 SetButtonText(button, $"Slot {move.equippedSlot + 1}: {FormatMove(move)}\nTap to unequip");
-                button.interactable = !isBusy && !move.locked;
+                button.interactable = !readOnly && !isBusy && !move.locked;
                 button.onClick.RemoveAllListeners();
                 button.onClick.AddListener(() => UnequipMove(move));
             }
@@ -326,7 +353,7 @@ namespace SignalJam.UI.MenuNavigation
                 MenuMoveItem move = availableMoves[i];
                 LoadoutValidationResult validation = loadout.CanEquip(move.ToMoveInstance(moveDatabase));
                 SetButtonText(button, $"{FormatMove(move)}\n{FitCue(move)}{(validation.isValid ? "" : $" | {validation.message}")}");
-                button.interactable = !isBusy && validation.isValid && !move.locked;
+                button.interactable = !readOnly && !isBusy && validation.isValid && !move.locked;
                 button.onClick.RemoveAllListeners();
                 button.onClick.AddListener(() => EquipMove(move));
             }
@@ -335,6 +362,9 @@ namespace SignalJam.UI.MenuNavigation
                 SetStatus("No moves equipped on this Chainling yet.");
             if (availableMoves.Count == 0 && inventory != null && equippedMoves.Count > 0)
                 SetStatus("No unequipped moves are available.");
+            if (readOnly && inventory != null)
+                SetStatus("Capture dossier preview - move changes unlock after naming.");
+            NavigationChanged?.Invoke();
         }
 
         private string FormatMove(MenuMoveItem move)
@@ -408,8 +438,47 @@ namespace SignalJam.UI.MenuNavigation
                 statusLabel.text = value ?? "";
         }
 
+        private void BindAuthoredLoadout()
+        {
+            if (loadoutRowLabels == null || loadoutRowLabels.Length == 0)
+                return;
+
+            var names = new List<string>();
+            if (equippedMoves.Count > 0)
+            {
+                for (int i = 0; i < equippedMoves.Count; i++)
+                    names.Add(GetMoveName(equippedMoves[i]));
+            }
+            else if (entry != null && entry.snapshot != null && entry.snapshot.moveIds != null)
+            {
+                for (int i = 0; i < entry.snapshot.moveIds.Count; i++)
+                {
+                    string moveId = entry.snapshot.moveIds[i];
+                    if (string.IsNullOrWhiteSpace(moveId))
+                        continue;
+                    MoveDefinitionSO definition = moveDatabase != null ? moveDatabase.GetById(moveId) : null;
+                    names.Add(definition != null && !string.IsNullOrWhiteSpace(definition.displayName)
+                        ? definition.displayName
+                        : moveId);
+                }
+            }
+
+            for (int i = 0; i < loadoutRowLabels.Length; i++)
+            {
+                TMP_Text label = loadoutRowLabels[i];
+                if (label == null)
+                    continue;
+                label.text = i < names.Count && !string.IsNullOrWhiteSpace(names[i])
+                    ? $"Slot {i + 1}\n{names[i]}"
+                    : $"Slot {i + 1}\nEmpty";
+            }
+        }
+
         private void EnsureBuilt()
         {
+            if (UsesAuthoredWireframe)
+                return;
+
             if (equippedRoot != null && availableRoot != null && refreshButton != null)
                 return;
 

@@ -17,6 +17,9 @@ MonoBehaviour:
   difficulty: 0
   minEncounterPartySize: 1
   maxEncounterPartySize: 1
+  extraWildChanceAtOne: 0.15
+  extraWildChanceAtTwo: 0.45
+  extraWildChanceAtThree: 0.7
   wildTraits:
     mutationChance: 0.047
     entangledChance: 0.023

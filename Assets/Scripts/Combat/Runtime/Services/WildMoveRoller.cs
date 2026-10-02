@@ -7,6 +7,7 @@ namespace Chainbound.Combat
     /// Rolls a wild battle kit (N moves, at least one damaging).
     /// knownMoveId is a legacy kit pick used only when the zone has no species database.
     /// Captures with a species database roll the progression pool instead.
+    /// WildBattleKitComposer then rebuilds the fight kit and does not change that grant.
     /// </summary>
     public static class WildMoveRoller
     {

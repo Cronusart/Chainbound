@@ -21,27 +21,19 @@ public class LoomvilleEncounterContentTests
         EncounterZoneSO zone = AssetDatabase.LoadAssetAtPath<EncounterZoneSO>(ZonePath);
         Assert.That(zone, Is.Not.Null);
 
+        EffectiveEncounterTable dawn = EncounterTableResolver.Resolve(zone, new WildRollConfig(), TimeSegment.Dawn);
         EffectiveEncounterTable day = EncounterTableResolver.Resolve(zone, new WildRollConfig(), TimeSegment.Day);
         EffectiveEncounterTable dusk = EncounterTableResolver.Resolve(zone, new WildRollConfig(), TimeSegment.Dusk);
         EffectiveEncounterTable night = EncounterTableResolver.Resolve(zone, new WildRollConfig(), TimeSegment.Night);
 
-        Assert.That(day.entries.Select(entry => entry.speciesId), Is.EquivalentTo(new[]
-        {
-            "cinislug",
-            "forkrook",
-            "rattlestake",
-        }));
-        Assert.That(dusk.entries.Select(entry => entry.speciesId), Is.EquivalentTo(new[]
-        {
-            "kreechank",
-            "keyper",
-        }));
-        Assert.That(night.entries.Select(entry => entry.speciesId), Is.EquivalentTo(new[]
-        {
-            "kreechank",
-            "keyper",
-            "deghoul",
-        }));
+        string[] daySpecies = { "kreechank", "balloom" };
+        string[] nightSpecies = { "kreechank", "balloom", "keyper", "crackett" };
+        Assert.That(dawn.entries.Select(entry => entry.speciesId), Is.EquivalentTo(daySpecies));
+        Assert.That(day.entries.Select(entry => entry.speciesId), Is.EquivalentTo(daySpecies));
+        Assert.That(dusk.entries.Select(entry => entry.speciesId), Is.EquivalentTo(nightSpecies));
+        Assert.That(night.entries.Select(entry => entry.speciesId), Is.EquivalentTo(nightSpecies));
+        Assert.That(WeightOf(night, "crackett"), Is.EqualTo(14f));
+        Assert.That(WeightOf(day, "kreechank"), Is.EqualTo(450f));
 
         IEnumerable<string> allResolvedSpecies = day.entries
             .Concat(dusk.entries)
@@ -58,12 +50,10 @@ public class LoomvilleEncounterContentTests
 
         var expectedMoves = new Dictionary<string, string>
         {
-            { "cinislug", "baseline_shot" },
-            { "forkrook", "baseline_shot" },
-            { "rattlestake", "baseline_shot" },
             { "kreechank", "baseline_striker" },
+            { "balloom", "baseline_striker" },
             { "keyper", "baseline_shot" },
-            { "deghoul", "baseline_striker" },
+            { "crackett", "baseline_striker" },
         };
 
         Assert.That(zone.entries.Count, Is.EqualTo(expectedMoves.Count));
@@ -76,5 +66,10 @@ public class LoomvilleEncounterContentTests
             Assert.That(entry.movePool.entries.Count, Is.EqualTo(1), entry.speciesId);
             Assert.That(entry.movePool.entries[0].moveId, Is.EqualTo(expectedMoves[entry.speciesId]), entry.speciesId);
         }
+    }
+
+    private static float WeightOf(EffectiveEncounterTable table, string speciesId)
+    {
+        return table.entries.First(entry => entry.speciesId == speciesId).weight;
     }
 }

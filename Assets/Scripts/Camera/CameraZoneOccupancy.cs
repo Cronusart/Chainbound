@@ -242,6 +242,64 @@ public static class CameraZoneOccupancy
     }
 
     /// <summary>
+    /// True when an already-active zone still has the player in its buffer ring
+    /// (outside that zone's inner volume). Nested rooms are not latched: they
+    /// take the camera as soon as their inner volume is entered.
+    /// </summary>
+    public static bool ActivatedBufferHoldsTransition(CameraZoneTrigger incoming, Vector3 position)
+    {
+        if (incoming == null)
+            return false;
+
+        CameraZoneTrigger[] zones = Object.FindObjectsByType<CameraZoneTrigger>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < zones.Length; i++)
+        {
+            CameraZoneTrigger held = zones[i];
+            if (held == null || held == incoming || !held.isActiveAndEnabled || !held.IsActivated)
+                continue;
+            if (held.ContainsPosition(position))
+                continue;
+            if (!BufferContainsPosition(held, position))
+                continue;
+            if (IsNestedPresentationPair(incoming, held))
+                continue;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// True when <paramref name="profile"/> is the authored profile of a zone
+    /// nested inside <paramref name="outer"/>.
+    /// </summary>
+    public static bool IsProfileFromNestedInner(CameraZoneTrigger outer, CameraProfile profile)
+    {
+        if (outer == null || profile == null)
+            return false;
+
+        CameraZoneTrigger[] zones = Object.FindObjectsByType<CameraZoneTrigger>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < zones.Length; i++)
+        {
+            CameraZoneTrigger candidate = zones[i];
+            if (candidate == null || candidate == outer || !candidate.isActiveAndEnabled)
+                continue;
+
+            CameraZoneBehavior behavior = candidate.ZoneBehavior;
+            if (behavior == null || behavior.ZoneProfile != profile)
+                continue;
+            if (IsNestedPresentationPair(candidate, outer))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Drops only true containing outer zones. Independent overlaps keep their
     /// normal occupancy, which preserves Academy stair-zone behavior.
     /// </summary>

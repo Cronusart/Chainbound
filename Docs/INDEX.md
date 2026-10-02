@@ -33,7 +33,7 @@ Use this page to find a mechanic and the doc that describes it. Status was check
 
 | Mechanic | Status | Where it is documented | Where it lives in code |
 |---|---|---|---|
-| Profile-first wild capture | Implemented | [PROFILE_FIRST_CAPTURE.md](Specs/Combat/PROFILE_FIRST_CAPTURE.md), [trading-trace capture](Architecture/AuthoritativeTradingTraceCapture.md) | `CaptureSimulation`, `profile_capture_wild` |
+| Authoritative wild capture | Rollout-gated | [PROFILE_FIRST_CAPTURE.md](Specs/Combat/PROFILE_FIRST_CAPTURE.md), [trading-trace capture](Architecture/AuthoritativeTradingTraceCapture.md) | `Chainbound.BattleService`, authoritative capture RPCs |
 | Per-capture inscription NFT | Not implemented | [profile-first capture](Specs/Combat/PROFILE_FIRST_CAPTURE.md) | Standard capture does not mint an NFT. The old per-capture inscription spec was removed. |
 | Local wild encounters | Implemented | [encounter return snapshot](Narrative/Encounter_Return_Snapshot.md) | `EncounterRollService`, zone encounter providers |
 | Encounter live-ops modifiers | Partial | [ENCOUNTER_EVENTS_SUPABASE.md](Specs/Combat/ENCOUNTER_EVENTS_SUPABASE.md) | `get_encounter_events` |

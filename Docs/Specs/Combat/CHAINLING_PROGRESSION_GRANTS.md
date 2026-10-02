@@ -45,7 +45,11 @@ The Chainlings tab uses `Next-star folio chance: N%` below five stars and `Five-
 
 ## Capture Known Move
 
-A captured Chainling rolls the same progression pool with the same star-gate percent as a folio at that star. A star-0 wild uses the first-star gate. A hit grants one Known move and equips it in loadout slot 0. A miss grants no move. The wild battle kit stays on the encounter zone and is not the capture grant.
+A captured Chainling rolls the same progression pool with the same star-gate percent as a folio at that star. A star-0 wild uses the first-star gate. A hit grants one Known move and equips it in loadout slot 0. A miss grants no move. The wild battle kit is composed separately and is not the capture grant.
+
+## Wild Battle Kit
+
+When the zone has a species database, `WildBattleKitComposer` builds the fight kit after the Known roll. Slot 1 is one damaging move from the zone wild pool. Slot 2 is one typed damaging move from that species' progression pool, using the pool weights, including the 5-star weight. Slot 3 is a 50% roll of one non-damaging progression move. Typeless progression hits and off-type equip exceptions stay out of those two slots. The capture grant is still only the Known roll.
 
 `EncounterZoneSO.speciesDatabase`, `progressionRewardTables`, and `progressionConfig` point the roll at the live species pool and odds. `Supabase/migrations/20261001180000_capture_progression_known_move.sql` stops the server from substituting `baseline_jab` when the client sends an empty move id. That migration is not applied yet.
 

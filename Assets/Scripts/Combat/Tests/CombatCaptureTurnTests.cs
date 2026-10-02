@@ -212,6 +212,44 @@ namespace Chainbound.Combat.Tests
             Assert.IsTrue(wild.isAlive);
         }
 
+        [Test]
+        public void PreviewCaptureTurn_PassesTheWildSideAndLeavesItUntouched()
+        {
+            CombatResolver resolver = CreateResolver();
+            ChainlingInstance recorder = CreateChainling("recorder", speed: 5);
+            ChainlingInstance partner = CreateChainling("partner", speed: 90);
+            partner.moves.Add(CreateStrike("chip", power: 40));
+            ChainlingInstance wild = CreateChainling("wild", maxHp: 100, speed: 80);
+            wild.moves.Add(CreateStrike("claw", power: 80));
+            CombatState state = resolver.InitializeBattle(
+                CreateTeam(0, recorder, partner),
+                CreateTeam(1, wild));
+            int wildHp = wild.currentHP;
+
+            resolver.BeginTurn(state);
+            List<CombatAction> player = CombatCapturePreviewActions.BuildPlayerCaptureTurn(state);
+            List<CombatAction> opponent = CombatCapturePreviewActions.BuildOpponentPasses(state);
+            List<CombatResolver.CombatActionStep> queue = resolver.BuildActionQueueForCurrentTurn(
+                state,
+                player,
+                opponent);
+
+            for (int i = 0; i < queue.Count; i++)
+                resolver.ExecuteActionStep(state, queue[i]);
+
+            Assert.AreEqual(CombatActionType.Capture, player[0].actionType);
+            Assert.AreEqual(CombatActionType.Pass, player[1].actionType);
+            Assert.IsTrue(opponent.TrueForAll(action => action.actionType == CombatActionType.Pass));
+            Assert.IsFalse(queue.Exists(step =>
+                step.actingTeam != null &&
+                step.actingTeam.teamIndex == 1 &&
+                step.action.actionType != CombatActionType.Pass));
+            Assert.AreEqual(wildHp, wild.currentHP);
+            Assert.IsTrue(wild.isAlive);
+            Assert.IsNotNull(state.pendingCaptureAttempt);
+            Assert.AreEqual(wild.instanceId, state.pendingCaptureAttempt.targetInstanceId);
+        }
+
         private CombatResolver CreateResolver()
         {
             TypeChemistryMatrixSO matrix = CreateAsset<TypeChemistryMatrixSO>();

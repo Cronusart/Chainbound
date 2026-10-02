@@ -190,6 +190,16 @@ namespace Chainbound.Combat
         [Tooltip("Maximum number of wild chainlings (1 or 2). Negative = inherit.")]
         public int maxEncounterPartySize = -1;
 
+        [Header("Extra Wild From Player Party")]
+        [Tooltip("Chance of one extra wild when the player has 1 Chainling equipped. Negative = inherit the area. Boss encounters ignore this.")]
+        public float extraWildChanceAtOne = -1f;
+
+        [Tooltip("Chance of one extra wild when the player has 2 Chainlings equipped. Negative = inherit the area.")]
+        public float extraWildChanceAtTwo = -1f;
+
+        [Tooltip("Chance of one extra wild when the player has 3 Chainlings equipped. Negative = inherit the area.")]
+        public float extraWildChanceAtThree = -1f;
+
         [Header("Species Table")]
         public EncounterEntryMergeMode entryMergeMode = EncounterEntryMergeMode.Extend;
         public List<ZoneEncounterEntry> entries = new List<ZoneEncounterEntry>();

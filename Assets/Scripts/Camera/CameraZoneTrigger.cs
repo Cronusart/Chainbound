@@ -230,11 +230,24 @@ public class CameraZoneTrigger : MonoBehaviour
         if (CameraZoneOccupancy.IsSceneTransitionOccupancyDeferred())
             return;
 
+        Vector3 samplePosition = SampleOccupancyPosition(other);
+        // The buffer is a one-way latch. A neighbor can take the camera only
+        // after the player has left this zone's buffer, so walking the shared
+        // edge cannot flip the profile back and forth.
+        if (CameraZoneOccupancy.ActivatedBufferHoldsTransition(this, samplePosition))
+        {
+            if (enableDebugLogs)
+            {
+                Debug.Log($"[CameraZoneTrigger] Buffer latch held {gameObject.name}; another zone's buffer still contains the player");
+            }
+            return;
+        }
+
         activePlayerColliders.Add(other);
         playerInInnerZone = true;
         isActivated = true;
-
-        Vector3 samplePosition = SampleOccupancyPosition(other);
+        if (useBufferZone && IsPlayerPhysicallyInsideBuffer())
+            playerInBufferZone = true;
         CameraZoneTrigger winner = CameraZoneOccupancy.FindTriggerContaining(samplePosition);
         // On a walked entry, Unity reports overlap when the leading edge of the
         // player collider crosses the volume. The player root/collider transform
@@ -366,9 +379,14 @@ public class CameraZoneTrigger : MonoBehaviour
     {
         if (!isActivated) return;
         
-        // If using buffer zone, must be outside BOTH zones to deactivate
+        // If using buffer zone, must be outside BOTH zones to deactivate.
+        // Spawn and relay volumes can miss the buffer enter event, so sample
+        // the authored buffer before treating an inner-edge exit as a full exit.
         if (useBufferZone && bufferZone != null)
         {
+            if (!playerInBufferZone && IsPlayerPhysicallyInsideBuffer())
+                playerInBufferZone = true;
+
             if (playerInInnerZone || playerInBufferZone)
             {
                 if (enableDebugLogs)
@@ -637,6 +655,7 @@ public class CameraZoneTrigger : MonoBehaviour
 
         if (restorePresentation)
         {
+            zoneBehavior.PrepareFullExitRestore();
             zoneBehavior.Deactivate();
             EnsurePlayerUnfrozen();
             return;

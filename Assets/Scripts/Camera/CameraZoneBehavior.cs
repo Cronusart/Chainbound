@@ -131,6 +131,9 @@ public class CameraZoneBehavior : MonoBehaviour
     /// </summary>
     public bool IsActive => isActive;
 
+    /// <summary>Authored profile for this zone. Null means the camera default.</summary>
+    public CameraProfile ZoneProfile => zoneProfile;
+
     /// <summary>True while activation or its camera transition is still being applied.</summary>
     public bool IsTransitioning =>
         activationCoroutine != null ||
@@ -294,6 +297,12 @@ public class CameraZoneBehavior : MonoBehaviour
             if (!useAbsoluteYaw && heldRestoreSnapshot.yawIndex90 == ResolveZoneYawIndex())
                 heldRestoreSnapshot.yawIndex90 = cameraController.DefaultYawIndex90;
 
+            // Spawn can activate this zone while a nested zone's profile is already
+            // on the camera. That profile is not the overworld default to restore
+            // when the player later leaves every zone.
+            if (SnapshotProfileCameFromNestedInner(heldRestoreSnapshot.profile))
+                ApplyDefaultProfileToSnapshot(ref heldRestoreSnapshot);
+
             CapturePresentationSnapshot();
         }
 
@@ -317,6 +326,20 @@ public class CameraZoneBehavior : MonoBehaviour
         OnActivated?.Invoke();
     }
     
+    /// <summary>
+    /// Full exit from every camera zone restores the prefab default profile,
+    /// not a nested zone profile that was live when this zone first activated.
+    /// </summary>
+    public void PrepareFullExitRestore()
+    {
+        if (!heldRestoreSnapshot.isValid)
+            return;
+
+        ResolveCameraController();
+        ApplyDefaultProfileToSnapshot(ref heldRestoreSnapshot);
+        previousSnapshot = heldRestoreSnapshot;
+    }
+
     /// <summary>
     /// Deactivate zone behavior and restore previous state.
     /// </summary>
@@ -542,11 +565,12 @@ public class CameraZoneBehavior : MonoBehaviour
         // NOTE: Collider update is deferred until AFTER transitions complete
         // to prevent false trigger exits during the freeze period
         
-        // Apply profile only when the authored asset actually changes. Re-applying
-        // the same profile restarts a blend and would freeze the player for no camera move.
-        if (zoneProfile != null && !ZoneProfileAlreadyMatches())
+        // A zone with no profile uses the prefab default, so a nested profile
+        // cannot linger after the player steps into unprofiled space.
+        CameraProfile profileToApply = zoneProfile != null ? zoneProfile : cameraController.DefaultProfile;
+        if (profileToApply != null && cameraController.CurrentProfile != profileToApply)
         {
-            cameraController.ApplyProfile(zoneProfile, profileBlendTime);
+            cameraController.ApplyProfile(profileToApply, profileBlendTime);
             totalDuration = Mathf.Max(totalDuration, profileBlendTime);
         }
         
@@ -556,12 +580,10 @@ public class CameraZoneBehavior : MonoBehaviour
             cameraController.SetZoomTarget(zoomOverride);
             totalDuration = Mathf.Max(totalDuration, zoomTransitionTime);
         }
-        else if (zoneProfile != null && !cameraAlreadySettled)
+        else if (profileToApply != null && !cameraAlreadySettled)
         {
-            // Use zone profile's default zoom
-            cameraController.SetZoomTarget(zoneProfile.defaultZoom);
+            cameraController.SetZoomTarget(profileToApply.defaultZoom);
         }
-        // If zoomOverride == 0 and no zone profile, keep current zoom
         
         // Apply pitch override
         if (overridePitch)
@@ -696,6 +718,7 @@ public class CameraZoneBehavior : MonoBehaviour
 
         bool restoreWithFreeze = freezePlayerDuringTransition;
         freezePlayerDuringTransition = false;
+        PrepareFullExitRestore();
         Deactivate();
         freezePlayerDuringTransition = restoreWithFreeze;
     }
@@ -733,8 +756,35 @@ public class CameraZoneBehavior : MonoBehaviour
 
     private bool ZoneProfileAlreadyMatches()
     {
-        return zoneProfile == null ||
-               (cameraController != null && cameraController.CurrentProfile == zoneProfile);
+        if (cameraController == null)
+            return true;
+
+        CameraProfile expected = zoneProfile != null ? zoneProfile : cameraController.DefaultProfile;
+        return expected == null || cameraController.CurrentProfile == expected;
+    }
+
+    private bool SnapshotProfileCameFromNestedInner(CameraProfile profile)
+    {
+        if (profile == null || profile == zoneProfile || profile == cameraController.DefaultProfile)
+            return false;
+
+        CameraZoneTrigger self = GetComponent<CameraZoneTrigger>();
+        return CameraZoneOccupancy.IsProfileFromNestedInner(self, profile);
+    }
+
+    private void ApplyDefaultProfileToSnapshot(ref CameraStateSnapshot snapshot)
+    {
+        if (cameraController == null)
+            return;
+
+        CameraProfile fallback = cameraController.DefaultProfile;
+        if (fallback == null)
+            return;
+
+        snapshot.profile = fallback;
+        snapshot.zoomTarget = fallback.defaultZoom;
+        snapshot.hasPitchOverride = false;
+        snapshot.pitchAngle = fallback.pitchAngle;
     }
 
     /// <summary>

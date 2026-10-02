@@ -111,6 +111,8 @@ namespace SignalJam.UI.MenuNavigation
         private MenuInputContextController activeInputContext;
         private Coroutine viewModeDebounceRoutine;
         private MonoBehaviour cachedSfxPlayerBehaviour;
+        private long lastRosterRefreshSequence;
+        private bool rosterRefreshRequested;
 
         /// <summary>
         /// True when this instance already contains an authored hierarchy (embedded prefab or scene instance).
@@ -270,6 +272,8 @@ namespace SignalJam.UI.MenuNavigation
 
         private void OnEnable()
         {
+            PlayerRosterRefreshSignal.ResolveOrCreate().Changed -= HandleRosterChanged;
+            PlayerRosterRefreshSignal.ResolveOrCreate().Changed += HandleRosterChanged;
             EnsureButtonListeners();
             if (pendingTabEnterPresentation)
             {
@@ -280,6 +284,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private void OnDisable()
         {
+            PlayerRosterRefreshSignal.ResolveOrCreate().Changed -= HandleRosterChanged;
             UnbindButtonListeners();
             UnbindNavigationControllerEvents();
             if (activeInputContext != null)
@@ -316,6 +321,13 @@ namespace SignalJam.UI.MenuNavigation
                 navigationController?.ResetToPartySection(true);
             }
             base.Show();
+
+            if (HasUnprocessedRosterRefresh())
+            {
+                rosterRefreshRequested = false;
+                Refresh();
+                return;
+            }
 
             if (rosterCache != null && !isLoading)
                 RenderParty();
@@ -356,6 +368,41 @@ namespace SignalJam.UI.MenuNavigation
                 skipHpDelta;
 
             _ = RefreshRosterAsync(bindWhenComplete: !alreadyPaintedThisOpen);
+        }
+
+        private void HandleRosterChanged(PlayerRosterRefreshSignal.Notice notice)
+        {
+            if (!MatchesActiveProfile(notice.PlayerProfileId) || notice.Sequence <= lastRosterRefreshSequence)
+                return;
+
+            lastRosterRefreshSequence = notice.Sequence;
+            rosterRefreshRequested = true;
+            if (gameObject.activeInHierarchy)
+                Refresh();
+        }
+
+        private bool HasUnprocessedRosterRefresh()
+        {
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session == null || string.IsNullOrWhiteSpace(session.PlayerProfileId))
+                return rosterRefreshRequested;
+
+            if (PlayerRosterRefreshSignal.TryGetLatest(session.PlayerProfileId, out PlayerRosterRefreshSignal.Notice notice) &&
+                notice.Sequence > lastRosterRefreshSequence)
+            {
+                lastRosterRefreshSequence = notice.Sequence;
+                rosterRefreshRequested = true;
+            }
+
+            return rosterRefreshRequested;
+        }
+
+        private static bool MatchesActiveProfile(string playerProfileId)
+        {
+            GameSessionContext session = GameSessionContext.Instance;
+            return session != null &&
+                   !string.IsNullOrWhiteSpace(session.PlayerProfileId) &&
+                   string.Equals(session.PlayerProfileId, playerProfileId, StringComparison.Ordinal);
         }
 
         private void EnsureButtonListeners()

@@ -27,6 +27,8 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private Vector2 scanlineScrollDirection = Vector2.down;
         [SerializeField, Min(0f)] private float scanlineUvSpeed = 0.05f;
         [SerializeField] private bool useUnscaledTime = true;
+        [Tooltip("When true the scanlines draw over every sibling. When false they sit directly above the base tint, behind the menu content.")]
+        [SerializeField] private bool scanlinesAboveContent = true;
 
         private bool capturedAuthoredPresentation;
 
@@ -34,6 +36,12 @@ namespace SignalJam.UI.MenuNavigation
         {
             get => respectAuthoredPresentation;
             set => respectAuthoredPresentation = value;
+        }
+
+        public bool ScanlinesAboveContent
+        {
+            get => scanlinesAboveContent;
+            set => scanlinesAboveContent = value;
         }
 
         public Image BaseTintImage => baseTintImage;
@@ -230,7 +238,15 @@ namespace SignalJam.UI.MenuNavigation
                 PlayerMenuUiFactory.Stretch(scanlineOverlay.rectTransform, 0f, 0f, 0f, 0f);
             }
 
-            scanlineOverlay.transform.SetAsLastSibling();
+            // Authored dossiers keep their own draw order (scanlines sit behind the
+            // book). Only lift or pin the overlay when this component owns presentation.
+            if (respectAuthoredPresentation)
+                return;
+
+            if (scanlinesAboveContent)
+                scanlineOverlay.transform.SetAsLastSibling();
+            else
+                scanlineOverlay.transform.SetSiblingIndex(baseTintImage.transform.GetSiblingIndex() + 1);
         }
 
         private Vector2 ResolveScanlineTiling()

@@ -1477,6 +1477,12 @@ public class TopDownCameraController3D : MonoBehaviour, ICombatCameraController,
     /// Get current camera profile.
     /// </summary>
     public CameraProfile CurrentProfile => currentProfile;
+
+    /// <summary>
+    /// Profile authored on the camera prefab. Used outside every camera zone,
+    /// and inside a zone that has no profile of its own.
+    /// </summary>
+    public CameraProfile DefaultProfile => defaultProfile;
     
     /// <summary>
     /// Get active camera profile (may differ during blending).

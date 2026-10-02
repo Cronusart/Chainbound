@@ -412,6 +412,8 @@ namespace Chainbound.Combat
         {
             if (teamIndex != 0 || state == null)
                 return;
+            if (battleController != null && battleController.CapturePreviewMode)
+                return;
 
             if (verboseLogs)
                 Debug.Log("[CombatActionSelectorBridge] OnPlayerTurnWaiting received for team 0.");
@@ -465,6 +467,8 @@ namespace Chainbound.Combat
                 return;
 
             if (!battleController.UsePlayerInput || !battleController.IsWaitingForPlayerActions)
+                return;
+            if (battleController.CapturePreviewMode)
                 return;
 
             if (battleController.State == null || !battleController.State.isActive)

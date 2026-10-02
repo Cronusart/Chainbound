@@ -140,9 +140,10 @@ public class EncounterTriggerZone : MonoBehaviour
             ? SolanaServiceBridge.Instance.MoveDatabase
             : null;
 
+        int equippedPartyCount = CountEquippedPartyMembers();
         if (debugForceEncounter)
         {
-            hit = ForceRoll(ctx, moveDb, out result);
+            hit = ForceRoll(ctx, moveDb, equippedPartyCount, out result);
         }
         else
         {
@@ -152,7 +153,8 @@ public class EncounterTriggerZone : MonoBehaviour
                 wildConfig,
                 out result,
                 moveDatabase: moveDb,
-                modifierService: EncounterModifierService.Instance);
+                modifierService: EncounterModifierService.Instance,
+                equippedPartyCount: equippedPartyCount);
         }
 
         if (!hit) return;
@@ -164,7 +166,7 @@ public class EncounterTriggerZone : MonoBehaviour
         StartCoroutine(TransitionToBattle(player, result));
     }
 
-    private bool ForceRoll(EncounterContext ctx, MoveDatabaseSO moveDb, out ZoneEncounterResult result)
+    private bool ForceRoll(EncounterContext ctx, MoveDatabaseSO moveDb, int equippedPartyCount, out ZoneEncounterResult result)
     {
         // Reuse the real roll path with chance forced via a temporary resolve + always-hit.
         // Deterministic: run TryRollEncounter against a cloned chance of 1 via modifier-less resolve,
@@ -196,15 +198,29 @@ public class EncounterTriggerZone : MonoBehaviour
             var visual = WildVariantRoller.Roll(entry.variantPool, rng, traits.isEntangled, entry.variantWeightMultipliers);
             int stars = Mathf.Clamp(entry.baseStars, 0, CombatConstants.STAR_MAX);
             string knownMoveId = moveRoll.knownMoveId;
+            System.Collections.Generic.List<string> battleMoves = moveRoll.battleMoveIds
+                ?? new System.Collections.Generic.List<string>();
             if (zone != null && zone.speciesDatabase != null)
             {
+                SpeciesDefinitionSO species = zone.speciesDatabase.GetById(entry.speciesId);
                 knownMoveId = ProgressionKnownMoveRoll.TryRoll(
-                    zone.speciesDatabase.GetById(entry.speciesId),
+                    species,
                     stars,
                     traits.isEntangled,
                     rng,
                     zone.progressionRewardTables,
                     zone.progressionConfig);
+                if (species != null)
+                {
+                    battleMoves = WildBattleKitComposer.Compose(
+                        battleMoves,
+                        species,
+                        stars,
+                        traits.isEntangled,
+                        rng,
+                        moveDb,
+                        zone.progressionConfig);
+                }
             }
 
             slots.Add(new ZoneEncounterSlot
@@ -214,10 +230,22 @@ public class EncounterTriggerZone : MonoBehaviour
                 stars = stars,
                 level = 0,
                 baseCaptureRate = entry.baseCaptureRate,
-                moveIds = moveRoll.battleMoveIds,
+                moveIds = battleMoves,
                 knownMoveId = knownMoveId,
                 visualIdentity = visual,
             });
+
+            if (i == partySize - 1 &&
+                WildPartyExtraRoll.TryAddPartner(
+                    zone,
+                    table.difficulty,
+                    zone != null && zone.bossIntroDialogueAsset != null,
+                    partySize,
+                    equippedPartyCount,
+                    rng))
+            {
+                partySize++;
+            }
         }
 
         result = new ZoneEncounterResult
@@ -233,6 +261,46 @@ public class EncounterTriggerZone : MonoBehaviour
             activeModifierIds = new System.Collections.Generic.List<string>(table.activeModifierIds),
         };
         return true;
+    }
+
+    private static int CountEquippedPartyMembers()
+    {
+        PlayerRosterSnapshot roster = FindRosterSnapshot();
+        if (roster == null || roster.chainlings == null)
+            return 1;
+
+        int count = 0;
+        for (int i = 0; i < roster.chainlings.Count; i++)
+        {
+            PlayerRosterEntry entry = roster.chainlings[i];
+            if (entry != null && entry.isPartyMember)
+                count++;
+        }
+
+        return count <= 0 ? 1 : Mathf.Min(count, CombatConstants.ROSTER_SIZE);
+    }
+
+    private static PlayerRosterSnapshot FindRosterSnapshot()
+    {
+        SupabasePlayerRosterProvider[] providers = FindObjectsByType<SupabasePlayerRosterProvider>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < providers.Length; i++)
+        {
+            if (providers[i] != null && providers[i].CachedRoster != null)
+                return providers[i].CachedRoster;
+        }
+
+        ChainlingsMenuTestHarness[] harnesses = FindObjectsByType<ChainlingsMenuTestHarness>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < harnesses.Length; i++)
+        {
+            if (harnesses[i] != null && harnesses[i].CachedRoster != null)
+                return harnesses[i].CachedRoster;
+        }
+
+        return null;
     }
 
     private System.Collections.IEnumerator TransitionToBattle(Transform player, ZoneEncounterResult result)

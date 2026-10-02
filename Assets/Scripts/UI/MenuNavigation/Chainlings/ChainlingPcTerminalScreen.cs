@@ -47,6 +47,7 @@ namespace SignalJam.UI.MenuNavigation
         private InputLockHandle inputLock;
         private bool hasInputLock;
         private string terminalId;
+        private long lastRosterRefreshSequence;
 
         public bool IsOpen => root != null && root.gameObject.activeSelf;
 
@@ -107,6 +108,8 @@ namespace SignalJam.UI.MenuNavigation
                     : "CHAINLING STORAGE";
             }
 
+            UpdateTitle();
+
             AcquireInputLock();
             root.gameObject.SetActive(true);
             root.alpha = 1f;
@@ -147,7 +150,14 @@ namespace SignalJam.UI.MenuNavigation
 
         private void OnDisable()
         {
+            PlayerRosterRefreshSignal.ResolveOrCreate().Changed -= HandleRosterChanged;
             ReleaseInputLock();
+        }
+
+        private void OnEnable()
+        {
+            PlayerRosterRefreshSignal.ResolveOrCreate().Changed -= HandleRosterChanged;
+            PlayerRosterRefreshSignal.ResolveOrCreate().Changed += HandleRosterChanged;
         }
 
         public void BuildDefaultLayoutForEditor()
@@ -194,6 +204,7 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             SetStatus("SELECT A STORED CHAINLING, THEN CHOOSE A PARTY SLOT.");
+            UpdateTitle();
         }
 
         private void Rebuild()
@@ -257,6 +268,35 @@ namespace SignalJam.UI.MenuNavigation
 
             SelectFirstAvailable();
             RefreshNavigation();
+        }
+
+        private void HandleRosterChanged(PlayerRosterRefreshSignal.Notice notice)
+        {
+            if (!MatchesActiveProfile(notice.PlayerProfileId) || notice.Sequence <= lastRosterRefreshSequence)
+                return;
+
+            lastRosterRefreshSequence = notice.Sequence;
+            if (IsOpen)
+                _ = RefreshAsync();
+        }
+
+        private static bool MatchesActiveProfile(string playerProfileId)
+        {
+            GameSessionContext session = GameSessionContext.Instance;
+            return session != null &&
+                   !string.IsNullOrWhiteSpace(session.PlayerProfileId) &&
+                   string.Equals(session.PlayerProfileId, playerProfileId, StringComparison.Ordinal);
+        }
+
+        private void UpdateTitle()
+        {
+            if (title == null)
+                return;
+
+            string prefix = terminalId == PlayerRoomTerminalId ? "YOUR PC · " : "";
+            title.text = roster != null
+                ? $"{prefix}STORAGE {roster.StorageCount} / {roster.StorageCapacity}"
+                : $"{prefix}CHAINLING STORAGE";
         }
 
         private void SelectStored(PlayerRosterEntry entry)

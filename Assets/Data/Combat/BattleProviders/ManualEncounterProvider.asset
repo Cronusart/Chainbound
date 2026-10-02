@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   authoritativeEncounterId: intro_first_creature
   roster:
-  - speciesId: validape
-    displayName: Validape
+  - speciesId: balloom
+    displayName: Balloom
     stars: 0
     rebirthCount: 0
     masteryXp: 0
     evolutionStage: 1
     visualIdentity:
-      visualVariantId: hockey_variant
+      visualVariantId: base
       auraId: none
       hudCardVariantId: default
       partyColumnVariantId: default
@@ -68,7 +68,10 @@ MonoBehaviour:
   aiPersonality: 4
   difficulty: 1
   bossIntroDialogueAsset: {fileID: 0}
+  fleePolicy: 0
+  capturePolicy: 2
   hideCombatUI: 0
   uiPresentationMode: 0
   introPresentation: {fileID: 11400000, guid: 6406ca81fad167f47b66145a17b25436, type: 2}
   skipManualTurnAfterIntro: 0
+  victoryKnownGrants: []

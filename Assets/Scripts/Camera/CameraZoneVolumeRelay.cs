@@ -29,13 +29,15 @@ public sealed class CameraZoneVolumeRelay : MonoBehaviour
 
     private void ResolveOwners()
     {
-        // A relay on a CameraZoneBuffer object is buffer occupancy.
-        // A relay on an inner compound piece must notify the trigger even if a
-        // sibling/child buffer was assigned in the inspector.
-        CameraZoneBuffer onThis = GetComponent<CameraZoneBuffer>();
-        if (onThis != null)
+        // Buffer pieces are children of the trigger, so a parent search hits the
+        // trigger too. A relay anywhere under a buffer is buffer occupancy.
+        // An inner compound piece is not under the buffer, so it stays on the trigger.
+        CameraZoneBuffer owningBuffer = GetComponent<CameraZoneBuffer>();
+        if (owningBuffer == null)
+            owningBuffer = GetComponentInParent<CameraZoneBuffer>();
+        if (owningBuffer != null)
         {
-            buffer = onThis;
+            buffer = owningBuffer;
             trigger = null;
             return;
         }

@@ -10,7 +10,9 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Idempotent Link1 wild encounters: existing grass triggers plus BushPatch
 /// volumes cloned from each GrassPatchManager box collider.
-/// Day: forkrook, rattlestake. Night: deghoul, keyper.
+/// Dawn and day: Cinislug, Kodiax.
+/// Dusk and night: those two, plus Marrowhead and Minefolk.
+/// Weights are the tier curve times 10: Common 450, Uncommon 220, Rare 100.
 /// </summary>
 public static class Link1EncounterZoneAuthoring
 {
@@ -69,7 +71,7 @@ public static class Link1EncounterZoneAuthoring
 
         Debug.Log(
             $"[Link1EncounterAuthoring] Authored Link1 grass/bush encounters. " +
-            $"Day: forkrook, rattlestake. Night: deghoul, keyper. BushPatch triggers={bushCount}.");
+            $"Dawn/Day: cinislug, kodiax. Dusk/Night: cinislug, kodiax, marrowhead, minefolk. BushPatch triggers={bushCount}.");
     }
 
     private static void AuthorArea(EncounterAreaSO area, WildVariantPoolSO variantPool)
@@ -79,6 +81,9 @@ public static class Link1EncounterZoneAuthoring
         area.difficulty = EncounterDifficulty.Standard;
         area.minEncounterPartySize = 1;
         area.maxEncounterPartySize = 1;
+        area.extraWildChanceAtOne = WildPartyExtraRoll.DefaultChanceAtOne;
+        area.extraWildChanceAtTwo = WildPartyExtraRoll.DefaultChanceAtTwo;
+        area.extraWildChanceAtThree = WildPartyExtraRoll.DefaultChanceAtThree;
         area.wildTraits = new WildRollConfig();
         area.entries = new List<ZoneEncounterEntry>();
         area.defaultMovePool = null;
@@ -103,13 +108,18 @@ public static class Link1EncounterZoneAuthoring
         zone.bossIntroDialogueAsset = null;
         zone.minEncounterPartySize = -1;
         zone.maxEncounterPartySize = -1;
+        zone.extraWildChanceAtOne = -1f;
+        zone.extraWildChanceAtTwo = -1f;
+        zone.extraWildChanceAtThree = -1f;
         zone.entryMergeMode = EncounterEntryMergeMode.Replace;
+        TimeSegmentMask always = TimeSegmentMask.Dawn | TimeSegmentMask.Day | TimeSegmentMask.Dusk | TimeSegmentMask.Night;
+        TimeSegmentMask evening = TimeSegmentMask.Dusk | TimeSegmentMask.Night;
         zone.entries = new List<ZoneEncounterEntry>
         {
-            CreateEntry("forkrook", 50, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
-            CreateEntry("rattlestake", 50, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
-            CreateEntry("keyper", 50, TimeSegmentMask.Dusk | TimeSegmentMask.Night, rangedPool, 50),
-            CreateEntry("deghoul", 50, TimeSegmentMask.Dusk | TimeSegmentMask.Night, meleePool, 45),
+            CreateEntry("cinislug", 450, always, rangedPool, 60),
+            CreateEntry("kodiax", 220, always, meleePool, 50),
+            CreateEntry("marrowhead", 220, evening, rangedPool, 50),
+            CreateEntry("minefolk", 100, evening, rangedPool, 40),
         };
         zone.mutationChanceOverride = -1f;
         zone.entangledChanceOverride = -1f;

@@ -14,6 +14,14 @@ namespace Chainbound.Combat
     public interface ICombatUiSfxPlayer
     {
         void PlayCue(CombatUiSfxCue cue);
+
+        /// <summary>
+        /// Plays an authored sound event. Used when a menu surface is shown from combat
+        /// and the menu SFX router is not in the scene.
+        /// </summary>
+        void PlaySound(UnityEngine.Object sound)
+        {
+        }
     }
 
     public static class CombatUiSfxResolver

@@ -21,10 +21,14 @@ namespace Chainbound.Combat
         [Header("Services")]
         [SerializeField] private AuthoritativeCombatSessionService authority;
         [SerializeField] private MonoBehaviour inventoryServiceBehaviour;
+        [SerializeField] private MonoBehaviour rosterProviderBehaviour;
         [SerializeField] private MonoBehaviour displayNameServiceBehaviour;
+        [SerializeField] private MonoBehaviour captureDossierPresenterBehaviour;
         [SerializeField] private CaptureBalanceConfigSO practiceBalance;
         [SerializeField] private CombatVisualDatabaseSO visualDatabase;
         [SerializeField] private CaptureAttemptDirector attemptDirector;
+        private string capturedDisplayName;
+        private string capturedNameSaveWarning = "";
 
         [Header("UI (authored prefabs preferred)")]
         [SerializeField] private CaptureChallengeController challengePrefab;
@@ -44,6 +48,19 @@ namespace Chainbound.Combat
         [SerializeField] private ScriptableObject itemPresentationCatalog;
 
         private readonly Dictionary<string, int> practiceAlertness = new Dictionary<string, int>(StringComparer.Ordinal);
+        private bool practicePreviewLock;
+        private float practicePreviewPanelHoldSeconds = 0.7f;
+
+        /// <summary>
+        /// Editor preview only. A practice attempt opens the capture panel, then locks
+        /// without the hold minigame so the dossier and post-battle flow can be reviewed.
+        /// Authoritative sessions ignore this.
+        /// </summary>
+        public void SetPracticePreviewLock(bool enabled, float panelHoldSeconds = 0.7f)
+        {
+            practicePreviewLock = enabled;
+            practicePreviewPanelHoldSeconds = Mathf.Max(0f, panelHoldSeconds);
+        }
         private readonly List<Button> choiceButtons = new List<Button>();
         private readonly MoveRowSelectionTuning choiceRowTuning = MoveRowSelectionTuning.CreateDefaults();
         private Tween portraitTween;
@@ -257,6 +274,9 @@ namespace Chainbound.Combat
                 footerPrompt.text = "A Select   B Back";
             SetChoiceInteractable(false);
 
+            if (!await CanStartAuthoritativeCaptureAsync())
+                return;
+
             List<CaptureOrbChoice> orbs = await ResolveOrbChoicesAsync(target.IsEntangled);
             if (!selecting || pickerStage != PickerStage.Orbs || selectedTarget != target)
                 return;
@@ -386,6 +406,20 @@ namespace Chainbound.Combat
             if (director != null)
                 yield return director.PlayIntro(introTarget);
 
+            if (practice && practicePreviewLock)
+            {
+                SetChallengeRootActive(true);
+                challengeController?.PrepareFreshAttempt();
+                if (challengeController != null)
+                    yield return challengeController.PlayOpen();
+                if (practicePreviewPanelHoldSeconds > 0f)
+                    yield return new WaitForSecondsRealtime(practicePreviewPanelHoldSeconds);
+                CaptureOutcome previewOutcome = BuildPreviewLockOutcome(captureSession);
+                captureSession?.Dispose();
+                yield return FinishLockedOutcome(previewOutcome, practice: true, introTarget);
+                yield break;
+            }
+
             SetChallengeRootActive(true);
             challengeController?.PrepareFreshAttempt();
             if (challengeController != null)
@@ -438,79 +472,64 @@ namespace Chainbound.Combat
                     yield return challengeController.PlayClose();
             }
             SetChallengeRootActive(false);
-            CapturePresentationConfigSO board = BalanceConfigRuntime.CapturePresentation;
             string fallbackName = selectedTarget != null ? selectedTarget.DisplayName : "Chainling";
-            string subject = CaptureResultCopy.FormatCapturedSubject(
-                selectedTarget != null ? selectedTarget.LocalTarget : null,
-                fallbackName);
-            string prompt = CaptureResultCopy.FormatPrompt(
-                board != null ? board.successNamePromptCopy : null,
-                subject);
-            bool nameChosen = false;
-            yield return PresentCaptureNarrationChoices(
-                prompt,
-                board != null ? board.nameChoiceYesLabel : "Yes",
-                board != null ? board.nameChoiceNoLabel : "No",
-                choseYes => nameChosen = choseYes);
+            capturedDisplayName = null;
+            capturedNameSaveWarning = "";
+            string profileId = GameSessionContext.Instance != null
+                ? GameSessionContext.Instance.PlayerProfileId
+                : "";
 
-            string resolvedName = ChainlingDisplayNameRules.ResolveOrFallback(null, fallbackName);
-            bool promptFinished = !nameChosen;
-            OnScreenKeyboardService keyboard = nameChosen ? OnScreenKeyboardService.Instance : null;
-            var input = new CaptureNameKeyboardTarget();
-            bool prompted = keyboard != null && keyboard.BeginSession(
-                input,
-                new KeyboardSessionOptions
+            bool hasGrant = !practice && !string.IsNullOrWhiteSpace(outcome.GrantedChainlingId);
+            if (hasGrant)
+            {
+                // The authoritative finalizer committed the dossier and ordinal before
+                // returning Locked. Notify readers, then show that exact server row.
+                PlayerRosterRefreshSignal.Publish(profileId, outcome.GrantedChainlingId);
+            }
+
+            // The book page is part of the capture reveal in every mode. Authoritative
+            // captures hydrate the server row; practice (editor) captures and grants whose
+            // id has not arrived show the rolled target instead so the flow stays visible.
+            ICaptureDossierPresenter dossierPresenter = ResolveCaptureDossierPresenter();
+            if (dossierPresenter != null)
+            {
+                bool namePromptStarted = false;
+                Task dossierTask = dossierPresenter.PresentAsync(new CaptureDossierRequest
                 {
-                    Title = "Chainling's Name",
-                    Prompt = "What will you call your Chainling?",
-                    SubmitLabel = "Confirm",
-                    EmptyDisplayText = fallbackName,
-                    ShowLivePreviewStrip = true,
-                    MaxLength = ChainlingDisplayNameRules.MaximumLength,
-                    StartShifted = true,
-                    CharacterPolicy = KeyboardCharacterPolicy.NameEntry,
-                    SubmitValidator = ChainlingDisplayNameRules.IsValid,
-                    OnSubmitted = value =>
+                    playerProfileId = profileId,
+                    chainlingId = hasGrant ? outcome.GrantedChainlingId : "",
+                    fallbackDisplayName = fallbackName,
+                    practice = practice,
+                    localSnapshot = hasGrant ? null : BuildLocalDossierSnapshot(fallbackName),
+                    addedToParty = outcome.AddedToParty,
+                    presentNamePrompt = setLiveName =>
                     {
-                        resolvedName = ChainlingDisplayNameRules.ResolveOrFallback(value, fallbackName);
-                        promptFinished = true;
-                    },
-                    OnCancelled = () =>
-                    {
-                        resolvedName = ChainlingDisplayNameRules.ResolveOrFallback(null, fallbackName);
-                        promptFinished = true;
+                        namePromptStarted = true;
+                        return PromptAndSaveCapturedNameAsync(
+                            setLiveName,
+                            fallbackName,
+                            practice,
+                            profileId,
+                            outcome);
                     },
                 });
-
-            if (prompted)
-            {
-                while (!promptFinished)
+                while (!dossierTask.IsCompleted)
                     yield return null;
-            }
 
-            string saveWarning = "";
-            if (!practice && !string.IsNullOrWhiteSpace(outcome.GrantedChainlingId))
+                if (dossierTask.IsFaulted)
+                    Debug.LogWarning(
+                        $"[CaptureCommandCoordinatorUGUI] Capture is safe; dossier reveal failed: {dossierTask.Exception?.GetBaseException().Message}",
+                        this);
+
+                if (!namePromptStarted)
+                    yield return PromptAndSaveCapturedName(null, fallbackName, practice, profileId, outcome);
+            }
+            else
             {
-                IChainlingDisplayNameService nameService = ResolveDisplayNameService();
-                if (nameService != null)
-                {
-                    string profileId = GameSessionContext.Instance != null
-                        ? GameSessionContext.Instance.PlayerProfileId
-                        : "";
-                    Task<MenuMutationResult> saveTask =
-                        nameService.SetDisplayNameAsync(profileId, outcome.GrantedChainlingId, resolvedName);
-                    while (!saveTask.IsCompleted)
-                        yield return null;
-
-                    if (saveTask.IsCanceled || saveTask.IsFaulted || saveTask.Result == null || !saveTask.Result.success)
-                        saveWarning = "\nNickname could not be saved; the capture is safe.";
-                }
-                else
-                {
-                    saveWarning = "\nNickname service unavailable; the capture is safe.";
-                }
+                yield return PromptAndSaveCapturedName(null, fallbackName, practice, profileId, outcome);
             }
 
+            string resolvedName = ChainlingDisplayNameRules.ResolveOrFallback(capturedDisplayName, fallbackName);
             string confirmation;
             if (practice)
             {
@@ -525,9 +544,121 @@ namespace Chainbound.Combat
                 confirmation = $"{resolvedName} was captured and stored.\nEquip them at a PC in your room.";
             }
 
-            outcome.Message = confirmation + saveWarning;
+            outcome.Message = confirmation + capturedNameSaveWarning;
             challengeController?.SetOutcomeMessage(outcome.Message);
             yield return CompleteAttempt(outcome, practice, localTarget, skipExit: true);
+        }
+
+        private Task PromptAndSaveCapturedNameAsync(
+            Action<string> setLiveName,
+            string fallbackName,
+            bool practice,
+            string profileId,
+            CaptureOutcome outcome)
+        {
+            TaskCompletionSource<bool> done = new TaskCompletionSource<bool>();
+            StartCoroutine(PromptAndSaveCapturedName(setLiveName, fallbackName, practice, profileId, outcome, done));
+            return done.Task;
+        }
+
+        private IEnumerator PromptAndSaveCapturedName(
+            Action<string> setLiveName,
+            string fallbackName,
+            bool practice,
+            string profileId,
+            CaptureOutcome outcome)
+        {
+            yield return PromptAndSaveCapturedName(setLiveName, fallbackName, practice, profileId, outcome, null);
+        }
+
+        private IEnumerator PromptAndSaveCapturedName(
+            Action<string> setLiveName,
+            string fallbackName,
+            bool practice,
+            string profileId,
+            CaptureOutcome outcome,
+            TaskCompletionSource<bool> done)
+        {
+            CapturePresentationConfigSO board = BalanceConfigRuntime.CapturePresentation;
+            string subject = CaptureResultCopy.FormatCapturedSubject(
+                selectedTarget != null ? selectedTarget.LocalTarget : null,
+                fallbackName);
+            string prompt = CaptureResultCopy.FormatPrompt(
+                board != null ? board.successNamePromptCopy : null,
+                subject);
+            setLiveName?.Invoke(fallbackName);
+
+            bool nameChosen = false;
+            yield return PresentCaptureNarrationChoices(
+                prompt,
+                board != null ? board.nameChoiceYesLabel : "Yes",
+                board != null ? board.nameChoiceNoLabel : "No",
+                choseYes => nameChosen = choseYes);
+
+            string resolvedName = ChainlingDisplayNameRules.ResolveOrFallback(null, fallbackName);
+            bool promptFinished = !nameChosen;
+            OnScreenKeyboardService keyboard = nameChosen ? OnScreenKeyboardService.Instance : null;
+            var input = new CaptureNameKeyboardTarget(value =>
+            {
+                string live = string.IsNullOrWhiteSpace(value) ? fallbackName : value;
+                setLiveName?.Invoke(live);
+            });
+            bool prompted = keyboard != null && keyboard.BeginSession(
+                input,
+                new KeyboardSessionOptions
+                {
+                    Title = "Chainling's Name",
+                    Prompt = "What will you call your Chainling?",
+                    SubmitLabel = "Confirm",
+                    EmptyDisplayText = fallbackName,
+                    ShowLivePreviewStrip = false,
+                    MaxLength = ChainlingDisplayNameRules.MaximumLength,
+                    StartShifted = true,
+                    CharacterPolicy = KeyboardCharacterPolicy.NameEntry,
+                    SubmitValidator = ChainlingDisplayNameRules.IsValid,
+                    OnSubmitted = value =>
+                    {
+                        resolvedName = ChainlingDisplayNameRules.ResolveOrFallback(value, fallbackName);
+                        setLiveName?.Invoke(resolvedName);
+                        promptFinished = true;
+                    },
+                    OnCancelled = () =>
+                    {
+                        resolvedName = ChainlingDisplayNameRules.ResolveOrFallback(null, fallbackName);
+                        setLiveName?.Invoke(resolvedName);
+                        promptFinished = true;
+                    },
+                });
+
+            if (prompted)
+            {
+                while (!promptFinished)
+                    yield return null;
+            }
+
+            capturedDisplayName = resolvedName;
+            capturedNameSaveWarning = "";
+            if (!practice && !string.IsNullOrWhiteSpace(outcome.GrantedChainlingId))
+            {
+                IChainlingDisplayNameService nameService = ResolveDisplayNameService();
+                if (nameService != null)
+                {
+                    Task<MenuMutationResult> saveTask =
+                        nameService.SetDisplayNameAsync(profileId, outcome.GrantedChainlingId, resolvedName);
+                    while (!saveTask.IsCompleted)
+                        yield return null;
+
+                    if (saveTask.IsCanceled || saveTask.IsFaulted || saveTask.Result == null || !saveTask.Result.success)
+                        capturedNameSaveWarning = "\nNickname could not be saved; the capture is safe.";
+                }
+                else
+                {
+                    capturedNameSaveWarning = "\nNickname service unavailable; the capture is safe.";
+                }
+                PlayerRosterRefreshSignal.Publish(profileId, outcome.GrantedChainlingId);
+            }
+
+            done?.TrySetResult(true);
         }
 
         private IEnumerator FinishAfterOutcomeDelay(CaptureOutcome outcome, bool practice, string localTarget)
@@ -666,6 +797,21 @@ namespace Chainbound.Combat
             }
 
             return null;
+        }
+
+        private static CaptureOutcome BuildPreviewLockOutcome(ICaptureSession captureSession)
+        {
+            return new CaptureOutcome
+            {
+                Kind = CaptureOutcomeKind.Locked,
+                AttemptId = captureSession != null && captureSession.Challenge != null
+                    ? captureSession.Challenge.AttemptId
+                    : "preview-lock",
+                Message = "PREVIEW SIGNAL LOCKED",
+                AddedToParty = true,
+                BattleContinues = false,
+                FinalMeterBasisPoints = 10000,
+            };
         }
 
         private ICaptureSession BuildPracticeSession(CaptureOrbChoice orb)
@@ -826,6 +972,176 @@ namespace Chainbound.Combat
                 if (behaviours[i] is IInventoryService found)
                 {
                     inventoryServiceBehaviour = behaviours[i];
+                    return found;
+                }
+            }
+            return null;
+        }
+
+        private async Task<bool> CanStartAuthoritativeCaptureAsync()
+        {
+            if (authority == null || !authority.IsRolloutEnabled)
+                return true;
+
+            if (pickerStatus != null)
+                pickerStatus.text = "Checking PC storage...";
+
+            IPlayerRosterProvider provider = ResolveRosterProvider();
+            GameSessionContext session = GameSessionContext.Instance;
+            if (provider == null || session == null || string.IsNullOrWhiteSpace(session.PlayerProfileId))
+            {
+                ShowCaptureCapacityBlocked("Capture capacity could not be verified. Try again.");
+                return false;
+            }
+
+            try
+            {
+                PlayerRosterSnapshot roster = await provider.FetchRosterAsync(session.PlayerProfileId, session.WalletAddress);
+                if (roster == null)
+                {
+                    ShowCaptureCapacityBlocked("Capture capacity could not be verified. Try again.");
+                    return false;
+                }
+
+                if (!roster.IsAtCapacity && roster.canCapture)
+                    return true;
+
+                ShowCaptureCapacityBlocked($"PC STORAGE FULL — {roster.OwnedCount} / {roster.OwnedCapacity}");
+                return false;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[CaptureCommandCoordinatorUGUI] Capacity preflight failed: {exception.Message}", this);
+                ShowCaptureCapacityBlocked("Capture capacity could not be verified. Try again.");
+                return false;
+            }
+        }
+
+        private void ShowCaptureCapacityBlocked(string message)
+        {
+            if (pickerStatus != null)
+                pickerStatus.text = message;
+            if (footerPrompt != null)
+                footerPrompt.text = "B Back";
+            ClearChoiceButtons();
+            ShowOrbDetails(null, animate: false);
+            SetChoiceInteractable(true);
+        }
+
+        private IPlayerRosterProvider ResolveRosterProvider()
+        {
+            if (rosterProviderBehaviour is IPlayerRosterProvider assigned)
+                return assigned;
+
+            MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is IPlayerRosterProvider found)
+                {
+                    rosterProviderBehaviour = behaviours[i];
+                    return found;
+                }
+            }
+
+            SupabaseConfigSO config = Resources.Load<SupabaseConfigSO>("SupabaseConfig");
+            if (config == null)
+                return null;
+
+            var provider = gameObject.AddComponent<SupabasePlayerRosterProvider>();
+            provider.Configure(config);
+            rosterProviderBehaviour = provider;
+            return provider;
+        }
+
+        /// <summary>
+        /// Builds the page data for a capture that has no server row to hydrate. The
+        /// rolled encounter snapshot is preferred (it carries the Known move and visual
+        /// identity); the live battle instance fills HP and the display name.
+        /// </summary>
+        private ChainlingSnapshot BuildLocalDossierSnapshot(string fallbackName)
+        {
+            ChainlingInstance target = selectedTarget != null ? selectedTarget.LocalTarget : null;
+            if (target == null)
+                return null;
+
+            ChainlingSnapshot source = null;
+            if (encounter?.chainlings != null)
+            {
+                for (int i = 0; i < encounter.chainlings.Count; i++)
+                {
+                    ChainlingSnapshot candidate = encounter.chainlings[i];
+                    if (candidate != null && string.Equals(candidate.speciesId, target.speciesId, StringComparison.Ordinal))
+                    {
+                        source = candidate;
+                        break;
+                    }
+                }
+            }
+
+            var snapshot = new ChainlingSnapshot
+            {
+                speciesId = target.speciesId,
+                backendChainlingId = "",
+                displayName = !string.IsNullOrWhiteSpace(target.displayName) ? target.displayName : fallbackName,
+                stars = target.stars,
+                rebirthCount = target.rebirthCount,
+                evolutionStage = Mathf.Max(1, target.evolutionStage),
+                visualIdentity = ChainlingVisualIdentity.CloneOrDefault(
+                    source != null ? source.visualIdentity : target.visualIdentity),
+                isMutated = target.isMutated,
+                mutationId = source != null ? source.mutationId : "",
+                isEntangled = target.isEntangled,
+                entangledType = target.isEntangled ? target.entangledType : ChainlingType.None,
+                knownMoveId = source != null ? source.knownMoveId : "",
+                legacyBaseCaptureRate = target.legacyBaseCaptureRate,
+                hasCaptureProfile = target.hasCaptureProfile,
+                captureProfile = target.captureProfile,
+                captureMutationRarityRank = target.captureMutationRarityRank,
+                currentHp = Mathf.Max(0, target.currentHP),
+                ivs = new[]
+                {
+                    target.ivMaxHP, target.ivMeleeAtk, target.ivMeleeDef,
+                    target.ivRangedAtk, target.ivRangedDef, target.ivSpeed,
+                },
+                rebirthIvBonuses = target.rebirthIvBonuses != null
+                    ? (int[])target.rebirthIvBonuses.Clone()
+                    : new int[CombatConstants.STAT_COUNT],
+            };
+
+            if (source?.moveIds != null && source.moveIds.Count > 0)
+            {
+                snapshot.moveIds = new List<string>(source.moveIds);
+                snapshot.modifier1SectionIds = source.modifier1SectionIds != null
+                    ? new List<string>(source.modifier1SectionIds)
+                    : new List<string>();
+                snapshot.modifier2SectionIds = source.modifier2SectionIds != null
+                    ? new List<string>(source.modifier2SectionIds)
+                    : new List<string>();
+            }
+            else if (target.moves != null)
+            {
+                for (int i = 0; i < target.moves.Count; i++)
+                {
+                    MoveInstance move = target.moves[i];
+                    if (move != null && !string.IsNullOrWhiteSpace(move.definitionId))
+                        snapshot.moveIds.Add(move.definitionId);
+                }
+            }
+
+            return snapshot;
+        }
+
+        private ICaptureDossierPresenter ResolveCaptureDossierPresenter()
+        {
+            if (captureDossierPresenterBehaviour is ICaptureDossierPresenter assigned)
+                return assigned;
+
+            MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is ICaptureDossierPresenter found)
+                {
+                    captureDossierPresenterBehaviour = behaviours[i];
                     return found;
                 }
             }
@@ -1421,7 +1737,24 @@ namespace Chainbound.Combat
 
         private sealed class CaptureNameKeyboardTarget : IKeyboardInputTarget
         {
-            public string Text { get; set; } = "";
+            private readonly Action<string> onTextChanged;
+            private string text = "";
+
+            public CaptureNameKeyboardTarget(Action<string> onTextChanged)
+            {
+                this.onTextChanged = onTextChanged;
+            }
+
+            public string Text
+            {
+                get => text;
+                set
+                {
+                    text = value ?? "";
+                    onTextChanged?.Invoke(text);
+                }
+            }
+
             public int CharacterLimit => ChainlingDisplayNameRules.MaximumLength;
             public bool IsValid => true;
             public void Focus() { }

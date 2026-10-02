@@ -27,6 +27,19 @@ namespace Chainbound.Combat
         [Range(1, 2)]
         public int maxEncounterPartySize = 1;
 
+        [Header("Extra Wild From Player Party")]
+        [Tooltip("Chance of one extra wild when the player has 1 Chainling equipped. Boss encounters ignore this.")]
+        [Range(0f, 1f)]
+        public float extraWildChanceAtOne = WildPartyExtraRoll.DefaultChanceAtOne;
+
+        [Tooltip("Chance of one extra wild when the player has 2 Chainlings equipped.")]
+        [Range(0f, 1f)]
+        public float extraWildChanceAtTwo = WildPartyExtraRoll.DefaultChanceAtTwo;
+
+        [Tooltip("Chance of one extra wild when the player has 3 Chainlings equipped. This is the cap.")]
+        [Range(0f, 1f)]
+        public float extraWildChanceAtThree = WildPartyExtraRoll.DefaultChanceAtThree;
+
         [Header("Wild Traits")]
         public WildRollConfig wildTraits = new WildRollConfig();
 

@@ -88,6 +88,13 @@ serve(async (req: Request) => {
 
     if (error) throw error;
 
+    const { data: capacityData, error: capacityError } = await supabase.rpc(
+      "profile_chainling_capacity_summary_service",
+      { p_profile_id: profile.player_profile_id },
+    );
+    if (capacityError) throw capacityError;
+    const capacity = (capacityData ?? {}) as Record<string, unknown>;
+
     const rows = (data ?? []) as ChainlingRow[];
     const loadouts = await loadChainlingLoadouts(supabase, rows.map((row) => row.id));
     const chainlings = rows.map((row) => ({
@@ -133,6 +140,13 @@ serve(async (req: Request) => {
     return jsonResponse({
       success: true,
       player_profile_id: profile.player_profile_id,
+      owned_count: numberValue(capacity.owned_count),
+      owned_capacity: numberValue(capacity.owned_capacity),
+      party_count: numberValue(capacity.party_count),
+      party_capacity: numberValue(capacity.party_capacity),
+      storage_count: numberValue(capacity.storage_count),
+      storage_capacity: numberValue(capacity.storage_capacity),
+      can_capture: capacity.can_capture === true,
       chainlings,
     });
   } catch (error) {
@@ -140,6 +154,10 @@ serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "profile_get_chainlings_failed" }, 500);
   }
 });
+
+function numberValue(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.floor(value) : 0;
+}
 
 function resolveVisualVariantId(value: string | null): string {
   const normalized = typeof value === "string" ? value.trim() : "";
@@ -209,3 +227,4 @@ function hudCardSlot(primary: unknown, legacy: unknown): string {
 function stringSlot(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
 }
+

@@ -29,6 +29,15 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private TMP_Text statusLabel;
         [SerializeField] private RectTransform statButtonRoot;
         [SerializeField] private Button rebirthButton;
+        [SerializeField] private TMP_Text starsXpLabel;
+        [SerializeField] private TMP_Text cycleLabel;
+        [SerializeField] private TMP_Text[] ivLabels;
+        [SerializeField] private TMP_Text victoriesLabel;
+        [SerializeField] private TMP_Text enemyKosLabel;
+        [SerializeField] private TMP_Text damageDealtLabel;
+        [SerializeField] private TMP_Text damageTakenLabel;
+        [SerializeField] private TMP_Text xpEarnedLabel;
+        [SerializeField] private TMP_Text timesKodLabel;
 
         private readonly List<Button> statButtons = new List<Button>();
         private readonly CoreStat[] stats =
@@ -52,6 +61,11 @@ namespace SignalJam.UI.MenuNavigation
         public event Action<PlayerRosterEntry> Reborn;
 
         private void Awake()
+        {
+            EnsureBuilt();
+        }
+
+        public void BuildDefaultLayoutForEditor()
         {
             EnsureBuilt();
         }
@@ -100,7 +114,8 @@ namespace SignalJam.UI.MenuNavigation
             ChainlingSnapshot snapshot = entry != null ? entry.snapshot : null;
             if (snapshot == null)
             {
-                SetStatus("Select a Chainling to inspect progression.");
+                if (transform.Find("Content") == null)
+                    SetStatus("Select a Chainling to inspect progression.");
                 return;
             }
 
@@ -133,6 +148,12 @@ namespace SignalJam.UI.MenuNavigation
             string folioLabel = folioPreview != null && folioPreview.isMastery
                 ? "Five-star mastery folio chance"
                 : "Next-star folio chance";
+
+            if (transform.Find("Content") != null)
+            {
+                BindAuthoredWireframe(snapshot, stars, rebirth, masteryXp, nextXp, autoCombat, folioLabel, folioChance);
+                return;
+            }
 
             if (summaryLabel != null)
             {
@@ -370,8 +391,71 @@ namespace SignalJam.UI.MenuNavigation
             return null;
         }
 
+        private void BindAuthoredWireframe(
+            ChainlingSnapshot snapshot,
+            int stars,
+            int rebirth,
+            int masteryXp,
+            int nextXp,
+            int autoCombat,
+            string folioLabel,
+            string folioChance)
+        {
+            if (starsXpLabel != null)
+            {
+                starsXpLabel.text =
+                    $"Stars {stars}/{CombatConstants.STAR_MAX}    {masteryXp} XP    Next {nextXp}    {folioLabel}: {folioChance}";
+            }
+
+            if (cycleLabel != null)
+                cycleLabel.text = $"{ChainlingPlayerTerms.FormatCycleLabel(rebirth)}    Cycle auto +{autoCombat}";
+
+            string[] ivNames = { "Max HP", "Melee Atk", "Melee Def", "Ranged Atk", "Ranged Def", "Speed" };
+            if (ivLabels != null)
+            {
+                for (int i = 0; i < ivLabels.Length && i < ivNames.Length; i++)
+                {
+                    if (ivLabels[i] == null)
+                        continue;
+                    int value = snapshot.ivs != null && i < snapshot.ivs.Length ? snapshot.ivs[i] : 0;
+                    ivLabels[i].text = $"{ivNames[i]}    {(value >= 0 ? "+" : "")}{value}";
+                }
+            }
+
+            var career = new ChainlingPartyColumnSummary();
+            ChainlingPartyStatsDisplayUtility.PopulateSummary(career, new ChainlingPartyColumnContext
+            {
+                entry = entry,
+                species = species,
+            });
+            SetCareerLabel(victoriesLabel, career, ChainlingPartyStatsDisplayUtility.VictoriesLabel);
+            SetCareerLabel(enemyKosLabel, career, ChainlingPartyStatsDisplayUtility.EnemyKosLabel);
+            SetCareerLabel(damageDealtLabel, career, ChainlingPartyStatsDisplayUtility.DamageDealtLabel);
+            SetCareerLabel(damageTakenLabel, career, ChainlingPartyStatsDisplayUtility.DamageTakenLabel);
+            SetCareerLabel(xpEarnedLabel, career, ChainlingPartyStatsDisplayUtility.XpEarnedLabel);
+            SetCareerLabel(timesKodLabel, career, ChainlingPartyStatsDisplayUtility.TimesKodLabel);
+        }
+
+        private static void SetCareerLabel(TMP_Text label, ChainlingPartyColumnSummary career, string key)
+        {
+            if (label == null || career == null || career.lines == null)
+                return;
+
+            for (int i = 0; i < career.lines.Count; i++)
+            {
+                ChainlingPartyDisplayLine line = career.lines[i];
+                if (!string.Equals(line.Label, key, System.StringComparison.Ordinal))
+                    continue;
+                label.text = $"{line.Label}    {line.Value}";
+                return;
+            }
+        }
+
         private void EnsureBuilt()
         {
+            if (transform.Find("Content") != null)
+                return;
+
             if (statButtonRoot != null && rebirthButton != null)
                 return;
 

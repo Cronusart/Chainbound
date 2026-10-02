@@ -58,6 +58,13 @@ namespace Chainbound.Combat
                 var snapshot = new PlayerRosterSnapshot
                 {
                     playerProfileId = payload.player_profile_id,
+                    ownedCount = payload.owned_count,
+                    ownedCapacity = payload.owned_capacity,
+                    partyCount = payload.party_count,
+                    partyCapacity = payload.party_capacity,
+                    storageCount = payload.storage_count,
+                    storageCapacity = payload.storage_capacity,
+                    canCapture = payload.can_capture,
                 };
 
                 List<RosterEntryPayload> entries = payload.chainlings ?? new List<RosterEntryPayload>();
@@ -123,7 +130,7 @@ namespace Chainbound.Combat
 
                 CachedRoster = snapshot;
                 if (enableDebugLogs)
-                    Debug.Log($"[SupabasePlayerRosterProvider] Loaded {snapshot.Count} chainling(s) for profile={snapshot.playerProfileId}.");
+                    Debug.Log($"[SupabasePlayerRosterProvider] Loaded {snapshot.OwnedCount}/{snapshot.OwnedCapacity} Chainling(s) for profile={snapshot.playerProfileId}.");
 
                 return CachedRoster;
             }
@@ -228,6 +235,13 @@ namespace Chainbound.Combat
         {
             public string player_profile_id;
             public List<RosterEntryPayload> chainlings = new List<RosterEntryPayload>();
+            public int owned_count = -1;
+            public int owned_capacity;
+            public int party_count = -1;
+            public int party_capacity;
+            public int storage_count = -1;
+            public int storage_capacity;
+            public bool can_capture;
         }
 
         [Serializable]

@@ -25,46 +25,24 @@ MonoBehaviour:
   maxEncounterPartySize: -1
   entryMergeMode: 1
   entries:
-  - speciesId: forkrook
-    weight: 30
-    allowedSegments: 6
-    segmentWeights:
-    - segment: 1
-      weight: 1.2
-    - segment: 2
-      weight: 0.8
-    baseCaptureRate: 40
-    baseStars: 0
-    starVariance: 0
-    movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
-    inlineMovePool: []
-    battleKitSizeMin: 1
-    battleKitSizeMax: 1
-    variantRarityTable: {fileID: 0}
-    variantPool: {fileID: 0}
-    inlineVariantPool: []
-  - speciesId: rattlestake
-    weight: 20
-    allowedSegments: 6
-    segmentWeights: []
-    baseCaptureRate: 35
-    baseStars: 0
-    starVariance: 0
-    movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
-    inlineMovePool: []
-    battleKitSizeMin: 1
-    battleKitSizeMax: 1
-    variantRarityTable: {fileID: 0}
-    variantPool: {fileID: 0}
-    inlineVariantPool: []
   - speciesId: kreechank
-    weight: 50
-    allowedSegments: -1
-    segmentWeights:
-    - segment: 3
-      weight: 1.2
-    - segment: 0
-      weight: 0.8
+    weight: 450
+    allowedSegments: 15
+    segmentWeights: []
+    baseCaptureRate: 55
+    baseStars: 0
+    starVariance: 0
+    movePool: {fileID: 11400000, guid: b02b95711d9d001479ce9685bceee6ca, type: 2}
+    inlineMovePool: []
+    battleKitSizeMin: 1
+    battleKitSizeMax: 1
+    variantRarityTable: {fileID: 0}
+    variantPool: {fileID: 0}
+    inlineVariantPool: []
+  - speciesId: balloom
+    weight: 450
+    allowedSegments: 15
+    segmentWeights: []
     baseCaptureRate: 55
     baseStars: 0
     starVariance: 0
@@ -76,14 +54,24 @@ MonoBehaviour:
     variantPool: {fileID: 0}
     inlineVariantPool: []
   - speciesId: keyper
-    weight: 20
+    weight: 450
     allowedSegments: 9
-    segmentWeights:
-    - segment: 3
-      weight: 1.2
-    - segment: 0
-      weight: 0.8
+    segmentWeights: []
     baseCaptureRate: 55
+    baseStars: 0
+    starVariance: 0
+    movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
+    inlineMovePool: []
+    battleKitSizeMin: 1
+    battleKitSizeMax: 1
+    variantRarityTable: {fileID: 0}
+    variantPool: {fileID: 0}
+    inlineVariantPool: []
+  - speciesId: crackett
+    weight: 14
+    allowedSegments: 9
+    segmentWeights: []
+    baseCaptureRate: 30
     baseStars: 0
     starVariance: 0
     movePool: {fileID: 11400000, guid: b02b95711d9d001479ce9685bceee6ca, type: 2}

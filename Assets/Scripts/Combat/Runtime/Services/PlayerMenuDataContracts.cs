@@ -35,8 +35,22 @@ namespace Chainbound.Combat
     {
         public string playerProfileId;
         public List<PlayerRosterEntry> chainlings = new List<PlayerRosterEntry>();
+        public int ownedCount = -1;
+        public int ownedCapacity;
+        public int partyCount = -1;
+        public int partyCapacity;
+        public int storageCount = -1;
+        public int storageCapacity;
+        public bool canCapture;
 
         public int Count => chainlings != null ? chainlings.Count : 0;
+        public int OwnedCount => ownedCount >= 0 ? ownedCount : Count;
+        public int OwnedCapacity => ownedCapacity > 0 ? ownedCapacity : CombatConstants.MAX_CHAINLINGS;
+        public int PartyCount => partyCount >= 0 ? partyCount : 0;
+        public int PartyCapacity => partyCapacity > 0 ? partyCapacity : CombatConstants.ROSTER_SIZE;
+        public int StorageCount => storageCount >= 0 ? storageCount : Math.Max(0, OwnedCount - PartyCount);
+        public int StorageCapacity => storageCapacity > 0 ? storageCapacity : Math.Max(0, OwnedCapacity - PartyCapacity);
+        public bool IsAtCapacity => OwnedCount >= OwnedCapacity;
     }
 
     [Serializable]

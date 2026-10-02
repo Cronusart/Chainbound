@@ -22,6 +22,11 @@ namespace Chainbound.Combat
             Play(Resolve(cue));
         }
 
+        public void PlaySound(UnityEngine.Object sound)
+        {
+            Play(sound as global::SoundEventSO);
+        }
+
         private global::SoundEventSO Resolve(CombatUiSfxCue cue)
         {
             switch (cue)

@@ -23,13 +23,16 @@ MonoBehaviour:
   bossIntroDialogueAsset: {fileID: 0}
   minEncounterPartySize: -1
   maxEncounterPartySize: -1
+  extraWildChanceAtOne: -1
+  extraWildChanceAtTwo: -1
+  extraWildChanceAtThree: -1
   entryMergeMode: 1
   entries:
-  - speciesId: forkrook
-    weight: 50
-    allowedSegments: 6
+  - speciesId: cinislug
+    weight: 450
+    allowedSegments: 15
     segmentWeights: []
-    baseCaptureRate: 55
+    baseCaptureRate: 60
     baseStars: 0
     starVariance: 0
     movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
@@ -39,22 +42,22 @@ MonoBehaviour:
     variantRarityTable: {fileID: 0}
     variantPool: {fileID: 0}
     inlineVariantPool: []
-  - speciesId: rattlestake
-    weight: 50
-    allowedSegments: 6
+  - speciesId: kodiax
+    weight: 220
+    allowedSegments: 15
     segmentWeights: []
-    baseCaptureRate: 55
+    baseCaptureRate: 50
     baseStars: 0
     starVariance: 0
-    movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
+    movePool: {fileID: 11400000, guid: b02b95711d9d001479ce9685bceee6ca, type: 2}
     inlineMovePool: []
     battleKitSizeMin: 1
     battleKitSizeMax: 1
     variantRarityTable: {fileID: 0}
     variantPool: {fileID: 0}
     inlineVariantPool: []
-  - speciesId: keyper
-    weight: 50
+  - speciesId: marrowhead
+    weight: 220
     allowedSegments: 9
     segmentWeights: []
     baseCaptureRate: 50
@@ -67,14 +70,14 @@ MonoBehaviour:
     variantRarityTable: {fileID: 0}
     variantPool: {fileID: 0}
     inlineVariantPool: []
-  - speciesId: deghoul
-    weight: 50
+  - speciesId: minefolk
+    weight: 100
     allowedSegments: 9
     segmentWeights: []
-    baseCaptureRate: 45
+    baseCaptureRate: 40
     baseStars: 0
     starVariance: 0
-    movePool: {fileID: 11400000, guid: b02b95711d9d001479ce9685bceee6ca, type: 2}
+    movePool: {fileID: 11400000, guid: 6f5f2851f65d4ab46bf3b076522d7b30, type: 2}
     inlineMovePool: []
     battleKitSizeMin: 1
     battleKitSizeMax: 1

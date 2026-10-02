@@ -199,6 +199,7 @@ MonoBehaviour:
   presenceId: world.loomville_mart.open
   target: {fileID: 1274725885}
   activeWhenTrue: 1
+  applyOnEnableOnly: 0
   lifetimeOverride: 0
 --- !u!1001 &52970634
 PrefabInstance:
@@ -1285,6 +1286,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2622957523595106931, guid: 0ffc69f39c212da46a897d9f57248545, type: 3}
+      propertyPath: enforceAspectRatio
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3180186076444887525, guid: 0ffc69f39c212da46a897d9f57248545, type: 3}
       propertyPath: m_LocalPosition.x
       value: 380.2131
@@ -2198,6 +2203,7 @@ MonoBehaviour:
   presenceId: world.loomville_mart.open
   target: {fileID: 1518032577}
   activeWhenTrue: 1
+  applyOnEnableOnly: 0
   lifetimeOverride: 0
 --- !u!1001 &1054253866
 PrefabInstance:

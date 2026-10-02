@@ -594,6 +594,178 @@ public sealed class CameraZoneCompoundVolumeTests
         Assert.That(NarrativeTestUtility.GetPrivateField<CameraZoneTrigger>(relay, "trigger"), Is.SameAs(trigger));
     }
 
+    [Test]
+    public void VolumeRelay_OnBufferChild_StaysBufferOccupancy()
+    {
+        CameraZoneTrigger trigger = CreateTrigger(useBuffer: true, Vector3.zero);
+        CameraZoneBuffer buffer = trigger.GetComponentInChildren<CameraZoneBuffer>();
+        Assert.That(buffer, Is.Not.Null);
+
+        GameObject piece = new GameObject("AuthoredBufferPiece");
+        cleanup.Add(piece);
+        piece.transform.SetParent(buffer.transform, false);
+        piece.AddComponent<BoxCollider>();
+        CameraZoneVolumeRelay relay = piece.AddComponent<CameraZoneVolumeRelay>();
+        NarrativeTestUtility.SetPrivateField(relay, "trigger", trigger);
+        NarrativeTestUtility.SetPrivateField(relay, "buffer", null);
+
+        typeof(CameraZoneVolumeRelay)
+            .GetMethod("OnValidate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            .Invoke(relay, null);
+
+        Assert.That(NarrativeTestUtility.GetPrivateField<CameraZoneBuffer>(relay, "buffer"), Is.SameAs(buffer));
+        Assert.That(NarrativeTestUtility.GetPrivateField<CameraZoneTrigger>(relay, "trigger"), Is.Null);
+    }
+
+    [Test]
+    public void SpawnInsideNested_LeavingAllZones_RestoresPrefabDefaultNotNestedProfile()
+    {
+        CameraProfile explore = ScriptableObject.CreateInstance<CameraProfile>();
+        CameraProfile garden = ScriptableObject.CreateInstance<CameraProfile>();
+        CameraProfile academy = ScriptableObject.CreateInstance<CameraProfile>();
+        cleanup.Add(explore);
+        cleanup.Add(garden);
+        cleanup.Add(academy);
+        explore.name = "Explore";
+        garden.name = "Garden";
+        academy.name = "Academy";
+
+        GameObject cameraObject = new GameObject("SpawnNestedCamera");
+        cleanup.Add(cameraObject);
+        cameraObject.AddComponent<Camera>();
+        TopDownCameraController3D camera = cameraObject.AddComponent<TopDownCameraController3D>();
+        InitializeTestCamera(camera);
+        NarrativeTestUtility.SetPrivateField(camera, "defaultProfile", explore);
+        camera.ApplyProfile(explore, 0f);
+
+        GameObject player = new GameObject("SpawnNestedPlayer");
+        cleanup.Add(player);
+        player.tag = "Player";
+        player.transform.position = Vector3.zero;
+        player.AddComponent<BoxCollider>().size = Vector3.one;
+
+        CameraZoneTrigger outer = CreateNestedOuterWithCompound(camera, yawSteps: 0);
+        CameraZoneTrigger inner = CreateYawTrigger("InnerNestedZone", Vector3.zero, camera, yawSteps: 0, size: 2f);
+        NarrativeTestUtility.SetPrivateField(outer.ZoneBehavior, "zoneProfile", garden);
+        NarrativeTestUtility.SetPrivateField(inner.ZoneBehavior, "zoneProfile", academy);
+
+        inner.ForceActivateAtPosition(Vector3.zero);
+        Assert.That(camera.CurrentProfile, Is.SameAs(academy));
+
+        player.transform.position = new Vector3(6f, 0f, 0f);
+        Physics.SyncTransforms();
+        inner.HardReset();
+        Assert.That(outer.ZoneBehavior.IsActive, Is.True);
+        Assert.That(camera.CurrentProfile, Is.SameAs(garden));
+
+        player.transform.position = new Vector3(40f, 0f, 0f);
+        Physics.SyncTransforms();
+        outer.HardReset();
+        Assert.That(outer.ZoneBehavior.IsActive, Is.False);
+        Assert.That(camera.CurrentProfile, Is.SameAs(explore));
+    }
+
+    [Test]
+    public void UnprofiledZone_AppliesPrefabDefault()
+    {
+        CameraProfile explore = ScriptableObject.CreateInstance<CameraProfile>();
+        CameraProfile academy = ScriptableObject.CreateInstance<CameraProfile>();
+        cleanup.Add(explore);
+        cleanup.Add(academy);
+
+        GameObject cameraObject = new GameObject("UnprofiledZoneCamera");
+        cleanup.Add(cameraObject);
+        cameraObject.AddComponent<Camera>();
+        TopDownCameraController3D camera = cameraObject.AddComponent<TopDownCameraController3D>();
+        InitializeTestCamera(camera);
+        NarrativeTestUtility.SetPrivateField(camera, "defaultProfile", explore);
+        camera.ApplyProfile(academy, 0f);
+
+        GameObject player = new GameObject("UnprofiledZonePlayer");
+        cleanup.Add(player);
+        player.tag = "Player";
+        player.transform.position = new Vector3(6f, 0f, 0f);
+        player.AddComponent<BoxCollider>().size = Vector3.one;
+
+        CameraZoneTrigger zone = CreateNestedOuterWithCompound(camera, yawSteps: 0);
+        zone.ForceActivateAtPosition(player.transform.position);
+        Assert.That(camera.CurrentProfile, Is.SameAs(explore));
+    }
+
+    [Test]
+    public void BufferRing_HoldsCurrentZoneUntilPlayerClearsBuffer()
+    {
+        CameraProfile leftProfile = ScriptableObject.CreateInstance<CameraProfile>();
+        CameraProfile rightProfile = ScriptableObject.CreateInstance<CameraProfile>();
+        cleanup.Add(leftProfile);
+        cleanup.Add(rightProfile);
+        leftProfile.name = "LeftZone";
+        rightProfile.name = "RightZone";
+
+        GameObject cameraObject = new GameObject("BufferLatchCamera");
+        cleanup.Add(cameraObject);
+        cameraObject.AddComponent<Camera>();
+        TopDownCameraController3D camera = cameraObject.AddComponent<TopDownCameraController3D>();
+        InitializeTestCamera(camera);
+        NarrativeTestUtility.SetPrivateField(camera, "defaultProfile", leftProfile);
+        camera.ApplyProfile(leftProfile, 0f);
+
+        GameObject player = new GameObject("BufferLatchPlayer");
+        cleanup.Add(player);
+        player.tag = "Player";
+        player.transform.position = Vector3.zero;
+        BoxCollider playerCollider = player.AddComponent<BoxCollider>();
+        playerCollider.size = Vector3.one;
+
+        CameraZoneTrigger left = CreateBufferedProfileZone("LeftZone", Vector3.zero, Vector3.one, camera, leftProfile);
+        CameraZoneTrigger right = CreateBufferedProfileZone("RightZone", new Vector3(2.2f, 0f, 0f), new Vector3(3f, 1f, 1f), camera, rightProfile);
+
+        left.ForceActivateAtPosition(Vector3.zero);
+        Assert.That(left.IsActivated, Is.True);
+        Assert.That(camera.CurrentProfile, Is.SameAs(leftProfile));
+
+        player.transform.position = new Vector3(1.5f, 0f, 0f);
+        Physics.SyncTransforms();
+        right.NotifyPlayerEnter(playerCollider);
+        Assert.That(right.IsActivated, Is.False);
+        Assert.That(left.IsActivated, Is.True);
+        Assert.That(camera.CurrentProfile, Is.SameAs(leftProfile));
+
+        player.transform.position = new Vector3(3.2f, 0f, 0f);
+        Physics.SyncTransforms();
+        left.NotifyPlayerExit(playerCollider);
+        CameraZoneBuffer leftBuffer = left.GetComponentInChildren<CameraZoneBuffer>();
+        leftBuffer.NotifyPlayerExit(playerCollider);
+
+        Assert.That(left.IsActivated, Is.False);
+        Assert.That(right.IsActivated, Is.True);
+        Assert.That(camera.CurrentProfile, Is.SameAs(rightProfile));
+    }
+
+    private CameraZoneTrigger CreateBufferedProfileZone(
+        string name,
+        Vector3 center,
+        Vector3 size,
+        TopDownCameraController3D camera,
+        CameraProfile profile)
+    {
+        GameObject zone = CreateInactiveZoneRoot();
+        zone.name = name;
+        zone.transform.position = center;
+        BoxCollider box = zone.AddComponent<BoxCollider>();
+        box.size = size;
+
+        CameraZoneTrigger trigger = FinishTrigger(zone, useBuffer: true);
+        CameraZoneBehavior behavior = trigger.GetComponent<CameraZoneBehavior>();
+        NarrativeTestUtility.SetPrivateField(behavior, "cameraController", camera);
+        NarrativeTestUtility.SetPrivateField(behavior, "freezePlayerDuringTransition", false);
+        NarrativeTestUtility.SetPrivateField(behavior, "profileBlendTime", 0f);
+        NarrativeTestUtility.SetPrivateField(behavior, "rotationDuration", 0f);
+        NarrativeTestUtility.SetPrivateField(behavior, "zoneProfile", profile);
+        NarrativeTestUtility.SetPrivateField(trigger, "zoneBehavior", behavior);
+        return trigger;
+    }
+
     private CameraZoneTrigger CreateNestedOuterWithCompound(TopDownCameraController3D camera, int yawSteps)
     {
         GameObject zone = CreateInactiveZoneRoot();

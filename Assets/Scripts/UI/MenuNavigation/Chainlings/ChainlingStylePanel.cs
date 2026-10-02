@@ -50,6 +50,8 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private TMP_Text headingLabel;
         [SerializeField] private TMP_Text statusLabel;
         [SerializeField] private Button saveButton;
+        [Tooltip("Prefab wireframe. Skips the two-column slot builder and does not persist Save.")]
+        [SerializeField] private bool authoredWireframe;
 
         private readonly List<Button> slotButtons = new List<Button>();
         private readonly List<Button> optionButtons = new List<Button>();
@@ -72,10 +74,18 @@ namespace SignalJam.UI.MenuNavigation
             EnsureBuilt();
         }
 
+        public void BuildDefaultLayoutForEditor()
+        {
+            EnsureBuilt();
+        }
+
+        private bool UsesAuthoredWireframe => authoredWireframe || transform.Find("Content") != null;
+
         private void OnEnable()
         {
-            if (saveButton != null)
-                saveButton.onClick.AddListener(HandleSaveClicked);
+            if (UsesAuthoredWireframe || saveButton == null)
+                return;
+            saveButton.onClick.AddListener(HandleSaveClicked);
         }
 
         private void OnDisable()
@@ -109,6 +119,9 @@ namespace SignalJam.UI.MenuNavigation
         public void Bind(PlayerRosterEntry rosterEntry, PlayerRosterSnapshot cache)
         {
             EnsureBuilt();
+            if (UsesAuthoredWireframe)
+                return;
+
             entry = rosterEntry;
             rosterCache = cache;
             editingIdentity = ChainlingVisualIdentity.CloneForPlayerSave(entry != null && entry.snapshot != null
@@ -123,6 +136,9 @@ namespace SignalJam.UI.MenuNavigation
 
         public void RefreshCosmeticOwnership()
         {
+            if (UsesAuthoredWireframe)
+                return;
+
             cosmeticInventoryService = ResolveCosmeticInventoryService();
             if (cosmeticInventoryService is ICosmeticInventoryProvenanceService provenanceService)
                 provenanceService.ClearCosmeticCache();
@@ -520,6 +536,9 @@ namespace SignalJam.UI.MenuNavigation
 
         private void EnsureBuilt()
         {
+            if (UsesAuthoredWireframe)
+                return;
+
             if (slotListRoot != null && optionListRoot != null && saveButton != null)
                 return;
 

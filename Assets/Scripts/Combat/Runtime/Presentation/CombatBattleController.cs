@@ -146,6 +146,7 @@ namespace Chainbound.Combat
         private IEncounterProvider _runtimeEncounterProvider;
         private CombatRulesetSO _runtimeRulesetOverride;
         private EncounterFleePolicy _runtimeFleePolicyOverride = EncounterFleePolicy.UseDifficultyDefault;
+        private bool _capturePreviewMode;
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Events
@@ -245,6 +246,17 @@ namespace Chainbound.Combat
         {
             _runtimeFleePolicyOverride = fleePolicyOverride;
         }
+
+        /// <summary>
+        /// Preview/test lever. The opponent passes, and the move selector stays closed
+        /// so a harness can submit the turn. Production battles leave this off.
+        /// </summary>
+        public void SetCapturePreviewMode(bool enabled)
+        {
+            _capturePreviewMode = enabled;
+        }
+
+        public bool CapturePreviewMode => _capturePreviewMode;
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Runtime State
@@ -1098,7 +1110,9 @@ namespace Chainbound.Combat
                 actions0 = _playerAI.GenerateActions(_state, 0, _resolver.Rng);
             }
 
-            var actions1 = _cpuAI.GenerateActions(_state, 1, _resolver.Rng);
+            List<CombatAction> actions1 = _capturePreviewMode
+                ? CombatCapturePreviewActions.BuildOpponentPasses(_state)
+                : _cpuAI.GenerateActions(_state, 1, _resolver.Rng);
 
             // â”€â”€ Record turn actions for replay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (_replayData != null)

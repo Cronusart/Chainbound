@@ -9,8 +9,9 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Idempotent content authoring for Loomville's grass encounters.
-/// Runtime behavior remains data-driven through EncounterAreaSO, EncounterZoneSO,
-/// NarrativeQuestGuard, and the existing EncounterTriggerZone interpreter.
+/// Dawn and day: Kreechank, Balloom.
+/// Dusk and night: those two, plus Keyper and Crackett.
+/// Weights are the tier curve times 10: Common 450, Epic 14 (Crackett halved again).
 /// </summary>
 public static class LoomvilleEncounterZoneAuthoring
 {
@@ -83,7 +84,7 @@ public static class LoomvilleEncounterZoneAuthoring
 
         Debug.Log(
             "[LoomvilleEncounterAuthoring] Authored five quest-gated grass triggers. " +
-            "Day/Dawn: cinislug, forkrook, rattlestake. Dusk/Night: kreechank, keyper, deghoul. " +
+            "Dawn/Day: kreechank, balloom. Dusk/Night: kreechank, balloom, keyper, crackett. " +
             "Starter species are excluded.");
     }
 
@@ -94,6 +95,9 @@ public static class LoomvilleEncounterZoneAuthoring
         area.difficulty = EncounterDifficulty.Standard;
         area.minEncounterPartySize = 1;
         area.maxEncounterPartySize = 1;
+        area.extraWildChanceAtOne = WildPartyExtraRoll.DefaultChanceAtOne;
+        area.extraWildChanceAtTwo = WildPartyExtraRoll.DefaultChanceAtTwo;
+        area.extraWildChanceAtThree = WildPartyExtraRoll.DefaultChanceAtThree;
         area.wildTraits = new WildRollConfig();
         area.entries = new List<ZoneEncounterEntry>();
         area.defaultMovePool = null;
@@ -118,19 +122,18 @@ public static class LoomvilleEncounterZoneAuthoring
         zone.bossIntroDialogueAsset = null;
         zone.minEncounterPartySize = -1;
         zone.maxEncounterPartySize = -1;
+        zone.extraWildChanceAtOne = -1f;
+        zone.extraWildChanceAtTwo = -1f;
+        zone.extraWildChanceAtThree = -1f;
         zone.entryMergeMode = EncounterEntryMergeMode.Replace;
+        TimeSegmentMask always = TimeSegmentMask.Dawn | TimeSegmentMask.Day | TimeSegmentMask.Dusk | TimeSegmentMask.Night;
+        TimeSegmentMask evening = TimeSegmentMask.Dusk | TimeSegmentMask.Night;
         zone.entries = new List<ZoneEncounterEntry>
         {
-            CreateEntry("cinislug", 50, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 60,
-                SegmentWeight(TimeSegment.Dawn, 0.8f), SegmentWeight(TimeSegment.Day, 1.2f)),
-            CreateEntry("forkrook", 30, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55,
-                SegmentWeight(TimeSegment.Dawn, 1.2f), SegmentWeight(TimeSegment.Day, 0.8f)),
-            CreateEntry("rattlestake", 20, TimeSegmentMask.Dawn | TimeSegmentMask.Day, rangedPool, 55),
-            CreateEntry("kreechank", 50, TimeSegmentMask.Dusk | TimeSegmentMask.Night, meleePool, 55,
-                SegmentWeight(TimeSegment.Dusk, 1.2f), SegmentWeight(TimeSegment.Night, 0.8f)),
-            CreateEntry("keyper", 35, TimeSegmentMask.Dusk | TimeSegmentMask.Night, rangedPool, 50,
-                SegmentWeight(TimeSegment.Dusk, 0.8f), SegmentWeight(TimeSegment.Night, 1.2f)),
-            CreateEntry("deghoul", 15, TimeSegmentMask.Night, meleePool, 45),
+            CreateEntry("kreechank", 450, always, meleePool, 55),
+            CreateEntry("balloom", 450, always, meleePool, 55),
+            CreateEntry("keyper", 450, evening, rangedPool, 55),
+            CreateEntry("crackett", 14, evening, meleePool, 30),
         };
         zone.mutationChanceOverride = -1f;
         zone.entangledChanceOverride = -1f;
@@ -166,15 +169,6 @@ public static class LoomvilleEncounterZoneAuthoring
             variantRarityTable = null,
             variantPool = null,
             inlineVariantPool = new List<WeightedVariantEntry>(),
-        };
-    }
-
-    private static EncounterSegmentWeight SegmentWeight(TimeSegment segment, float weight)
-    {
-        return new EncounterSegmentWeight
-        {
-            segment = segment,
-            weight = weight,
         };
     }
 

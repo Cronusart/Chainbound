@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a6cb23fe0397fc478dd55821b47061b, type: 3}
+  m_Name: EncounterArea_Jungle
+  m_EditorClassIdentifier: 
+  areaId: jungle
+  encounterChance: 0.16
+  difficulty: 0
+  minEncounterPartySize: 1
+  maxEncounterPartySize: 1
+  extraWildChanceAtOne: 0.15
+  extraWildChanceAtTwo: 0.45
+  extraWildChanceAtThree: 0.7
+  wildTraits:
+    mutationChance: 0.047
+    entangledChance: 0.023
+    entangledTypePool: 
+    ivMin: -5
+    ivMax: 5
+  defaultVariantRarityTable: {fileID: 0}
+  variantTierMultipliers:
+    common: -1
+    uncommon: -1
+    rare: -1
+    epic: -1
+    legendary: -1
+    mythic: -1
+  mutationRarityTable: {fileID: 0}
+  mutationTierMultipliers:
+    common: -1
+    uncommon: -1
+    rare: -1
+    epic: -1
+    legendary: -1
+    mythic: -1
+  entries: []
+  defaultMovePool: {fileID: 0}
+  defaultVariantPool: {fileID: 11400000, guid: b2c3d4e5f60718293a4b5c6d7e8f901a, type: 2}

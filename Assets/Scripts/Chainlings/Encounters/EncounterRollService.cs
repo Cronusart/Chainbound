@@ -33,7 +33,8 @@ namespace Chainbound.Combat
             int favorScore = -1,
             FavorConfigSO favorConfig = null,
             MoveDatabaseSO moveDatabase = null,
-            EncounterModifierService modifierService = null)
+            EncounterModifierService modifierService = null,
+            int equippedPartyCount = 1)
         {
             result = null;
             if (zone == null)
@@ -117,15 +118,28 @@ namespace Chainbound.Combat
                 visual.Normalize();
 
                 string knownMoveId = moveRoll.knownMoveId ?? "";
+                List<string> battleMoves = moveRoll.battleMoveIds ?? new List<string>();
                 if (zone.speciesDatabase != null)
                 {
+                    SpeciesDefinitionSO species = zone.speciesDatabase.GetById(picked.speciesId);
                     knownMoveId = ProgressionKnownMoveRoll.TryRoll(
-                        zone.speciesDatabase.GetById(picked.speciesId),
+                        species,
                         stars,
                         traits.isEntangled,
                         rng,
                         zone.progressionRewardTables,
                         zone.progressionConfig);
+                    if (species != null)
+                    {
+                        battleMoves = WildBattleKitComposer.Compose(
+                            battleMoves,
+                            species,
+                            stars,
+                            traits.isEntangled,
+                            rng,
+                            moveDatabase,
+                            zone.progressionConfig);
+                    }
                 }
 
                 slots.Add(new ZoneEncounterSlot
@@ -135,7 +149,7 @@ namespace Chainbound.Combat
                     stars = stars,
                     level = 0,
                     baseCaptureRate = picked.baseCaptureRate,
-                    moveIds = moveRoll.battleMoveIds ?? new List<string>(),
+                    moveIds = battleMoves,
                     knownMoveId = knownMoveId,
                     visualIdentity = visual,
                 });
@@ -143,8 +157,20 @@ namespace Chainbound.Combat
                 logParts.Add(
                     $"{picked.speciesId} stars={stars} ivs=[{string.Join(",", traits.ivs)}] " +
                     $"mut={traits.isMutated}:{traits.mutationId} ent={traits.isEntangled}:{traits.entangledType} " +
-                    $"moves=[{string.Join(",", moveRoll.battleMoveIds)}] Known={knownMoveId} " +
+                    $"moves=[{string.Join(",", battleMoves)}] Known={knownMoveId} " +
                     $"variant={visual.visualVariantId}");
+
+                if (i == partySize - 1 &&
+                    WildPartyExtraRoll.TryAddPartner(
+                        zone,
+                        table.difficulty,
+                        table.bossIntroDialogueAsset != null,
+                        partySize,
+                        equippedPartyCount,
+                        rng))
+                {
+                    partySize++;
+                }
             }
 
             string logLine =

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6122526739975521023}
   - component: {fileID: 9003773010720977929}
   - component: {fileID: 6834416173493914826}
+  - component: {fileID: 5458183463896514446}
   m_Layer: 5
   m_Name: CombatBattleCanvas
   m_TagString: Untagged
@@ -118,7 +119,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   authority: {fileID: 0}
   inventoryServiceBehaviour: {fileID: 0}
+  rosterProviderBehaviour: {fileID: 0}
   displayNameServiceBehaviour: {fileID: 0}
+  captureDossierPresenterBehaviour: {fileID: 5458183463896514446}
   practiceBalance: {fileID: 0}
   visualDatabase: {fileID: 0}
   attemptDirector: {fileID: 0}
@@ -137,6 +140,24 @@ MonoBehaviour:
   projectedReveal: {fileID: 0}
   footerPrompt: {fileID: 0}
   itemPresentationCatalog: {fileID: 11400000, guid: 9027c66df0af4dc481a7eb1cabd95f1b, type: 2}
+--- !u!114 &5458183463896514446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc48ccba45988ef4caa197061a1dd9f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dossierPrefab: {fileID: 8843033668398946530, guid: 5ea6c6cbf9ca95c4db467a6dd664fe21, type: 3}
+  overlayParent: {fileID: 210001}
+  rosterProviderBehaviour: {fileID: 0}
+  supabaseConfig: {fileID: 11400000, guid: ade43a952186e6e4cb200c77d99919b7, type: 2}
+  hydrateAttempts: 4
+  retryDelaySeconds: 0.25
 --- !u!1 &210000
 GameObject:
   m_ObjectHideFlags: 0
