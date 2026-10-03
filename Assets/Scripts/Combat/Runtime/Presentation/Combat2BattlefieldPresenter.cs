@@ -506,6 +506,22 @@ namespace Chainbound.Combat
 
             view.ConfigureOutlineTuning(actionOutlineTuning);
             view.AssignChainling(chainling, visualDatabase, visualIdentityDatabase);
+            view.SetPresentationScaleMultiplier(ResolvePresentationScaleMultiplier(view));
+        }
+
+        private float ResolvePresentationScaleMultiplier(Combat2ChainlingView view)
+        {
+            // Team 0 is the player's side. Only the opponent slots consume the
+            // encounter-authored multiplier; all normal/player visuals remain 1x.
+            if (view != team1Slot0 && view != team1Slot1)
+                return 1f;
+
+            EncounterSnapshot encounter = _battleController != null
+                ? _battleController.CurrentEncounter
+                : null;
+            return encounter != null
+                ? Mathf.Max(0.01f, encounter.opponentVisualScaleMultiplier)
+                : 1f;
         }
 
         private void ApplyOutlineTuningToSlots()

@@ -406,6 +406,8 @@ namespace Chainbound.Combat
             if (director != null)
                 yield return director.PlayIntro(introTarget);
 
+            yield return HideChainlingHudForCapture();
+
             if (practice && practicePreviewLock)
             {
                 SetChallengeRootActive(true);
@@ -429,6 +431,7 @@ namespace Chainbound.Combat
             if (challengeController == null)
             {
                 director?.Abort();
+                yield return RestoreChainlingHudAfterCapture();
                 ResetQueuedAttemptWithoutStarting();
                 yield break;
             }
@@ -443,6 +446,7 @@ namespace Chainbound.Combat
             if (playTask.IsFaulted)
             {
                 director?.Abort();
+                yield return RestoreChainlingHudAfterCapture();
                 attemptAccepted = false;
                 selecting = false;
                 Exception exception = playTask.Exception != null
@@ -687,6 +691,7 @@ namespace Chainbound.Combat
             }
 
             SetChallengeRootActive(false);
+            yield return RestoreChainlingHudAfterCapture();
             selecting = false;
             attemptAccepted = false;
             Action<string, CaptureOutcome, bool> callback = outcomeCallback;
@@ -699,6 +704,36 @@ namespace Chainbound.Combat
             if (attemptDirector == null)
                 attemptDirector = CaptureAttemptDirector.Resolve(this);
             return attemptDirector;
+        }
+
+        private CombatUiStageController ResolveUiStage()
+        {
+            CombatUiStageController stage = GetComponent<CombatUiStageController>();
+            if (stage == null)
+                stage = FindFirstObjectByType<CombatUiStageController>(FindObjectsInactive.Include);
+            return stage;
+        }
+
+        private IEnumerator HideChainlingHudForCapture()
+        {
+            CombatUiStageController stage = ResolveUiStage();
+            if (stage == null)
+                yield break;
+
+            float duration = stage.PlayCaptureChainlingHudExit();
+            if (duration > 0f)
+                yield return new WaitForSecondsRealtime(duration);
+        }
+
+        private IEnumerator RestoreChainlingHudAfterCapture()
+        {
+            CombatUiStageController stage = ResolveUiStage();
+            if (stage == null)
+                yield break;
+
+            float duration = stage.PlayCaptureChainlingHudReturn();
+            if (duration > 0f)
+                yield return new WaitForSecondsRealtime(duration);
         }
 
         private IEnumerator PresentCaptureNarrationUntilAdvanced(string text)

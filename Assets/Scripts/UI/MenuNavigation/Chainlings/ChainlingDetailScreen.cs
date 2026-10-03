@@ -398,7 +398,10 @@ namespace SignalJam.UI.MenuNavigation
                 cosmeticInventoryServiceBehaviour,
                 visualIdentityServiceBehaviour);
             movePanel?.Configure(speciesDatabase, moveDatabase, moveInventoryProviderBehaviour, moveEquipServiceBehaviour);
-            progressionPanel?.Configure(progressionConfig, rebirthServiceBehaviour);
+            progressionPanel?.Configure(
+                progressionConfig,
+                rebirthServiceBehaviour,
+                speciesDb: speciesDatabase);
         }
 
         private void BindPanels()

@@ -65,6 +65,7 @@ MonoBehaviour:
   capturePolicy: 2
   hideCombatUI: 0
   uiPresentationMode: 0
+  opponentVisualScaleMultiplier: 1.5
   introPresentation: {fileID: 11400000, guid: 6406ca81fad167f47b66145a17b25436, type: 2}
   skipManualTurnAfterIntro: 0
   victoryKnownGrants:

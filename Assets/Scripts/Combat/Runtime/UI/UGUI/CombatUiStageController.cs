@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
@@ -36,6 +37,18 @@ namespace Chainbound.Combat
         [SerializeField] private Ease walletEase = Ease.OutCubic;
         [SerializeField] private bool useUnscaledTime = true;
 
+        [Header("Capture Chainling HUD")]
+        [Tooltip("Downward wind-up before the cards leave through the top of the screen.")]
+        [SerializeField] private float captureHudDipDistance = 36f;
+        [SerializeField] private float captureHudDipDuration = 0.12f;
+        [SerializeField] private float captureHudExitDuration = 0.28f;
+        [SerializeField] private float captureHudReturnDuration = 0.26f;
+        [SerializeField] private float captureHudSettleDuration = 0.18f;
+        [SerializeField] private float captureHudExitPadding = 28f;
+        [SerializeField] private Ease captureHudDipEase = Ease.OutQuad;
+        [SerializeField] private Ease captureHudExitEase = Ease.InCubic;
+        [SerializeField] private Ease captureHudSettleEase = Ease.OutBack;
+
         private readonly List<CanvasGroup> _infoHudGroups = new List<CanvasGroup>(2);
         private readonly List<CanvasGroup> _interactionHudGroups = new List<CanvasGroup>(3);
         private CanvasGroup _walletGroup;
@@ -45,6 +58,8 @@ namespace Chainbound.Combat
         private Vector3 _cachedWalletLocalEulers;
         private CombatHardwareWalletOffsetController _walletOffsetController;
         private Sequence _activeRevealSequence;
+        private Sequence _captureHudSequence;
+        private bool _captureHudHidden;
 
         /// <summary>
         /// Apply immediate hidden state before any HUD refresh. Call as early as possible (e.g. Awake).
@@ -52,7 +67,8 @@ namespace Chainbound.Combat
         public void ApplyImmediateHidden()
         {
             KillActiveSequence();
-            SetGroupHidden(GetInfoHudTransforms(), _infoHudGroups, true);
+            if (!_captureHudHidden)
+                SetGroupHidden(GetInfoHudTransforms(), _infoHudGroups, true);
             SetGroupHidden(GetInteractionHudTransforms(), _interactionHudGroups, true);
             SetWalletHidden(true);
         }
@@ -73,7 +89,8 @@ namespace Chainbound.Combat
 
             if (mode == CombatUiPresentationMode.Full || mode == CombatUiPresentationMode.InfoOnly)
             {
-                RevealInfoHud(_activeRevealSequence, 0f);
+                if (!_captureHudHidden)
+                    RevealInfoHud(_activeRevealSequence, 0f);
                 if (mode == CombatUiPresentationMode.Full)
                 {
                     RevealInteractionHud(_activeRevealSequence, 0f);
@@ -94,6 +111,95 @@ namespace Chainbound.Combat
             ApplyImmediateHidden();
         }
 
+        /// <summary>
+        /// Dips the chainling cards down, then sends them up off the top of the screen.
+        /// Returns the unscaled duration so the capture flow can wait for them to clear.
+        /// </summary>
+        public float PlayCaptureChainlingHudExit()
+        {
+            EnsureInfoHudGroups();
+            if (_captureHudHidden || !HasInfoHud())
+                return 0f;
+
+            KillCaptureHudSequence();
+            _captureHudHidden = true;
+            _captureHudSequence = DOTween.Sequence().SetUpdate(useUnscaledTime);
+
+            float dip = Mathf.Max(0.01f, captureHudDipDuration);
+            float exit = Mathf.Max(0.01f, captureHudExitDuration);
+            ForEachInfoHud((panel, group) =>
+            {
+                Vector2 rest = RestPosition(panel);
+                float exitDistance = ResolveUpExitDistance(panel);
+                panel.gameObject.SetActive(true);
+                panel.anchoredPosition = rest;
+                SetInfoHudInteractive(group, false);
+                if (group != null)
+                    group.alpha = 1f;
+
+                _captureHudSequence.Insert(0f, panel.DOAnchorPos(rest + new Vector2(0f, -captureHudDipDistance), dip).SetEase(captureHudDipEase));
+                _captureHudSequence.Insert(dip, panel.DOAnchorPos(rest + new Vector2(0f, exitDistance), exit).SetEase(captureHudExitEase));
+            });
+
+            _captureHudSequence.OnComplete(() =>
+            {
+                ForEachInfoHud((panel, group) =>
+                {
+                    if (group != null)
+                        group.alpha = 0f;
+                    SetInfoHudInteractive(group, false);
+                });
+            });
+            _captureHudSequence.OnKill(() => _captureHudSequence = null);
+            _captureHudSequence.Play();
+            return dip + exit;
+        }
+
+        /// <summary>
+        /// Brings the chainling cards back from above: they overshoot down, then bounce up to rest.
+        /// Used when the capture dossier closes into combat or post-battle rewards.
+        /// </summary>
+        public float PlayCaptureChainlingHudReturn()
+        {
+            EnsureInfoHudGroups();
+            if (!_captureHudHidden || !HasInfoHud())
+                return 0f;
+
+            KillCaptureHudSequence();
+            _captureHudHidden = false;
+
+            float inbound = Mathf.Max(0.01f, captureHudReturnDuration);
+            float settle = Mathf.Max(0.01f, captureHudSettleDuration);
+            _captureHudSequence = DOTween.Sequence().SetUpdate(useUnscaledTime);
+            ForEachInfoHud((panel, group) =>
+            {
+                Vector2 rest = RestPosition(panel);
+                float exitDistance = ResolveUpExitDistance(panel);
+                panel.gameObject.SetActive(true);
+                panel.anchoredPosition = rest + new Vector2(0f, exitDistance);
+                if (group != null)
+                    group.alpha = 1f;
+                SetInfoHudInteractive(group, false);
+
+                _captureHudSequence.Insert(0f, panel.DOAnchorPos(rest + new Vector2(0f, -captureHudDipDistance), inbound).SetEase(captureHudDipEase));
+                _captureHudSequence.Insert(inbound, panel.DOAnchorPos(rest, settle).SetEase(captureHudSettleEase));
+            });
+
+            _captureHudSequence.OnComplete(() =>
+            {
+                ForEachInfoHud((panel, group) =>
+                {
+                    panel.anchoredPosition = RestPosition(panel);
+                    if (group != null)
+                        group.alpha = 1f;
+                    SetInfoHudInteractive(group, true);
+                });
+            });
+            _captureHudSequence.OnKill(() => _captureHudSequence = null);
+            _captureHudSequence.Play();
+            return inbound + settle;
+        }
+
         private void Awake()
         {
             ResolveReferences();
@@ -108,6 +214,7 @@ namespace Chainbound.Combat
         private void OnDestroy()
         {
             KillActiveSequence();
+            KillCaptureHudSequence();
         }
 
         private void ResolveReferences()
@@ -314,6 +421,99 @@ namespace Chainbound.Combat
                 _activeRevealSequence.Kill();
                 _activeRevealSequence = null;
             }
+        }
+
+        private void KillCaptureHudSequence()
+        {
+            if (_captureHudSequence != null)
+            {
+                _captureHudSequence.Kill();
+                _captureHudSequence = null;
+            }
+        }
+
+        private bool HasInfoHud()
+        {
+            List<RectTransform> panels = GetInfoHudTransforms();
+            for (int i = 0; i < panels.Count; i++)
+            {
+                if (panels[i] != null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void EnsureInfoHudGroups()
+        {
+            ResolveReferences();
+            List<RectTransform> panels = GetInfoHudTransforms();
+            if (_infoHudGroups.Count == panels.Count && panels.Count > 0)
+                return;
+
+            _infoHudGroups.Clear();
+            for (int i = 0; i < panels.Count; i++)
+            {
+                RectTransform panel = panels[i];
+                if (panel == null)
+                    continue;
+
+                CanvasGroup group = panel.GetComponent<CanvasGroup>();
+                if (group == null)
+                    group = panel.gameObject.AddComponent<CanvasGroup>();
+                _infoHudGroups.Add(group);
+                if (!_cachedAnchoredPositions.ContainsKey(panel))
+                    _cachedAnchoredPositions[panel] = panel.anchoredPosition;
+            }
+        }
+
+        private void ForEachInfoHud(Action<RectTransform, CanvasGroup> apply)
+        {
+            List<RectTransform> panels = GetInfoHudTransforms();
+            int groupIndex = 0;
+            for (int i = 0; i < panels.Count; i++)
+            {
+                RectTransform panel = panels[i];
+                if (panel == null)
+                    continue;
+
+                CanvasGroup group = groupIndex < _infoHudGroups.Count ? _infoHudGroups[groupIndex] : null;
+                groupIndex++;
+                apply(panel, group);
+            }
+        }
+
+        private Vector2 RestPosition(RectTransform panel)
+        {
+            if (panel != null && _cachedAnchoredPositions.TryGetValue(panel, out Vector2 cached))
+                return cached;
+
+            return panel != null ? panel.anchoredPosition : Vector2.zero;
+        }
+
+        private float ResolveUpExitDistance(RectTransform panel)
+        {
+            if (panel == null)
+                return captureHudExitPadding;
+
+            RectTransform parent = panel.parent as RectTransform;
+            float parentHeight = parent != null ? Mathf.Abs(parent.rect.height) : 0f;
+            float height = Mathf.Abs(panel.rect.height);
+            if (height < 1f && parentHeight > 1f)
+                height = parentHeight * Mathf.Abs(panel.anchorMax.y - panel.anchorMin.y);
+            float topGap = parentHeight > 1f
+                ? parentHeight * Mathf.Max(0f, 1f - panel.anchorMax.y)
+                : 0f;
+            return Mathf.Max(height + captureHudExitPadding, topGap + height + captureHudExitPadding);
+        }
+
+        private static void SetInfoHudInteractive(CanvasGroup group, bool interactive)
+        {
+            if (group == null)
+                return;
+
+            group.interactable = interactive;
+            group.blocksRaycasts = interactive;
         }
 
     }

@@ -2,6 +2,7 @@ using Chainbound.Combat;
 using NUnit.Framework;
 using SignalJam.UI.MenuNavigation;
 using SignalJam.UI.MenuNavigation.PartyTab;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -80,7 +81,7 @@ public sealed class ChainlingDossierPrefabTests
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(DossierPath);
         Assert.That(prefab, Is.Not.Null);
 
-        string[] pages = { "SummaryPage", "MovesPage", "LearnablePage", "StylePage", "GrowthPage" };
+        string[] pages = { "SummaryPage", "MovesPage", "LearnablePage", "StylePage" };
         for (int i = 0; i < pages.Length; i++)
         {
             Transform page = FindPage(prefab, pages[i]);
@@ -111,6 +112,26 @@ public sealed class ChainlingDossierPrefabTests
 
             Assert.That(hasFocusRow, Is.True, pages[i] + " needs an active focus row");
         }
+
+        Transform growth = FindPage(prefab, "GrowthPage");
+        Transform growthContent = growth.Find("Content");
+        Assert.That(growthContent, Is.Not.Null);
+        Assert.That(growthContent.GetComponent<ScrollRect>(), Is.Null, "Growth stays on screen without a scroll view.");
+        Assert.That(growthContent.Find("LeftColumn/NatureList"), Is.Not.Null);
+        Assert.That(growthContent.Find("RightColumn/RecordGrid"), Is.Not.Null);
+        Assert.That(growthContent.Find("LeftColumn/RankRow").GetComponentInChildren<PartyTabStarRatingDisplay>(true), Is.Not.Null);
+        Assert.That(growthContent.Find("LeftColumn/RankRow").GetComponentInChildren<PartyTabCycleProgressDisplay>(true), Is.Not.Null);
+        Assert.That(growthContent.Find("RightColumn/AttributeRadar").GetComponent<PartyTabAttributeRadarGraphic>(), Is.Not.Null);
+        Assert.That(growthContent.GetComponentsInChildren<Button>(true).Length, Is.EqualTo(0));
+        SerializedObject growthSo = new SerializedObject(growth.GetComponent<ChainlingProgressionPanel>());
+        Assert.That(growthSo.FindProperty("ivLabels").arraySize, Is.EqualTo(6));
+        Assert.That(growthSo.FindProperty("baseLabels").arraySize, Is.EqualTo(6));
+        Assert.That(growthContent.Find("LeftColumn/NatureColumns"), Is.Not.Null);
+        Assert.That(growthContent.Find("LeftColumn/NatureList/MaxHp/Base"), Is.Not.Null);
+        Assert.That(growthContent.Find("RightColumn/RecordGrid").GetComponentsInChildren<HorizontalLayoutGroup>(true).Length, Is.GreaterThanOrEqualTo(3));
+        Assert.That(growthContent.Find("RightColumn/AttributeRadar/StatIcons").childCount, Is.EqualTo(5));
+        Assert.That(growthSo.FindProperty("xpBarFill").objectReferenceValue, Is.Not.Null);
+        Assert.That(growthSo.FindProperty("attributeRadar").objectReferenceValue, Is.Not.Null);
 
         Transform learnable = FindPage(prefab, "LearnablePage");
         Assert.That(learnable.Find("Header/ScrollUp"), Is.Null);
@@ -144,6 +165,43 @@ public sealed class ChainlingDossierPrefabTests
         {
             Object.DestroyImmediate(instance);
         }
+    }
+
+    [Test]
+    public void DossierPrefab_PixeloidLabelsUseStampInk()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(DossierPath);
+        Assert.That(prefab, Is.Not.Null);
+        Material stampInk = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/TextMesh Pro/Fonts/PixeloidSans_Stamp.mat");
+        TMP_FontAsset pixeloid = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Resources/TextMesh Pro/Fonts/PixeloidSans SDF.asset");
+        Assert.That(stampInk, Is.Not.Null);
+        Assert.That(pixeloid, Is.Not.Null);
+
+        TMP_Text[] dossierLabels = prefab.GetComponentsInChildren<TMP_Text>(true);
+        int pixeloidCount = 0;
+        int otherFontCount = 0;
+        for (int i = 0; i < dossierLabels.Length; i++)
+        {
+            TMP_Text label = dossierLabels[i];
+            if (label.GetComponentInParent<PartyTabCycleProgressDisplay>(true) != null)
+                continue;
+
+            if (label.font == pixeloid)
+            {
+                pixeloidCount++;
+                Assert.That(label.fontSharedMaterial, Is.SameAs(stampInk), label.transform.name);
+            }
+            else if (label.font != null)
+            {
+                otherFontCount++;
+                Assert.That(label.fontSharedMaterial, Is.Not.SameAs(stampInk), label.transform.name);
+            }
+        }
+
+        Assert.That(pixeloidCount, Is.GreaterThan(0));
+        Assert.That(otherFontCount, Is.GreaterThan(0));
+        TMP_Text nature = FindPage(prefab, "GrowthPage").Find("Content/LeftColumn/NatureHeader").GetComponent<TMP_Text>();
+        Assert.That(nature.fontSharedMaterial, Is.SameAs(stampInk));
     }
 
     [Test]

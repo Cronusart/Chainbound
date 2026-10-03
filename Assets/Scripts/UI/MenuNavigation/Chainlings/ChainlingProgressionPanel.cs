@@ -21,6 +21,7 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private ProgressionConfigSO progressionConfig;
         [SerializeField] private ChainlingProgressionRewardTablesSO progressionRewardTables;
         [SerializeField] private ChainlingProgressionEventCatalogSO progressionEventCatalog;
+        [SerializeField] private SpeciesDatabaseSO speciesDatabase;
 
         [Header("UI")]
         [SerializeField] private TMP_Text headingLabel;
@@ -32,12 +33,31 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private TMP_Text starsXpLabel;
         [SerializeField] private TMP_Text cycleLabel;
         [SerializeField] private TMP_Text[] ivLabels;
+        [SerializeField] private TMP_Text[] baseLabels;
         [SerializeField] private TMP_Text victoriesLabel;
+        [SerializeField] private TMP_Text victoriesValueLabel;
         [SerializeField] private TMP_Text enemyKosLabel;
+        [SerializeField] private TMP_Text enemyKosValueLabel;
         [SerializeField] private TMP_Text damageDealtLabel;
+        [SerializeField] private TMP_Text damageDealtValueLabel;
         [SerializeField] private TMP_Text damageTakenLabel;
+        [SerializeField] private TMP_Text damageTakenValueLabel;
         [SerializeField] private TMP_Text xpEarnedLabel;
+        [SerializeField] private TMP_Text xpEarnedValueLabel;
         [SerializeField] private TMP_Text timesKodLabel;
+        [SerializeField] private TMP_Text timesKodValueLabel;
+        [SerializeField] private RectTransform[] radarStatIcons;
+        [SerializeField] private float radarIconGap = 18f;
+        [SerializeField] private float radarIconSize = 28f;
+        [SerializeField] private Image xpBarFill;
+        [SerializeField] private PartyTabStarRatingDisplay starRating;
+        [SerializeField] private PartyTabCycleProgressDisplay cycleProgress;
+        [SerializeField] private PartyTabAttributeRadarGraphic attributeRadar;
+        [SerializeField] private bool fitRadarToRect = true;
+        [SerializeField, Range(0.2f, 0.48f)] private float radarRadiusFactor = 0.42f;
+        [SerializeField] private Color positiveIvColor = new Color(0.48f, 0.82f, 0.40f, 1f);
+        [SerializeField] private Color negativeIvColor = new Color(0.86f, 0.34f, 0.36f, 1f);
+        [SerializeField] private Color neutralIvColor = new Color(0.84f, 0.85f, 0.74f, 1f);
 
         private readonly List<Button> statButtons = new List<Button>();
         private readonly CoreStat[] stats =
@@ -74,6 +94,12 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (rebirthButton != null)
                 rebirthButton.onClick.AddListener(HandleRebirthClicked);
+            FitRadarToRect();
+        }
+
+        private void OnRectTransformDimensionsChange()
+        {
+            FitRadarToRect();
         }
 
         private void OnDisable()
@@ -86,7 +112,8 @@ namespace SignalJam.UI.MenuNavigation
             ProgressionConfigSO config,
             MonoBehaviour rebirthServiceSource,
             ChainlingProgressionRewardTablesSO rewardTables = null,
-            ChainlingProgressionEventCatalogSO eventCatalog = null)
+            ChainlingProgressionEventCatalogSO eventCatalog = null,
+            SpeciesDatabaseSO speciesDb = null)
         {
             if (config != null)
                 progressionConfig = config;
@@ -96,6 +123,8 @@ namespace SignalJam.UI.MenuNavigation
                 progressionRewardTables = rewardTables;
             if (eventCatalog != null)
                 progressionEventCatalog = eventCatalog;
+            if (speciesDb != null)
+                speciesDatabase = speciesDb;
         }
 
         public void Bind(PlayerRosterEntry rosterEntry, SpeciesDefinitionSO speciesDefinition, PlayerRosterSnapshot cache)
@@ -401,6 +430,20 @@ namespace SignalJam.UI.MenuNavigation
             string folioLabel,
             string folioChance)
         {
+            StarProgressionUtility.GetMilestoneSegment(
+                masteryXp,
+                rebirth,
+                ResolveConfig(),
+                out _,
+                out _,
+                out float xpFill);
+            if (xpBarFill != null)
+                PartyTabProgressBarUtility.SetFill01(xpBarFill, xpFill);
+            if (starRating != null)
+                starRating.SetRating(stars, true, true);
+            if (cycleProgress != null)
+                cycleProgress.SetCycle(ChainlingPlayerTerms.FormatCycleLabel(rebirth), rebirth, true);
+
             if (starsXpLabel != null)
             {
                 starsXpLabel.text =
@@ -410,17 +453,20 @@ namespace SignalJam.UI.MenuNavigation
             if (cycleLabel != null)
                 cycleLabel.text = $"{ChainlingPlayerTerms.FormatCycleLabel(rebirth)}    Cycle auto +{autoCombat}";
 
-            string[] ivNames = { "Max HP", "Melee Atk", "Melee Def", "Ranged Atk", "Ranged Def", "Speed" };
             if (ivLabels != null)
             {
-                for (int i = 0; i < ivLabels.Length && i < ivNames.Length; i++)
+                for (int i = 0; i < ivLabels.Length; i++)
                 {
-                    if (ivLabels[i] == null)
+                    TMP_Text label = ivLabels[i];
+                    if (label == null)
                         continue;
                     int value = snapshot.ivs != null && i < snapshot.ivs.Length ? snapshot.ivs[i] : 0;
-                    ivLabels[i].text = $"{ivNames[i]}    {(value >= 0 ? "+" : "")}{value}";
+                    label.text = value > 0 ? $"+{value}" : value < 0 ? value.ToString() : "+0";
+                    label.color = value > 0 ? positiveIvColor : value < 0 ? negativeIvColor : neutralIvColor;
                 }
             }
+
+            BindNatureBases();
 
             var career = new ChainlingPartyColumnSummary();
             ChainlingPartyStatsDisplayUtility.PopulateSummary(career, new ChainlingPartyColumnContext
@@ -428,15 +474,110 @@ namespace SignalJam.UI.MenuNavigation
                 entry = entry,
                 species = species,
             });
-            SetCareerLabel(victoriesLabel, career, ChainlingPartyStatsDisplayUtility.VictoriesLabel);
-            SetCareerLabel(enemyKosLabel, career, ChainlingPartyStatsDisplayUtility.EnemyKosLabel);
-            SetCareerLabel(damageDealtLabel, career, ChainlingPartyStatsDisplayUtility.DamageDealtLabel);
-            SetCareerLabel(damageTakenLabel, career, ChainlingPartyStatsDisplayUtility.DamageTakenLabel);
-            SetCareerLabel(xpEarnedLabel, career, ChainlingPartyStatsDisplayUtility.XpEarnedLabel);
-            SetCareerLabel(timesKodLabel, career, ChainlingPartyStatsDisplayUtility.TimesKodLabel);
+            SetCareerLabel(victoriesLabel, victoriesValueLabel, career, ChainlingPartyStatsDisplayUtility.VictoriesLabel, null);
+            SetCareerLabel(enemyKosLabel, enemyKosValueLabel, career, ChainlingPartyStatsDisplayUtility.EnemyKosLabel, null);
+            SetCareerLabel(damageDealtLabel, damageDealtValueLabel, career, ChainlingPartyStatsDisplayUtility.DamageDealtLabel, "DMG dealt");
+            SetCareerLabel(damageTakenLabel, damageTakenValueLabel, career, ChainlingPartyStatsDisplayUtility.DamageTakenLabel, "DMG taken");
+            SetCareerLabel(xpEarnedLabel, xpEarnedValueLabel, career, ChainlingPartyStatsDisplayUtility.XpEarnedLabel, null);
+            SetCareerLabel(timesKodLabel, timesKodValueLabel, career, ChainlingPartyStatsDisplayUtility.TimesKodLabel, null);
+            BindAttributeRadar(snapshot);
         }
 
-        private static void SetCareerLabel(TMP_Text label, ChainlingPartyColumnSummary career, string key)
+        private void BindAttributeRadar(ChainlingSnapshot snapshot)
+        {
+            if (attributeRadar == null)
+                return;
+
+            IReadOnlyList<ChainlingAttributeRadarAxis> axes =
+                ChainlingAttributeDisplayUtility.BuildPartyRadarAxes(snapshot, species, speciesDatabase);
+            var fills = new float[PartyTabAttributeRadarGraphic.AxisCount];
+            for (int i = 0; i < fills.Length; i++)
+                fills[i] = axes != null && i < axes.Count ? axes[i].Fill01 : 0f;
+            attributeRadar.SetFills(fills);
+            Canvas.ForceUpdateCanvases();
+            FitRadarToRect();
+        }
+
+        private void FitRadarToRect()
+        {
+            if (!Application.isPlaying || !fitRadarToRect || attributeRadar == null)
+                return;
+
+            Rect rect = attributeRadar.rectTransform.rect;
+            float radius = Mathf.Min(rect.width, rect.height) * radarRadiusFactor;
+            if (radius < 12f)
+                return;
+
+            attributeRadar.SetOuterRadius(radius);
+            PlaceRadarStatIcons();
+        }
+
+        private void BindNatureBases()
+        {
+            if (baseLabels == null)
+                return;
+
+            int[] bases = ResolveNatureBases(species);
+            for (int i = 0; i < baseLabels.Length; i++)
+            {
+                TMP_Text label = baseLabels[i];
+                if (label == null)
+                    continue;
+                label.text = bases[i].ToString();
+            }
+        }
+
+        private static int[] ResolveNatureBases(SpeciesDefinitionSO speciesDefinition)
+        {
+            if (speciesDefinition == null)
+                return new[] { 0, 0, 0, 0, 0, 0 };
+
+            return new[]
+            {
+                speciesDefinition.baseMaxHP,
+                speciesDefinition.baseMeleeAtk,
+                speciesDefinition.baseMeleeDef,
+                speciesDefinition.baseRangedAtk,
+                speciesDefinition.baseRangedDef,
+                speciesDefinition.baseSpeed,
+            };
+        }
+
+        private void PlaceRadarStatIcons()
+        {
+            if (attributeRadar == null || radarStatIcons == null)
+                return;
+
+            float radius = attributeRadar.OuterRadius;
+            if (radius < 1f)
+                return;
+
+            Rect rect = attributeRadar.rectTransform.rect;
+            float width = Mathf.Abs(rect.width);
+            float height = Mathf.Abs(rect.height);
+            float limit = width > 1f && height > 1f ? Mathf.Min(width, height) : Mathf.Max(width, height);
+            float center = radius + Mathf.Max(0f, radarIconGap);
+            if (limit > 20f)
+                center = Mathf.Min(center, limit * 0.5f - Mathf.Max(8f, radarIconSize) * 0.5f);
+
+            for (int i = 0; i < radarStatIcons.Length; i++)
+            {
+                RectTransform icon = radarStatIcons[i];
+                if (icon == null)
+                    continue;
+                icon.anchorMin = new Vector2(0.5f, 0.5f);
+                icon.anchorMax = new Vector2(0.5f, 0.5f);
+                icon.pivot = new Vector2(0.5f, 0.5f);
+                icon.anchoredPosition = attributeRadar.GetAxisPoint(i, center);
+            }
+        }
+
+        private static void SetCareerLabel(
+            TMP_Text label,
+            TMP_Text valueLabel,
+            ChainlingPartyColumnSummary career,
+            string key,
+            string displayTitle)
         {
             if (label == null || career == null || career.lines == null)
                 return;
@@ -446,7 +587,17 @@ namespace SignalJam.UI.MenuNavigation
                 ChainlingPartyDisplayLine line = career.lines[i];
                 if (!string.Equals(line.Label, key, System.StringComparison.Ordinal))
                     continue;
-                label.text = $"{line.Label}    {line.Value}";
+
+                string title = string.IsNullOrEmpty(displayTitle) ? line.Label : displayTitle;
+                if (valueLabel != null)
+                {
+                    label.text = title;
+                    valueLabel.text = line.Value;
+                }
+                else
+                {
+                    label.text = $"{title}    {line.Value}";
+                }
                 return;
             }
         }

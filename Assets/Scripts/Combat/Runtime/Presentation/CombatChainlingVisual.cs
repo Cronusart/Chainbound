@@ -92,6 +92,11 @@ namespace Chainbound.Combat
         [Tooltip("Size of the quad in world units. Default 5x5 matches the scene's x5 pixel scale.")]
         [SerializeField] private Vector2 spriteSize = new Vector2(5f, 5f);
 
+        // The profile owns the baseline quad size. Encounter presentation may
+        // temporarily scale that baseline without mutating the shared profile.
+        private Vector2 _profileSpriteSize = new Vector2(5f, 5f);
+        private float _presentationScaleMultiplier = 1f;
+
         [Tooltip("When true, rebuilds the quad around each sprite's imported pivot so stance pivots align to the slot origin.")]
         [SerializeField] private bool useSpritePivot = true;
 
@@ -213,6 +218,7 @@ namespace Chainbound.Combat
 
         public bool FlipX => flipX;
         public Vector2 SpriteSize => spriteSize;
+        public float PresentationScaleMultiplier => _presentationScaleMultiplier;
         public CombatVisualProfileSO CurrentProfile => _currentProfile;
         public bool HasSwapInSequence => HasConfiguredSequence(CombatAnimState.SwapIn);
         public bool HasSwapOutSequence => HasConfiguredSequence(CombatAnimState.SwapOut);
@@ -993,6 +999,21 @@ namespace Chainbound.Combat
             RebuildQuadMesh(GetFrameSprite(_currentState, _currentFrame));
         }
 
+        /// <summary>
+        /// Applies an encounter-scoped presentation multiplier to the current
+        /// profile's baseline quad size. This changes only this visual instance;
+        /// it never writes back to the shared CombatVisualProfileSO.
+        /// </summary>
+        public void SetPresentationScaleMultiplier(float multiplier)
+        {
+            multiplier = Mathf.Max(0.01f, multiplier);
+            if (Mathf.Approximately(_presentationScaleMultiplier, multiplier))
+                return;
+
+            _presentationScaleMultiplier = multiplier;
+            SetSpriteSize(_profileSpriteSize * multiplier);
+        }
+
         public void ConfigureOutlineTuning(CombatActionOutlineTuningSO tuning)
         {
             _outlineTuning = tuning;
@@ -1108,6 +1129,9 @@ namespace Chainbound.Combat
             _currentProfile = profile;
             ClearBodyOverrides();
 
+            _profileSpriteSize = profile.spriteSize;
+            _presentationScaleMultiplier = 1f;
+
             // Sprite sequences
             idleSequence = profile.idleSequence ?? new SpriteAnimationSequence();
             meleeAttackSequence = profile.meleeAttackSequence ?? new SpriteAnimationSequence();
@@ -1125,8 +1149,8 @@ namespace Chainbound.Combat
             swapOutFPS = profile.swapOutFPS;
 
             // Quad size (rebuilds mesh if different)
-            if (spriteSize != profile.spriteSize)
-                SetSpriteSize(profile.spriteSize);
+            if (spriteSize != _profileSpriteSize)
+                SetSpriteSize(_profileSpriteSize);
 
             useSpritePivot = profile.useSpritePivot;
             spritePivotWorldOffset = profile.spritePivotWorldOffset;

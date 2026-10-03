@@ -79,6 +79,16 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
             SetVerticesDirty();
         }
 
+        public void SetOuterRadius(float radius)
+        {
+            radius = Mathf.Max(1f, radius);
+            if (Mathf.Approximately(outerRadius, radius))
+                return;
+
+            outerRadius = radius;
+            SetVerticesDirty();
+        }
+
         public void SetFillAt(int index, float fill01)
         {
             if (index < 0 || index >= AxisCount)
@@ -92,6 +102,11 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
         {
             float radius = outerRadius * Mathf.Clamp01(radiusScale);
             return ComputeVertex(axisIndex, radius);
+        }
+
+        public Vector2 GetAxisPoint(int axisIndex, float radius)
+        {
+            return ComputeVertex(axisIndex, Mathf.Max(0f, radius));
         }
 
 #if UNITY_EDITOR

@@ -212,6 +212,13 @@ namespace Chainbound.Combat
         /// <summary>Which combat UI elements to reveal. hideCombatUI=true overrides to Hidden.</summary>
         public CombatUiPresentationMode uiPresentationMode;
 
+        /// <summary>
+        /// Presentation-only multiplier for opponent sprite quad sizes. Kept on the
+        /// encounter snapshot so boss framing can be authored without changing the
+        /// shared Chainling slot or species visual profiles.
+        /// </summary>
+        public float opponentVisualScaleMultiplier;
+
         /// <summary>Effective UI mode: Hidden when hideCombatUI is true, otherwise uiPresentationMode.</summary>
         public CombatUiPresentationMode EffectiveUiMode => hideCombatUI ? CombatUiPresentationMode.Hidden : uiPresentationMode;
 
@@ -236,6 +243,7 @@ namespace Chainbound.Combat
             aiPersonality = AIPersonality.Aggressive;
             capturePolicy = EncounterCapturePolicy.UseEncounterDefault;
             authoritativeBattleKind = AuthoritativeBattleKind.Scripted;
+            opponentVisualScaleMultiplier = 1f;
         }
 
         public int Count => chainlings != null ? chainlings.Count : 0;

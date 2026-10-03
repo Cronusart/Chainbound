@@ -40,6 +40,11 @@ namespace Chainbound.Combat
         [Tooltip("Which combat UI to reveal. Ignored when Hide Combat UI is true (then always Hidden).")]
         [SerializeField] private CombatUiPresentationMode uiPresentationMode = CombatUiPresentationMode.Full;
 
+        [Header("Battlefield Presentation")]
+        [Tooltip("Presentation-only multiplier applied to opponent sprite quad sizes for this encounter. 1 keeps the normal Chainling scale.")]
+        [Min(0.01f)]
+        [SerializeField] private float opponentVisualScaleMultiplier = 1f;
+
         [Header("Narrative / Scripted Exit")]
         [Tooltip("Optional: presentation overrides for battle intro staging. Null uses presenter defaults.")]
         [SerializeField] private BattleIntroPresentationSO introPresentation;
@@ -59,6 +64,7 @@ namespace Chainbound.Combat
         public string AuthoritativeEncounterId => authoritativeEncounterId;
         public bool HideCombatUI => hideCombatUI;
         public BattleIntroPresentationSO IntroPresentation => introPresentation;
+        public float OpponentVisualScaleMultiplier => Mathf.Max(0.01f, opponentVisualScaleMultiplier);
 
         public EncounterSnapshot GenerateEncounter(int seed)
         {
@@ -74,6 +80,7 @@ namespace Chainbound.Combat
                 skipManualTurnAfterIntro = skipManualTurnAfterIntro,
                 captureEnabled = capturePolicy == Chainbound.Combat.Core.EncounterCapturePolicy.Enabled,
                 capturePolicy = capturePolicy,
+                opponentVisualScaleMultiplier = OpponentVisualScaleMultiplier,
                 authoritativeBattleKind = difficulty == EncounterDifficulty.Boss
                     ? Chainbound.Combat.Core.AuthoritativeBattleKind.Boss
                     : Chainbound.Combat.Core.AuthoritativeBattleKind.Scripted,

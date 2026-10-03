@@ -102,6 +102,16 @@ namespace Chainbound.Combat
         public CombatSlotGroundCircle GroundCircle => groundCircle;
         public CombatChainlingVisual Visual => combatVisual;
 
+        /// <summary>
+        /// Applies a presentation-only scale to the bound sprite quad. The slot
+        /// transform and combat anchors remain unchanged, so melee/ranged spacing
+        /// and ordinary Chainling presentation are not affected.
+        /// </summary>
+        public void SetPresentationScaleMultiplier(float multiplier)
+        {
+            combatVisual?.SetPresentationScaleMultiplier(multiplier);
+        }
+
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Unity Lifecycle
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -336,6 +346,7 @@ namespace Chainbound.Combat
             if (chainling == null)
             {
                 combatVisual?.ClearBodyOverrides();
+                combatVisual?.SetPresentationScaleMultiplier(1f);
                 cosmeticOverlayController?.ClearAll();
             }
 
