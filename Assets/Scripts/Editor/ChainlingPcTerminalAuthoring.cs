@@ -53,6 +53,7 @@ public static class ChainlingPcTerminalAuthoring
             AssetDatabase.LoadAssetAtPath<SupabaseConfigSO>(
                 "Assets/Resources/SupabaseConfig.asset"));
         screen.BuildDefaultLayoutForEditor();
+        ApplyTerminalChrome(root);
 
         MenuInputContextController input = root.GetComponent<MenuInputContextController>();
         if (input == null)
@@ -345,6 +346,149 @@ public static class ChainlingPcTerminalAuthoring
         }
 
         return null;
+    }
+
+    private static void ApplyTerminalChrome(GameObject root)
+    {
+        Sprite panel = LoadSprite("Assets/Sprites/UI/MainMenu/Buttons/menu_panel_sliced.png");
+        Sprite dialogue = LoadSprite("Assets/Sprites/UI/PlayerMenu/infopanel.png");
+        Sprite button = LoadSprite("Assets/Sprites/UI/MainMenu/Buttons/gray_button.png");
+        Texture2D scanline = AssetDatabase.LoadAssetAtPath<Texture2D>(
+            "Assets/Sprites/Combat/BattleDevice/SCANLINE_FRAME_PMROOT.png");
+
+        ApplyPlate(root.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopLeft"), panel);
+        ApplyPlate(root.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopCenter"), panel);
+        ApplyPlate(root.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopRight"), panel);
+        ApplyPlate(root.transform.Find("SafeArea/TerminalBoot/MenuPanel/DialogueLowerCenter"), dialogue != null ? dialogue : panel);
+        ApplyButtonSprites(root, button);
+        ApplyScanlines(root, scanline);
+        ApplyBootFrames(root);
+    }
+
+    private static void ApplyPlate(Transform slot, Sprite sprite)
+    {
+        if (slot == null || sprite == null)
+            return;
+
+        Image image = slot.GetComponent<Image>();
+        if (image == null)
+            return;
+
+        image.sprite = sprite;
+        image.type = sprite.border.sqrMagnitude > 0.01f ? Image.Type.Sliced : Image.Type.Simple;
+        image.color = Color.white;
+        image.raycastTarget = false;
+        image.pixelsPerUnitMultiplier = 1f;
+    }
+
+    private static void ApplyButtonSprites(GameObject root, Sprite sprite)
+    {
+        if (root == null || sprite == null)
+            return;
+
+        Button[] buttons = root.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Image image = buttons[i].GetComponent<Image>();
+            if (image == null)
+                continue;
+
+            image.sprite = sprite;
+            image.type = sprite.border.sqrMagnitude > 0.01f ? Image.Type.Sliced : Image.Type.Simple;
+            image.color = Color.white;
+            image.pixelsPerUnitMultiplier = 1f;
+        }
+    }
+
+    private static void ApplyScanlines(GameObject root, Texture2D scanline)
+    {
+        PlayerMenuBackgroundController background = root.GetComponentInChildren<PlayerMenuBackgroundController>(true);
+        if (background == null)
+            return;
+
+        Image tint = background.BaseTintImage;
+        if (tint != null)
+        {
+            tint.color = new Color(0.07f, 0.025f, 0.035f, 0.78f);
+            tint.raycastTarget = false;
+        }
+
+        RawImage overlay = background.ScanlineOverlay;
+        if (overlay != null && scanline != null)
+        {
+            overlay.texture = scanline;
+            overlay.color = new Color(1f, 1f, 1f, 0.28f);
+            overlay.uvRect = new Rect(0f, 0f, 1f, 8f);
+            overlay.raycastTarget = false;
+            overlay.gameObject.SetActive(true);
+        }
+
+        background.CaptureAuthoredPresentation();
+        SerializedObject serialized = new SerializedObject(background);
+        serialized.FindProperty("respectAuthoredPresentation").boolValue = true;
+        serialized.FindProperty("scanlinesEnabled").boolValue = scanline != null;
+        serialized.FindProperty("scanlinesAboveContent").boolValue = false;
+        serialized.FindProperty("useUnscaledTime").boolValue = true;
+        serialized.FindProperty("scanlineUvSpeed").floatValue = 0.045f;
+        serialized.FindProperty("baseTintBlocksRaycasts").boolValue = false;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void ApplyBootFrames(GameObject root)
+    {
+        PlayerMenuBootSequenceController boot = root.GetComponentInChildren<PlayerMenuBootSequenceController>(true);
+        if (boot == null)
+            return;
+
+        SerializedObject serialized = new SerializedObject(boot);
+        AssignBootSprites(serialized.FindProperty("bootFrames"), new[]
+        {
+            "mainmenu_boot1",
+            "mainmenu_boot2",
+            "mainmenu_boot3",
+            "mainmenu_boot4",
+            "mainmenu_boot5",
+            "mainmenu_boot6",
+            "mainmenu_boot7",
+            "mainmenu_boot8",
+            "mainmenu_boot9",
+            "mainmenu_boot10"
+        });
+        AssignBootSprites(serialized.FindProperty("exitFrames"), new[]
+        {
+            "mainmenu_boot12",
+            "mainmenu_boot11",
+            "mainmenu_boot6",
+            "mainmenu_boot7",
+            "mainmenu_boot8",
+            "mainmenu_boot9",
+            "mainmenu_boot10"
+        });
+        serialized.FindProperty("fps").floatValue = 20f;
+        serialized.FindProperty("revealStartFrame").intValue = 2;
+        serialized.FindProperty("menuPanelStartScale").floatValue = 0.88f;
+        serialized.FindProperty("contentDelay").floatValue = 0.25f;
+        serialized.FindProperty("overshootScale").floatValue = 1.05f;
+        serialized.FindProperty("playCloseAnimation").boolValue = true;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void AssignBootSprites(SerializedProperty frames, string[] spriteNames)
+    {
+        if (frames == null || !frames.isArray)
+            return;
+
+        frames.arraySize = spriteNames.Length;
+        for (int i = 0; i < spriteNames.Length; i++)
+        {
+            frames.GetArrayElementAtIndex(i).objectReferenceValue = LoadSprite(
+                "Assets/Sprites/UI/PlayerMenu/MainMenuBoot/" + spriteNames[i] + ".png");
+        }
+    }
+
+    private static Sprite LoadSprite(string path)
+    {
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
     private static void EnsureFolder(string parent, string name)

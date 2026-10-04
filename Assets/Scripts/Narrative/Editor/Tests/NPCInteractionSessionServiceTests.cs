@@ -102,6 +102,9 @@ public class NPCInteractionSessionServiceTests
         NPCController npc = CreateNpc("npc_unlocked");
         NPCMovementAgent movementAgent = npc.GetComponent<NPCMovementAgent>();
 
+        npc.transform.rotation = Quaternion.LookRotation(Vector3.forward);
+        Vector2 facingBeforeTalk = new Vector2(npc.transform.forward.x, npc.transform.forward.z).normalized;
+
         service.BeginNormalInteraction(npc);
         dialogueService.PlayDialogue(CreateAutoAdvanceDialogue("unlocked_dialogue", 0.15f), false);
 
@@ -117,6 +120,8 @@ public class NPCInteractionSessionServiceTests
         Assert.That(service.HasActiveSession, Is.False);
         Assert.That(npc.CurrentOverrideMode, Is.EqualTo(RouteOverrideMode.None));
         Assert.That(GetPrivateField<Transform>(movementAgent, "facingTargetOverride"), Is.Null);
+        Vector2 facingAfterTalk = GetPrivateField<Vector2>(movementAgent, "lastStableWalkDirection");
+        Assert.That(Vector2.Dot(facingAfterTalk.normalized, facingBeforeTalk), Is.GreaterThan(0.9f));
     }
 
     [UnityTest]

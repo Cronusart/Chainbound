@@ -130,7 +130,7 @@ namespace Chainbound.Combat
             Append(sb, "interval", config.intervalSeconds);
             Append(sb, "healBp", config.HealBasisPoints);
             Append(sb, "catchup", config.maxCatchupIntervals);
-            Append(sb, "party", config.partyMembersOnly ? 1 : 0);
+            Append(sb, "storage", config.storageOnly ? 1 : 0);
             return HashUtf8(sb.ToString());
         }
 

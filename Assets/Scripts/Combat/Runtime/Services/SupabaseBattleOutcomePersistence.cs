@@ -90,8 +90,10 @@ namespace Chainbound.Combat
                 player_won = result.PlayerWon,
                 is_draw = result.IsDraw,
                 was_fled = result.wasFled,
-                ram_earned = rewards != null ? Math.Max(0, rewards.ramEarned) : 0,
-                ram_penalty = rewards != null ? Math.Max(0, rewards.ramPenalty) : 0,
+                // PvE is client-resolved, so RAM remains preview-only until an
+                // authoritative battle verifier exists.
+                ram_earned = 0,
+                ram_penalty = 0,
                 forensic_hash = !string.IsNullOrWhiteSpace(outcome.forensicHash)
                     ? outcome.forensicHash
                     : result.forensicHash ?? string.Empty,

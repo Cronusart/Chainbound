@@ -17,6 +17,7 @@ namespace Chainbound.Combat
 
         private IWalletService wallet;
         private IRpcService rpc;
+        private IChainTxOrchestrator txOrchestrator;
         private readonly Dictionary<string, PreparedStampPayload> prepared = new Dictionary<string, PreparedStampPayload>(StringComparer.Ordinal);
         private readonly Dictionary<string, PreparedRamGrantPayload> preparedRamGrants = new Dictionary<string, PreparedRamGrantPayload>(StringComparer.Ordinal);
 
@@ -29,12 +30,18 @@ namespace Chainbound.Combat
             }
         }
 
-        public void Configure(SupabaseConfigSO backend, SolanaConfigSO chain, IWalletService walletService, IRpcService rpcService)
+        public void Configure(
+            SupabaseConfigSO backend,
+            SolanaConfigSO chain,
+            IWalletService walletService,
+            IRpcService rpcService,
+            IChainTxOrchestrator orchestrator = null)
         {
             supabaseConfig = PlatformContext.ResolveSupabaseConfig(backend);
             solanaConfig = PlatformContext.ResolveSolanaConfig(chain);
             wallet = walletService;
             rpc = rpcService;
+            txOrchestrator = orchestrator;
         }
 
         public async Task<OwnershipKnownRollResult> RollKnownAsync(string idempotencyKey)
@@ -81,7 +88,9 @@ namespace Chainbound.Combat
             RequireStampDependencies();
             PreparedStampPayload payload = await PrepareAsync(request);
             byte[] transaction = Convert.FromBase64String(payload.transaction_base64);
-            RpcSimulationResult simulation = await rpc.SimulateTransactionAsync(transaction);
+            ChainTxScope scope = StampScope(payload, request.idempotencyKey);
+            RpcSimulationResult simulation = await txOrchestrator.SimulateAsync(
+                new ChainTxRequest(scope, transaction, wallet.SupportsSignAndSend));
             payload.review.simulationSucceeded = simulation != null && simulation.success;
             payload.review.simulationMessage = simulation != null ? simulation.errorMessage : "RPC simulation returned no result.";
             if (simulation != null && simulation.unitsConsumed > 0)
@@ -100,20 +109,33 @@ namespace Chainbound.Combat
                 return new StampMoveResult { error = "Stamp must pass simulation before signing." };
 
             byte[] transaction = Convert.FromBase64String(payload.transaction_base64);
-            string signature;
+            if (!Application.isEditor && !wallet.SupportsSignAndSend)
+                return new StampMoveResult { error = "Device Stamp requires wallet SignAndSend support." };
+
+            TxResult submission;
             try
             {
-                signature = wallet.SupportsSignAndSend
-                    ? await wallet.SignAndSendTransactionAsync(transaction)
-                    : await SendSignedAsync(transaction);
+                submission = await txOrchestrator.SubmitAsync(new ChainTxRequest(
+                    StampScope(payload, request.idempotencyKey),
+                    transaction,
+                    wallet.SupportsSignAndSend));
             }
             catch (Exception exception)
             {
                 return new StampMoveResult { error = exception.Message };
             }
 
+            string signature = submission?.txSignature;
+
             if (string.IsNullOrWhiteSpace(signature))
-                return new StampMoveResult { error = "Wallet rejected or did not return a transaction signature." };
+                return new StampMoveResult
+                {
+                    pending = submission != null && submission.status == TxStatus.UnknownOutcome,
+                    operationId = payload.operation_id,
+                    operationStatus = submission?.status.ToString(),
+                    idempotencyKey = request.idempotencyKey,
+                    error = submission?.errorMessage ?? "Wallet rejected or did not return a transaction signature.",
+                };
 
             // Once the wallet returns a signature, never offer this prepared transaction for
             // signing again. The authority persists it immediately and reconciliation handles
@@ -314,6 +336,15 @@ namespace Chainbound.Combat
             return signed != null && signed.Length > 0 ? await rpc.SendTransactionAsync(signed) : null;
         }
 
+        private ChainTxScope StampScope(PreparedStampPayload payload, string idempotencyKey)
+        {
+            string operationId = !string.IsNullOrWhiteSpace(payload?.operation_id)
+                ? payload.operation_id
+                : idempotencyKey;
+            string cluster = solanaConfig != null ? solanaConfig.ownershipCluster : string.Empty;
+            return new ChainTxScope(cluster, wallet.PublicKey, operationId);
+        }
+
         private string RequireProfileId()
         {
             string value = GameSessionContext.Instance != null ? GameSessionContext.Instance.PlayerProfileId : string.Empty;
@@ -328,6 +359,7 @@ namespace Chainbound.Combat
         private void RequireStampDependencies()
         {
             RequireTransactionDependencies();
+            if (txOrchestrator == null) throw new InvalidOperationException("Solana transaction recovery is not configured.");
         }
 
         private void RequireTransactionDependencies()
@@ -353,6 +385,7 @@ namespace Chainbound.Combat
             if (bridge == null) return;
             if (wallet == null) wallet = bridge.WalletService;
             if (rpc == null) rpc = bridge.RpcService;
+            if (txOrchestrator == null) txOrchestrator = bridge.TxOrchestrator;
             if (solanaConfig == null) solanaConfig = bridge.Config;
         }
 

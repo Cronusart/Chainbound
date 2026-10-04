@@ -26,15 +26,21 @@ namespace Chainbound.Combat
 
         public const string BindChainling = "bind_chainling";
         public static readonly byte[] BindChainlingDiscriminator = { 181, 19, 166, 249, 245, 197, 66, 176 };
-        public static readonly string[] BindChainlingAccounts = { "owner", "profile", "chainling", "ownership_config", "core_authority", "cover", "component", "cover_collection", "moves_collection", "cosmetics_collection", "archives_collection", "archive_asset", "receipt", "core_program", "system_program" };
-        public static readonly bool[] BindChainlingWritable = { true, true, true, false, false, true, true, true, true, true, true, true, true, false, false };
-        public static readonly bool[] BindChainlingSigner = { true, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
+        public static readonly string[] BindChainlingAccounts = { "owner", "profile", "reservation", "chainling", "ownership_config", "core_authority", "cover", "component", "cover_collection", "moves_collection", "cosmetics_collection", "archives_collection", "archive_asset", "receipt", "core_program", "system_program" };
+        public static readonly bool[] BindChainlingWritable = { true, true, true, true, false, false, true, true, true, true, true, true, true, true, false, false };
+        public static readonly bool[] BindChainlingSigner = { true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
 
         public const string BurnKnownMoveForRam = "burn_known_move_for_ram";
         public static readonly byte[] BurnKnownMoveForRamDiscriminator = { 52, 70, 128, 132, 155, 170, 40, 190 };
         public static readonly string[] BurnKnownMoveForRamAccounts = { "vault", "profile", "config", "result_authority" };
         public static readonly bool[] BurnKnownMoveForRamWritable = { true, true, false, false };
         public static readonly bool[] BurnKnownMoveForRamSigner = { false, false, false, true };
+
+        public const string CancelRamReservation = "cancel_ram_reservation";
+        public static readonly byte[] CancelRamReservationDiscriminator = { 187, 16, 38, 226, 202, 185, 140, 135 };
+        public static readonly string[] CancelRamReservationAccounts = { "reservation", "config", "result_authority" };
+        public static readonly bool[] CancelRamReservationWritable = { true, false, true };
+        public static readonly bool[] CancelRamReservationSigner = { false, false, true };
 
         public const string ConsumeEncounterRandomness = "consume_encounter_randomness";
         public static readonly byte[] ConsumeEncounterRandomnessDiscriminator = { 7, 114, 169, 20, 163, 95, 27, 181 };
@@ -59,6 +65,24 @@ namespace Chainbound.Combat
         public static readonly string[] CreateProfileAccounts = { "profile", "authority", "system_program" };
         public static readonly bool[] CreateProfileWritable = { true, true, false };
         public static readonly bool[] CreateProfileSigner = { false, true, false };
+
+        public const string CreateRamReservation = "create_ram_reservation";
+        public static readonly byte[] CreateRamReservationDiscriminator = { 170, 252, 246, 81, 3, 188, 79, 36 };
+        public static readonly string[] CreateRamReservationAccounts = { "reservation", "profile", "owner", "config", "result_authority", "system_program" };
+        public static readonly bool[] CreateRamReservationWritable = { true, false, false, false, true, false };
+        public static readonly bool[] CreateRamReservationSigner = { false, false, false, false, true, false };
+
+        public const string CreditPurchasedRam = "credit_purchased_ram";
+        public static readonly byte[] CreditPurchasedRamDiscriminator = { 40, 249, 120, 28, 8, 80, 128, 108 };
+        public static readonly string[] CreditPurchasedRamAccounts = { "receipt", "profile", "owner", "config", "result_authority", "system_program" };
+        public static readonly bool[] CreditPurchasedRamWritable = { true, true, false, false, true, false };
+        public static readonly bool[] CreditPurchasedRamSigner = { false, false, false, false, true, false };
+
+        public const string DebitReservedRam = "debit_reserved_ram";
+        public static readonly byte[] DebitReservedRamDiscriminator = { 33, 31, 171, 238, 31, 94, 205, 157 };
+        public static readonly string[] DebitReservedRamAccounts = { "reservation", "receipt", "profile", "owner", "config", "result_authority", "system_program" };
+        public static readonly bool[] DebitReservedRamWritable = { true, true, true, false, false, true, false };
+        public static readonly bool[] DebitReservedRamSigner = { false, false, false, false, false, true, false };
 
         public const string FulfillEncounter = "fulfill_encounter";
         public static readonly byte[] FulfillEncounterDiscriminator = { 179, 121, 75, 29, 254, 142, 143, 171 };
@@ -102,6 +126,12 @@ namespace Chainbound.Combat
         public static readonly bool[] PrepareStampTicketWritable = { true, false, false, false, false, true, false };
         public static readonly bool[] PrepareStampTicketSigner = { false, false, false, false, false, true, false };
 
+        public const string ReconcileRamDelta = "reconcile_ram_delta";
+        public static readonly byte[] ReconcileRamDeltaDiscriminator = { 0, 109, 140, 149, 153, 119, 226, 15 };
+        public static readonly string[] ReconcileRamDeltaAccounts = { "receipt", "profile", "owner", "config", "result_authority", "system_program" };
+        public static readonly bool[] ReconcileRamDeltaWritable = { true, true, false, false, true, false };
+        public static readonly bool[] ReconcileRamDeltaSigner = { false, false, false, false, true, false };
+
         public const string RemoveChainling = "remove_chainling";
         public static readonly byte[] RemoveChainlingDiscriminator = { 150, 217, 4, 148, 150, 250, 180, 246 };
         public static readonly string[] RemoveChainlingAccounts = { "vault", "config", "result_authority" };
@@ -116,9 +146,9 @@ namespace Chainbound.Combat
 
         public const string RollKnownMove = "roll_known_move";
         public static readonly byte[] RollKnownMoveDiscriminator = { 42, 140, 118, 198, 71, 101, 152, 152 };
-        public static readonly string[] RollKnownMoveAccounts = { "vault", "owner", "profile", "ownership_config", "receipt", "game_config", "result_authority", "system_program" };
-        public static readonly bool[] RollKnownMoveWritable = { true, false, true, false, true, false, true, false };
-        public static readonly bool[] RollKnownMoveSigner = { false, false, false, false, false, false, true, false };
+        public static readonly string[] RollKnownMoveAccounts = { "reservation", "vault", "owner", "profile", "ownership_config", "receipt", "game_config", "result_authority", "system_program" };
+        public static readonly bool[] RollKnownMoveWritable = { true, true, false, true, false, true, false, true, false };
+        public static readonly bool[] RollKnownMoveSigner = { false, false, false, false, false, false, false, true, false };
 
         public const string SetEquippedSlot = "set_equipped_slot";
         public static readonly byte[] SetEquippedSlotDiscriminator = { 202, 159, 125, 247, 191, 139, 184, 76 };
@@ -134,9 +164,9 @@ namespace Chainbound.Combat
 
         public const string StampKnownMove = "stamp_known_move";
         public static readonly byte[] StampKnownMoveDiscriminator = { 169, 191, 199, 46, 62, 34, 188, 181 };
-        public static readonly string[] StampKnownMoveAccounts = { "owner", "profile", "vault", "ticket", "ownership_config", "core_authority", "stamped_asset", "moves_collection", "core_program", "system_program" };
-        public static readonly bool[] StampKnownMoveWritable = { true, true, true, true, false, false, true, true, false, false };
-        public static readonly bool[] StampKnownMoveSigner = { true, false, false, false, false, false, false, false, false, false };
+        public static readonly string[] StampKnownMoveAccounts = { "owner", "profile", "reservation", "vault", "ticket", "ownership_config", "core_authority", "stamped_asset", "moves_collection", "core_program", "system_program" };
+        public static readonly bool[] StampKnownMoveWritable = { true, true, true, true, true, false, false, true, true, false, false };
+        public static readonly bool[] StampKnownMoveSigner = { true, false, false, false, false, false, false, false, false, false, false };
 
         public const string UpdateGameConfig = "update_game_config";
         public static readonly byte[] UpdateGameConfigDiscriminator = { 180, 82, 7, 205, 89, 182, 61, 128 };
@@ -172,7 +202,11 @@ namespace Chainbound.Combat
         public static readonly byte[] MoveVaultAccountDiscriminator = { 30, 75, 22, 221, 63, 126, 196, 29 };
         public static readonly byte[] OwnershipConfigAccountDiscriminator = { 227, 236, 116, 131, 86, 134, 101, 163 };
         public static readonly byte[] PlayerProfileAccountDiscriminator = { 82, 226, 99, 87, 164, 130, 181, 80 };
+        public static readonly byte[] RamDebitReceiptAccountDiscriminator = { 158, 73, 117, 135, 247, 44, 34, 129 };
         public static readonly byte[] RamGrantReceiptAccountDiscriminator = { 151, 111, 207, 251, 59, 36, 69, 29 };
+        public static readonly byte[] RamPurchaseReceiptAccountDiscriminator = { 37, 105, 212, 100, 110, 164, 29, 144 };
+        public static readonly byte[] RamReconciliationReceiptAccountDiscriminator = { 242, 112, 40, 70, 115, 180, 87, 215 };
+        public static readonly byte[] RamReservationAccountDiscriminator = { 171, 186, 0, 107, 1, 255, 131, 148 };
         public static readonly byte[] StampTicketAccountDiscriminator = { 27, 188, 81, 247, 225, 23, 30, 219 };
 
         public static List<AccountMeta> BuildAccounts(string[] names, bool[] writable, bool[] signer, IReadOnlyDictionary<string, PublicKey> addresses)

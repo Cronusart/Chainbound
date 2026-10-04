@@ -8,6 +8,7 @@ import {
   str,
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
+import { applyChainlingPassiveRecovery, resolveRecoveryClock } from "../_shared/chainling_passive_recovery.ts";
 
 const ROSTER_SIZE = 3;
 
@@ -73,20 +74,42 @@ serve(async (req: Request) => {
       }, 403);
     }
 
-    const clearRes = await supabase
+    const clock = await resolveRecoveryClock();
+    await applyChainlingPassiveRecovery(supabase, pid, clock);
+    const { data: currentParty, error: partyErr } = await supabase
       .from("chainlings")
-      // Passive recovery is party-scoped. Reset its anchor whenever membership
-      // changes so bench time cannot be converted into recovery on promotion.
-      .update({ is_party_member: false, party_slot: null, passive_recovery_at: new Date().toISOString() })
-      .eq("player_profile_id", pid);
+      .select("id")
+      .eq("player_profile_id", pid)
+      .eq("is_party_member", true);
 
-    if (clearRes.error) throw clearRes.error;
+    if (partyErr) throw partyErr;
+
+    const nextParty = new Set(normalized);
+    const leaving = ((currentParty ?? []) as Array<{ id: string }>)
+      .map((row) => row.id)
+      .filter((id) => id && !nextParty.has(id));
+
+    if (leaving.length > 0) {
+      // Storage healing starts when a Chainling leaves the party. Chainlings
+      // that stay in storage keep their existing anchor.
+      const leaveRes = await supabase
+        .from("chainlings")
+        .update({
+          is_party_member: false,
+          party_slot: null,
+          passive_recovery_at: clock.iso,
+        })
+        .eq("player_profile_id", pid)
+        .in("id", leaving);
+
+      if (leaveRes.error) throw leaveRes.error;
+    }
 
     for (let slot = 0; slot < normalized.length; slot++) {
       const id = normalized[slot];
       const up = await supabase
         .from("chainlings")
-        .update({ is_party_member: true, party_slot: slot, passive_recovery_at: new Date().toISOString() })
+        .update({ is_party_member: true, party_slot: slot })
         .eq("id", id)
         .eq("player_profile_id", pid);
 

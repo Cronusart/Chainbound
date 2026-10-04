@@ -19,6 +19,9 @@ namespace Chainbound.Combat
     public sealed class SolanaRpcService : IRpcService, IDisposable
     {
         private const int BlockhashCacheTtlSeconds = 45;
+        // The newest finalized slot often has no block time yet. Nearby older slots still
+        // represent the live cluster day and stay well inside a one-hour window.
+        private static readonly int[] BlockTimeSlotOffsets = { 0, 30, 150, 300 };
         private readonly Uri _endpoint;
         private readonly HttpClient _httpClient;
         private string _cachedBlockhash;
@@ -211,11 +214,28 @@ namespace Chainbound.Combat
                     "getSlot",
                     new JArray(new JObject { ["commitment"] = "finalized" }));
                 long? slot = slotResponse["result"]?.Value<long?>();
-                if (!slot.HasValue || slot.Value < 0) return null;
+                if (!slot.HasValue || slot.Value <= 0) return null;
 
-                JObject timeResponse = await PostAsync("getBlockTime", new JArray(slot.Value));
-                long? blockTime = timeResponse["result"]?.Value<long?>();
-                return blockTime.HasValue && blockTime.Value > 0 ? blockTime : null;
+                for (int i = 0; i < BlockTimeSlotOffsets.Length; i++)
+                {
+                    long target = slot.Value - BlockTimeSlotOffsets[i];
+                    if (target <= 0)
+                        continue;
+
+                    try
+                    {
+                        JObject timeResponse = await PostAsync("getBlockTime", new JArray(target));
+                        long? blockTime = timeResponse["result"]?.Value<long?>();
+                        if (blockTime.HasValue && blockTime.Value > 0)
+                            return blockTime;
+                    }
+                    catch (Exception)
+                    {
+                        // The tip slot often has no timestamp yet. Try the next offset.
+                    }
+                }
+
+                return null;
             }
             catch (Exception ex)
             {

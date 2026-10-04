@@ -255,7 +255,10 @@ namespace Chainbound.Combat
             _rpcService = new SolanaRpcService(_resolvedRpcEndpoint);
 
             // â”€â”€ Layer 2: Tx Orchestrator â”€â”€
-            _txOrchestrator = new SolanaChainTxOrchestrator(_walletService, _rpcService);
+            _txOrchestrator = new SolanaChainTxOrchestrator(
+                _walletService,
+                _rpcService,
+                configuredCluster: solanaConfig.ownershipCluster);
 
             // â”€â”€ Layer 2.5: Solana Time Service (cluster-authoritative time) â”€â”€
             _solanaTimeService = new SolanaTimeService(_rpcService);

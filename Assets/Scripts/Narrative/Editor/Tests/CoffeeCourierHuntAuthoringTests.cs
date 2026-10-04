@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Linq;
 using NUnit.Framework;
+using SignalJam.Narrative.Combat;
 using UnityEditor;
 using UnityEngine;
 
@@ -19,6 +20,9 @@ public sealed class CoffeeCourierHuntAuthoringTests
     private const string GateSequencePath =
         "Assets/Scripts/Narrative/Quests/coffee_and_beer/Sequence/coffee_loomville_gate_sequence.asset";
     private const string QuestPath = "Assets/Scripts/Narrative/Quests/Quest_CoffeeAndBeer.asset";
+    private const string GameServicesPrefabPath = "Assets/Prefabs/GameServices/GameServices.prefab";
+    private const string IntroEncounterId = "intro_first_creature";
+    private const string CofiEncounterId = "coffee_cofi_lootwak";
 
     [Test]
     public void TobyRouter_HasCoffeeActiveNag()
@@ -174,6 +178,108 @@ public sealed class CoffeeCourierHuntAuthoringTests
     }
 
     [Test]
+    public void CofiLoss_ReturnsToSanctuaryUntilZebReopensTheTrigger()
+    {
+        SequenceAsset cofi = AssetDatabase.LoadAssetAtPath<SequenceAsset>(CofiSequencePath);
+        int lossFlag = -1;
+        int awaitCheckpoint = -1;
+        int awaitZeb = -1;
+        int enableRetry = -1;
+        int jumpIdle = -1;
+        for (int i = 0; i < cofi.StepCount; i++)
+        {
+            SequenceStep step = cofi.GetStep(i);
+            if (step is Step_SetProfileWorldFlag flag &&
+                flag.FlagKey == CoffeeCourierHuntAuthoring.CofiPlayerLostFlag &&
+                flag.FlagValue)
+                lossFlag = i;
+
+            if (step is Step_SetCheckpoint checkpoint &&
+                checkpoint.CheckpointLabel == "coffee_cofi_await_zeb")
+            {
+                awaitCheckpoint = i;
+                Assert.That(checkpoint.ResumeSceneId, Is.EqualTo("Jungle"));
+                Assert.That(checkpoint.ResumeSpawnId, Is.EqualTo("sanctuary_jungle_trailhead"));
+            }
+
+            if (step is Step_WaitForTrigger wait)
+            {
+                SerializedObject so = new SerializedObject(wait);
+                if (so.FindProperty("triggerId").stringValue == CoffeeCourierHuntAuthoring.ZebCofiRetryTriggerId)
+                {
+                    awaitZeb = i;
+                    Assert.That(so.FindProperty("saveReturnSnapshotOnTriggerComplete").boolValue, Is.False);
+                    Assert.That(so.FindProperty("returnSpawnPointId").stringValue, Is.Empty);
+                }
+            }
+
+            if (step is Step_EnableGameObject enable)
+            {
+                SerializedObject so = new SerializedObject(enable);
+                if (so.FindProperty("gameObjectName").stringValue == CoffeeCourierHuntAuthoring.CofiTriggerObjectName &&
+                    so.FindProperty("enable").boolValue)
+                    enableRetry = i;
+            }
+
+            if (step is Step_JumpToLabel jump)
+            {
+                SerializedObject so = new SerializedObject(jump);
+                if (so.FindProperty("targetLabel").stringValue == "coffee_cofi_idle")
+                    jumpIdle = i;
+            }
+        }
+
+        Step_StartEncounter encounter = null;
+        for (int i = 0; i < cofi.StepCount; i++)
+        {
+            if (cofi.GetStep(i) is Step_StartEncounter start)
+                encounter = start;
+        }
+
+        Assert.That(encounter, Is.Not.Null);
+        SerializedObject encounterObject = new SerializedObject(encounter);
+        Assert.That(encounterObject.FindProperty("returnSpawnPointId").stringValue, Is.EqualTo("sanctuary_jungle_trailhead"));
+        Assert.That(lossFlag, Is.GreaterThanOrEqualTo(0));
+        Assert.That(awaitCheckpoint, Is.GreaterThan(lossFlag));
+        Assert.That(awaitZeb, Is.GreaterThan(awaitCheckpoint));
+        Assert.That(enableRetry, Is.GreaterThan(awaitZeb));
+        Assert.That(jumpIdle, Is.GreaterThan(enableRetry));
+    }
+
+    [Test]
+    public void CombatLaunchProfiles_KeepIntroAutoEscaperScopedToIntroEncounter()
+    {
+        GameObject gameServices = AssetDatabase.LoadAssetAtPath<GameObject>(GameServicesPrefabPath);
+        Assert.That(gameServices, Is.Not.Null);
+
+        NarrativeEncounterService service = gameServices.GetComponentInChildren<NarrativeEncounterService>(true);
+        Assert.That(service, Is.Not.Null);
+
+        SerializedObject serialized = new SerializedObject(service);
+        SerializedProperty registry = serialized.FindProperty("registry");
+        Assert.That(registry, Is.Not.Null);
+
+        SerializedProperty introProfile = null;
+        SerializedProperty cofiProfile = null;
+        for (int i = 0; i < registry.arraySize; i++)
+        {
+            SerializedProperty entry = registry.GetArrayElementAtIndex(i);
+            string encounterId = entry.FindPropertyRelative("encounterId").stringValue;
+            if (encounterId == IntroEncounterId)
+                introProfile = entry.FindPropertyRelative("combatLaunchProfile");
+            else if (encounterId == CofiEncounterId)
+                cofiProfile = entry.FindPropertyRelative("combatLaunchProfile");
+        }
+
+        Assert.That(introProfile, Is.Not.Null);
+        Assert.That(introProfile.objectReferenceValue, Is.Not.Null);
+        Assert.That(introProfile.objectReferenceValue.name, Is.EqualTo("IntroEncounterLaunchProfile"));
+        Assert.That(cofiProfile, Is.Not.Null);
+        Assert.That(cofiProfile.objectReferenceValue, Is.Null,
+            "Cofi Lootwak must use the normal player party and combat flow, not the intro ghost/auto-escape profile.");
+    }
+
+    [Test]
     public void DeliveryProfiles_GateOnWorldFlags()
     {
         QuestInteractionProfileSO zeb = AssetDatabase.LoadAssetAtPath<QuestInteractionProfileSO>(
@@ -189,6 +295,10 @@ public sealed class CoffeeCourierHuntAuthoringTests
         Assert.That(zeb.Rules[0].triggerId, Is.Empty);
         Assert.That(zeb.Rules[1].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.ZebReturnTriggerId));
         Assert.That(zeb.Rules[1].dialogue.GetLine(0).text, Does.Contain("bag back"));
+        Assert.That(zeb.Rules[2].label, Is.EqualTo(CoffeeCourierHuntAuthoring.ZebRetryAdviceRuleLabel));
+        Assert.That(zeb.Rules[2].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.ZebCofiRetryTriggerId));
+        Assert.That(zeb.Rules[2].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.CofiPlayerLostFlag));
+        Assert.That(zeb.Rules[2].dialogue.GetLine(1).text, Does.Contain("party").IgnoreCase);
 
         Assert.That(reynard.Rules[0].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardBrewedFlag));
         Assert.That(reynard.Rules[1].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardBrewTriggerId));

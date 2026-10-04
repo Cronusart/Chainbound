@@ -58,8 +58,9 @@ serve(async (req: Request) => {
     const battleSeed = integer(body.battle_seed);
     const forensicHash = str(body.forensic_hash);
     const configHash = str(body.config_hash);
-    const playerLost = !bool(body.player_won) && !bool(body.is_draw) && !bool(body.was_fled);
-    const ramPenalty = playerLost ? nonNegativeInteger(body.ram_penalty) : 0;
+    // PvE outcomes are still client-resolved. RAM is therefore never mutated here;
+    // retain reward configuration for a future authoritative verifier only.
+    const ramPenalty = 0;
     const applied: unknown[] = [];
     let appliedCount = 0;
     let totalEnemyKos = 0;
@@ -137,7 +138,7 @@ serve(async (req: Request) => {
         p_total_kos_scored: totalEnemyKos,
         p_total_kos_taken: totalTimesKod,
         p_total_star_ups: totalStarUps,
-        p_total_ram_earned: nonNegativeInteger(body.ram_earned),
+        p_total_ram_earned: 0,
         p_total_ram_spent: ramPenalty,
       });
 
@@ -150,6 +151,7 @@ serve(async (req: Request) => {
       success: true,
       player_profile_id: profile.player_profile_id,
       applied_count: appliedCount,
+      ram_delta_applied: 0,
       chainlings: applied,
     });
   } catch (error) {

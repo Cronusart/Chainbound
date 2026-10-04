@@ -51,10 +51,10 @@ How/when a Chainling advances. Cycle grants are flat **and** percent of species 
 ECONOMY_01 rarity weights (basis points, `generatorVersion`), costs, daily cap, item-class table, server-gated `eventFavorBoost` (default 0).
 
 ### 6. ChainlingRecoveryConfigSO
-Passive health recovery: `intervalSeconds`, MaxHP fraction per completed interval, `maxCatchupIntervals`, and party-only scope. Default: 10% MaxHP every 30 minutes, capped at 48 elapsed intervals per resolver read. The matching server board in `Supabase/functions/_shared/chainling_recovery_config.ts` is authoritative; Unity's `ChainlingRecoveryConfigService` fetches it for UI/presentation only.
+Passive health recovery: `intervalSeconds`, MaxHP fraction per completed interval, `maxCatchupIntervals`, and storage-only scope. Default: 10% MaxHP every 30 minutes for Chainlings in PC storage, capped at 48 elapsed intervals per resolver read. Equipped party members do not recover. The matching server board in `Supabase/functions/_shared/chainling_recovery_config.ts` is authoritative; Unity's `ChainlingRecoveryConfigService` fetches it for UI/presentation only.
 
-The resolver runs lazily before authenticated `profile_get_chainlings` and `profile_get_party` responses. It uses a finalized Solana `getBlockTime` result, locks the affected rows, caps recovery at server-derived MaxHP, and does not revive KO Chainlings. Missing Solana time defers recovery without blocking login or combat.
-Changing party membership resets the affected recovery anchors, so bench time cannot be banked and redeemed on promotion.
+The resolver runs lazily before authenticated `profile_get_chainlings` and `profile_get_party` responses. It prefers a finalized Solana block time, walking back from the tip slot when that slot has no timestamp, then falls back to server UTC. Both clocks are the real 24-hour day; the player device clock is not accepted. It locks the affected storage rows, caps recovery at server-derived MaxHP, and does not revive KO Chainlings. A missing clock does not block login or combat.
+Depositing a Chainling into storage starts its recovery anchor at that clock. Editing the party does not reset anchors for Chainlings that were already in storage, so stored time is not discarded. Time spent equipped does not convert into healing.
 
 ### 7. ModifierBalanceOverlaySO (event layer)
 Per-`sectionId` overrides + optional tier-weight override. Never exported to CSV. Overlay id folded into config stamps.

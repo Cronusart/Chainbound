@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5309cdea59cf447994c48cbf9ec009c7, type: 3}
   m_Name: ChainlingRecoveryConfig_Default
   m_EditorClassIdentifier: 
-  configVersion: 1
+  configVersion: 2
   enabled: 1
   intervalSeconds: 1800
   maxHpFractionPerInterval: 0.1
   maxCatchupIntervals: 48
-  partyMembersOnly: 1
+  storageOnly: 1

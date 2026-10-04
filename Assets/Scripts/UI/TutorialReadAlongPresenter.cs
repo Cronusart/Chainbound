@@ -8,7 +8,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Persistent tutorial read-along overlay. Locks movement, interaction, and
-/// gameplay menus while shown; any button or dimmer tap dismisses.
+/// gameplay menus while shown. Dismiss stays closed until the panel reveal
+/// finishes and a short read delay elapses; any button or dimmer tap then dismisses.
 /// Combat.Runtime must not reference this type.
 /// </summary>
 [DisallowMultipleComponent]
@@ -16,6 +17,7 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
 {
     public const string MenuSuppressionReason = "TutorialReadAlong";
     public const string InputLockReason = "TutorialReadAlong";
+    public const float DefaultDismissDelayAfterRevealSeconds = 1.5f;
 
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private Image iconImage;
@@ -24,6 +26,7 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
     [SerializeField] private TMP_Text hintText;
     [SerializeField] private Button dismissButton;
     [SerializeField] private ItemObtainPanelReveal panelReveal;
+    [SerializeField, Min(0f)] private float dismissDelayAfterRevealSeconds = DefaultDismissDelayAfterRevealSeconds;
 
     private static TutorialReadAlongPresenter instance;
 
@@ -88,8 +91,9 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
 
         AcquireGameplayFreeze();
         SubscribeDismiss();
+        SetDismissInteractable(false);
         if (Application.isPlaying && isActiveAndEnabled)
-            StartCoroutine(ArmDismissNextFrame());
+            StartCoroutine(ArmDismissAfterReveal());
         return true;
     }
 
@@ -124,15 +128,33 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
         }
     }
 
-    private IEnumerator ArmDismissNextFrame()
+    private IEnumerator ArmDismissAfterReveal()
     {
         int generation = showGeneration;
-        yield return null;
-        yield return null;
+        if (panelReveal != null)
+        {
+            while (panelReveal.IsPlaying)
+            {
+                if (generation != showGeneration || !IsShowing)
+                    yield break;
+                yield return null;
+            }
+        }
+
+        float elapsed = 0f;
+        while (elapsed < dismissDelayAfterRevealSeconds)
+        {
+            if (generation != showGeneration || !IsShowing)
+                yield break;
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
         if (generation != showGeneration || !IsShowing)
             yield break;
 
         dismissArmed = true;
+        SetDismissInteractable(true);
         ArmAnyButtonGate();
     }
 
@@ -209,8 +231,18 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
             return;
 
         dismissButton.onClick.AddListener(HandleDismissClicked);
-        if (EventSystem.current != null)
-            EventSystem.current.SetSelectedGameObject(dismissButton.gameObject);
+    }
+
+    private void SetDismissInteractable(bool interactable)
+    {
+        if (dismissButton == null)
+            return;
+
+        dismissButton.interactable = interactable;
+        if (!interactable || EventSystem.current == null)
+            return;
+
+        EventSystem.current.SetSelectedGameObject(dismissButton.gameObject);
     }
 
     private void UnsubscribeDismiss()

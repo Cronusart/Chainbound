@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Blocking sequence step that shows a tutorial read-along card and waits for
-/// any-button dismiss. Presentation lives on <see cref="TutorialReadAlongPresenter"/>.
+/// any-button dismiss. The presenter locks movement and menus, then allows
+/// dismiss only after the panel reveal and its read delay.
 /// </summary>
 [CreateAssetMenu(
     fileName = "Step_ShowTutorialReadAlong",

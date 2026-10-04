@@ -24,6 +24,7 @@ public class NPCInteractionSessionService : MonoBehaviour
         public int ClaimedPlaybackId;
         public SessionPhase Phase;
         public bool TrackingPlayer;
+        public bool RestoreIdleFacingOnRelease;
         public ExplorationSpritePresentationPresenter OwnedPresentationPresenter;
         public int OwnedPresentationPlaybackId;
     }
@@ -195,6 +196,14 @@ public class NPCInteractionSessionService : MonoBehaviour
                 $"{contextLabel} session");
         }
 
+        bool restoreIdleFacing = session.Behavior.FacePlayerOnStart ||
+                                 session.Behavior.TrackPlayerWhileUnlockedDialogue;
+        if (restoreIdleFacing)
+        {
+            npc.CaptureIdleFacing();
+            session.RestoreIdleFacingOnRelease = true;
+        }
+
         if (session.Behavior.FacePlayerOnStart && playerTransform != null)
             npc.SnapFaceTarget(playerTransform);
 
@@ -306,7 +315,11 @@ public class NPCInteractionSessionService : MonoBehaviour
         }
 
         if (session.Npc != null)
+        {
             session.Npc.ClearFacingTargetOverride();
+            if (session.RestoreIdleFacingOnRelease)
+                session.Npc.RestoreCapturedIdleFacing();
+        }
 
         if (session.RouteOverrideHandle != null && !session.RouteOverrideHandle.IsReleased)
             session.RouteOverrideHandle.Release();

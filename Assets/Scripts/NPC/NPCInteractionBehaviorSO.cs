@@ -18,10 +18,10 @@ public class NPCInteractionBehaviorSO : ScriptableObject
     [SerializeField] private NPCInteractionRoutePauseMode routePauseMode = NPCInteractionRoutePauseMode.ForceHoldPosition;
 
     [Header("Facing")]
-    [Tooltip("When enabled, the NPC immediately snaps to face the player when the interaction begins.")]
+    [Tooltip("When enabled, the NPC immediately snaps to face the player when the interaction begins. Ending the interaction restores the facing captured before that snap. Route movement replaces it once the NPC walks again.")]
     [SerializeField] private bool facePlayerOnStart = true;
 
-    [Tooltip("When enabled, unlocked dialogue keeps the NPC facing the player until dialogue completes.")]
+    [Tooltip("When enabled, unlocked dialogue keeps the NPC facing the player until dialogue completes. The pre-interaction facing is still restored when the session ends.")]
     [SerializeField] private bool trackPlayerWhileUnlockedDialogue = true;
 
     public bool PauseRouteWhileInteracting => pauseRouteWhileInteracting;

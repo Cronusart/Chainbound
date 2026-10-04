@@ -14,10 +14,12 @@ import {
   authoritySecretBytes,
   buildStampTransaction,
   CORE_PROGRAM_ID,
+  deriveRamOperationId,
   deriveStampLockForModifiers,
   deriveStampResult,
   ensureOwnershipRpcCluster,
-  findConfirmedSignatureForAddress,
+  ensureRamReservationOnChain,
+  findFinalizedSignatureForAddress,
   isOwnershipWalletAllowed,
   loadOwnershipConfig,
   normalizeAcquisition,
@@ -62,9 +64,9 @@ serve(async (req: Request) => {
     await ensureOwnershipRpcCluster(config);
     const now = new Date().toISOString();
 
-    // A transaction that was never signed cannot remain an open lock after its
-    // ticket/blockhash window. Retire only unsigned prepared rows; submitted
-    // transactions must go through reconciliation.
+    // Expiry is not proof that a wallet never submitted. Keep the intent open
+    // until reconciliation proves the deterministic asset/receipt absent and
+    // the server cancels the matching on-chain reservation.
     const { data: expiredPrepared, error: expiredPreparedError } = await supabase
       .from("ownership_stamp_operations")
       .select("operation_id,stamped_asset_address")
@@ -73,36 +75,21 @@ serve(async (req: Request) => {
       .order("created_at", { ascending: true }).limit(1).maybeSingle();
     if (expiredPreparedError) throw expiredPreparedError;
     if (expiredPrepared) {
-      const recoveredSignature = await findConfirmedSignatureForAddress(
+      const recoveredSignature = await findFinalizedSignatureForAddress(
         config.rpcUrl,
         str(expiredPrepared.stamped_asset_address),
       );
-      const recovered = !!recoveredSignature;
       const { error: expiryError } = await supabase.from("ownership_stamp_operations").update({
-        status: recovered ? "submitted" : "failed",
+        status: recoveredSignature ? "submitted" : "prepared",
         signature: recoveredSignature || null,
-        failure_code: recovered ? null : "unsigned_intent_expired",
-        submitted_at: recovered ? now : null,
+        failure_code: recoveredSignature ? null : "reconciliation_required",
+        submitted_at: recoveredSignature ? now : null,
         last_reconciled_at: now,
         updated_at: now,
       }).eq("operation_id", expiredPrepared.operation_id).eq("status", "prepared").is("signature", null);
       if (expiryError) throw expiryError;
     }
 
-    // Fail before result derivation, metadata publication, or intent creation.
-    // The on-chain program remains the final authority and repeats this check.
-    const { data: profileState, error: profileStateError } = await supabase.from("player_profiles")
-      .select("ram_balance").eq("player_profile_id", profile.player_profile_id).single();
-    if (profileStateError) throw profileStateError;
-    const ramBalance = Math.max(0, Number(profileState?.ram_balance ?? 0));
-    if (ramBalance < config.stampRamCost) {
-      return jsonResponse({
-        success: false,
-        error: "insufficient_ram",
-        ram_balance: ramBalance,
-        ram_cost: config.stampRamCost,
-      }, 409);
-    }
     const { data: known, error: knownError } = await supabase.from("ownership_known_moves").select("*")
       .eq("known_id", knownId).eq("player_profile_id", profile.player_profile_id).maybeSingle();
     if (knownError) throw knownError;
@@ -184,6 +171,41 @@ serve(async (req: Request) => {
         config.modifierPoolHash,
       );
     const result = { modifierIds: storedIds, rarity: storedRarity, modifierEffectValues };
+    const operationId = existing
+      ? str(existing.operation_id)
+      : await deriveRamOperationId(profile.player_profile_id, "stamp", canonicalIdempotencyKey);
+    const expiresAt = new Date(Date.now() + config.ticketTtlSeconds * 1000);
+    const { error: reservationError } = await supabase.rpc("ram_ledger_reserve_operation", {
+      p_operation_id: operationId,
+      p_player_profile_id: profile.player_profile_id,
+      p_wallet_address: walletAddress,
+      p_cluster: config.cluster,
+      p_operation_kind: "stamp",
+      p_amount: config.stampRamCost,
+      p_expires_at: expiresAt.toISOString(),
+      p_metadata_json: {
+        idempotency_key: canonicalIdempotencyKey,
+        known_id: knownId,
+        modifier_count: modifierCount,
+      },
+    });
+    if (reservationError) {
+      if (reservationError.message?.includes("insufficient_ram")) {
+        return jsonResponse({ success: false, error: "insufficient_ram", ram_cost: config.stampRamCost }, 409);
+      }
+      if (reservationError.message?.includes("ram_ledger_not_active")) {
+        return jsonResponse({ success: false, error: "ram_reconciliation_required" }, 409);
+      }
+      throw reservationError;
+    }
+    const reservation = await ensureRamReservationOnChain({
+      config,
+      walletAddress,
+      operationId,
+      amount: config.stampRamCost,
+      kind: 1,
+      expiresAt,
+    });
     const built = await buildStampTransaction({
       config,
       walletAddress,
@@ -192,7 +214,9 @@ serve(async (req: Request) => {
       element: Number(known.element),
       basePower: Number(known.base_power),
       existingOnchainInstanceId: known.onchain_instance_id == null ? null : String(known.onchain_instance_id),
+      operationId,
       idempotencyKey: canonicalIdempotencyKey,
+      expiresAt,
       modifierIds: result.modifierIds,
       rarity: result.rarity,
     });
@@ -224,7 +248,8 @@ serve(async (req: Request) => {
       known_id: knownId,
       wallet_address: walletAddress,
       idempotency_key: canonicalIdempotencyKey,
-      idempotency_hash: await sha256Hex(canonicalIdempotencyKey),
+      operation_id: operationId,
+      idempotency_hash: await sha256Hex(operationId),
       modifier_count: 1,
       modifier_ids: result.modifierIds,
       modifier_effect_values: result.modifierEffectValues,
@@ -242,7 +267,6 @@ serve(async (req: Request) => {
       failure_code: null,
       updated_at: now,
     };
-    let operationId = existing ? str(existing.operation_id) : "";
     if (existing) {
       const { error: updateError } = await supabase.from("ownership_stamp_operations").update(operation)
         .eq("operation_id", operationId).eq("status", "prepared");
@@ -256,7 +280,7 @@ serve(async (req: Request) => {
         }
         throw insertError;
       }
-      operationId = str(inserted.operation_id);
+      if (str(inserted.operation_id) !== operationId) throw new Error("stamp_operation_id_mismatch");
     }
 
     return jsonResponse({
@@ -268,6 +292,7 @@ serve(async (req: Request) => {
       acquisition,
       transaction_base64: built.transactionBase64,
       ticket_address: built.ticketAddress,
+      reservation_address: reservation.address,
       stamped_asset_address: built.stampedAssetAddress,
       expires_at: built.expiresAt.toISOString(),
       review: {

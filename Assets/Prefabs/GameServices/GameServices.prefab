@@ -12617,7 +12617,7 @@ MonoBehaviour:
     legacyBattleSceneOverride: 
   - encounterId: coffee_cofi_lootwak
     encounterProvider: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0401, type: 2}
-    combatLaunchProfile: {fileID: 11400000, guid: 940faf7ef2ffde7488dd8f7afda5a3a9, type: 2}
+    combatLaunchProfile: {fileID: 0}
     preEncounterDialogue: {fileID: 0}
     postEncounterDialogue: {fileID: 0}
     lockInputDuringPostEncounterDialogue: 1

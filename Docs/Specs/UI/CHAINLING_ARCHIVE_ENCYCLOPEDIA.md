@@ -73,7 +73,7 @@ There is no Press Charge and no move named Bound in this recipe.
 
 ### Bound: Encyclopedia
 
-- Show the selected book cover and a 3D or 2D book presentation.
+- Show the selected book cover on the 3D book in `Docs/Specs/UI/BOUND_ENCYCLOPEDIA_BOOK_PRESENTATION_v1.md`.
 - Show the Chainling's captured base visual identity even when no cosmetic is equipped.
 - Removing or transferring an equipped cosmetic reveals the base skin; it never produces a blank/no-skin state.
 - Remaining Known moves may be listed as archive pages, but they stay non-NFT and are not individually tradable.

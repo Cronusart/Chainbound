@@ -152,7 +152,7 @@ namespace Chainbound.Combat
                 dto.interval_seconds,
                 dto.heal_basis_points,
                 dto.max_catchup_intervals,
-                dto.party_members_only);
+                dto.storage_only);
 
             ActiveConfig = _runtimeOverride;
             LastConfigHash = string.IsNullOrEmpty(dto.config_hash)
@@ -190,7 +190,7 @@ namespace Chainbound.Combat
             public int interval_seconds;
             public int heal_basis_points;
             public int max_catchup_intervals;
-            public bool party_members_only;
+            public bool storage_only;
         }
     }
 }

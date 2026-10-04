@@ -19,6 +19,7 @@ public static class CoffeeCourierHuntAuthoring
     public const string TalkToZebObjective = "talk_to_zeb";
     public const string ZebTalkedFlag = "world.coffee.zeb_talked";
     public const string CofiDefeatedFlag = "world.coffee.cofi_lootwak.defeated";
+    public const string CofiPlayerLostFlag = "world.coffee.cofi_lootwak.player_lost";
     public const string FetchCoffeeObjective = "fetch_coffee";
     public const string FetchBeerObjective = "fetch_beer";
     public const string DeliverToTobyObjective = "deliver_to_toby";
@@ -30,6 +31,8 @@ public static class CoffeeCourierHuntAuthoring
     public const string HoldingTobysDeliveryFlag = "world.coffee.holding_tobys_delivery";
     public const string ZebTriggerId = "trigger_coffee_zeb_talked";
     public const string ZebReturnTriggerId = "trigger_coffee_zeb_return";
+    public const string ZebCofiRetryTriggerId = "trigger_coffee_zeb_cofi_retry";
+    public const string ZebRetryAdviceRuleLabel = "lost to cofi — advise and reopen";
     public const string MomoBeerTriggerId = "trigger_coffee_momo_beer";
     public const string ReynardBrewTriggerId = "trigger_coffee_reynard_brew";
     public const string CofiTriggerId = "trigger_cofi_lootwak";
@@ -83,6 +86,13 @@ public static class CoffeeCourierHuntAuthoring
         "I would finish the run myself, but the cart is wrecked and I still have to scrape up what's left of the shipment.",
         "Take the beans to Reynard. He is the one who brews Toby's order.",
         "Across the stream, the academy is just ahead. Tell Momo I sent you. He is holding the beer.",
+    };
+
+    public static readonly string[] ZebRetryAdviceLines =
+    {
+        "Cofi sent you back to the sanctuary. One Chainling was never going to hold that trail.",
+        "Level your Chainlings up, and don't walk in alone. Bring a party.",
+        "When you're ready, I'll open the trail again.",
     };
 
     public static readonly string[] ZebDepartedReminderLines =
@@ -196,6 +206,10 @@ public static class CoffeeCourierHuntAuthoring
             DialogueFolder + "/Dial_Zeb_DepartedReminder.asset");
         AuthorDialogue(zebReminder, chatter, shot, "Zeb", ZebNpcId, ZebDepartedReminderLines);
 
+        DialogueSequenceSO zebRetry = EnsureAsset<DialogueSequenceSO>(
+            DialogueFolder + "/Dial_Zeb_CofiRetryAdvice.asset");
+        AuthorDialogue(zebRetry, chatter, shot, "Zeb", ZebNpcId, ZebRetryAdviceLines);
+
         DialogueSequenceSO momoBeer = EnsureAsset<DialogueSequenceSO>(
             DialogueFolder + "/Dial_Momo_ColdBeer.asset");
         AuthorDialogue(momoBeer, chatter, shot, "Momo", "momo", MomoBeerLines);
@@ -227,7 +241,7 @@ public static class CoffeeCourierHuntAuthoring
         AuthorReynardCoffeeProfile(coffeeQuest, reynardCheckIn, reynardReminder, reynardNeedBeer, reynardBrew, reynardBrewed);
         AuthorTobyActiveProfile(coffeeQuest, tobyThirsty, tobyBeans, tobyStall);
         AuthorTobyRouter();
-        AuthorZebProfile(coffeeQuest, zebTalk, zebReturn, zebReminder);
+        AuthorZebProfile(coffeeQuest, zebTalk, zebReturn, zebReminder, zebRetry);
         AuthorMomoBeerRule(momoBeer);
         AuthorLoominaryFallback();
 
@@ -470,14 +484,15 @@ public static class CoffeeCourierHuntAuthoring
         QuestDefinitionSO coffeeQuest,
         DialogueSequenceSO talk,
         DialogueSequenceSO returned,
-        DialogueSequenceSO departedReminder)
+        DialogueSequenceSO departedReminder,
+        DialogueSequenceSO retryAdvice)
     {
         QuestInteractionProfileSO profile = EnsureAsset<QuestInteractionProfileSO>(ZebProfilePath);
         var serialized = new SerializedObject(profile);
         serialized.FindProperty("questDefinition").objectReferenceValue = coffeeQuest;
         serialized.FindProperty("questId").stringValue = "";
         SerializedProperty rules = serialized.FindProperty("rules");
-        rules.arraySize = 2;
+        rules.arraySize = 3;
         ConfigureRule(
             rules.GetArrayElementAtIndex(0),
             "already sent the player on",
@@ -499,12 +514,24 @@ public static class CoffeeCourierHuntAuthoring
             rules.GetArrayElementAtIndex(1),
             (CofiDefeatedFlag, QuestInteractionMemoryFlagComparison.IsTrue),
             (ZebDepartedFlag, QuestInteractionMemoryFlagComparison.IsFalse));
+        ConfigureRule(
+            rules.GetArrayElementAtIndex(2),
+            ZebRetryAdviceRuleLabel,
+            NarrativeQuestLifecycleMask.Active,
+            "",
+            QuestInteractionObjectiveComparison.None,
+            retryAdvice,
+            ZebCofiRetryTriggerId);
+        SetWorldFlags(
+            rules.GetArrayElementAtIndex(2),
+            (CofiPlayerLostFlag, QuestInteractionMemoryFlagComparison.IsTrue),
+            (CofiDefeatedFlag, QuestInteractionMemoryFlagComparison.IsFalse));
         serialized.FindProperty("inactiveDialogue").objectReferenceValue = talk;
         serialized.FindProperty("inactiveTriggerId").stringValue = ZebTriggerId;
         serialized.FindProperty("activeFallbackDialogue").objectReferenceValue = talk;
         serialized.FindProperty("activeFallbackTriggerId").stringValue = ZebTriggerId;
         serialized.FindProperty("designerNotes").stringValue =
-            "First talk points at Cofi. After the win, Zeb sends the player to Reynard and Momo. He stays until Jungle loads again.";
+            "First talk points at Cofi. A loss sends the player to the sanctuary; talking to Zeb again gives party advice and reopens the boss trigger. After the win, Zeb sends the player to Reynard and Momo. He stays until Jungle loads again.";
         serialized.FindProperty("activateQuestOnInactiveInteract").boolValue = false;
         SetNpcBehavior(serialized.FindProperty("inactiveNpcBehavior"));
         SetNpcBehavior(serialized.FindProperty("activeFallbackNpcBehavior"));
@@ -687,6 +714,13 @@ public static class CoffeeCourierHuntAuthoring
             StartEncounter(EncounterId, "coffee_cofi_encounter"),
             IfEquals("lastEncounterOutcome", "Win", "coffee_cofi_grant", "", "coffee_cofi_if_win", "coffee_cofi_win_condition"),
             ResetTrigger(CofiTriggerId, "coffee_cofi_reset_loss"),
+            WorldFlag(CofiPlayerLostFlag, "coffee_cofi_player_lost_flag", true),
+            EnableObject(CofiTriggerObjectName, "coffee_cofi_disable_trigger", false),
+            Label("coffee_cofi_await_zeb", "coffee_cofi_label_await_zeb"),
+            Checkpoint("coffee_cofi_await_zeb", "coffee_cofi_await_checkpoint", "Jungle", "sanctuary_jungle_trailhead"),
+            UnlockInput("coffee_cofi_await_unlock"),
+            WaitForTrigger(ZebCofiRetryTriggerId, "coffee_cofi_await_zeb", saveReturn: false),
+            EnableObject(CofiTriggerObjectName, "coffee_cofi_enable_retry"),
             Jump("coffee_cofi_idle", "coffee_cofi_jump_idle"),
             Label("coffee_cofi_grant", "coffee_cofi_label_grant"),
             ItemDelta(CoffeeBeansIdempotencyKey, CoffeeBeansItemId, "", "", "coffee_cofi_grant_beans"),
@@ -694,6 +728,7 @@ public static class CoffeeCourierHuntAuthoring
             Label("coffee_cofi_granted", "coffee_cofi_label_granted"),
             WorldFlag(HoldingCoffeeBeansFlag, "coffee_cofi_holding_beans", true),
             Objective(coffeeQuest, FetchCoffeeObjective, "coffee_cofi_objective"),
+            WorldFlag(CofiPlayerLostFlag, "coffee_cofi_clear_player_lost", false),
             WorldFlag(CofiDefeatedFlag, "coffee_cofi_defeated_flag", true),
             QueueFollowUp(zebReturn, "coffee_cofi_queue_return"),
             Jump("coffee_cofi_end", "coffee_cofi_jump_end"),
@@ -1190,11 +1225,11 @@ public static class CoffeeCourierHuntAuthoring
             }
         });
 
-    private static Step_EnableGameObject EnableObject(string objectName, string fileName) =>
+    private static Step_EnableGameObject EnableObject(string objectName, string fileName, bool enable = true) =>
         ConfigureStep<Step_EnableGameObject>(fileName, so =>
         {
             so.FindProperty("gameObjectName").stringValue = objectName;
-            so.FindProperty("enable").boolValue = true;
+            so.FindProperty("enable").boolValue = enable;
             so.FindProperty("includeInactive").boolValue = true;
             so.FindProperty("persistAcrossSceneLoads").boolValue = true;
             so.FindProperty("allowMissingWhenPersisting").boolValue = true;

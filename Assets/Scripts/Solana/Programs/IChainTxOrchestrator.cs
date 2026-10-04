@@ -3,93 +3,95 @@ using System.Threading.Tasks;
 
 namespace Chainbound.Combat
 {
-    /// <summary>
-    /// Transaction lifecycle orchestrator.
-    /// Wraps IWalletService + IRpcService into a higher-level flow:
-    ///   Build â†’ Sign â†’ Submit â†’ Confirm â†’ Done/Retry.
-    ///
-    /// Designed for:
-    ///   - Idempotent tx handling (same tx ID won't double-submit)
-    ///   - Retry-safe (automatic retries with back-off)
-    ///   - Resume after app background / reconnect (persists pending tx state)
-    ///   - Mobile-safe (non-blocking async with cancellation)
-    ///
-    /// Future implementation will integrate the Anchor escrow program IDL.
-    /// </summary>
     public interface IChainTxOrchestrator
     {
-        /// <summary>
-        /// Submit a transaction end-to-end: sign, send, and confirm.
-        /// The <paramref name="idempotencyKey"/> prevents double-submission if called again
-        /// with the same key (returns the existing result instead of re-submitting).
-        /// </summary>
-        /// <param name="idempotencyKey">Caller-supplied unique key for this logical operation.</param>
-        /// <param name="transactionBytes">Unsigned serialized transaction.</param>
-        /// <returns>Result containing the tx signature and confirmation status.</returns>
+        Task<RpcSimulationResult> SimulateAsync(ChainTxRequest request);
+        Task<TxResult> SubmitAsync(ChainTxRequest request);
+        Task<TxResult> ResumeAsync(ChainTxScope scope);
+        PendingTxRecord Query(ChainTxScope scope);
+
+        // Compatibility surface for callers being migrated to scoped requests.
         Task<TxResult> SubmitAsync(string idempotencyKey, byte[] transactionBytes);
-
-        /// <summary>
-        /// Resume confirmation of a previously submitted but unconfirmed transaction.
-        /// Call this on app resume / reconnect.
-        /// </summary>
-        /// <param name="txSignature">The signature from a prior SubmitAsync call.</param>
         Task<TxResult> ResumeConfirmationAsync(string txSignature);
-
-        /// <summary>
-        /// Check whether an idempotency key has already been submitted and is pending or complete.
-        /// </summary>
         bool HasPendingTx(string idempotencyKey);
-
-        /// <summary>
-        /// Get the result of a previously submitted transaction by its idempotency key.
-        /// Returns null if no tx exists for that key.
-        /// </summary>
         TxResult GetCachedResult(string idempotencyKey);
     }
 
-    /// <summary>
-    /// Result of a transaction submission + confirmation cycle.
-    /// </summary>
+    [Serializable]
+    public sealed class ChainTxScope
+    {
+        public string cluster;
+        public string wallet;
+        public string operationId;
+        public string orderId;
+
+        public ChainTxScope(string cluster, string wallet, string operationId = null, string orderId = null)
+        {
+            this.cluster = cluster ?? string.Empty;
+            this.wallet = wallet ?? string.Empty;
+            this.operationId = operationId ?? string.Empty;
+            this.orderId = orderId ?? string.Empty;
+        }
+
+        public string Key => string.Join("|", cluster, wallet, operationId, orderId);
+    }
+
+    [Serializable]
+    public sealed class ChainTxRequest
+    {
+        public ChainTxScope scope;
+        public byte[] transactionBytes;
+        public bool requiresSignAndSend;
+
+        public ChainTxRequest(ChainTxScope scope, byte[] transactionBytes, bool requiresSignAndSend)
+        {
+            this.scope = scope;
+            this.transactionBytes = transactionBytes;
+            this.requiresSignAndSend = requiresSignAndSend;
+        }
+    }
+
+    [Serializable]
+    public sealed class PendingTxRecord
+    {
+        public int version = 1;
+        public string cluster;
+        public string wallet;
+        public string operationId;
+        public string orderId;
+        public string signature;
+        public string messageHash;
+        public TxStatus status;
+        public string errorMessage;
+        public long lastUpdatedTicks;
+
+        public string ScopeKey => string.Join("|", cluster ?? string.Empty, wallet ?? string.Empty,
+            operationId ?? string.Empty, orderId ?? string.Empty);
+    }
+
     [Serializable]
     public class TxResult
     {
-        /// <summary>Transaction signature (base58). Null if signing was rejected.</summary>
         public string txSignature;
-
-        /// <summary>Current status of the transaction.</summary>
         public TxStatus status;
-
-        /// <summary>Human-readable error message if failed.</summary>
         public string errorMessage;
-
-        /// <summary>Timestamp (UTC ticks) when this result was last updated.</summary>
         public long lastUpdatedTicks;
+        public ChainTxScope scope;
+        public RpcSimulationResult simulation;
     }
 
-    /// <summary>
-    /// Lifecycle status of a submitted transaction.
-    /// </summary>
     public enum TxStatus
     {
-        /// <summary>Transaction has not been submitted yet.</summary>
         NotStarted,
-
-        /// <summary>Transaction is being signed by the wallet.</summary>
+        Simulating,
+        AwaitingWallet,
         Signing,
-
-        /// <summary>Transaction has been sent to the cluster, awaiting confirmation.</summary>
         Submitted,
-
-        /// <summary>Transaction has been confirmed on-chain.</summary>
+        Confirming,
         Confirmed,
-
-        /// <summary>Transaction has reached finalized commitment level.</summary>
         Finalized,
-
-        /// <summary>Transaction failed (see errorMessage).</summary>
+        UnknownOutcome,
         Failed,
-
-        /// <summary>User rejected the signing prompt.</summary>
         Rejected,
     }
 }

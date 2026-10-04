@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -34,6 +37,17 @@ namespace Chainbound.Combat
                 ? walletAddress.Trim()
                 : session != null ? session.WalletAddress : "";
             string authUserId = session != null ? session.AuthUserId : "";
+            string statId = ToStatId(chosenStat);
+            string operationScope = string.Join("|", profileId, wallet, chainlingId.Trim(), statId);
+            string idempotencyKey;
+            try
+            {
+                idempotencyKey = RebirthOperationJournal.GetOrCreate(operationScope);
+            }
+            catch (Exception ex)
+            {
+                return Failed($"rebirth_journal_unavailable: {ex.Message}");
+            }
 
             string json = JsonUtility.ToJson(new RebirthRequest
             {
@@ -41,7 +55,8 @@ namespace Chainbound.Combat
                 wallet_address = wallet,
                 auth_user_id = authUserId,
                 chainling_id = chainlingId.Trim(),
-                stat = ToStatId(chosenStat),
+                stat = statId,
+                idempotency_key = idempotencyKey,
             });
 
             SupabaseClient.Response response = await SupabaseClient.PostJsonAsync(supabaseConfig, "profile_rebirth_chainling", json);
@@ -56,6 +71,8 @@ namespace Chainbound.Combat
                     : "profile_rebirth_chainling_invalid_payload";
                 return Failed(error);
             }
+
+            RebirthOperationJournal.Complete(operationScope, idempotencyKey);
 
             return new ChainlingRebirthResult
             {
@@ -173,6 +190,88 @@ namespace Chainbound.Combat
             public string auth_user_id;
             public string chainling_id;
             public string stat;
+            public string idempotency_key;
+        }
+
+        private static class RebirthOperationJournal
+        {
+            private const int CurrentVersion = 1;
+            private const string FileName = "chainbound_rebirth_operations_v1.json";
+            private static readonly object Gate = new object();
+
+            [Serializable]
+            private sealed class Entry
+            {
+                public string scope;
+                public string idempotencyKey;
+                public long createdTicks;
+            }
+
+            [Serializable]
+            private sealed class Envelope
+            {
+                public int version = CurrentVersion;
+                public List<Entry> entries = new List<Entry>();
+            }
+
+            public static string GetOrCreate(string scope)
+            {
+                lock (Gate)
+                {
+                    Envelope journal = Load();
+                    Entry existing = journal.entries.FirstOrDefault(item => item.scope == scope);
+                    if (existing != null && !string.IsNullOrWhiteSpace(existing.idempotencyKey))
+                        return existing.idempotencyKey;
+
+                    var created = new Entry
+                    {
+                        scope = scope,
+                        idempotencyKey = Guid.NewGuid().ToString("N"),
+                        createdTicks = DateTime.UtcNow.Ticks,
+                    };
+                    journal.entries.Add(created);
+                    Save(journal);
+                    return created.idempotencyKey;
+                }
+            }
+
+            public static void Complete(string scope, string idempotencyKey)
+            {
+                lock (Gate)
+                {
+                    Envelope journal = Load();
+                    journal.entries.RemoveAll(item => item.scope == scope && item.idempotencyKey == idempotencyKey);
+                    Save(journal);
+                }
+            }
+
+            private static Envelope Load()
+            {
+                string path = Path.Combine(Application.persistentDataPath, FileName);
+                if (!File.Exists(path)) return new Envelope();
+                Envelope value = JsonUtility.FromJson<Envelope>(File.ReadAllText(path));
+                if (value == null || value.version != CurrentVersion || value.entries == null)
+                    throw new InvalidDataException("unsupported rebirth journal");
+                return value;
+            }
+
+            private static void Save(Envelope journal)
+            {
+                string path = Path.Combine(Application.persistentDataPath, FileName);
+                string temporaryPath = path + ".tmp";
+                string backupPath = path + ".bak";
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(temporaryPath, JsonUtility.ToJson(journal), Encoding.UTF8);
+                if (File.Exists(path))
+                {
+                    File.Replace(temporaryPath, path, backupPath, true);
+                    if (File.Exists(backupPath)) File.Delete(backupPath);
+                }
+                else
+                {
+                    File.Move(temporaryPath, path);
+                }
+            }
         }
 
         [Serializable]

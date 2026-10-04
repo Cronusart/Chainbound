@@ -40,14 +40,25 @@ export const DEVNET_SMOKE_WALLETS_ENV = "CHAINBOUND_DEVNET_SMOKE_WALLETS";
 export const LEGACY_DEVNET_SMOKE_WALLET_ENV = "CHAINBOUND_DEVNET_SMOKE_WALLET";
 
 const ROLL_KNOWN_DISCRIMINATOR = bytes(42, 140, 118, 198, 71, 101, 152, 152);
+const CREATE_RAM_RESERVATION_DISCRIMINATOR = bytes(170, 252, 246, 81, 3, 188, 79, 36);
+const CANCEL_RAM_RESERVATION_DISCRIMINATOR = bytes(187, 16, 38, 226, 202, 185, 140, 135);
+const DEBIT_RESERVED_RAM_DISCRIMINATOR = bytes(33, 31, 171, 238, 31, 94, 205, 157);
+const RECONCILE_RAM_DELTA_DISCRIMINATOR = bytes(0, 109, 140, 149, 153, 119, 226, 15);
 const GRANT_RAM_DISCRIMINATOR = bytes(178, 154, 17, 238, 34, 122, 206, 163);
 const PREPARE_STAMP_DISCRIMINATOR = bytes(244, 254, 92, 75, 125, 49, 21, 158);
 const STAMP_KNOWN_DISCRIMINATOR = bytes(169, 191, 199, 46, 62, 34, 188, 181);
+const BIND_CHAINLING_DISCRIMINATOR = bytes(181, 19, 166, 249, 245, 197, 66, 176);
 const GAME_CONFIG_DISCRIMINATOR = bytes(45, 146, 146, 33, 170, 69, 96, 133);
 const PLAYER_PROFILE_DISCRIMINATOR = bytes(82, 226, 99, 87, 164, 130, 181, 80);
+const CHAINLING_ACCOUNT_DISCRIMINATOR = bytes(126, 210, 27, 85, 136, 74, 53, 142);
 const MOVE_VAULT_DISCRIMINATOR = bytes(30, 75, 22, 221, 63, 126, 196, 29);
 const RAM_GRANT_RECEIPT_DISCRIMINATOR = bytes(151, 111, 207, 251, 59, 36, 69, 29);
+const KNOWN_ROLL_RECEIPT_DISCRIMINATOR = bytes(168, 108, 149, 105, 64, 120, 128, 147);
+const RAM_RESERVATION_DISCRIMINATOR = bytes(171, 186, 0, 107, 1, 255, 131, 148);
+const RAM_DEBIT_RECEIPT_DISCRIMINATOR = bytes(158, 73, 117, 135, 247, 44, 34, 129);
+const RAM_RECONCILIATION_RECEIPT_DISCRIMINATOR = bytes(242, 112, 40, 70, 115, 180, 87, 215);
 const STAMP_TICKET_DISCRIMINATOR = bytes(27, 188, 81, 247, 225, 23, 30, 219);
+const BIND_RECEIPT_DISCRIMINATOR = bytes(178, 55, 40, 1, 22, 166, 212, 254);
 export const STAMP_METADATA_RENDER_VERSION = 6;
 
 // Server-owned Phase 1 pool. IDs and powers are canonical Moves.csv values;
@@ -99,6 +110,12 @@ export interface OwnershipConfig {
   metadataUriBase: string;
 }
 
+export interface BindOwnershipConfig extends OwnershipConfig {
+  coversCollection: PublicKey;
+  cosmeticsCollection: PublicKey;
+  archivesCollection: PublicKey;
+}
+
 export interface DevnetSmokeGrantConfig {
   cluster: string;
   rpcUrl: string;
@@ -112,6 +129,13 @@ export interface KnownAuthorityResult {
   onchainMoveId: number;
   element: number;
   basePower: number;
+}
+
+export interface SettledKnownRoll {
+  operationId: string;
+  signature: string;
+  receiptAddress: string;
+  knownInstanceId: string;
 }
 
 export interface StampAuthorityResult {
@@ -130,9 +154,54 @@ export interface BuiltStampTransaction {
   expiresAt: Date;
   chainRamBalance: number;
   chainRamRequired: number;
+  reservationAddress: string;
+}
+
+export interface BuiltBindTransaction {
+  transactionBase64: string;
+  recentBlockhash: string;
+  lastValidBlockHeight: number;
+  reservationAddress: string;
+  chainlingAddress: string;
+  archiveAssetAddress: string;
+  receiptAddress: string;
+  estimatedNetworkFeeLamports: number;
+  expiresAt: Date;
+}
+
+export interface VerifiedBindReceipt {
+  receiptAddress: string;
+  ownerAddress: string;
+  onchainChainlingId: string;
+  operationHash: string;
+  coverAssetAddress: string;
+  componentAssetAddress: string;
+  componentKind: number;
+  archiveAssetAddress: string;
+}
+
+export interface EnsuredRamReservation {
+  address: string;
+  signature: string;
+  recovered: boolean;
+}
+
+export interface SettledRamDebit {
+  signature: string;
+  receiptAddress: string;
+  balanceAfter: number;
+}
+
+export interface SettledRamReconciliation {
+  signature: string;
+  receiptAddress: string;
+  balanceBefore: number;
+  balanceAfter: number;
+  recovered: boolean;
 }
 
 export type SignatureOutcome = "missing" | "pending" | "confirmed" | "failed";
+export type SubmittedTransactionOutcome = SignatureOutcome | "mismatch";
 
 export interface BuiltRamGrantTransaction {
   transactionBase64: string;
@@ -251,6 +320,24 @@ export function loadOwnershipConfig(): OwnershipConfig {
     ticketTtlSeconds: positiveIntEnv("CHAINBOUND_OWNERSHIP_TICKET_TTL_SECONDS"),
     stampRamCost,
     metadataUriBase,
+  };
+}
+
+export function loadBindConfig(): BindOwnershipConfig {
+  return {
+    ...loadOwnershipConfig(),
+    coversCollection: publicKey(
+      requiredEnv("CHAINBOUND_CORE_COVERS_COLLECTION"),
+      "covers_collection_unset_or_invalid",
+    ),
+    cosmeticsCollection: publicKey(
+      requiredEnv("CHAINBOUND_CORE_COSMETICS_COLLECTION"),
+      "cosmetics_collection_unset_or_invalid",
+    ),
+    archivesCollection: publicKey(
+      requiredEnv("CHAINBOUND_CORE_ARCHIVES_COLLECTION"),
+      "archives_collection_unset_or_invalid",
+    ),
   };
 }
 
@@ -396,6 +483,528 @@ export async function deriveKnownResult(
   const digest = await authorityDigest(secret, `known:${profileId}:${idempotencyKey}`);
   const selected = KNOWN_POOL[readU32(digest, 0) % KNOWN_POOL.length];
   return { ...selected, onchainMoveId: hashMoveId(selected.moveId) };
+}
+
+/** Stable UUID used as the shared Postgres/on-chain operation identifier. */
+export async function deriveRamOperationId(profileId: string, kind: string, idempotencyKey: string): Promise<string> {
+  const digest = await sha256Bytes(`ram-operation:${profileId}:${kind}:${idempotencyKey}`);
+  const value = digest.slice(0, 16);
+  value[6] = (value[6] & 0x0f) | 0x50;
+  value[8] = (value[8] & 0x3f) | 0x80;
+  const hex = bytesToHex(value);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/**
+ * Atomically creates and consumes the Known reservation on chain. The result
+ * authority is fee payer and signer, so retries can recover from the immutable
+ * receipt without exposing a player-signable bypass transaction.
+ */
+export async function settleKnownRollOnChain(args: {
+  config: OwnershipConfig;
+  walletAddress: string;
+  operationId: string;
+  result: KnownAuthorityResult;
+  expiresAt: Date;
+}): Promise<SettledKnownRoll> {
+  const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
+  const operationHash = await sha256Bytes(args.operationId);
+  const program = args.config.programId;
+  const connection = new Connection(args.config.rpcUrl, "finalized");
+  const [reservation] = PublicKey.findProgramAddressSync(
+    [utf8("ram_reservation"), owner.toBytes(), operationHash],
+    program,
+  );
+  const [vault] = PublicKey.findProgramAddressSync([utf8("move_vault"), owner.toBytes()], program);
+  const [profile] = PublicKey.findProgramAddressSync([utf8("player_profile"), owner.toBytes()], program);
+  const [ownershipConfig] = PublicKey.findProgramAddressSync([utf8("ownership_config")], program);
+  const [gameConfig] = PublicKey.findProgramAddressSync([utf8("game_config")], program);
+  const [receipt] = PublicKey.findProgramAddressSync(
+    [utf8("known_roll_receipt"), owner.toBytes(), operationHash],
+    program,
+  );
+
+  const recovered = await decodeKnownRollReceipt(
+    connection,
+    receipt,
+    owner,
+    operationHash,
+    args.result,
+    args.config,
+  );
+  if (recovered !== null) {
+    const signatures = await connection.getSignaturesForAddress(receipt, { limit: 20 }, "finalized");
+    const signature = signatures.find((candidate) => !candidate.err && candidate.confirmationStatus === "finalized")
+      ?.signature ?? "";
+    if (!signature) throw new Error("known_roll_signature_missing");
+    return {
+      operationId: args.operationId,
+      signature,
+      receiptAddress: receipt.toBase58(),
+      knownInstanceId: recovered.toString(),
+    };
+  }
+
+  const expiresAtSeconds = BigInt(Math.floor(args.expiresAt.getTime() / 1000));
+  if (expiresAtSeconds <= BigInt(Math.floor(Date.now() / 1000))) throw new Error("ram_reservation_expired");
+  const createReservation = new TransactionInstruction({
+    programId: program,
+    keys: [
+      meta(reservation, false, true),
+      meta(profile, false, false),
+      meta(owner, false, false),
+      meta(gameConfig, false, false),
+      meta(args.config.resultAuthority.publicKey, true, true),
+      meta(SystemProgram.programId, false, false),
+    ],
+    data: instructionData(concat(
+      CREATE_RAM_RESERVATION_DISCRIMINATOR,
+      operationHash,
+      u32(KNOWN_ROLL_RAM_COST),
+      bytes(0),
+      i64(expiresAtSeconds),
+    )),
+  });
+  const roll = new TransactionInstruction({
+    programId: program,
+    keys: [
+      meta(reservation, false, true),
+      meta(vault, false, true),
+      meta(owner, false, false),
+      meta(profile, false, true),
+      meta(ownershipConfig, false, false),
+      meta(receipt, false, true),
+      meta(gameConfig, false, false),
+      meta(args.config.resultAuthority.publicKey, true, true),
+      meta(SystemProgram.programId, false, false),
+    ],
+    data: instructionData(concat(
+      ROLL_KNOWN_DISCRIMINATOR,
+      operationHash,
+      u16(args.result.onchainMoveId),
+      bytes(args.result.element),
+      u16(args.result.basePower),
+    )),
+  });
+  const latest = await connection.getLatestBlockhash("finalized");
+  const tx = new Transaction({
+    feePayer: args.config.resultAuthority.publicKey,
+    recentBlockhash: latest.blockhash,
+  }).add(createReservation, roll);
+  tx.sign(args.config.resultAuthority);
+  const signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+  const confirmation = await connection.confirmTransaction({ signature, ...latest }, "finalized");
+  if (confirmation.value.err) throw new Error("known_roll_transaction_failed");
+  const knownInstanceId = await decodeKnownRollReceipt(
+    connection,
+    receipt,
+    owner,
+    operationHash,
+    args.result,
+    args.config,
+  );
+  if (knownInstanceId === null) throw new Error("known_roll_receipt_missing");
+  return {
+    operationId: args.operationId,
+    signature,
+    receiptAddress: receipt.toBase58(),
+    knownInstanceId: knownInstanceId.toString(),
+  };
+}
+
+async function decodeKnownRollReceipt(
+  connection: Connection,
+  receipt: PublicKey,
+  owner: PublicKey,
+  operationHash: Uint8Array,
+  expected: KnownAuthorityResult,
+  config: OwnershipConfig,
+): Promise<bigint | null> {
+  const info = await connection.getAccountInfo(receipt, "finalized");
+  if (!info) return null;
+  const data = new Uint8Array(info.data);
+  if (
+    !info.owner.equals(config.programId) || data.length < 119 ||
+    !equalBytes(data.slice(0, 8), KNOWN_ROLL_RECEIPT_DISCRIMINATOR) ||
+    !equalBytes(data.slice(8, 40), owner.toBytes()) ||
+    !equalBytes(data.slice(40, 72), operationHash) ||
+    readU16(data, 80) !== expected.onchainMoveId ||
+    readU32(data, 82) !== config.generatorVersion ||
+    bytesToHex(data.slice(86, 118)) !== config.modifierPoolHash
+  ) {
+    throw new Error("known_roll_receipt_mismatch");
+  }
+  return readU64(data, 72);
+}
+
+export async function ensureRamReservationOnChain(args: {
+  config: OwnershipConfig;
+  walletAddress: string;
+  operationId: string;
+  amount: number;
+  kind: number;
+  expiresAt: Date;
+}): Promise<EnsuredRamReservation> {
+  if (!Number.isSafeInteger(args.amount) || args.amount <= 0 || args.amount > 0xffffffff) {
+    throw new Error("invalid_ram_reservation_amount");
+  }
+  if (!Number.isSafeInteger(args.kind) || args.kind < 0 || args.kind > 3) {
+    throw new Error("invalid_ram_reservation_kind");
+  }
+  const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
+  const operationHash = await sha256Bytes(args.operationId);
+  const program = args.config.programId;
+  const connection = new Connection(args.config.rpcUrl, "finalized");
+  const [reservation] = PublicKey.findProgramAddressSync(
+    [utf8("ram_reservation"), owner.toBytes(), operationHash],
+    program,
+  );
+  const existing = await connection.getAccountInfo(reservation, "finalized");
+  if (existing) {
+    const data = new Uint8Array(existing.data);
+    if (
+      !existing.owner.equals(program) || data.length < 119 ||
+      !equalBytes(data.slice(0, 8), RAM_RESERVATION_DISCRIMINATOR) ||
+      !equalBytes(data.slice(8, 40), owner.toBytes()) ||
+      !equalBytes(data.slice(40, 72), operationHash) ||
+      readU32(data, 72) !== args.amount || data[76] !== args.kind ||
+      !equalBytes(data.slice(86, 118), args.config.resultAuthority.publicKey.toBytes())
+    ) {
+      throw new Error("ram_reservation_mismatch");
+    }
+    const expiresAt = readI64(data, 77);
+    const consumed = data[85] !== 0;
+    if (!consumed && expiresAt <= BigInt(Math.floor(Date.now() / 1000))) {
+      throw new Error("ram_reservation_expired");
+    }
+    const signatures = await connection.getSignaturesForAddress(reservation, { limit: 20 }, "finalized");
+    const signature = signatures.find((candidate) => !candidate.err && candidate.confirmationStatus === "finalized")
+      ?.signature ?? "";
+    if (!signature) throw new Error("ram_reservation_signature_missing");
+    return { address: reservation.toBase58(), signature, recovered: true };
+  }
+
+  const expiresAtSeconds = BigInt(Math.floor(args.expiresAt.getTime() / 1000));
+  if (expiresAtSeconds <= BigInt(Math.floor(Date.now() / 1000))) throw new Error("ram_reservation_expired");
+  const [profile] = PublicKey.findProgramAddressSync([utf8("player_profile"), owner.toBytes()], program);
+  const [gameConfig] = PublicKey.findProgramAddressSync([utf8("game_config")], program);
+  const ix = new TransactionInstruction({
+    programId: program,
+    keys: [
+      meta(reservation, false, true),
+      meta(profile, false, false),
+      meta(owner, false, false),
+      meta(gameConfig, false, false),
+      meta(args.config.resultAuthority.publicKey, true, true),
+      meta(SystemProgram.programId, false, false),
+    ],
+    data: instructionData(concat(
+      CREATE_RAM_RESERVATION_DISCRIMINATOR,
+      operationHash,
+      u32(args.amount),
+      bytes(args.kind),
+      i64(expiresAtSeconds),
+    )),
+  });
+  const latest = await connection.getLatestBlockhash("finalized");
+  const tx = new Transaction({
+    feePayer: args.config.resultAuthority.publicKey,
+    recentBlockhash: latest.blockhash,
+  }).add(ix);
+  tx.sign(args.config.resultAuthority);
+  const signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+  const confirmation = await connection.confirmTransaction({ signature, ...latest }, "finalized");
+  if (confirmation.value.err) throw new Error("ram_reservation_transaction_failed");
+  return { address: reservation.toBase58(), signature, recovered: false };
+}
+
+export async function cancelRamReservationOnChain(args: {
+  config: OwnershipConfig;
+  walletAddress: string;
+  operationId: string;
+}): Promise<string> {
+  const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
+  const operationHash = await sha256Bytes(args.operationId);
+  const program = args.config.programId;
+  const connection = new Connection(args.config.rpcUrl, "finalized");
+  const [reservation] = PublicKey.findProgramAddressSync(
+    [utf8("ram_reservation"), owner.toBytes(), operationHash],
+    program,
+  );
+  const info = await connection.getAccountInfo(reservation, "finalized");
+  if (!info) return "";
+  const data = new Uint8Array(info.data);
+  if (
+    !info.owner.equals(program) || data.length < 119 ||
+    !equalBytes(data.slice(0, 8), RAM_RESERVATION_DISCRIMINATOR) ||
+    !equalBytes(data.slice(8, 40), owner.toBytes()) ||
+    !equalBytes(data.slice(40, 72), operationHash) ||
+    !equalBytes(data.slice(86, 118), args.config.resultAuthority.publicKey.toBytes())
+  ) {
+    throw new Error("ram_reservation_mismatch");
+  }
+  if (data[85] !== 0) throw new Error("ram_reservation_already_consumed");
+  const [gameConfig] = PublicKey.findProgramAddressSync([utf8("game_config")], program);
+  const ix = new TransactionInstruction({
+    programId: program,
+    keys: [
+      meta(reservation, false, true),
+      meta(gameConfig, false, false),
+      meta(args.config.resultAuthority.publicKey, true, true),
+    ],
+    data: instructionData(concat(CANCEL_RAM_RESERVATION_DISCRIMINATOR, operationHash)),
+  });
+  const latest = await connection.getLatestBlockhash("finalized");
+  const tx = new Transaction({
+    feePayer: args.config.resultAuthority.publicKey,
+    recentBlockhash: latest.blockhash,
+  }).add(ix);
+  tx.sign(args.config.resultAuthority);
+  const signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+  const confirmation = await connection.confirmTransaction({ signature, ...latest }, "finalized");
+  if (confirmation.value.err) throw new Error("ram_reservation_cancel_failed");
+  return signature;
+}
+
+export async function debitReservedRamOnChain(args: {
+  config: OwnershipConfig;
+  walletAddress: string;
+  operationId: string;
+  amount: number;
+  kind?: number;
+}): Promise<SettledRamDebit> {
+  const kind = args.kind ?? 3;
+  const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
+  const operationHash = await sha256Bytes(args.operationId);
+  const program = args.config.programId;
+  const connection = new Connection(args.config.rpcUrl, "finalized");
+  const [reservation] = PublicKey.findProgramAddressSync(
+    [utf8("ram_reservation"), owner.toBytes(), operationHash],
+    program,
+  );
+  const [receipt] = PublicKey.findProgramAddressSync(
+    [utf8("ram_debit_receipt"), owner.toBytes(), operationHash],
+    program,
+  );
+  const recovered = await decodeRamDebitReceipt(
+    connection,
+    receipt,
+    owner,
+    operationHash,
+    args.amount,
+    kind,
+    args.config,
+  );
+  if (recovered !== null) {
+    const signatures = await connection.getSignaturesForAddress(receipt, { limit: 20 }, "finalized");
+    const signature = signatures.find((candidate) => !candidate.err && candidate.confirmationStatus === "finalized")
+      ?.signature ?? "";
+    if (!signature) throw new Error("ram_debit_signature_missing");
+    return { signature, receiptAddress: receipt.toBase58(), balanceAfter: recovered };
+  }
+
+  const [profile] = PublicKey.findProgramAddressSync([utf8("player_profile"), owner.toBytes()], program);
+  const [gameConfig] = PublicKey.findProgramAddressSync([utf8("game_config")], program);
+  const ix = new TransactionInstruction({
+    programId: program,
+    keys: [
+      meta(reservation, false, true),
+      meta(receipt, false, true),
+      meta(profile, false, true),
+      meta(owner, false, false),
+      meta(gameConfig, false, false),
+      meta(args.config.resultAuthority.publicKey, true, true),
+      meta(SystemProgram.programId, false, false),
+    ],
+    data: instructionData(concat(
+      DEBIT_RESERVED_RAM_DISCRIMINATOR,
+      operationHash,
+      u32(args.amount),
+      bytes(kind),
+    )),
+  });
+  const latest = await connection.getLatestBlockhash("finalized");
+  const tx = new Transaction({
+    feePayer: args.config.resultAuthority.publicKey,
+    recentBlockhash: latest.blockhash,
+  }).add(ix);
+  tx.sign(args.config.resultAuthority);
+  const signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+  const confirmation = await connection.confirmTransaction({ signature, ...latest }, "finalized");
+  if (confirmation.value.err) throw new Error("ram_debit_transaction_failed");
+  const balanceAfter = await decodeRamDebitReceipt(
+    connection,
+    receipt,
+    owner,
+    operationHash,
+    args.amount,
+    kind,
+    args.config,
+  );
+  if (balanceAfter === null) throw new Error("ram_debit_receipt_missing");
+  return { signature, receiptAddress: receipt.toBase58(), balanceAfter };
+}
+
+async function decodeRamDebitReceipt(
+  connection: Connection,
+  receipt: PublicKey,
+  owner: PublicKey,
+  operationHash: Uint8Array,
+  amount: number,
+  kind: number,
+  config: OwnershipConfig,
+): Promise<number | null> {
+  const info = await connection.getAccountInfo(receipt, "finalized");
+  if (!info) return null;
+  const data = new Uint8Array(info.data);
+  if (
+    !info.owner.equals(config.programId) || data.length < 118 ||
+    !equalBytes(data.slice(0, 8), RAM_DEBIT_RECEIPT_DISCRIMINATOR) ||
+    !equalBytes(data.slice(8, 40), owner.toBytes()) ||
+    !equalBytes(data.slice(40, 72), operationHash) ||
+    readU32(data, 72) !== amount || data[76] !== kind ||
+    !equalBytes(data.slice(85, 117), config.resultAuthority.publicKey.toBytes())
+  ) {
+    throw new Error("ram_debit_receipt_mismatch");
+  }
+  return readU32(data, 81);
+}
+
+export async function fetchChainRamBalance(args: {
+  config: OwnershipConfig;
+  walletAddress: string;
+}): Promise<number> {
+  const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
+  const [profile] = PublicKey.findProgramAddressSync(
+    [utf8("player_profile"), owner.toBytes()],
+    args.config.programId,
+  );
+  const connection = new Connection(args.config.rpcUrl, "finalized");
+  const info = await connection.getAccountInfo(profile, "finalized");
+  if (!info || !info.owner.equals(args.config.programId)) throw new Error("player_profile_not_initialized");
+  const state = decodePlayerProfile(new Uint8Array(info.data));
+  if (state.owner !== owner.toBase58()) throw new Error("player_profile_owner_mismatch");
+  return state.ramBalance;
+}
+
+/** Operator-only, authority-paid convergence for an approved frozen-ledger case. */
+export async function reconcileRamDeltaOnChain(args: {
+  config: OwnershipConfig;
+  walletAddress: string;
+  caseId: string;
+  direction: "credit_chain" | "debit_chain";
+  amount: number;
+}): Promise<SettledRamReconciliation> {
+  if (!Number.isSafeInteger(args.amount) || args.amount <= 0 || args.amount > 0xffffffff) {
+    throw new Error("invalid_reconciliation_amount");
+  }
+  const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
+  const program = args.config.programId;
+  const caseHash = await sha256Bytes(args.caseId);
+  const direction = args.direction === "credit_chain" ? 0 : 1;
+  const [receipt] = PublicKey.findProgramAddressSync(
+    [utf8("ram_reconcile_receipt"), owner.toBytes(), caseHash],
+    program,
+  );
+  const connection = new Connection(args.config.rpcUrl, "finalized");
+  const recovered = await decodeRamReconciliationReceipt(
+    connection,
+    receipt,
+    owner,
+    caseHash,
+    direction,
+    args.amount,
+    args.config,
+  );
+  if (recovered) {
+    const signature = await findFinalizedSignature(connection, receipt);
+    if (!signature) throw new Error("ram_reconciliation_signature_missing");
+    return { signature, receiptAddress: receipt.toBase58(), ...recovered, recovered: true };
+  }
+
+  const [profile] = PublicKey.findProgramAddressSync([utf8("player_profile"), owner.toBytes()], program);
+  const [gameConfig] = PublicKey.findProgramAddressSync([utf8("game_config")], program);
+  const ix = new TransactionInstruction({
+    programId: program,
+    keys: [
+      meta(receipt, false, true),
+      meta(profile, false, true),
+      meta(owner, false, false),
+      meta(gameConfig, false, false),
+      meta(args.config.resultAuthority.publicKey, true, true),
+      meta(SystemProgram.programId, false, false),
+    ],
+    data: instructionData(concat(
+      RECONCILE_RAM_DELTA_DISCRIMINATOR,
+      caseHash,
+      bytes(direction),
+      u32(args.amount),
+    )),
+  });
+  const latest = await connection.getLatestBlockhash("finalized");
+  const tx = new Transaction({
+    feePayer: args.config.resultAuthority.publicKey,
+    recentBlockhash: latest.blockhash,
+  }).add(ix);
+  tx.sign(args.config.resultAuthority);
+  let signature = "";
+  try {
+    signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+    const confirmation = await connection.confirmTransaction({ signature, ...latest }, "finalized");
+    if (confirmation.value.err) throw new Error("ram_reconciliation_transaction_failed");
+  } catch (error) {
+    const afterRace = await decodeRamReconciliationReceipt(
+      connection,
+      receipt,
+      owner,
+      caseHash,
+      direction,
+      args.amount,
+      args.config,
+    );
+    if (!afterRace) throw error;
+    signature = await findFinalizedSignature(connection, receipt) ?? "";
+  }
+  const settled = await decodeRamReconciliationReceipt(
+    connection,
+    receipt,
+    owner,
+    caseHash,
+    direction,
+    args.amount,
+    args.config,
+  );
+  if (!settled || !signature) throw new Error("ram_reconciliation_receipt_missing");
+  return { signature, receiptAddress: receipt.toBase58(), ...settled, recovered: false };
+}
+
+async function decodeRamReconciliationReceipt(
+  connection: Connection,
+  receipt: PublicKey,
+  owner: PublicKey,
+  caseHash: Uint8Array,
+  direction: number,
+  amount: number,
+  config: OwnershipConfig,
+): Promise<{ balanceBefore: number; balanceAfter: number } | null> {
+  const info = await connection.getAccountInfo(receipt, "finalized");
+  if (!info) return null;
+  const data = new Uint8Array(info.data);
+  if (
+    !info.owner.equals(config.programId) || data.length < 118 ||
+    !equalBytes(data.slice(0, 8), RAM_RECONCILIATION_RECEIPT_DISCRIMINATOR) ||
+    !equalBytes(data.slice(8, 40), owner.toBytes()) ||
+    !equalBytes(data.slice(40, 72), caseHash) || data[72] !== direction ||
+    readU32(data, 73) !== amount ||
+    !equalBytes(data.slice(85, 117), config.resultAuthority.publicKey.toBytes())
+  ) throw new Error("ram_reconciliation_receipt_mismatch");
+  return { balanceBefore: readU32(data, 77), balanceAfter: readU32(data, 81) };
+}
+
+async function findFinalizedSignature(connection: Connection, address: PublicKey): Promise<string | null> {
+  const signatures = await connection.getSignaturesForAddress(address, { limit: 20 }, "finalized");
+  return signatures.find((candidate) => !candidate.err && candidate.confirmationStatus === "finalized")?.signature ??
+    null;
 }
 
 export async function deriveStampResult(
@@ -567,7 +1176,9 @@ export async function buildStampTransaction(args: {
   element: number;
   basePower: number;
   existingOnchainInstanceId: string | null;
+  operationId: string;
   idempotencyKey: string;
+  expiresAt: Date;
   modifierIds: string[];
   rarity: number;
 }): Promise<BuiltStampTransaction> {
@@ -576,18 +1187,17 @@ export async function buildStampTransaction(args: {
   const program = args.config.programId;
   const [vault] = PublicKey.findProgramAddressSync([utf8("move_vault"), owner.toBytes()], program);
   const [profile] = PublicKey.findProgramAddressSync([utf8("player_profile"), owner.toBytes()], program);
+  const operationHash = await sha256Bytes(args.operationId);
+  const [reservation] = PublicKey.findProgramAddressSync(
+    [utf8("ram_reservation"), owner.toBytes(), operationHash],
+    program,
+  );
   const [ownershipConfig] = PublicKey.findProgramAddressSync([utf8("ownership_config")], program);
   const [gameConfig] = PublicKey.findProgramAddressSync([utf8("game_config")], program);
   const [coreAuthority] = PublicKey.findProgramAddressSync([utf8("core_authority")], program);
-  const operationHash = await sha256Bytes(args.idempotencyKey);
-  const materializeHash = await sha256Bytes(`known:${args.knownId}`);
   const [ticket] = PublicKey.findProgramAddressSync([utf8("stamp_ticket"), owner.toBytes(), operationHash], program);
   const [stampedAsset] = PublicKey.findProgramAddressSync(
     [utf8("stamped_asset"), owner.toBytes(), operationHash],
-    program,
-  );
-  const [receipt] = PublicKey.findProgramAddressSync(
-    [utf8("known_roll_receipt"), owner.toBytes(), materializeHash],
     program,
   );
 
@@ -599,43 +1209,18 @@ export async function buildStampTransaction(args: {
   const vaultState = decodeMoveVault(new Uint8Array(vaultInfo.data));
   const profileState = decodePlayerProfile(new Uint8Array(profileInfo.data));
   if (profileState.owner !== owner.toBase58()) throw new Error("player_profile_owner_mismatch");
-  const onchainInstanceId = args.existingOnchainInstanceId
-    ? BigInt(args.existingOnchainInstanceId)
-    : vaultState.nextInstanceId;
-  const materialize = !vaultState.instanceIds.some((value) => value === onchainInstanceId);
-  if (args.existingOnchainInstanceId && materialize) throw new Error("known_onchain_instance_missing");
-  const chainRamRequired = args.config.stampRamCost + (materialize ? KNOWN_ROLL_RAM_COST : 0);
+  if (!args.existingOnchainInstanceId) throw new Error("known_onchain_instance_missing");
+  const onchainInstanceId = BigInt(args.existingOnchainInstanceId);
+  if (!vaultState.instanceIds.some((value) => value === onchainInstanceId)) {
+    throw new Error("known_onchain_instance_missing");
+  }
+  const chainRamRequired = args.config.stampRamCost;
   if (profileState.ramBalance < chainRamRequired) throw new Error("insufficient_ram");
 
   const instructions: TransactionInstruction[] = [];
-  if (materialize) {
-    instructions.push(
-      new TransactionInstruction({
-        programId: program,
-        keys: [
-          meta(vault, false, true),
-          meta(owner, false, false),
-          meta(profile, false, true),
-          meta(ownershipConfig, false, false),
-          meta(receipt, false, true),
-          meta(gameConfig, false, false),
-          meta(args.config.resultAuthority.publicKey, true, true),
-          meta(SystemProgram.programId, false, false),
-        ],
-        data: instructionData(
-          concat(
-            ROLL_KNOWN_DISCRIMINATOR,
-            materializeHash,
-            u16(args.knownMoveId),
-            bytes(args.element),
-            u16(args.basePower),
-          ),
-        ),
-      }),
-    );
-  }
 
-  const expiresAt = new Date(Date.now() + args.config.ticketTtlSeconds * 1000);
+  const expiresAt = args.expiresAt;
+  if (expiresAt.getTime() <= Date.now()) throw new Error("ram_reservation_expired");
   const assetName = `Chainbound Stamped ${args.knownMoveId}`;
   const assetUri = stampMetadataUri(args.config.metadataUriBase, stampedAsset.toBase58());
   instructions.push(
@@ -668,6 +1253,7 @@ export async function buildStampTransaction(args: {
       keys: [
         meta(owner, true, true),
         meta(profile, false, true),
+        meta(reservation, false, true),
         meta(vault, false, true),
         meta(ticket, false, true),
         meta(ownershipConfig, false, false),
@@ -698,6 +1284,7 @@ export async function buildStampTransaction(args: {
     expiresAt,
     chainRamBalance: profileState.ramBalance,
     chainRamRequired,
+    reservationAddress: reservation.toBase58(),
   };
 }
 
@@ -733,6 +1320,229 @@ export async function simulateStampTransaction(rpcUrl: string, transactionBase64
   if (serialized.includes("6001")) throw new Error("insufficient_ram");
   console.error("[simulateStampTransaction]", serialized, payload.result?.value?.logs ?? []);
   throw new Error("stamp_simulation_failed");
+}
+
+export async function buildBindTransaction(args: {
+  config: BindOwnershipConfig;
+  walletAddress: string;
+  operationId: string;
+  onchainChainlingId: string;
+  coverAssetAddress: string;
+  componentAssetAddress: string;
+  componentKind: number;
+  archiveName: string;
+  archiveUri: string;
+  expiresAt: Date;
+}): Promise<BuiltBindTransaction> {
+  const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
+  const cover = publicKey(args.coverAssetAddress, "invalid_cover_asset");
+  const component = publicKey(args.componentAssetAddress, "invalid_component_asset");
+  if (cover.equals(component)) throw new Error("duplicate_bind_component");
+  if (args.componentKind !== 0 && args.componentKind !== 1) throw new Error("invalid_component_kind");
+  const nameBytes = utf8(args.archiveName);
+  const uriBytes = utf8(args.archiveUri);
+  if (!args.archiveName.trim() || nameBytes.length > 64) throw new Error("invalid_archive_name");
+  if (!args.archiveUri.startsWith("https://") || uriBytes.length > 200) throw new Error("invalid_archive_uri");
+  const chainlingId = BigInt(args.onchainChainlingId);
+  if (chainlingId < 0n || chainlingId > 18446744073709551615n) throw new Error("invalid_onchain_chainling_id");
+  if (args.expiresAt.getTime() <= Date.now()) throw new Error("ram_reservation_expired");
+
+  const program = args.config.programId;
+  const operationHash = await sha256Bytes(args.operationId);
+  const chainlingIdBytes = u64(chainlingId);
+  const [profile] = PublicKey.findProgramAddressSync([utf8("player_profile"), owner.toBytes()], program);
+  const [reservation] = PublicKey.findProgramAddressSync(
+    [utf8("ram_reservation"), owner.toBytes(), operationHash],
+    program,
+  );
+  const [chainling] = PublicKey.findProgramAddressSync(
+    [utf8("chainling_account"), owner.toBytes(), chainlingIdBytes],
+    program,
+  );
+  const [ownershipConfig] = PublicKey.findProgramAddressSync([utf8("ownership_config")], program);
+  const [coreAuthority] = PublicKey.findProgramAddressSync([utf8("core_authority")], program);
+  const [archiveAsset] = PublicKey.findProgramAddressSync(
+    [utf8("archive_asset"), owner.toBytes(), chainlingIdBytes],
+    program,
+  );
+  const [receipt] = PublicKey.findProgramAddressSync(
+    [utf8("bind_receipt"), owner.toBytes(), chainlingIdBytes],
+    program,
+  );
+  const coreProgram = new PublicKey(CORE_PROGRAM_ID);
+  const connection = new Connection(args.config.rpcUrl, "confirmed");
+  const infos = await connection.getMultipleAccountsInfo([
+    profile,
+    reservation,
+    chainling,
+    cover,
+    component,
+    args.config.coversCollection,
+    args.config.movesCollection,
+    args.config.cosmeticsCollection,
+    args.config.archivesCollection,
+    archiveAsset,
+    receipt,
+  ], "confirmed");
+  const [profileInfo, reservationInfo, chainlingInfo, coverInfo, componentInfo, ...collectionAndOutputInfos] = infos;
+  if (!profileInfo) throw new Error("player_profile_not_initialized");
+  if (!reservationInfo) throw new Error("ram_reservation_missing");
+  if (!chainlingInfo) throw new Error("chainling_account_not_initialized");
+  requireProgramAccount(
+    profileInfo.owner,
+    program,
+    new Uint8Array(profileInfo.data),
+    PLAYER_PROFILE_DISCRIMINATOR,
+    "invalid_player_profile_account",
+  );
+  requireProgramAccount(
+    chainlingInfo.owner,
+    program,
+    new Uint8Array(chainlingInfo.data),
+    CHAINLING_ACCOUNT_DISCRIMINATOR,
+    "invalid_chainling_account",
+  );
+  const chainlingData = new Uint8Array(chainlingInfo.data);
+  if (
+    chainlingData.length < 48 || !equalBytes(chainlingData.slice(8, 40), owner.toBytes()) ||
+    readU64(chainlingData, 40) !== chainlingId
+  ) throw new Error("chainling_account_mismatch");
+  const profileState = decodePlayerProfile(new Uint8Array(profileInfo.data));
+  if (profileState.owner !== owner.toBase58()) throw new Error("player_profile_owner_mismatch");
+  if (profileState.ramBalance < BIND_RAM_COST_PIN) throw new Error("insufficient_ram");
+  if (!coverInfo || !coverInfo.owner.equals(coreProgram)) throw new Error("invalid_cover_asset");
+  if (!componentInfo || !componentInfo.owner.equals(coreProgram)) throw new Error("invalid_component_asset");
+  for (const info of collectionAndOutputInfos.slice(0, 4)) {
+    if (!info || !info.owner.equals(coreProgram)) throw new Error("invalid_bind_collection");
+  }
+  if (collectionAndOutputInfos[4] || collectionAndOutputInfos[5]) throw new Error("bind_already_exists");
+
+  const ix = new TransactionInstruction({
+    programId: program,
+    keys: [
+      meta(owner, true, true),
+      meta(profile, false, true),
+      meta(reservation, false, true),
+      meta(chainling, false, true),
+      meta(ownershipConfig, false, false),
+      meta(coreAuthority, false, false),
+      meta(cover, false, true),
+      meta(component, false, true),
+      meta(args.config.coversCollection, false, true),
+      meta(args.config.movesCollection, false, true),
+      meta(args.config.cosmeticsCollection, false, true),
+      meta(args.config.archivesCollection, false, true),
+      meta(archiveAsset, false, true),
+      meta(receipt, false, true),
+      meta(coreProgram, false, false),
+      meta(SystemProgram.programId, false, false),
+    ],
+    data: instructionData(concat(
+      BIND_CHAINLING_DISCRIMINATOR,
+      chainlingIdBytes,
+      operationHash,
+      bytes(args.componentKind),
+      borshString(args.archiveName),
+      borshString(args.archiveUri),
+    )),
+  });
+  const latest = await connection.getLatestBlockhash("confirmed");
+  const tx = new Transaction({ feePayer: owner, recentBlockhash: latest.blockhash }).add(ix);
+  const estimated = await connection.getFeeForMessage(tx.compileMessage(), "confirmed");
+  return {
+    transactionBase64: uint8ToBase64(
+      new Uint8Array(tx.serialize({ requireAllSignatures: false, verifySignatures: false })),
+    ),
+    recentBlockhash: latest.blockhash,
+    lastValidBlockHeight: latest.lastValidBlockHeight,
+    reservationAddress: reservation.toBase58(),
+    chainlingAddress: chainling.toBase58(),
+    archiveAssetAddress: archiveAsset.toBase58(),
+    receiptAddress: receipt.toBase58(),
+    estimatedNetworkFeeLamports: estimated.value ?? 0,
+    expiresAt: args.expiresAt,
+  };
+}
+
+export async function simulateBindTransaction(rpcUrl: string, transactionBase64: string): Promise<void> {
+  const response = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "simulateTransaction",
+      params: [transactionBase64, {
+        encoding: "base64",
+        commitment: "confirmed",
+        sigVerify: false,
+        replaceRecentBlockhash: false,
+      }],
+    }),
+  });
+  if (!response.ok) throw new Error("bind_simulation_failed");
+  const payload = await response.json() as {
+    error?: unknown;
+    result?: { value?: { err?: unknown; logs?: string[] } };
+  };
+  const simulationError = payload.error ?? payload.result?.value?.err;
+  if (!simulationError) return;
+  const serialized = JSON.stringify(simulationError);
+  if (serialized.includes("6001")) throw new Error("insufficient_ram");
+  console.error("[simulateBindTransaction]", serialized, payload.result?.value?.logs ?? []);
+  throw new Error("bind_simulation_failed");
+}
+
+export async function fetchAndVerifyBindReceipt(args: {
+  config: BindOwnershipConfig;
+  walletAddress: string;
+  operationId: string;
+  onchainChainlingId: string;
+  coverAssetAddress: string;
+  componentAssetAddress: string;
+  componentKind: number;
+  expectedArchiveAssetAddress?: string;
+  expectedReceiptAddress?: string;
+}): Promise<VerifiedBindReceipt | null> {
+  const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
+  const chainlingId = BigInt(args.onchainChainlingId);
+  const operationHash = await sha256Bytes(args.operationId);
+  const chainlingIdBytes = u64(chainlingId);
+  const [archiveAsset] = PublicKey.findProgramAddressSync(
+    [utf8("archive_asset"), owner.toBytes(), chainlingIdBytes],
+    args.config.programId,
+  );
+  const [receipt] = PublicKey.findProgramAddressSync(
+    [utf8("bind_receipt"), owner.toBytes(), chainlingIdBytes],
+    args.config.programId,
+  );
+  if (args.expectedArchiveAssetAddress && archiveAsset.toBase58() !== args.expectedArchiveAssetAddress) return null;
+  if (args.expectedReceiptAddress && receipt.toBase58() !== args.expectedReceiptAddress) return null;
+  const connection = new Connection(args.config.rpcUrl, "finalized");
+  const [receiptInfo, archiveInfo] = await connection.getMultipleAccountsInfo([receipt, archiveAsset], "finalized");
+  if (!receiptInfo || !archiveInfo) return null;
+  const data = new Uint8Array(receiptInfo.data);
+  if (
+    !receiptInfo.owner.equals(args.config.programId) || data.length !== 179 ||
+    !equalBytes(data.slice(0, 8), BIND_RECEIPT_DISCRIMINATOR) ||
+    !equalBytes(data.slice(8, 40), owner.toBytes()) || readU64(data, 40) !== chainlingId ||
+    !equalBytes(data.slice(48, 80), operationHash) ||
+    new PublicKey(data.slice(80, 112)).toBase58() !== args.coverAssetAddress ||
+    new PublicKey(data.slice(112, 144)).toBase58() !== args.componentAssetAddress ||
+    data[144] !== args.componentKind ||
+    !equalBytes(data.slice(145, 177), archiveAsset.toBytes()) || data[177] !== 1 ||
+    !archiveInfo.owner.equals(new PublicKey(CORE_PROGRAM_ID))
+  ) return null;
+  return {
+    receiptAddress: receipt.toBase58(),
+    ownerAddress: owner.toBase58(),
+    onchainChainlingId: chainlingId.toString(),
+    operationHash: bytesToHex(operationHash),
+    coverAssetAddress: args.coverAssetAddress,
+    componentAssetAddress: args.componentAssetAddress,
+    componentKind: args.componentKind,
+    archiveAssetAddress: archiveAsset.toBase58(),
+  };
 }
 
 export async function buildDevnetSmokeGrantTransaction(args: {
@@ -1045,6 +1855,53 @@ export async function signatureOutcome(rpcUrl: string, signature: string): Promi
     : "pending";
 }
 
+export async function finalizedSignatureOutcome(rpcUrl: string, signature: string): Promise<SignatureOutcome> {
+  const connection = new Connection(rpcUrl, "finalized");
+  const result = await connection.getSignatureStatuses([signature], { searchTransactionHistory: true });
+  const status = result.value[0];
+  if (!status) return "missing";
+  if (status.err) return "failed";
+  return status.confirmationStatus === "finalized" ? "confirmed" : "pending";
+}
+
+export async function submittedLegacyTransactionOutcome(
+  rpcUrl: string,
+  signature: string,
+  expectedTransactionBase64: string,
+): Promise<SubmittedTransactionOutcome> {
+  const response = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "getTransaction",
+      params: [signature, {
+        commitment: "finalized",
+        encoding: "base64",
+        maxSupportedTransactionVersion: 0,
+      }],
+    }),
+  });
+  if (!response.ok) throw new Error("solana_rpc_unavailable");
+  const payload = await response.json() as {
+    error?: unknown;
+    result?: { meta?: { err?: unknown }; transaction?: [string, string] } | null;
+  };
+  if (payload.error) throw new Error("solana_rpc_error");
+  if (!payload.result?.transaction?.[0]) return "pending";
+  const actual = Transaction.from(Buffer.from(payload.result.transaction[0], "base64"));
+  const expected = Transaction.from(Buffer.from(expectedTransactionBase64, "base64"));
+  if (!equalBytes(new Uint8Array(actual.serializeMessage()), new Uint8Array(expected.serializeMessage()))) {
+    return "mismatch";
+  }
+  return payload.result.meta?.err ? "failed" : "confirmed";
+}
+
+export async function finalizedBlockHeight(rpcUrl: string): Promise<number> {
+  return await new Connection(rpcUrl, "finalized").getBlockHeight("finalized");
+}
+
 export function stampMetadataUri(metadataUriBase: string, assetAddress: string): string {
   return `${
     metadataUriBase.replace(/\/+$/, "")
@@ -1080,8 +1937,8 @@ export async function fetchAndVerifyStampReceipt(args: {
   if (args.expectedTicketAddress && ticket.toBase58() !== args.expectedTicketAddress) return null;
   if (args.expectedStampedAssetAddress && stampedAsset.toBase58() !== args.expectedStampedAssetAddress) return null;
 
-  const connection = new Connection(args.config.rpcUrl, "confirmed");
-  const [ticketInfo, stampedInfo] = await connection.getMultipleAccountsInfo([ticket, stampedAsset], "confirmed");
+  const connection = new Connection(args.config.rpcUrl, "finalized");
+  const [ticketInfo, stampedInfo] = await connection.getMultipleAccountsInfo([ticket, stampedAsset], "finalized");
   if (!ticketInfo || !stampedInfo) return null;
   requireProgramAccount(
     ticketInfo.owner,
@@ -1150,6 +2007,21 @@ export async function findConfirmedSignatureForAddress(rpcUrl: string, address: 
       (candidate.confirmationStatus === "confirmed" || candidate.confirmationStatus === "finalized") &&
       isSolanaSignature(candidate.signature)
     ) return candidate.signature;
+  }
+  return "";
+}
+
+export async function findFinalizedSignatureForAddress(rpcUrl: string, address: string): Promise<string> {
+  const connection = new Connection(rpcUrl, "finalized");
+  const signatures = await connection.getSignaturesForAddress(
+    publicKey(address, "invalid_reconciliation_address"),
+    { limit: 20 },
+    "finalized",
+  );
+  for (const candidate of signatures) {
+    if (!candidate.err && candidate.confirmationStatus === "finalized" && isSolanaSignature(candidate.signature)) {
+      return candidate.signature;
+    }
   }
   return "";
 }

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Chainbound.Combat;
-using SignalJam.UI.MobileControls;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -12,7 +12,7 @@ namespace SignalJam.UI.MenuNavigation
 {
     /// <summary>
     /// World-PC roster storage and party assignment surface.
-    /// Layout is owned by the authored prefab; this component binds data and input.
+    /// Layout is the handheld Profile B frame: storage, party, selection, and a shared status line.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ChainlingPcTerminalScreen : MonoBehaviour
@@ -40,6 +40,14 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private TMP_Text status;
         [SerializeField] private MenuInputContextController inputContext;
         [SerializeField] private Selectable defaultSelection;
+        [SerializeField] private PlayerMenuBootSequenceController bootSequence;
+        [SerializeField] private CanvasGroup[] revealColumns = Array.Empty<CanvasGroup>();
+        [SerializeField] private Image previewPortrait;
+        [SerializeField] private TMP_Text previewName;
+        [SerializeField] private TMP_Text previewMeta;
+        [SerializeField] private TMP_Text previewBody;
+        [SerializeField] private Image previewHpFill;
+        [SerializeField] private MonoBehaviour sfxPlayerBehaviour;
 
         private readonly List<GameObject> spawnedCards = new List<GameObject>();
         private PlayerRosterSnapshot roster;
@@ -48,6 +56,9 @@ namespace SignalJam.UI.MenuNavigation
         private bool hasInputLock;
         private string terminalId;
         private long lastRosterRefreshSequence;
+        private bool entranceSettled;
+        private bool closing;
+        private MonoBehaviour cachedSfxPlayerBehaviour;
 
         public bool IsOpen => root != null && root.gameObject.activeSelf;
 
@@ -111,11 +122,18 @@ namespace SignalJam.UI.MenuNavigation
             UpdateTitle();
 
             AcquireInputLock();
+            closing = false;
+            entranceSettled = false;
             root.gameObject.SetActive(true);
             root.alpha = 1f;
-            root.interactable = true;
             root.blocksRaycasts = true;
+            root.interactable = false;
+            if (inputContext != null)
+                inputContext.SetAnimationHold(true);
             SetStatus("LOADING CHAINLING STORAGE...");
+            PlayCue(PlayerMenuSfxCue.MenuOpen);
+            PlayerMenuSfxResolver.SuppressNavigationCues(0.6f);
+            BeginOpenMotion();
             try
             {
                 await RefreshAsync();
@@ -124,21 +142,35 @@ namespace SignalJam.UI.MenuNavigation
             {
                 Debug.LogException(ex, this);
                 SetStatus("CHAINLING STORAGE COULD NOT BE LOADED.");
-                SetInteractable(true);
+                if (entranceSettled)
+                    SetInteractable(true);
             }
         }
 
         public void Close()
         {
-            if (root != null)
+            if (closing)
+                return;
+
+            if (root == null || !root.gameObject.activeSelf)
             {
-                root.interactable = false;
-                root.blocksRaycasts = false;
-                root.gameObject.SetActive(false);
+                ReleaseInputLock();
+                return;
             }
 
+            closing = true;
+            entranceSettled = false;
             selectedStorage = null;
-            ReleaseInputLock();
+            root.interactable = false;
+            if (inputContext != null)
+                inputContext.SetAnimationHold(true);
+            DOTween.Kill(this);
+            PlayCue(PlayerMenuSfxCue.MenuClose);
+
+            if (bootSequence != null && bootSequence.HasExitFrames)
+                bootSequence.PlayCloseSequence(FinishClose);
+            else
+                FinishClose();
         }
 
         private void Awake()
@@ -151,6 +183,9 @@ namespace SignalJam.UI.MenuNavigation
         private void OnDisable()
         {
             PlayerRosterRefreshSignal.ResolveOrCreate().Changed -= HandleRosterChanged;
+            DOTween.Kill(this);
+            closing = false;
+            entranceSettled = false;
             ReleaseInputLock();
         }
 
@@ -177,12 +212,12 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             roster = await provider.FetchRosterAsync(session.PlayerProfileId, session.WalletAddress);
-            if (root != null && !root.gameObject.activeSelf)
+            if (root != null && !root.gameObject.activeSelf && !closing)
             {
                 root.gameObject.SetActive(true);
                 root.alpha = 1f;
-                root.interactable = true;
                 root.blocksRaycasts = true;
+                root.interactable = entranceSettled;
             }
 
             if (roster == null)
@@ -266,8 +301,9 @@ namespace SignalJam.UI.MenuNavigation
                 }
             }
 
-            SelectFirstAvailable();
-            RefreshNavigation();
+            BindPreview();
+            if (entranceSettled && !closing)
+                RefreshNavigation();
         }
 
         private void HandleRosterChanged(PlayerRosterRefreshSignal.Notice notice)
@@ -304,6 +340,7 @@ namespace SignalJam.UI.MenuNavigation
             selectedStorage = entry;
             Rebuild();
             SetStatus($"{ResolveName(entry)} SELECTED. CHOOSE LEAD, PARTNER, OR BENCH.");
+            PlayCue(PlayerMenuSfxCue.ChainlingSelect);
         }
 
         private async void AssignSelectedToSlot(int slot)
@@ -311,6 +348,7 @@ namespace SignalJam.UI.MenuNavigation
             if (selectedStorage == null)
             {
                 SetStatus("SELECT A CHAINLING FROM STORAGE FIRST.");
+                PlayCue(PlayerMenuSfxCue.Invalid);
                 return;
             }
 
@@ -318,6 +356,7 @@ namespace SignalJam.UI.MenuNavigation
             if (slot > party.Count)
             {
                 SetStatus("FILL THE PREVIOUS PARTY SLOT FIRST.");
+                PlayCue(PlayerMenuSfxCue.Invalid);
                 return;
             }
 
@@ -348,10 +387,12 @@ namespace SignalJam.UI.MenuNavigation
                 SetStatus(result != null && !string.IsNullOrWhiteSpace(result.error)
                     ? result.error
                     : "PARTY COULD NOT BE SAVED.");
+                PlayCue(PlayerMenuSfxCue.Invalid);
                 SetInteractable(true);
                 return;
             }
 
+            PlayCue(PlayerMenuSfxCue.Confirm);
             await RefreshAsync();
             SetInteractable(true);
         }
@@ -387,7 +428,7 @@ namespace SignalJam.UI.MenuNavigation
                 card = go.GetComponent<ChainlingCardWidget>();
             }
 
-            PlayerMenuUiFactory.LayoutElement(card.gameObject, 220f, 260f);
+            PlayerMenuUiFactory.LayoutElement(card.gameObject, preferredHeight: 188f, flexibleWidth: 1f);
             return card;
         }
 
@@ -462,133 +503,118 @@ namespace SignalJam.UI.MenuNavigation
         private void BuildAuthoredHierarchy()
         {
             ConfigureOverlayCanvas();
+            ClearGeneratedShell();
 
-            Transform safe = transform.Find("SafeArea");
-            GameObject panel = safe != null ? safe.gameObject : new GameObject("SafeArea", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
-            panel.transform.SetParent(transform, false);
-            RectTransform panelRect = panel.GetComponent<RectTransform>();
-            PlayerMenuUiFactory.Stretch(panelRect, 0f, 0f, 0f, 0f);
-            Image panelImage = panel.GetComponent<Image>();
-            panelImage.color = new Color(0.025f, 0.045f, 0.075f, 0.985f);
-            if (panel.GetComponent<SignalJam.UI.MobileControls.SafeAreaAdapter>() == null)
-                panel.AddComponent<SignalJam.UI.MobileControls.SafeAreaAdapter>();
-            root = panel.GetComponent<CanvasGroup>();
+            GameObject shell = new GameObject("SafeArea", typeof(RectTransform), typeof(CanvasGroup));
+            shell.transform.SetParent(transform, false);
+            PlayerMenuUiFactory.Stretch(shell.GetComponent<RectTransform>());
+            root = shell.GetComponent<CanvasGroup>();
 
-            if (title == null)
+            Image dimmer = PlayerMenuUiFactory.CreateImage("Dimmer", shell.transform, new Color(0.03f, 0.012f, 0.02f, 0.58f));
+            PlayerMenuUiFactory.Stretch(dimmer.rectTransform);
+            dimmer.raycastTarget = true;
+
+            GameObject bootObject = new GameObject("TerminalBoot", typeof(RectTransform), typeof(PlayerMenuBootSequenceController));
+            bootObject.transform.SetParent(shell.transform, false);
+            PlayerMenuUiFactory.Stretch(bootObject.GetComponent<RectTransform>());
+            bootSequence = bootObject.GetComponent<PlayerMenuBootSequenceController>();
+
+            GameObject crt = new GameObject("CrtBackground", typeof(RectTransform), typeof(PlayerMenuBackgroundController));
+            crt.transform.SetParent(bootObject.transform, false);
+            PlayerMenuUiFactory.Stretch(crt.GetComponent<RectTransform>());
+            PlayerMenuBackgroundController background = crt.GetComponent<PlayerMenuBackgroundController>();
+            background.BuildDefaultLayoutForEditor();
+            if (background.BaseTintImage != null)
             {
-                title = PlayerMenuUiFactory.CreateText(
-                    "Title",
-                    panel.transform,
-                    "CHAINLING STORAGE",
-                    38f,
-                    TextAlignmentOptions.MidlineLeft,
-                    false);
-                PlayerMenuUiFactory.Top(title.rectTransform, 70f, 32f, 190f, 18f);
+                background.BaseTintImage.color = new Color(0.07f, 0.025f, 0.035f, 0.78f);
+                background.BaseTintImage.raycastTarget = false;
             }
 
-            if (closeButton == null)
+            GameObject menuPanel = new GameObject("MenuPanel", typeof(RectTransform), typeof(CanvasGroup));
+            menuPanel.transform.SetParent(bootObject.transform, false);
+            PlayerMenuUiFactory.Stretch(menuPanel.GetComponent<RectTransform>());
+            CanvasGroup menuGroup = menuPanel.GetComponent<CanvasGroup>();
+            bootSequence.ConfigureTargets(crt.GetComponent<RectTransform>(), menuPanel.GetComponent<RectTransform>());
+            bootSequence.BuildDefaultLayoutForEditor();
+
+            RectTransform storageSlot = CreateHudSlot(menuPanel.transform, "TopLeft", new Vector2(0.019f, 0.438f), new Vector2(0.316f, 0.951f));
+            RectTransform partySlot = CreateHudSlot(menuPanel.transform, "TopCenter", new Vector2(0.334f, 0.438f), new Vector2(0.666f, 0.868f));
+            RectTransform previewSlot = CreateHudSlot(menuPanel.transform, "TopRight", new Vector2(0.684f, 0.438f), new Vector2(0.981f, 0.951f));
+            RectTransform dialogueSlot = CreateHudSlot(menuPanel.transform, "DialogueLowerCenter", new Vector2(0.206f, 0.014f), new Vector2(0.794f, 0.382f));
+            revealColumns = new[]
             {
-                closeButton = PlayerMenuUiFactory.CreateButton("Close", panel.transform, "B  CLOSE", PlayerMenuUiFactory.PanelAlt);
-                PlayerMenuUiFactory.Top(closeButton.transform as RectTransform, 58f, 0f, 28f, 22f);
-                RectTransform closeRect = closeButton.transform as RectTransform;
-                closeRect.anchorMin = new Vector2(0.84f, 1f);
-                MenuSelectableFocusVisual.EnsureOn(closeButton);
-            }
+                partySlot.GetComponent<CanvasGroup>(),
+                storageSlot.GetComponent<CanvasGroup>(),
+                previewSlot.GetComponent<CanvasGroup>(),
+                dialogueSlot.GetComponent<CanvasGroup>()
+            };
 
-            RectTransform partyRoot = panel.transform.Find("PartySlots") as RectTransform;
-            if (partyRoot == null)
-            {
-                partyRoot = PlayerMenuUiFactory.CreateRect("PartySlots", panel.transform);
-                partyRoot.anchorMin = new Vector2(0.03f, 0.64f);
-                partyRoot.anchorMax = new Vector2(0.97f, 0.84f);
-                partyRoot.offsetMin = Vector2.zero;
-                partyRoot.offsetMax = Vector2.zero;
-                HorizontalLayoutGroup partyLayout = PlayerMenuUiFactory.HorizontalLayout(partyRoot.gameObject, 18f);
-                partyLayout.childForceExpandWidth = true;
-            }
+            VerticalLayoutGroup storageLayout = FillSlot(storageSlot.gameObject);
+            title = CreateSlotHeader(storageSlot, "Title", "STORAGE");
+            BuildStorageList(storageSlot, storageLayout);
 
-            if (partyButtons == null || partyButtons.Length != CombatConstants.ROSTER_SIZE)
-                partyButtons = new Button[CombatConstants.ROSTER_SIZE];
-
+            VerticalLayoutGroup partyLayout = FillSlot(partySlot.gameObject);
+            CreateSlotHeader(partySlot, "PartyHeader", "PARTY");
+            RectTransform partyRoot = PlayerMenuUiFactory.CreateRect("PartySlots", partySlot);
+            PlayerMenuUiFactory.LayoutElement(partyRoot.gameObject, preferredHeight: 280f, flexibleWidth: 1f, flexibleHeight: 1f);
+            VerticalLayoutGroup partyRows = PlayerMenuUiFactory.VerticalLayout(partyRoot.gameObject, 8f);
+            partyRows.childControlHeight = true;
+            partyRows.childForceExpandHeight = true;
+            partyRows.childAlignment = TextAnchor.UpperCenter;
+            partyButtons = new Button[CombatConstants.ROSTER_SIZE];
             for (int slot = 0; slot < partyButtons.Length; slot++)
             {
-                if (partyButtons[slot] != null)
-                    continue;
-
                 partyButtons[slot] = PlayerMenuUiFactory.CreateButton(
                     $"Party_{SlotNames[slot]}",
                     partyRoot,
-                    SlotNames[slot],
+                    $"{SlotNames[slot]}\nEMPTY",
                     PlayerMenuUiFactory.PanelAlt);
-                PlayerMenuUiFactory.LayoutElement(partyButtons[slot].gameObject, 300f, 150f, 1f);
-                MenuSelectableFocusVisual.EnsureOn(partyButtons[slot]);
+                TMP_Text partyLabel = partyButtons[slot].GetComponentInChildren<TMP_Text>(true);
+                if (partyLabel != null)
+                    partyLabel.fontSize = 20f;
+                PlayerMenuUiFactory.LayoutElement(partyButtons[slot].gameObject, preferredHeight: 96f, flexibleWidth: 1f, flexibleHeight: 1f);
+                MenuSelectableFocusVisual.EnsureOn(partyButtons[slot], new Color(1f, 0.62f, 0.22f, 0.95f));
             }
 
-            if (panel.transform.Find("StorageLabel") == null)
-            {
-                TMP_Text storageLabel = PlayerMenuUiFactory.CreateText(
-                    "StorageLabel",
-                    panel.transform,
-                    "STORAGE",
-                    25f,
-                    TextAlignmentOptions.MidlineLeft,
-                    false);
-                storageLabel.color = PlayerMenuUiFactory.Accent;
-                storageLabel.rectTransform.anchorMin = new Vector2(0.03f, 0.56f);
-                storageLabel.rectTransform.anchorMax = new Vector2(0.97f, 0.62f);
-                storageLabel.rectTransform.offsetMin = Vector2.zero;
-                storageLabel.rectTransform.offsetMax = Vector2.zero;
-            }
+            partyLayout.childAlignment = TextAnchor.UpperCenter;
 
-            Transform scrollTransform = panel.transform.Find("StorageScroll");
-            GameObject scrollGo = scrollTransform != null
-                ? scrollTransform.gameObject
-                : new GameObject("StorageScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
-            scrollGo.transform.SetParent(panel.transform, false);
-            RectTransform scrollRect = scrollGo.GetComponent<RectTransform>();
-            scrollRect.anchorMin = new Vector2(0.03f, 0.16f);
-            scrollRect.anchorMax = new Vector2(0.97f, 0.56f);
-            scrollRect.offsetMin = Vector2.zero;
-            scrollRect.offsetMax = Vector2.zero;
-            scrollGo.GetComponent<Image>().color = new Color(0.04f, 0.065f, 0.1f, 0.9f);
+            VerticalLayoutGroup previewLayout = FillSlot(previewSlot.gameObject);
+            CreateSlotHeader(previewSlot, "PreviewHeader", "SELECTED");
+            Image portraitBack = PlayerMenuUiFactory.CreateImage("PortraitBack", previewSlot, new Color(0.12f, 0.06f, 0.05f, 0.9f));
+            PlayerMenuUiFactory.LayoutElement(portraitBack.gameObject, preferredHeight: 132f, flexibleWidth: 1f);
+            previewPortrait = PlayerMenuUiFactory.CreateImage("Portrait", portraitBack.transform, Color.white);
+            PlayerMenuUiFactory.Stretch(previewPortrait.rectTransform, 10f, 10f, 10f, 10f);
+            previewPortrait.preserveAspect = true;
+            previewPortrait.enabled = false;
+            previewName = CreatePreviewLine(previewSlot, "PreviewName", "NO CHAINLING", 28f);
+            previewMeta = CreatePreviewLine(previewSlot, "PreviewMeta", "Choose a stored Chainling.", 18f);
+            previewMeta.color = PlayerMenuUiFactory.Muted;
+            previewBody = CreatePreviewLine(previewSlot, "PreviewBody", "Deposited Chainlings recover while they stay in storage.", 18f);
+            previewBody.color = PlayerMenuUiFactory.Muted;
+            PlayerMenuUiFactory.LayoutElement(previewBody.gameObject, preferredHeight: 72f, flexibleWidth: 1f, flexibleHeight: 1f);
+            Image hpTrack = PlayerMenuUiFactory.CreateImage("HpTrack", previewSlot, new Color(0.15f, 0.08f, 0.08f, 0.95f));
+            PlayerMenuUiFactory.LayoutElement(hpTrack.gameObject, preferredHeight: 16f, flexibleWidth: 1f);
+            previewHpFill = PlayerMenuUiFactory.CreateImage("HpFill", hpTrack.transform, new Color(0.45f, 0.85f, 0.38f, 1f));
+            PlayerMenuUiFactory.Stretch(previewHpFill.rectTransform);
+            previewHpFill.rectTransform.anchorMax = new Vector2(0f, 1f);
+            previewHpFill.raycastTarget = false;
+            closeButton = PlayerMenuUiFactory.CreateButton("Close", previewSlot, "B  CLOSE", PlayerMenuUiFactory.PanelAlt);
+            PlayerMenuUiFactory.LayoutElement(closeButton.gameObject, preferredHeight: 64f, flexibleWidth: 1f);
+            MenuSelectableFocusVisual.EnsureOn(closeButton, new Color(1f, 0.62f, 0.22f, 0.95f));
+            previewLayout.childAlignment = TextAnchor.UpperCenter;
 
-            if (storageRoot == null)
-            {
-                storageRoot = PlayerMenuUiFactory.CreateRect("Cards", scrollGo.transform);
-                storageRoot.anchorMin = new Vector2(0f, 0f);
-                storageRoot.anchorMax = new Vector2(0f, 1f);
-                storageRoot.pivot = new Vector2(0f, 0.5f);
-                storageRoot.sizeDelta = new Vector2(0f, 0f);
-                HorizontalLayoutGroup storageLayout = PlayerMenuUiFactory.HorizontalLayout(storageRoot.gameObject, 18f);
-                storageLayout.padding = new RectOffset(18, 18, 18, 18);
-                ContentSizeFitter fitter = storageRoot.gameObject.AddComponent<ContentSizeFitter>();
-                fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-                fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
-            }
-
-            ScrollRect scroll = scrollGo.GetComponent<ScrollRect>();
-            scroll.content = storageRoot;
-            scroll.horizontal = true;
-            scroll.vertical = false;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-
-            if (emptyStorageLabel == null)
-            {
-                emptyStorageLabel = PlayerMenuUiFactory.CreateText(
-                    "EmptyStorage",
-                    storageRoot,
-                    "NO STORED CHAINLINGS\nCaptured Chainlings appear here when your party is full.",
-                    22f,
-                    TextAlignmentOptions.Center);
-                PlayerMenuUiFactory.LayoutElement(emptyStorageLabel.gameObject, 520f, 100f);
-                emptyStorageLabel.gameObject.SetActive(false);
-            }
-
-            if (status == null)
-            {
-                status = PlayerMenuUiFactory.CreateText("Status", panel.transform, "", 20f, TextAlignmentOptions.Center, true);
-                PlayerMenuUiFactory.Bottom(status.rectTransform, 82f, 30f, 30f, 20f);
-            }
+            VerticalLayoutGroup dialogueLayout = FillSlot(dialogueSlot.gameObject);
+            TMP_Text kicker = CreateSlotHeader(dialogueSlot, "DialogueKicker", "CHAINLING PC");
+            kicker.fontSize = 16f;
+            status = PlayerMenuUiFactory.CreateText(
+                "Status",
+                dialogueSlot,
+                "SELECT A STORED CHAINLING, THEN CHOOSE A PARTY SLOT.",
+                24f,
+                TextAlignmentOptions.TopLeft,
+                true);
+            PlayerMenuUiFactory.LayoutElement(status.gameObject, preferredHeight: 96f, flexibleWidth: 1f, flexibleHeight: 1f);
+            dialogueLayout.childAlignment = TextAnchor.UpperLeft;
 
             if (inputContext == null)
             {
@@ -597,8 +623,141 @@ namespace SignalJam.UI.MenuNavigation
                 inputContext.OnCancel.AddListener(Close);
             }
 
-            defaultSelection = closeButton;
-            root.gameObject.SetActive(false);
+            defaultSelection = partyButtons.Length > 0 ? partyButtons[0] : closeButton;
+            menuGroup.alpha = 1f;
+            root.alpha = 1f;
+            root.interactable = false;
+            root.blocksRaycasts = false;
+            root.gameObject.SetActive(true);
+        }
+
+        private void ClearGeneratedShell()
+        {
+            Transform existing = transform.Find("SafeArea");
+            if (existing == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(existing.gameObject);
+            else
+                DestroyImmediate(existing.gameObject);
+        }
+
+        private static RectTransform CreateHudSlot(Transform parent, string slotName, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            RectTransform slot = PlayerMenuUiFactory.CreateRect(slotName, parent);
+            slot.anchorMin = anchorMin;
+            slot.anchorMax = anchorMax;
+            slot.offsetMin = Vector2.zero;
+            slot.offsetMax = Vector2.zero;
+            slot.pivot = new Vector2(0.5f, 0.5f);
+            Image plate = slot.gameObject.AddComponent<Image>();
+            plate.color = new Color(0.22f, 0.1f, 0.08f, 0.94f);
+            plate.raycastTarget = false;
+            slot.gameObject.AddComponent<CanvasGroup>();
+            return slot;
+        }
+
+        private static VerticalLayoutGroup FillSlot(GameObject slot)
+        {
+            VerticalLayoutGroup layout = PlayerMenuUiFactory.VerticalLayout(slot, 8f);
+            layout.padding = new RectOffset(16, 16, 12, 12);
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            return layout;
+        }
+
+        private static TMP_Text CreateSlotHeader(Transform parent, string objectName, string value)
+        {
+            TMP_Text header = PlayerMenuUiFactory.CreateText(objectName, parent, value, 20f, TextAlignmentOptions.MidlineLeft, false);
+            header.color = PlayerMenuUiFactory.Accent;
+            header.fontStyle = FontStyles.Bold;
+            PlayerMenuUiFactory.LayoutElement(header.gameObject, preferredHeight: 28f, flexibleWidth: 1f);
+            return header;
+        }
+
+        private static TMP_Text CreatePreviewLine(Transform parent, string objectName, string value, float size)
+        {
+            TMP_Text line = PlayerMenuUiFactory.CreateText(objectName, parent, value, size, TextAlignmentOptions.TopLeft, true);
+            line.overflowMode = TextOverflowModes.Ellipsis;
+            PlayerMenuUiFactory.LayoutElement(line.gameObject, preferredHeight: size + 10f, flexibleWidth: 1f);
+            return line;
+        }
+
+        private void BuildStorageList(RectTransform slot, VerticalLayoutGroup slotLayout)
+        {
+            slotLayout.childAlignment = TextAnchor.UpperLeft;
+            GameObject scrollGo = new GameObject("StorageScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+            scrollGo.transform.SetParent(slot, false);
+            PlayerMenuUiFactory.LayoutElement(scrollGo, preferredHeight: 220f, flexibleWidth: 1f, flexibleHeight: 1f);
+            Image scrollImage = scrollGo.GetComponent<Image>();
+            scrollImage.color = new Color(0.05f, 0.025f, 0.03f, 0.72f);
+            scrollImage.raycastTarget = true;
+
+            RectTransform viewport = PlayerMenuUiFactory.CreateRect("Viewport", scrollGo.transform);
+            PlayerMenuUiFactory.Stretch(viewport, 8f, 8f, 22f, 8f);
+            viewport.gameObject.AddComponent<RectMask2D>();
+
+            storageRoot = PlayerMenuUiFactory.CreateRect("Cards", viewport);
+            storageRoot.anchorMin = new Vector2(0f, 1f);
+            storageRoot.anchorMax = new Vector2(1f, 1f);
+            storageRoot.pivot = new Vector2(0.5f, 1f);
+            storageRoot.sizeDelta = Vector2.zero;
+            VerticalLayoutGroup cards = PlayerMenuUiFactory.VerticalLayout(storageRoot.gameObject, 8f);
+            cards.padding = new RectOffset(4, 4, 4, 4);
+            cards.childControlHeight = true;
+            ContentSizeFitter fitter = storageRoot.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            emptyStorageLabel = PlayerMenuUiFactory.CreateText(
+                "EmptyStorage",
+                storageRoot,
+                "NO STORED CHAINLINGS\nCaptured Chainlings appear here when your party is full.",
+                18f,
+                TextAlignmentOptions.Center);
+            PlayerMenuUiFactory.LayoutElement(emptyStorageLabel.gameObject, preferredHeight: 88f, flexibleWidth: 1f);
+            emptyStorageLabel.gameObject.SetActive(false);
+
+            Scrollbar scrollbar = CreateVerticalScrollbar(scrollGo.transform);
+            ScrollRect scroll = scrollGo.GetComponent<ScrollRect>();
+            scroll.viewport = viewport;
+            scroll.content = storageRoot;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 28f;
+            scroll.verticalScrollbar = scrollbar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        }
+
+        private static Scrollbar CreateVerticalScrollbar(Transform parent)
+        {
+            GameObject barObject = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            barObject.transform.SetParent(parent, false);
+            RectTransform barRect = barObject.GetComponent<RectTransform>();
+            barRect.anchorMin = new Vector2(1f, 0f);
+            barRect.anchorMax = new Vector2(1f, 1f);
+            barRect.pivot = new Vector2(1f, 0.5f);
+            barRect.sizeDelta = new Vector2(14f, -16f);
+            barRect.anchoredPosition = new Vector2(-4f, 0f);
+            Image track = barObject.GetComponent<Image>();
+            track.color = new Color(0.2f, 0.1f, 0.08f, 0.85f);
+            track.raycastTarget = true;
+
+            RectTransform sliding = PlayerMenuUiFactory.CreateRect("Sliding Area", barObject.transform);
+            PlayerMenuUiFactory.Stretch(sliding, 2f, 2f, 2f, 2f);
+            Image handle = PlayerMenuUiFactory.CreateImage("Handle", sliding, new Color(0.92f, 0.55f, 0.24f, 0.95f));
+            PlayerMenuUiFactory.Stretch(handle.rectTransform);
+            handle.raycastTarget = true;
+
+            Scrollbar scrollbar = barObject.GetComponent<Scrollbar>();
+            scrollbar.handleRect = handle.rectTransform;
+            scrollbar.targetGraphic = handle;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            return scrollbar;
         }
 
         private void WireView()
@@ -650,8 +809,14 @@ namespace SignalJam.UI.MenuNavigation
             Selectable first = defaultSelection;
             for (int i = 0; i < spawnedCards.Count; i++)
             {
-                Button button = spawnedCards[i] != null ? spawnedCards[i].GetComponent<Button>() : null;
-                if (button != null && button.interactable)
+                ChainlingCardWidget card = spawnedCards[i] != null ? spawnedCards[i].GetComponent<ChainlingCardWidget>() : null;
+                Button button = card != null ? card.Button : null;
+                if (button == null || !button.interactable)
+                    continue;
+
+                if (first == defaultSelection)
+                    first = button;
+                if (selectedStorage != null && card.BoundEntry == selectedStorage)
                 {
                     first = button;
                     break;
@@ -659,6 +824,130 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             inputContext.SetContentNavigation(order, first, transform);
+            inputContext.ConfigureNavigation();
+        }
+
+        private void BeginOpenMotion()
+        {
+            if (bootSequence != null && bootSequence.HasBootFrames)
+                bootSequence.PlayOpenSequence(FinishEntrance, PlayColumnReveal);
+            else
+            {
+                PlayColumnReveal();
+                FinishEntrance();
+            }
+        }
+
+        private void FinishEntrance()
+        {
+            if (closing || root == null || !root.gameObject.activeSelf)
+                return;
+
+            entranceSettled = true;
+            root.interactable = true;
+            if (inputContext != null)
+                inputContext.SetAnimationHold(false);
+            RefreshNavigation();
+        }
+
+        private void FinishClose()
+        {
+            DOTween.Kill(this);
+            if (root != null)
+            {
+                root.interactable = false;
+                root.blocksRaycasts = false;
+                root.gameObject.SetActive(false);
+            }
+
+            if (inputContext != null)
+                inputContext.SetAnimationHold(false);
+            closing = false;
+            ReleaseInputLock();
+        }
+
+        private void PlayColumnReveal()
+        {
+            DOTween.Kill(this);
+            if (revealColumns == null || revealColumns.Length == 0)
+                return;
+
+            Sequence sequence = DOTween.Sequence().SetUpdate(true).SetTarget(this);
+            for (int i = 0; i < revealColumns.Length; i++)
+            {
+                CanvasGroup column = revealColumns[i];
+                if (column == null)
+                    continue;
+
+                Transform columnTransform = column.transform;
+                column.alpha = 0f;
+                columnTransform.localScale = new Vector3(0.92f, 0.92f, 1f);
+                float at = 0.06f * i;
+                sequence.Insert(at, columnTransform.DOScale(1f, 0.28f).SetEase(Ease.OutBack, 1.4f).SetUpdate(true));
+                sequence.Insert(at, column.DOFade(1f, 0.16f).SetEase(Ease.OutQuad).SetUpdate(true));
+            }
+        }
+
+        private void BindPreview()
+        {
+            SpeciesDefinitionSO species = ResolveSpecies(selectedStorage);
+            CombatVisualProfileSO visual = ResolveVisual(selectedStorage);
+            if (previewPortrait != null)
+            {
+                previewPortrait.sprite = visual != null ? visual.portrait : null;
+                previewPortrait.enabled = previewPortrait.sprite != null;
+                previewPortrait.color = Color.white;
+            }
+
+            if (selectedStorage == null || selectedStorage.snapshot == null)
+            {
+                if (previewName != null)
+                    previewName.text = "NO CHAINLING";
+                if (previewMeta != null)
+                    previewMeta.text = "Choose a stored Chainling.";
+                if (previewBody != null)
+                    previewBody.text = "Deposited Chainlings recover while they stay in storage.";
+                SetHpFill(0f, false);
+                return;
+            }
+
+            ChainlingSnapshot snapshot = selectedStorage.snapshot;
+            ChainlingVitalsDisplay vitals = ChainlingVitalsUtility.BuildDisplay(snapshot, species);
+            if (previewName != null)
+                previewName.text = ResolveName(selectedStorage);
+            if (previewMeta != null)
+            {
+                string speciesName = species != null && !string.IsNullOrWhiteSpace(species.displayName)
+                    ? species.displayName
+                    : snapshot.speciesId;
+                previewMeta.text = $"{speciesName}  ·  {Mathf.Max(0, snapshot.stars)}★";
+            }
+
+            if (previewBody != null)
+            {
+                previewBody.text = vitals.IsFainted
+                    ? "FAINTED. Storage will not revive a downed Chainling."
+                    : $"HP {vitals.Label}. Recovers while this Chainling stays deposited.";
+            }
+
+            SetHpFill(vitals.Fill01, vitals.IsFainted);
+        }
+
+        private void SetHpFill(float fill01, bool fainted)
+        {
+            if (previewHpFill == null)
+                return;
+
+            previewHpFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(fill01), 1f);
+            previewHpFill.color = fainted
+                ? new Color(0.55f, 0.22f, 0.22f, 1f)
+                : new Color(0.45f, 0.85f, 0.38f, 1f);
+        }
+
+        private void PlayCue(PlayerMenuSfxCue cue)
+        {
+            IPlayerMenuSfxPlayer player = PlayerMenuSfxResolver.Resolve(sfxPlayerBehaviour, ref cachedSfxPlayerBehaviour);
+            player?.PlayCue(cue);
         }
 
         private IPlayerRosterProvider ResolveRosterProvider()
@@ -721,7 +1010,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private void SetInteractable(bool value)
         {
-            if (root != null)
+            if (root != null && !closing)
                 root.interactable = value;
         }
 

@@ -20,6 +20,6 @@ serve(async (req: Request) => {
     interval_seconds: cfg.intervalSeconds,
     heal_basis_points: cfg.healBasisPoints,
     max_catchup_intervals: cfg.maxCatchupIntervals,
-    party_members_only: cfg.partyMembersOnly,
+    storage_only: cfg.storageOnly,
   });
 });

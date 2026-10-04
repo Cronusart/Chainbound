@@ -72,6 +72,8 @@ public class NPCMovementAgent : MonoBehaviour
     private NPCAnimationState currentAnimState = NPCAnimationState.Idle;
     private Vector2 lastStableWalkDirection;
     private bool hasStableWalkDirection;
+    private Vector2 capturedIdleFacing;
+    private bool hasCapturedIdleFacing;
     private Transform followFacingTarget;
     private Transform facingTargetOverride;
     private int presentationLockDepth;
@@ -1307,6 +1309,41 @@ public class NPCMovementAgent : MonoBehaviour
     public void ClearFacingTargetOverride()
     {
         facingTargetOverride = null;
+    }
+
+    /// <summary>
+    /// Store the facing the NPC should return to after a player-facing interaction.
+    /// Route locomotion still replaces this once the NPC walks again.
+    /// </summary>
+    public void CaptureIdleFacing()
+    {
+        if (TryGetStableWalkDirection(out Vector2 stableFacing))
+        {
+            capturedIdleFacing = stableFacing;
+            hasCapturedIdleFacing = true;
+            return;
+        }
+
+        if (TryGetTransformFacingDirection(out Vector2 transformFacing))
+        {
+            capturedIdleFacing = transformFacing;
+            hasCapturedIdleFacing = true;
+            return;
+        }
+
+        hasCapturedIdleFacing = false;
+    }
+
+    /// <summary>
+    /// Write the captured pre-interaction facing back into the idle cache.
+    /// </summary>
+    public void RestoreCapturedIdleFacing()
+    {
+        if (!hasCapturedIdleFacing)
+            return;
+
+        CacheStableWalkDirection(capturedIdleFacing, force: true);
+        hasCapturedIdleFacing = false;
     }
 
     /// <summary>

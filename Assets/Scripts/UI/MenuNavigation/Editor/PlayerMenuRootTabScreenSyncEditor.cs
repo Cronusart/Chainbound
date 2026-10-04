@@ -241,6 +241,12 @@ namespace SignalJam.UI.MenuNavigation.Editor
                 continue;
             }
 
+            if (candidate is RamShopScreen ramShopScreen && ramShopScreen.HasEmbeddedLayout)
+            {
+                Object.DestroyImmediate(candidate.gameObject);
+                continue;
+            }
+
             if (candidate.transform.childCount == 0)
                 Object.DestroyImmediate(candidate.gameObject);
             }
@@ -274,6 +280,9 @@ namespace SignalJam.UI.MenuNavigation.Editor
             if (screen is ProfileMenuScreen profileScreen)
                 return profileScreen.HasEmbeddedLayout;
 
+            if (screen is RamShopScreen ramShopScreen)
+                return ramShopScreen.HasEmbeddedLayout;
+
             return screen.transform.childCount > 0;
         }
 
@@ -293,6 +302,9 @@ namespace SignalJam.UI.MenuNavigation.Editor
 
             if (screen is ProfileMenuScreen profileScreen)
                 return !profileScreen.HasEmbeddedLayout;
+
+            if (screen is RamShopScreen ramShopScreen)
+                return !ramShopScreen.HasEmbeddedLayout;
 
             return screen.transform.childCount == 0;
         }

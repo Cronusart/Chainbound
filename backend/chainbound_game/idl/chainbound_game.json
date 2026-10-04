@@ -208,6 +208,42 @@
           }
         },
         {
+          "name": "reservation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
           "name": "chainling",
           "writable": true,
           "pda": {
@@ -539,6 +575,100 @@
       ]
     },
     {
+      "name": "cancel_ram_reservation",
+      "discriminator": [
+        187,
+        16,
+        38,
+        226,
+        202,
+        185,
+        140,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "reservation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "reservation.owner",
+                "account": "RamReservation"
+              },
+              {
+                "kind": "arg",
+                "path": "operation_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "operation_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "consume_encounter_randomness",
       "docs": [
         "Marks fulfilled bytes consumed exactly once after the game has read them."
@@ -856,6 +986,475 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "create_ram_reservation",
+      "docs": [
+        "Creates the shared entitlement reservation required by every production RAM spend.",
+        "The result authority pays for and controls the reservation; the player cannot mint one."
+      ],
+      "discriminator": [
+        170,
+        252,
+        246,
+        81,
+        3,
+        188,
+        79,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "reservation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "operation_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "profile",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "operation_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u32"
+        },
+        {
+          "name": "kind",
+          "type": "u8"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "credit_purchased_ram",
+      "docs": [
+        "Credits verified purchases without touching earned-RAM counters or the daily cap."
+      ],
+      "discriminator": [
+        40,
+        249,
+        120,
+        28,
+        8,
+        80,
+        128,
+        108
+      ],
+      "accounts": [
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  112,
+                  117,
+                  114,
+                  99,
+                  104,
+                  97,
+                  115,
+                  101,
+                  95,
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "order_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "order_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "debit_reserved_ram",
+      "docs": [
+        "Retires on-chain purchasing power before a profile-native gameplay mutation settles."
+      ],
+      "discriminator": [
+        33,
+        31,
+        171,
+        238,
+        31,
+        94,
+        205,
+        157
+      ],
+      "accounts": [
+        {
+          "name": "reservation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "operation_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  100,
+                  101,
+                  98,
+                  105,
+                  116,
+                  95,
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "operation_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "operation_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u32"
+        },
+        {
+          "name": "kind",
+          "type": "u8"
+        }
+      ]
     },
     {
       "name": "fulfill_encounter",
@@ -1535,6 +2134,154 @@
       ]
     },
     {
+      "name": "reconcile_ram_delta",
+      "docs": [
+        "Applies a one-time operator-approved delta for a frozen legacy reconciliation case."
+      ],
+      "discriminator": [
+        0,
+        109,
+        140,
+        149,
+        153,
+        119,
+        226,
+        15
+      ],
+      "accounts": [
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  114,
+                  101,
+                  99,
+                  111,
+                  110,
+                  99,
+                  105,
+                  108,
+                  101,
+                  95,
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "case_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "case_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "direction",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "remove_chainling",
       "discriminator": [
         150,
@@ -1744,6 +2491,42 @@
         152
       ],
       "accounts": [
+        {
+          "name": "reservation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
         {
           "name": "vault",
           "writable": true,
@@ -2180,6 +2963,42 @@
               {
                 "kind": "account",
                 "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reservation",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  109,
+                  95,
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
               }
             ]
           }
@@ -2827,6 +3646,19 @@
       ]
     },
     {
+      "name": "RamDebitReceipt",
+      "discriminator": [
+        158,
+        73,
+        117,
+        135,
+        247,
+        44,
+        34,
+        129
+      ]
+    },
+    {
       "name": "RamGrantReceipt",
       "discriminator": [
         151,
@@ -2837,6 +3669,45 @@
         36,
         69,
         29
+      ]
+    },
+    {
+      "name": "RamPurchaseReceipt",
+      "discriminator": [
+        37,
+        105,
+        212,
+        100,
+        110,
+        164,
+        29,
+        144
+      ]
+    },
+    {
+      "name": "RamReconciliationReceipt",
+      "discriminator": [
+        242,
+        112,
+        40,
+        70,
+        115,
+        180,
+        87,
+        215
+      ]
+    },
+    {
+      "name": "RamReservation",
+      "discriminator": [
+        171,
+        186,
+        0,
+        107,
+        1,
+        255,
+        131,
+        148
       ]
     },
     {
@@ -2881,6 +3752,32 @@
       ]
     },
     {
+      "name": "PurchasedRamCredited",
+      "discriminator": [
+        37,
+        203,
+        152,
+        158,
+        100,
+        123,
+        47,
+        13
+      ]
+    },
+    {
+      "name": "RamDeltaReconciled",
+      "discriminator": [
+        134,
+        114,
+        90,
+        215,
+        116,
+        242,
+        146,
+        57
+      ]
+    },
+    {
       "name": "RamGranted",
       "discriminator": [
         239,
@@ -2891,6 +3788,45 @@
         224,
         11,
         34
+      ]
+    },
+    {
+      "name": "RamReservationCancelled",
+      "discriminator": [
+        154,
+        156,
+        82,
+        42,
+        83,
+        208,
+        128,
+        62
+      ]
+    },
+    {
+      "name": "RamReserved",
+      "discriminator": [
+        20,
+        197,
+        41,
+        85,
+        16,
+        125,
+        119,
+        34
+      ]
+    },
+    {
+      "name": "ReservedRamDebited",
+      "discriminator": [
+        71,
+        15,
+        21,
+        175,
+        41,
+        198,
+        160,
+        29
       ]
     },
     {
@@ -2930,131 +3866,161 @@
     },
     {
       "code": 6004,
+      "name": "InvalidRamAmount",
+      "msg": "RAM amount must be positive."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidReservationKind",
+      "msg": "RAM reservation kind is invalid for this operation."
+    },
+    {
+      "code": 6006,
+      "name": "ReservationAmountMismatch",
+      "msg": "RAM reservation amount does not match the operation."
+    },
+    {
+      "code": 6007,
+      "name": "ReservationExpired",
+      "msg": "RAM reservation has expired."
+    },
+    {
+      "code": 6008,
+      "name": "ReservationAlreadyConsumed",
+      "msg": "RAM reservation was already consumed."
+    },
+    {
+      "code": 6009,
+      "name": "InvalidReconciliationDirection",
+      "msg": "RAM reconciliation direction must be credit or debit."
+    },
+    {
+      "code": 6010,
       "name": "VaultFull",
       "msg": "The target vault is full."
     },
     {
-      "code": 6005,
+      "code": 6011,
       "name": "InvalidIndex",
       "msg": "Invalid index."
     },
     {
-      "code": 6006,
+      "code": 6012,
       "name": "InvalidAuthority",
       "msg": "Invalid authority for this account."
     },
     {
-      "code": 6007,
+      "code": 6013,
       "name": "StringTooLong",
       "msg": "String exceeds the account's bounded storage."
     },
     {
-      "code": 6008,
+      "code": 6014,
       "name": "ContractNotImplemented",
       "msg": "This contract entrypoint is declared but not implemented yet."
     },
     {
-      "code": 6009,
+      "code": 6015,
       "name": "InvalidConfig",
       "msg": "Game configuration values are invalid."
     },
     {
-      "code": 6010,
+      "code": 6016,
       "name": "KnownMoveNotFound",
       "msg": "The Known move instance does not exist or was already consumed."
     },
     {
-      "code": 6011,
+      "code": 6017,
       "name": "KnownMoveMismatch",
       "msg": "The ticket move no longer matches the selected Known instance."
     },
     {
-      "code": 6012,
+      "code": 6018,
       "name": "InvalidModifierCount",
       "msg": "Stamped moves require exactly one or two modifiers."
     },
     {
-      "code": 6013,
+      "code": 6019,
       "name": "InvalidModifier",
       "msg": "Modifier identifiers must be non-empty."
     },
     {
-      "code": 6014,
+      "code": 6020,
       "name": "DuplicateModifier",
       "msg": "Stamped modifier identifiers must be distinct."
     },
     {
-      "code": 6015,
+      "code": 6021,
       "name": "StaleConfiguration",
       "msg": "The ticket was produced for a different ownership configuration."
     },
     {
-      "code": 6016,
+      "code": 6022,
       "name": "TicketExpired",
       "msg": "This ticket has expired."
     },
     {
-      "code": 6017,
+      "code": 6023,
       "name": "TicketAlreadyConsumed",
       "msg": "This ticket was already consumed."
     },
     {
-      "code": 6018,
+      "code": 6024,
       "name": "IdempotencyMismatch",
       "msg": "The idempotency key does not match this receipt or ticket."
     },
     {
-      "code": 6019,
+      "code": 6025,
       "name": "WrongCollection",
       "msg": "The supplied Core collection is not the configured trusted collection."
     },
     {
-      "code": 6020,
+      "code": 6026,
       "name": "InvalidCollectionAuthority",
       "msg": "The supplied Core collection is not controlled by the program authority PDA."
     },
     {
-      "code": 6021,
+      "code": 6027,
       "name": "AssetOwnerMismatch",
       "msg": "The supplied Core asset is not owned by the signing wallet."
     },
     {
-      "code": 6022,
+      "code": 6028,
       "name": "InvalidCoreAccount",
       "msg": "The supplied Metaplex Core account could not be decoded."
     },
     {
-      "code": 6023,
+      "code": 6029,
       "name": "InvalidComponentKind",
       "msg": "Bind component kind must be a Stamped move or cosmetic skin."
     },
     {
-      "code": 6024,
+      "code": 6030,
       "name": "DuplicateComponent",
       "msg": "The cover and selected third component must be different assets."
     },
     {
-      "code": 6025,
+      "code": 6031,
       "name": "ChainlingMismatch",
       "msg": "The Chainling does not match the requested Bind."
     },
     {
-      "code": 6026,
+      "code": 6032,
       "name": "AlreadyBound",
       "msg": "This Chainling is already Bound."
     },
     {
-      "code": 6027,
+      "code": 6033,
       "name": "TooManyMutations",
       "msg": "Capture supplied too many mutation IDs."
     },
     {
-      "code": 6028,
+      "code": 6034,
       "name": "TooManyKnownMoves",
       "msg": "Capture supplied too many Known move IDs."
     },
     {
-      "code": 6029,
+      "code": 6035,
       "name": "InvalidEncounterStatus",
       "msg": "Encounter randomness is not in the required lifecycle state."
     }
@@ -3723,6 +4689,121 @@
       }
     },
     {
+      "name": "PurchasedRamCredited",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "order_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "balance_before",
+            "type": "u32"
+          },
+          {
+            "name": "balance_after",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamDebitReceipt",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "balance_before",
+            "type": "u32"
+          },
+          {
+            "name": "balance_after",
+            "type": "u32"
+          },
+          {
+            "name": "result_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamDeltaReconciled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "case_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "balance_before",
+            "type": "u32"
+          },
+          {
+            "name": "balance_after",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
       "name": "RamGrantReceipt",
       "type": {
         "kind": "struct",
@@ -3792,6 +4873,228 @@
                 32
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamPurchaseReceipt",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "order_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "balance_before",
+            "type": "u32"
+          },
+          {
+            "name": "balance_after",
+            "type": "u32"
+          },
+          {
+            "name": "result_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamReconciliationReceipt",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "case_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "balance_before",
+            "type": "u32"
+          },
+          {
+            "name": "balance_after",
+            "type": "u32"
+          },
+          {
+            "name": "result_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamReservation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "consumed",
+            "type": "bool"
+          },
+          {
+            "name": "result_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamReservationCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RamReserved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReservedRamDebited",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u32"
+          },
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "balance_before",
+            "type": "u32"
+          },
+          {
+            "name": "balance_after",
+            "type": "u32"
           }
         ]
       }

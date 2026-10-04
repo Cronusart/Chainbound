@@ -34,6 +34,12 @@ const MAX_CHAINLING_KNOWN_MOVE_IDS: usize = 16;
 const COMPONENT_STAMPED_MOVE: u8 = 0;
 const COMPONENT_COSMETIC_SKIN: u8 = 1;
 const KNOWN_ROLL_RAM_COST: u32 = 5;
+const RAM_RESERVATION_KIND_KNOWN: u8 = 0;
+const RAM_RESERVATION_KIND_STAMP: u8 = 1;
+const RAM_RESERVATION_KIND_BIND: u8 = 2;
+const RAM_RESERVATION_KIND_PROFILE_SPEND: u8 = 3;
+const RAM_RECONCILE_CREDIT: u8 = 0;
+const RAM_RECONCILE_DEBIT: u8 = 1;
 const SECONDS_PER_DAY: i64 = 86_400;
 const ENCOUNTER_PENDING: u8 = 0;
 const ENCOUNTER_FULFILLED: u8 = 1;
@@ -188,6 +194,172 @@ pub mod chainbound_game {
         Ok(())
     }
 
+    /// Creates the shared entitlement reservation required by every production RAM spend.
+    /// The result authority pays for and controls the reservation; the player cannot mint one.
+    pub fn create_ram_reservation(
+        ctx: Context<CreateRamReservation>,
+        operation_hash: [u8; 32],
+        amount: u32,
+        kind: u8,
+        expires_at: i64,
+    ) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+        require!(amount > 0, ChainboundError::InvalidRamAmount);
+        require!(expires_at > now, ChainboundError::ReservationExpired);
+        require!(
+            kind <= RAM_RESERVATION_KIND_PROFILE_SPEND,
+            ChainboundError::InvalidReservationKind
+        );
+        require!(
+            ctx.accounts.profile.ram_balance >= amount,
+            ChainboundError::InsufficientRam
+        );
+
+        let reservation = &mut ctx.accounts.reservation;
+        reservation.owner = ctx.accounts.owner.key();
+        reservation.operation_hash = operation_hash;
+        reservation.amount = amount;
+        reservation.kind = kind;
+        reservation.expires_at = expires_at;
+        reservation.consumed = false;
+        reservation.result_authority = ctx.accounts.result_authority.key();
+        reservation.bump = ctx.bumps.reservation;
+
+        emit!(RamReserved {
+            owner: reservation.owner,
+            operation_hash,
+            amount,
+            kind,
+            expires_at,
+        });
+        Ok(())
+    }
+
+    pub fn cancel_ram_reservation(
+        ctx: Context<CancelRamReservation>,
+        operation_hash: [u8; 32],
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.reservation.operation_hash == operation_hash,
+            ChainboundError::IdempotencyMismatch
+        );
+        require!(
+            !ctx.accounts.reservation.consumed,
+            ChainboundError::ReservationAlreadyConsumed
+        );
+        emit!(RamReservationCancelled {
+            owner: ctx.accounts.reservation.owner,
+            operation_hash,
+        });
+        Ok(())
+    }
+
+    /// Credits verified purchases without touching earned-RAM counters or the daily cap.
+    pub fn credit_purchased_ram(
+        ctx: Context<CreditPurchasedRam>,
+        order_hash: [u8; 32],
+        amount: u32,
+    ) -> Result<()> {
+        let balance_before = ctx.accounts.profile.ram_balance;
+        apply_uncapped_ram_credit(&mut ctx.accounts.profile, amount)?;
+
+        let receipt = &mut ctx.accounts.receipt;
+        receipt.owner = ctx.accounts.owner.key();
+        receipt.order_hash = order_hash;
+        receipt.amount = amount;
+        receipt.balance_before = balance_before;
+        receipt.balance_after = ctx.accounts.profile.ram_balance;
+        receipt.result_authority = ctx.accounts.result_authority.key();
+        receipt.bump = ctx.bumps.receipt;
+
+        emit!(PurchasedRamCredited {
+            owner: receipt.owner,
+            order_hash,
+            amount,
+            balance_before,
+            balance_after: receipt.balance_after,
+        });
+        Ok(())
+    }
+
+    /// Retires on-chain purchasing power before a profile-native gameplay mutation settles.
+    pub fn debit_reserved_ram(
+        ctx: Context<DebitReservedRam>,
+        operation_hash: [u8; 32],
+        amount: u32,
+        kind: u8,
+    ) -> Result<()> {
+        consume_ram_reservation(
+            &mut ctx.accounts.reservation,
+            ctx.accounts.owner.key(),
+            operation_hash,
+            amount,
+            kind,
+            Clock::get()?.unix_timestamp,
+        )?;
+        let balance_before = ctx.accounts.profile.ram_balance;
+        apply_ram_debit(&mut ctx.accounts.profile, amount)?;
+
+        let receipt = &mut ctx.accounts.receipt;
+        receipt.owner = ctx.accounts.owner.key();
+        receipt.operation_hash = operation_hash;
+        receipt.amount = amount;
+        receipt.kind = kind;
+        receipt.balance_before = balance_before;
+        receipt.balance_after = ctx.accounts.profile.ram_balance;
+        receipt.result_authority = ctx.accounts.result_authority.key();
+        receipt.bump = ctx.bumps.receipt;
+
+        emit!(ReservedRamDebited {
+            owner: receipt.owner,
+            operation_hash,
+            amount,
+            kind,
+            balance_before,
+            balance_after: receipt.balance_after,
+        });
+        Ok(())
+    }
+
+    /// Applies a one-time operator-approved delta for a frozen legacy reconciliation case.
+    pub fn reconcile_ram_delta(
+        ctx: Context<ReconcileRamDelta>,
+        case_hash: [u8; 32],
+        direction: u8,
+        amount: u32,
+    ) -> Result<()> {
+        require!(
+            direction == RAM_RECONCILE_CREDIT || direction == RAM_RECONCILE_DEBIT,
+            ChainboundError::InvalidReconciliationDirection
+        );
+        let balance_before = ctx.accounts.profile.ram_balance;
+        if direction == RAM_RECONCILE_CREDIT {
+            apply_uncapped_ram_credit(&mut ctx.accounts.profile, amount)?;
+        } else {
+            apply_ram_debit(&mut ctx.accounts.profile, amount)?;
+        }
+
+        let receipt = &mut ctx.accounts.receipt;
+        receipt.owner = ctx.accounts.owner.key();
+        receipt.case_hash = case_hash;
+        receipt.direction = direction;
+        receipt.amount = amount;
+        receipt.balance_before = balance_before;
+        receipt.balance_after = ctx.accounts.profile.ram_balance;
+        receipt.result_authority = ctx.accounts.result_authority.key();
+        receipt.bump = ctx.bumps.receipt;
+
+        emit!(RamDeltaReconciled {
+            owner: receipt.owner,
+            case_hash,
+            direction,
+            amount,
+            balance_before,
+            balance_after: receipt.balance_after,
+        });
+        Ok(())
+    }
+
     pub fn create_move_vault(ctx: Context<CreateMoveVault>) -> Result<()> {
         let vault = &mut ctx.accounts.vault;
         vault.owner = ctx.accounts.authority.key();
@@ -208,6 +380,14 @@ pub mod chainbound_game {
         element: u8,
         base_power: u16,
     ) -> Result<()> {
+        consume_ram_reservation(
+            &mut ctx.accounts.reservation,
+            ctx.accounts.owner.key(),
+            idempotency_key,
+            KNOWN_ROLL_RAM_COST,
+            RAM_RESERVATION_KIND_KNOWN,
+            Clock::get()?.unix_timestamp,
+        )?;
         require!(
             ctx.accounts.profile.ram_balance >= KNOWN_ROLL_RAM_COST,
             ChainboundError::InsufficientRam
@@ -534,6 +714,15 @@ pub mod chainbound_game {
         let now = Clock::get()?.unix_timestamp;
         let ticket = &ctx.accounts.ticket;
 
+        consume_ram_reservation(
+            &mut ctx.accounts.reservation,
+            owner_key,
+            idempotency_key,
+            ctx.accounts.ownership_config.stamp_ram_cost,
+            RAM_RESERVATION_KIND_STAMP,
+            now,
+        )?;
+
         require!(ticket.owner == owner_key, ChainboundError::InvalidAuthority);
         require!(
             ticket.idempotency_key == idempotency_key,
@@ -657,6 +846,14 @@ pub mod chainbound_game {
         archive_name: String,
         archive_uri: String,
     ) -> Result<()> {
+        consume_ram_reservation(
+            &mut ctx.accounts.reservation,
+            ctx.accounts.owner.key(),
+            idempotency_key,
+            ctx.accounts.ownership_config.bind_ram_cost,
+            RAM_RESERVATION_KIND_BIND,
+            Clock::get()?.unix_timestamp,
+        )?;
         require!(
             component_kind == COMPONENT_STAMPED_MOVE || component_kind == COMPONENT_COSMETIC_SKIN,
             ChainboundError::InvalidComponentKind
@@ -974,6 +1171,158 @@ pub struct GrantRam<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(operation_hash: [u8; 32])]
+pub struct CreateRamReservation<'info> {
+    #[account(
+        init,
+        payer = result_authority,
+        space = 8 + RamReservation::LEN,
+        seeds = [b"ram_reservation", owner.key().as_ref(), operation_hash.as_ref()],
+        bump
+    )]
+    pub reservation: Account<'info, RamReservation>,
+    #[account(
+        seeds = [b"player_profile", owner.key().as_ref()],
+        bump = profile.bump,
+        constraint = profile.owner == owner.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub profile: Account<'info, PlayerProfile>,
+    /// CHECK: Bound to the validated PlayerProfile and reservation PDA seed.
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(operation_hash: [u8; 32])]
+pub struct CancelRamReservation<'info> {
+    #[account(
+        mut,
+        close = result_authority,
+        seeds = [b"ram_reservation", reservation.owner.as_ref(), operation_hash.as_ref()],
+        bump = reservation.bump,
+        constraint = reservation.result_authority == result_authority.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub reservation: Account<'info, RamReservation>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(order_hash: [u8; 32])]
+pub struct CreditPurchasedRam<'info> {
+    #[account(
+        init,
+        payer = result_authority,
+        space = 8 + RamPurchaseReceipt::LEN,
+        seeds = [b"ram_purchase_receipt", owner.key().as_ref(), order_hash.as_ref()],
+        bump
+    )]
+    pub receipt: Account<'info, RamPurchaseReceipt>,
+    #[account(
+        mut,
+        seeds = [b"player_profile", owner.key().as_ref()],
+        bump = profile.bump,
+        constraint = profile.owner == owner.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub profile: Account<'info, PlayerProfile>,
+    /// CHECK: Bound to the validated PlayerProfile and receipt PDA seed.
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(operation_hash: [u8; 32])]
+pub struct DebitReservedRam<'info> {
+    #[account(
+        mut,
+        seeds = [b"ram_reservation", owner.key().as_ref(), operation_hash.as_ref()],
+        bump = reservation.bump,
+        constraint = reservation.owner == owner.key() @ ChainboundError::InvalidAuthority,
+        constraint = reservation.result_authority == result_authority.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub reservation: Account<'info, RamReservation>,
+    #[account(
+        init,
+        payer = result_authority,
+        space = 8 + RamDebitReceipt::LEN,
+        seeds = [b"ram_debit_receipt", owner.key().as_ref(), operation_hash.as_ref()],
+        bump
+    )]
+    pub receipt: Account<'info, RamDebitReceipt>,
+    #[account(
+        mut,
+        seeds = [b"player_profile", owner.key().as_ref()],
+        bump = profile.bump,
+        constraint = profile.owner == owner.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub profile: Account<'info, PlayerProfile>,
+    /// CHECK: Bound to the validated PlayerProfile and operation PDA seeds.
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(case_hash: [u8; 32])]
+pub struct ReconcileRamDelta<'info> {
+    #[account(
+        init,
+        payer = result_authority,
+        space = 8 + RamReconciliationReceipt::LEN,
+        seeds = [b"ram_reconcile_receipt", owner.key().as_ref(), case_hash.as_ref()],
+        bump
+    )]
+    pub receipt: Account<'info, RamReconciliationReceipt>,
+    #[account(
+        mut,
+        seeds = [b"player_profile", owner.key().as_ref()],
+        bump = profile.bump,
+        constraint = profile.owner == owner.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub profile: Account<'info, PlayerProfile>,
+    /// CHECK: Bound to the validated PlayerProfile and receipt PDA seed.
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct CreateMoveVault<'info> {
     #[account(
         init,
@@ -1004,6 +1353,14 @@ pub struct MoveVaultMutation<'info> {
 #[derive(Accounts)]
 #[instruction(idempotency_key: [u8; 32])]
 pub struct RollKnownMove<'info> {
+    #[account(
+        mut,
+        seeds = [b"ram_reservation", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump = reservation.bump,
+        constraint = reservation.owner == owner.key() @ ChainboundError::InvalidAuthority,
+        constraint = reservation.result_authority == result_authority.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub reservation: Account<'info, RamReservation>,
     #[account(
         mut,
         seeds = [b"move_vault", owner.key().as_ref()],
@@ -1300,6 +1657,13 @@ pub struct StampKnownMove<'info> {
     pub profile: Account<'info, PlayerProfile>,
     #[account(
         mut,
+        seeds = [b"ram_reservation", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump = reservation.bump,
+        constraint = reservation.owner == owner.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub reservation: Account<'info, RamReservation>,
+    #[account(
+        mut,
         seeds = [b"move_vault", owner.key().as_ref()],
         bump = vault.bump,
         constraint = vault.owner == owner.key() @ ChainboundError::InvalidAuthority
@@ -1345,6 +1709,13 @@ pub struct BindChainling<'info> {
         constraint = profile.owner == owner.key() @ ChainboundError::InvalidAuthority
     )]
     pub profile: Account<'info, PlayerProfile>,
+    #[account(
+        mut,
+        seeds = [b"ram_reservation", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump = reservation.bump,
+        constraint = reservation.owner == owner.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub reservation: Account<'info, RamReservation>,
     #[account(
         mut,
         seeds = [b"chainling_account", owner.key().as_ref(), &chainling_id.to_le_bytes()],
@@ -1457,6 +1828,69 @@ pub struct RamGrantReceipt {
 
 impl RamGrantReceipt {
     pub const LEN: usize = 32 + 32 + 4 + 4 + 8 + 32 + 1;
+}
+
+#[account]
+pub struct RamReservation {
+    pub owner: Pubkey,
+    pub operation_hash: [u8; 32],
+    pub amount: u32,
+    pub kind: u8,
+    pub expires_at: i64,
+    pub consumed: bool,
+    pub result_authority: Pubkey,
+    pub bump: u8,
+}
+
+impl RamReservation {
+    pub const LEN: usize = 32 + 32 + 4 + 1 + 8 + 1 + 32 + 1;
+}
+
+#[account]
+pub struct RamPurchaseReceipt {
+    pub owner: Pubkey,
+    pub order_hash: [u8; 32],
+    pub amount: u32,
+    pub balance_before: u32,
+    pub balance_after: u32,
+    pub result_authority: Pubkey,
+    pub bump: u8,
+}
+
+impl RamPurchaseReceipt {
+    pub const LEN: usize = 32 + 32 + 4 + 4 + 4 + 32 + 1;
+}
+
+#[account]
+pub struct RamDebitReceipt {
+    pub owner: Pubkey,
+    pub operation_hash: [u8; 32],
+    pub amount: u32,
+    pub kind: u8,
+    pub balance_before: u32,
+    pub balance_after: u32,
+    pub result_authority: Pubkey,
+    pub bump: u8,
+}
+
+impl RamDebitReceipt {
+    pub const LEN: usize = 32 + 32 + 4 + 1 + 4 + 4 + 32 + 1;
+}
+
+#[account]
+pub struct RamReconciliationReceipt {
+    pub owner: Pubkey,
+    pub case_hash: [u8; 32],
+    pub direction: u8,
+    pub amount: u32,
+    pub balance_before: u32,
+    pub balance_after: u32,
+    pub result_authority: Pubkey,
+    pub bump: u8,
+}
+
+impl RamReconciliationReceipt {
+    pub const LEN: usize = 32 + 32 + 1 + 4 + 4 + 4 + 32 + 1;
 }
 
 #[account]
@@ -1739,6 +2173,50 @@ pub struct RamGranted {
 }
 
 #[event]
+pub struct RamReserved {
+    pub owner: Pubkey,
+    pub operation_hash: [u8; 32],
+    pub amount: u32,
+    pub kind: u8,
+    pub expires_at: i64,
+}
+
+#[event]
+pub struct RamReservationCancelled {
+    pub owner: Pubkey,
+    pub operation_hash: [u8; 32],
+}
+
+#[event]
+pub struct PurchasedRamCredited {
+    pub owner: Pubkey,
+    pub order_hash: [u8; 32],
+    pub amount: u32,
+    pub balance_before: u32,
+    pub balance_after: u32,
+}
+
+#[event]
+pub struct ReservedRamDebited {
+    pub owner: Pubkey,
+    pub operation_hash: [u8; 32],
+    pub amount: u32,
+    pub kind: u8,
+    pub balance_before: u32,
+    pub balance_after: u32,
+}
+
+#[event]
+pub struct RamDeltaReconciled {
+    pub owner: Pubkey,
+    pub case_hash: [u8; 32],
+    pub direction: u8,
+    pub amount: u32,
+    pub balance_before: u32,
+    pub balance_after: u32,
+}
+
+#[event]
 pub struct ChainlingBound {
     pub owner: Pubkey,
     pub chainling_id: u64,
@@ -1817,6 +2295,61 @@ fn apply_capped_ram_grant(
     if current_day != recorded_day {
         profile.last_ram_reset_timestamp = now;
     }
+    Ok(())
+}
+
+fn apply_uncapped_ram_credit(profile: &mut PlayerProfile, amount: u32) -> Result<()> {
+    require!(amount > 0, ChainboundError::InvalidRamAmount);
+    profile.ram_balance = profile
+        .ram_balance
+        .checked_add(amount)
+        .ok_or(ChainboundError::ArithmeticOverflow)?;
+    Ok(())
+}
+
+fn apply_ram_debit(profile: &mut PlayerProfile, amount: u32) -> Result<()> {
+    require!(amount > 0, ChainboundError::InvalidRamAmount);
+    require!(
+        profile.ram_balance >= amount,
+        ChainboundError::InsufficientRam
+    );
+    profile.ram_balance = profile
+        .ram_balance
+        .checked_sub(amount)
+        .ok_or(ChainboundError::ArithmeticOverflow)?;
+    Ok(())
+}
+
+fn consume_ram_reservation(
+    reservation: &mut RamReservation,
+    owner: Pubkey,
+    operation_hash: [u8; 32],
+    amount: u32,
+    kind: u8,
+    now: i64,
+) -> Result<()> {
+    require_keys_eq!(reservation.owner, owner, ChainboundError::InvalidAuthority);
+    require!(
+        reservation.operation_hash == operation_hash,
+        ChainboundError::IdempotencyMismatch
+    );
+    require!(
+        reservation.amount == amount,
+        ChainboundError::ReservationAmountMismatch
+    );
+    require!(
+        reservation.kind == kind,
+        ChainboundError::InvalidReservationKind
+    );
+    require!(
+        !reservation.consumed,
+        ChainboundError::ReservationAlreadyConsumed
+    );
+    require!(
+        reservation.expires_at >= now,
+        ChainboundError::ReservationExpired
+    );
+    reservation.consumed = true;
     Ok(())
 }
 
@@ -2003,6 +2536,18 @@ pub enum ChainboundError {
     InvalidRamGrant,
     #[msg("RAM grant would exceed the configured daily cap.")]
     RamDailyCapExceeded,
+    #[msg("RAM amount must be positive.")]
+    InvalidRamAmount,
+    #[msg("RAM reservation kind is invalid for this operation.")]
+    InvalidReservationKind,
+    #[msg("RAM reservation amount does not match the operation.")]
+    ReservationAmountMismatch,
+    #[msg("RAM reservation has expired.")]
+    ReservationExpired,
+    #[msg("RAM reservation was already consumed.")]
+    ReservationAlreadyConsumed,
+    #[msg("RAM reconciliation direction must be credit or debit.")]
+    InvalidReconciliationDirection,
     #[msg("The target vault is full.")]
     VaultFull,
     #[msg("Invalid index.")]
@@ -2236,6 +2781,113 @@ mod tests {
             moves,
             Pubkey::new_unique(),
             Pubkey::new_unique()
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn purchased_ram_is_uncapped_and_does_not_change_earned_counters() {
+        let now = 1_800_000_000;
+        let mut profile = zero_ram_profile(now);
+        profile.ram_balance = 10;
+        profile.daily_ram_earned = 7;
+        profile.ram_lifetime_earned = 55;
+
+        apply_uncapped_ram_credit(&mut profile, 500).unwrap();
+
+        assert_eq!(profile.ram_balance, 510);
+        assert_eq!(profile.daily_ram_earned, 7);
+        assert_eq!(profile.ram_lifetime_earned, 55);
+        assert_eq!(profile.last_ram_reset_timestamp, now);
+        assert!(apply_uncapped_ram_credit(&mut profile, 0).is_err());
+    }
+
+    #[test]
+    fn purchased_ram_credit_rejects_overflow() {
+        let mut profile = zero_ram_profile(1_800_000_000);
+        profile.ram_balance = u32::MAX;
+        assert!(apply_uncapped_ram_credit(&mut profile, 1).is_err());
+    }
+
+    #[test]
+    fn reservation_consumes_once_and_requires_exact_operation() {
+        let owner = Pubkey::new_unique();
+        let authority = Pubkey::new_unique();
+        let operation_hash = [3; 32];
+        let mut reservation = RamReservation {
+            owner,
+            operation_hash,
+            amount: 75,
+            kind: RAM_RESERVATION_KIND_STAMP,
+            expires_at: 2_000,
+            consumed: false,
+            result_authority: authority,
+            bump: 1,
+        };
+
+        assert!(consume_ram_reservation(
+            &mut reservation,
+            owner,
+            operation_hash,
+            74,
+            RAM_RESERVATION_KIND_STAMP,
+            1_000,
+        )
+        .is_err());
+        assert!(consume_ram_reservation(
+            &mut reservation,
+            owner,
+            operation_hash,
+            75,
+            RAM_RESERVATION_KIND_STAMP,
+            1_000,
+        )
+        .is_ok());
+        assert!(reservation.consumed);
+        assert!(consume_ram_reservation(
+            &mut reservation,
+            owner,
+            operation_hash,
+            75,
+            RAM_RESERVATION_KIND_STAMP,
+            1_000,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn reservation_rejects_expired_and_wrong_kind() {
+        let owner = Pubkey::new_unique();
+        let operation_hash = [4; 32];
+        let base = RamReservation {
+            owner,
+            operation_hash,
+            amount: 5,
+            kind: RAM_RESERVATION_KIND_KNOWN,
+            expires_at: 100,
+            consumed: false,
+            result_authority: Pubkey::new_unique(),
+            bump: 1,
+        };
+        let mut wrong_kind = RamReservation { ..base };
+        assert!(consume_ram_reservation(
+            &mut wrong_kind,
+            owner,
+            operation_hash,
+            5,
+            RAM_RESERVATION_KIND_BIND,
+            10,
+        )
+        .is_err());
+
+        let mut expired = RamReservation { ..base };
+        assert!(consume_ram_reservation(
+            &mut expired,
+            owner,
+            operation_hash,
+            5,
+            RAM_RESERVATION_KIND_KNOWN,
+            101,
         )
         .is_err());
     }

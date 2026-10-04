@@ -735,12 +735,12 @@ namespace Chainbound.Combat
             if (_outcome.DidCapture)
             {
                 string name = BattleOutcomePresentation.ResolveCapturedDisplayName(_result);
-                return "Recorded " + name + ". XP and RAM land after you confirm.";
+                return "Recorded " + name + ". XP saves after you confirm; RAM is not settled from client-resolved battles.";
             }
 
             if (_rewardSummary.chainlingRewards == null || _rewardSummary.chainlingRewards.Count == 0)
                 return _outcome.Kind == BattleOutcomeKind.Draw
-                    ? "Draw. No XP or RAM earned from this battle."
+                    ? "Draw. No XP earned; RAM is not settled from client-resolved battles."
                     : "No XP rewards available for this battle.";
 
             return "XP fills live. Confirm saves the outcome.";
@@ -753,11 +753,9 @@ namespace Chainbound.Combat
             int recoveryPercent = config != null
                 ? Mathf.RoundToInt(Mathf.Clamp01(config.defeatKoRespawnHpFraction) * 100f)
                 : 0;
-            int penalty = _rewardSummary != null ? _rewardSummary.ramPenalty : 0;
             var builder = new StringBuilder();
             builder.AppendLine("No XP earned.");
-            if (penalty > 0)
-                builder.Append('-').Append(penalty).AppendLine(" RAM recovery cost.");
+            builder.AppendLine("No RAM penalty is settled from this client-resolved battle.");
             builder.AppendLine("You will return to your recovery point.");
             if (recoveryCount > 0)
             {
@@ -790,34 +788,7 @@ namespace Chainbound.Combat
             if (_ramLabel == null)
                 return;
 
-            int delta = 0;
-            if (_rewardSummary != null)
-                delta = defeatPage ? -Mathf.Max(0, _rewardSummary.ramPenalty) : Mathf.Max(0, _rewardSummary.ramEarned);
-
-            long startRam;
-            bool hasCached = TryReadCachedRam(out startRam);
-            if (!hasCached)
-            {
-                _ramLabel.text = delta >= 0 ? $"+{delta} RAM" : $"{delta} RAM";
-                if (delta != 0)
-                    TweenRamDelta(0, delta);
-                return;
-            }
-
-            long endRam = startRam + delta;
-            _ramLabel.text = $"RAM {startRam}";
-            Tween tween = DOTween.To(
-                    () => startRam,
-                    value =>
-                    {
-                        startRam = value;
-                        _ramLabel.text = $"RAM {value}";
-                    },
-                    endRam,
-                    0.65f)
-                .SetEase(Ease.OutCubic)
-                .SetUpdate(true);
-            _activeTweens.Add(tween);
+            _ramLabel.text = "RAM unchanged — authoritative settlement required";
         }
 
         private void TweenRamDelta(int from, int to)

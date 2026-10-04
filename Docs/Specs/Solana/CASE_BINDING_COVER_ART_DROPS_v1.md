@@ -14,6 +14,7 @@ Cross-references:
 
 - Bind recipe: `Docs/Specs/Economy/BINDERY_FOLIO_AND_PRESS_CHARGE_v1.md`
 - Archive metadata/UI: `Docs/Specs/UI/CHAINLING_ARCHIVE_ENCYCLOPEDIA.md`
+- Book mesh, cover atlas, and page turn: `Docs/Specs/UI/BOUND_ENCYCLOPEDIA_BOOK_PRESENTATION_v1.md`
 - Core asset rules: `Docs/Specs/Solana/CHAINBOUND_SOLANA_ASSET_TAXONOMY.md`
 
 ## Player loop

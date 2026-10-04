@@ -95,7 +95,7 @@ namespace Chainbound.Combat.Tests
             Assert.AreEqual(1800, config.intervalSeconds);
             Assert.AreEqual(1000, config.HealBasisPoints);
             Assert.AreEqual(48, config.maxCatchupIntervals);
-            Assert.IsTrue(config.partyMembersOnly);
+            Assert.IsTrue(config.storageOnly);
             Assert.AreEqual(11, config.ResolveHealPerInterval(101)); // ceil(10.1)
 
             string hash = config.ComputeConfigHash();

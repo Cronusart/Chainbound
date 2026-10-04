@@ -31,8 +31,15 @@ public sealed class ItemObtainPanelReveal : MonoBehaviour
     [SerializeField] private bool useUnscaledTime = true;
 
     private Sequence revealSequence;
+    private bool revealPlaying;
 
     public RectTransform PanelRoot => panelRoot;
+
+    /// <summary>
+    /// True from the start of a staged reveal until that sequence completes or is killed.
+    /// Immediate reveals never report as playing.
+    /// </summary>
+    public bool IsPlaying => revealPlaying;
 
     private void Awake()
     {
@@ -184,11 +191,13 @@ public sealed class ItemObtainPanelReveal : MonoBehaviour
             revealSequence.Append(titleFade);
         }
 
+        revealPlaying = true;
         revealSequence.OnComplete(() =>
         {
             SetGroupState(dimmerGroup, 1f, true, true);
             SetGroupState(titleGroup, 1f, false, false);
             SetContentState(1f, true, true);
+            revealPlaying = false;
             revealSequence = null;
         });
         revealSequence.Play();
@@ -340,6 +349,7 @@ public sealed class ItemObtainPanelReveal : MonoBehaviour
 
     private void KillTweens()
     {
+        revealPlaying = false;
         revealSequence?.Kill();
         revealSequence = null;
         if (panelRoot != null)

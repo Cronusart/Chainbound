@@ -1,11 +1,13 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Chainbound.Combat
 {
     /// <summary>
     /// Lever board for server-authoritative passive Chainling HP recovery.
-    /// The client uses this board for presentation only; Supabase applies health changes
-    /// against the matching server board and a Solana-derived timestamp.
+    /// The client uses this board for presentation only. Supabase applies health
+    /// to PC storage against the matching server board and a Solana block timestamp,
+    /// falling back to server UTC on the same real 24-hour day.
     /// </summary>
     [CreateAssetMenu(fileName = "ChainlingRecoveryConfig", menuName = "Chainbound/Combat/Config/Chainling Recovery Config")]
     public sealed class ChainlingRecoveryConfigSO : ScriptableObject
@@ -13,7 +15,7 @@ namespace Chainbound.Combat
         public const int BasisPoints = 10000;
 
         [Header("Identity")]
-        [Min(1)] public int configVersion = 1;
+        [Min(1)] public int configVersion = 2;
 
         [Header("Recovery")]
         [Tooltip("Disabling this stops new passive recovery while preserving all saved HP.")]
@@ -24,8 +26,9 @@ namespace Chainbound.Combat
         [Range(0f, 1f)] public float maxHpFractionPerInterval = 0.10f;
         [Tooltip("Maximum completed ticks applied in one authoritative read. Prevents unbounded catch-up work.")]
         [Min(1)] public int maxCatchupIntervals = 48;
-        [Tooltip("When enabled, only the active party recovers passively.")]
-        public bool partyMembersOnly = true;
+        [FormerlySerializedAs("partyMembersOnly")]
+        [Tooltip("When enabled, only Chainlings stored on the PC recover. Equipped party members do not.")]
+        public bool storageOnly = true;
 
         public int HealBasisPoints => Mathf.Clamp(Mathf.RoundToInt(maxHpFractionPerInterval * BasisPoints), 0, BasisPoints);
 
@@ -50,12 +53,12 @@ namespace Chainbound.Combat
 
         public void ResetToDefaults()
         {
-            configVersion = 1;
+            configVersion = 2;
             enabled = true;
             intervalSeconds = 1800;
             maxHpFractionPerInterval = 0.10f;
             maxCatchupIntervals = 48;
-            partyMembersOnly = true;
+            storageOnly = true;
         }
 
         public void ApplyServerOverride(
@@ -64,14 +67,14 @@ namespace Chainbound.Combat
             int interval,
             int healBasisPoints,
             int catchupIntervals,
-            bool partyOnly)
+            bool storageOnlyValue)
         {
             configVersion = Mathf.Max(1, version);
             enabled = isEnabled;
             intervalSeconds = Mathf.Clamp(interval, 60, 86400);
             maxHpFractionPerInterval = Mathf.Clamp01(healBasisPoints / (float)BasisPoints);
             maxCatchupIntervals = Mathf.Clamp(catchupIntervals, 1, 1000);
-            partyMembersOnly = partyOnly;
+            storageOnly = storageOnlyValue;
         }
 
         private void OnValidate()

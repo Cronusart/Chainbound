@@ -12,11 +12,14 @@ import {
 import {
   authoritySecretBytes,
   deriveKnownResult,
+  deriveRamOperationId,
+  ensureOwnershipRpcCluster,
   isOwnershipWalletAllowed,
   KNOWN_ROLL_RAM_COST,
-  loadRollConfig,
+  loadOwnershipConfig,
   normalizeAcquisition,
   OwnershipConfigurationError,
+  settleKnownRollOnChain,
 } from "../_shared/ownership_spine.ts";
 
 serve(async (req: Request) => {
@@ -33,11 +36,13 @@ serve(async (req: Request) => {
   if (!profile) return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
 
   try {
-    const config = loadRollConfig();
+    const config = loadOwnershipConfig();
+    await ensureOwnershipRpcCluster(config);
+    const activeWallet = await getActiveWallet(supabase, profile.player_profile_id);
+    const walletAddress = str(activeWallet?.wallet_public_key);
+    if (!walletAddress) return jsonResponse({ success: false, error: "linked_wallet_required" }, 409);
     if (config.cluster === "mainnet-beta") {
-      const activeWallet = await getActiveWallet(supabase, profile.player_profile_id);
-      const walletAddress = str(activeWallet?.wallet_public_key);
-      if (!walletAddress || !isOwnershipWalletAllowed(config.cluster, walletAddress)) {
+      if (!isOwnershipWalletAllowed(config.cluster, walletAddress)) {
         return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
       }
     }
@@ -46,26 +51,77 @@ serve(async (req: Request) => {
       profile.player_profile_id,
       idempotencyKey,
     );
-    const { data, error } = await supabase.rpc("ownership_roll_known_atomic", {
+    const operationId = await deriveRamOperationId(profile.player_profile_id, "known_roll", idempotencyKey);
+    const expiresAt = new Date(Date.now() + Math.max(config.ticketTtlSeconds, 600) * 1000);
+    const { error: reservationError } = await supabase.rpc("ram_ledger_reserve_operation", {
+      p_operation_id: operationId,
       p_player_profile_id: profile.player_profile_id,
+      p_wallet_address: walletAddress,
+      p_cluster: config.cluster,
+      p_operation_kind: "known_roll",
+      p_amount: KNOWN_ROLL_RAM_COST,
+      p_expires_at: expiresAt.toISOString(),
+      p_metadata_json: {
+        idempotency_key: idempotencyKey,
+        move_id: result.moveId,
+        onchain_move_id: result.onchainMoveId,
+        generator_version: config.generatorVersion,
+        pool_hash: config.modifierPoolHash,
+      },
+    });
+    if (reservationError) {
+      if (reservationError.message?.includes("insufficient_ram")) {
+        return jsonResponse({ success: false, error: "insufficient_ram", ramCost: KNOWN_ROLL_RAM_COST }, 409);
+      }
+      if (reservationError.message?.includes("ram_ledger_not_active")) {
+        return jsonResponse({ success: false, error: "ram_reconciliation_required" }, 409);
+      }
+      throw reservationError;
+    }
+
+    const chain = await settleKnownRollOnChain({
+      config,
+      walletAddress,
+      operationId,
+      result,
+      expiresAt,
+    });
+    const { error: submittedError } = await supabase.rpc("ram_ledger_mark_chain_submitted", {
+      p_operation_id: operationId,
+      p_cluster: config.cluster,
+      p_chain_signature: chain.signature,
+    });
+    if (submittedError) throw submittedError;
+    const { error: confirmedError } = await supabase.rpc("ram_ledger_mark_chain_confirmed", {
+      p_operation_id: operationId,
+      p_cluster: config.cluster,
+      p_chain_signature: chain.signature,
+      p_receipt_address: chain.receiptAddress,
+    });
+    if (confirmedError) throw confirmedError;
+
+    const { data, error } = await supabase.rpc("ownership_settle_known_reserved", {
+      p_operation_id: operationId,
+      p_player_profile_id: profile.player_profile_id,
+      p_cluster: config.cluster,
+      p_chain_signature: chain.signature,
+      p_receipt_address: chain.receiptAddress,
       p_idempotency_key: idempotencyKey,
       p_move_id: result.moveId,
       p_onchain_move_id: result.onchainMoveId,
+      p_onchain_instance_id: chain.knownInstanceId,
       p_element: result.element,
       p_base_power: result.basePower,
       p_generator_version: config.generatorVersion,
       p_pool_hash: config.modifierPoolHash,
-      p_ram_cost: KNOWN_ROLL_RAM_COST,
     });
-    if (error) {
-      if (error.message?.includes("insufficient_ram")) {
-        return jsonResponse({ success: false, error: "insufficient_ram", ramCost: KNOWN_ROLL_RAM_COST }, 409);
-      }
-      throw error;
-    }
+    if (error) throw error;
     const payload = data as JsonMap;
     return jsonResponse({
       success: true,
+      operationId,
+      chainSignature: chain.signature,
+      receiptAddress: chain.receiptAddress,
       replayed: Boolean(payload.replayed),
       known: knownResponse(payload.known as JsonMap),
       ramCost: Number(payload.ram_cost),

@@ -10,9 +10,11 @@ import {
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
 import {
+  cancelRamReservationOnChain,
   ensureOwnershipRpcCluster,
   fetchAndVerifyStampReceipt,
-  findConfirmedSignatureForAddress,
+  finalizedSignatureOutcome,
+  findFinalizedSignatureForAddress,
   FIRST_STAMP_RAM_COST,
   hashMoveId,
   isOwnershipWalletAllowed,
@@ -20,7 +22,6 @@ import {
   loadOwnershipConfig,
   normalizeAcquisition,
   OwnershipConfigurationError,
-  signatureOutcome,
   stampEffectFieldsFromOperation,
 } from "../_shared/ownership_spine.ts";
 
@@ -71,7 +72,7 @@ serve(async (req: Request) => {
     const verified = await fetchAndVerifyStampReceipt({
       config,
       walletAddress,
-      idempotencyKey: str(operation.idempotency_key),
+      idempotencyKey: str(operation.operation_id),
       expectedKnownOnchainInstanceId: String(operation.onchain_instance_id),
       expectedMoveId: Number(knownRow?.onchain_move_id ?? hashMoveId(str(knownRow?.move_id))),
       expectedModifierIds: modifierIds,
@@ -81,10 +82,10 @@ serve(async (req: Request) => {
     });
     let signature = str(body.signature);
     if (!isSolanaSignature(signature)) signature = str(operation.signature);
-    let outcome = isSolanaSignature(signature) ? await signatureOutcome(config.rpcUrl, signature) : "missing";
+    let outcome = isSolanaSignature(signature) ? await finalizedSignatureOutcome(config.rpcUrl, signature) : "missing";
     let chainConfirmed = outcome === "confirmed";
     if (!chainConfirmed || !isSolanaSignature(signature)) {
-      const discovered = await findConfirmedSignatureForAddress(
+      const discovered = await findFinalizedSignatureForAddress(
         config.rpcUrl,
         str(operation.stamped_asset_address),
       );
@@ -104,6 +105,17 @@ serve(async (req: Request) => {
         new Date(String(operation.expires_at)).getTime() <= Date.now();
       if (outcome === "failed" || expiredUnsignedPrepare) {
         const failureCode = outcome === "failed" ? "transaction_failed" : "unsigned_intent_expired";
+        await cancelRamReservationOnChain({
+          config,
+          walletAddress,
+          operationId: str(operation.operation_id),
+        });
+        const { error: releaseError } = await supabase.rpc("ram_ledger_release_operation", {
+          p_operation_id: str(operation.operation_id),
+          p_cluster: config.cluster,
+          p_failure_code: failureCode,
+        });
+        if (releaseError) throw releaseError;
         const { error: failedUpdateError } = await supabase.from("ownership_stamp_operations").update({
           status: "failed",
           failure_code: failureCode,
@@ -155,6 +167,12 @@ serve(async (req: Request) => {
       updated_at: now,
     }).eq("operation_id", operation.operation_id).neq("status", "confirmed");
     if (chainUpdateError) throw chainUpdateError;
+    const { error: ledgerSubmittedError } = await supabase.rpc("ram_ledger_mark_chain_submitted", {
+      p_operation_id: str(operation.operation_id),
+      p_cluster: config.cluster,
+      p_chain_signature: signature,
+    });
+    if (ledgerSubmittedError) throw ledgerSubmittedError;
 
     if (!verified) {
       return jsonResponse({
@@ -183,14 +201,23 @@ serve(async (req: Request) => {
     delete publicAsset.ticketAddress;
     delete publicAsset.idempotencyHash;
     delete publicAsset.assetUri;
-    const { data: settlement, error: settlementError } = await supabase.rpc("ownership_confirm_stamp_atomic", {
+    const { error: confirmedLedgerError } = await supabase.rpc("ram_ledger_mark_chain_confirmed", {
+      p_operation_id: str(operation.operation_id),
+      p_cluster: config.cluster,
+      p_chain_signature: signature,
+      p_receipt_address: str(operation.stamped_asset_address),
+    });
+    if (confirmedLedgerError) throw confirmedLedgerError;
+    const { data: settlement, error: settlementError } = await supabase.rpc("ownership_confirm_stamp_reserved", {
+      p_operation_id: str(operation.operation_id),
       p_player_profile_id: profile.player_profile_id,
+      p_cluster: config.cluster,
       p_idempotency_key: str(operation.idempotency_key),
       p_known_id: knownId,
       p_signature: signature,
       p_verified_asset_json: publicAsset,
       p_onchain_instance_id: String(operation.onchain_instance_id),
-      p_ram_cost: FIRST_STAMP_RAM_COST,
+      p_receipt_address: str(operation.stamped_asset_address),
     });
     if (settlementError) throw settlementError;
     return jsonResponse({

@@ -467,6 +467,12 @@ public sealed class MartNpcAuthoringTests
         Assert.That(scaler, Is.Not.Null);
         Assert.That(scaler.uiScaleMode, Is.EqualTo(CanvasScaler.ScaleMode.ScaleWithScreenSize));
         Assert.That(prefab.transform.Find("SafeArea"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopLeft/StorageScroll"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopCenter/PartySlots"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopRight/Close"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/DialogueLowerCenter/Status"), Is.Not.Null);
+        Assert.That(prefab.GetComponentInChildren<PlayerMenuBackgroundController>(true), Is.Not.Null);
+        Assert.That(prefab.GetComponentInChildren<PlayerMenuBootSequenceController>(true), Is.Not.Null);
     }
 
     private static bool TrackSetsFlag(string sequencePath, string flagKey)

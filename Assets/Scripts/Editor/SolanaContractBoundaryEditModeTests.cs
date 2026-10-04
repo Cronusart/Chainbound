@@ -50,7 +50,7 @@ public sealed class SolanaContractBoundaryEditModeTests
 
     [TestCase(RpcConfirmationStatus.Confirmed, TxStatus.Confirmed)]
     [TestCase(RpcConfirmationStatus.Finalized, TxStatus.Finalized)]
-    [TestCase(RpcConfirmationStatus.TimedOut, TxStatus.Failed)]
+    [TestCase(RpcConfirmationStatus.TimedOut, TxStatus.UnknownOutcome)]
     public void ConfirmationMapping_PreservesObservedCommitment(
         RpcConfirmationStatus rpcStatus,
         TxStatus expected)

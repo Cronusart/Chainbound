@@ -65,6 +65,32 @@ MonoBehaviour:
     npcBehavior:
       mode: 1
       behaviorOverride: {fileID: 0}
+  - label: "lost to cofi \u2014 advise and reopen"
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.cofi_lootwak.player_lost
+      comparison: 2
+    - key: world.coffee.cofi_lootwak.defeated
+      comparison: 3
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc00b1, type: 2}
+    useDialogueCamera: 1
+    triggerId: trigger_coffee_zeb_cofi_retry
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
   inactiveDialogue: {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0003, type: 2}
   inactiveTriggerId: trigger_coffee_zeb_talked
   inactiveNpcBehavior:
@@ -75,7 +101,9 @@ MonoBehaviour:
   activeFallbackNpcBehavior:
     mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: First talk points at Cofi. After the win, Zeb sends the player to
-    Reynard and Momo. He stays until Jungle loads again.
+  designerNotes: First talk points at Cofi. A loss returns the player to the sanctuary.
+    Talking to Zeb again gives party advice and reopens the boss trigger. After
+    the win, Zeb sends the player to Reynard and Momo. He stays until Jungle loads
+    again.
   activateQuestOnInactiveInteract: 0
   completeObjectiveOnActivate: 

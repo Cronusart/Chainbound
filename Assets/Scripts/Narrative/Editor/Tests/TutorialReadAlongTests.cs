@@ -93,7 +93,7 @@ public sealed class TutorialReadAlongTests
     }
 
     [Test]
-    public void Presenter_ArmsDismissOnlyAfterWaitingFrames()
+    public void Presenter_ArmsDismissOnlyAfterRevealAndReadDelay()
     {
         GameObject presenterObject = new GameObject("TutorialReadAlongPresenter_Arm", typeof(RectTransform));
         cleanup.Add(presenterObject);
@@ -106,13 +106,25 @@ public sealed class TutorialReadAlongTests
 
         Assert.That(presenter.Show(snippet), Is.True);
         Assert.That(NarrativeTestUtility.GetPrivateField<bool>(presenter, "dismissArmed"), Is.False);
+        Assert.That(
+            NarrativeTestUtility.GetPrivateField<float>(presenter, "dismissDelayAfterRevealSeconds"),
+            Is.EqualTo(TutorialReadAlongPresenter.DefaultDismissDelayAfterRevealSeconds));
 
-        System.Collections.IEnumerator arm = InvokePrivateEnumerator(presenter, "ArmDismissNextFrame");
+        ItemObtainPanelReveal reveal = presenter.GetComponent<ItemObtainPanelReveal>();
+        Assert.That(reveal, Is.Not.Null);
+        reveal.HideImmediate();
+        NarrativeTestUtility.SetPrivateField(reveal, "revealPlaying", true);
+        NarrativeTestUtility.SetPrivateField(presenter, "dismissDelayAfterRevealSeconds", 100f);
+
+        System.Collections.IEnumerator arm = InvokePrivateEnumerator(presenter, "ArmDismissAfterReveal");
         Assert.That(arm.MoveNext(), Is.True);
         Assert.That(NarrativeTestUtility.GetPrivateField<bool>(presenter, "dismissArmed"), Is.False);
+
+        NarrativeTestUtility.SetPrivateField(reveal, "revealPlaying", false);
         Assert.That(arm.MoveNext(), Is.True);
         Assert.That(NarrativeTestUtility.GetPrivateField<bool>(presenter, "dismissArmed"), Is.False);
 
+        NarrativeTestUtility.SetPrivateField(presenter, "dismissDelayAfterRevealSeconds", 0f);
         arm.MoveNext();
         Assert.That(NarrativeTestUtility.GetPrivateField<bool>(presenter, "dismissArmed"), Is.True);
 

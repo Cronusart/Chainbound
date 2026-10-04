@@ -583,6 +583,24 @@ public class NPCController : MonoBehaviour
         if (movementAgent == null) return;
         movementAgent.ClearFacingTargetOverride();
     }
+
+    /// <summary>
+    /// Remember the current idle facing so an interaction can restore it later.
+    /// </summary>
+    public void CaptureIdleFacing()
+    {
+        if (movementAgent == null) return;
+        movementAgent.CaptureIdleFacing();
+    }
+
+    /// <summary>
+    /// Restore the idle facing captured before this interaction turned the NPC.
+    /// </summary>
+    public void RestoreCapturedIdleFacing()
+    {
+        if (movementAgent == null) return;
+        movementAgent.RestoreCapturedIdleFacing();
+    }
     
     /// <summary>
     /// Ends fire-and-forget follow (if running) or stops NavMesh movement (including background MoveTo).
