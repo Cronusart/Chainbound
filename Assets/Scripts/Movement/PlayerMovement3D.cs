@@ -367,6 +367,7 @@ public class PlayerMovement3D : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        EnsureSpeedModifierStack();
         
         // Configure Rigidbody for top-down movement with jump support
         // Remove FreezePositionY to allow jumping
@@ -628,6 +629,12 @@ public class PlayerMovement3D : MonoBehaviour
 
     private void OnDisable()
     {
+        // Timed speed sources must drop if movement is disabled mid-timer.
+        // Wearables and party passives have no expiry and stay registered.
+        PlayerMovementSpeedModifierStack speedModifiers = GetComponent<PlayerMovementSpeedModifierStack>();
+        if (speedModifiers != null)
+            speedModifiers.CancelExpiringSources();
+
         CharacterCollisionRegistry.OnNpcColliderRegistered -= OnNpcColliderRegistered;
         CharacterCollisionRegistry.OnNpcColliderUnregistered -= OnNpcColliderUnregistered;
         UnregisterPlayerSolidColliders();
@@ -1994,7 +2001,8 @@ public class PlayerMovement3D : MonoBehaviour
     }
 
     /// <summary>
-    /// Get current movement speed (accounting for sprint and volume modifiers).
+    /// Current planar speed. Serialized moveSpeed is the unmodified baseline;
+    /// sprint and every registered IPlayerMovementModifier scale it.
     /// </summary>
     public float GetCurrentSpeed()
     {
@@ -2023,8 +2031,16 @@ public class PlayerMovement3D : MonoBehaviour
 
     private float GetEffectiveMoveSpeed(bool sprinting)
     {
+        // moveSpeed stays at the authored baseline. Buffs live in movementModifiers.
         float speed = sprinting ? moveSpeed * sprintSpeedMultiplier : moveSpeed;
         return speed * GetExternalSpeedMultiplier();
+    }
+
+    private void EnsureSpeedModifierStack()
+    {
+        if (GetComponent<PlayerMovementSpeedModifierStack>() != null)
+            return;
+        gameObject.AddComponent<PlayerMovementSpeedModifierStack>();
     }
 
     private float GetExternalSpeedMultiplier()

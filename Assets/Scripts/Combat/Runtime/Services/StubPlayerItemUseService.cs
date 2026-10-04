@@ -140,6 +140,12 @@ namespace Chainbound.Combat
                     favorScore = favorService.CurrentFavorScore;
                     break;
                 }
+                case PlayerItemEffectFamily.MovementSpeedBoost:
+                {
+                    if (!PlayerMovementSpeedConsumable.TryApply(out string speedError))
+                        return PlayerItemUseResult.Failed(speedError);
+                    break;
+                }
             }
 
             working.ramBalance -= def.useRamCost;

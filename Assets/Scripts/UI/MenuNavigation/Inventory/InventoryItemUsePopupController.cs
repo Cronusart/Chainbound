@@ -777,6 +777,15 @@ namespace SignalJam.UI.MenuNavigation
 
         private void BindSelfConfirm(InventoryItemCeremonyContext context)
         {
+            if (!string.IsNullOrEmpty(context.SelfStatusText) || !string.IsNullOrEmpty(context.SelfApplyText))
+            {
+                if (favorStatusLabel != null)
+                    favorStatusLabel.text = context.SelfStatusText ?? "";
+                if (favorApplyLabel != null)
+                    favorApplyLabel.text = context.SelfApplyText ?? "";
+                return;
+            }
+
             if (favorStatusLabel != null)
             {
                 favorStatusLabel.text = InventoryItemEffectCopy.FormatFavorStatusBlock(

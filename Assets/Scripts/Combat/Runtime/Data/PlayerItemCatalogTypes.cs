@@ -41,6 +41,7 @@ namespace Chainbound.Combat
         CosmeticOwned = 15,
         UtilityGear = 16,
         CaptureBoost = 17,
+        MovementSpeedBoost = 18,
     }
 
     /// <summary>
@@ -170,6 +171,7 @@ namespace Chainbound.Combat
                 case PlayerItemEffectFamily.CosmeticOwned: return "cosmetic_owned";
                 case PlayerItemEffectFamily.UtilityGear: return "utility_gear";
                 case PlayerItemEffectFamily.CaptureBoost: return "capture_boost";
+                case PlayerItemEffectFamily.MovementSpeedBoost: return "movement_speed_boost";
                 default: return "none";
             }
         }

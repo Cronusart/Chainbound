@@ -56,6 +56,11 @@ namespace Chainbound.Combat
             if (def.ownershipKind == PlayerItemOwnershipKind.CoreCollectible)
                 return await UseCoreCollectibleAsync(profileId, wallet, request, def);
 
+            // Stride Tonic is client-side. profile_use_field_item only accepts catalog
+            // rows that already exist in Supabase, and this change does not add one.
+            if (def.effectFamily == PlayerItemEffectFamily.MovementSpeedBoost)
+                return PlayerItemUseResult.Failed("movement_speed_boost_not_server_backed");
+
             if (!IsServerBackedFieldOrFavor(def.effectFamily))
                 return PlayerItemUseResult.Failed("item_use_not_supported_yet");
 

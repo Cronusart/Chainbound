@@ -1,6 +1,7 @@
 /// <summary>
-/// Stackable movement modifier applied while the player occupies a volume.
-/// Values are sampled live each physics tick so inspector tweaks apply immediately.
+/// Stackable movement modifier sampled live by PlayerMovement3D.
+/// Terrain volumes and PlayerMovementSpeedModifierStack both register here.
+/// Their multipliers are multiplied together. The serialized moveSpeed baseline is never written.
 /// </summary>
 public interface IPlayerMovementModifier
 {

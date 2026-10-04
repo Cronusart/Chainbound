@@ -32,6 +32,7 @@ namespace SignalJam.UI.MenuNavigation
                 case PlayerItemEffectFamily.HealParty:
                     return InventoryItemCeremonyId.PartyAoeConfirm;
                 case PlayerItemEffectFamily.FavorBoost:
+                case PlayerItemEffectFamily.MovementSpeedBoost:
                     return InventoryItemCeremonyId.SelfConfirm;
                 case PlayerItemEffectFamily.UtilityGear:
                     return InventoryItemCeremonyId.UtilityGearEquip;
@@ -76,6 +77,7 @@ namespace SignalJam.UI.MenuNavigation
                 case PlayerItemEffectFamily.Revive:
                     return PlayerMenuSfxCue.HealTick;
                 case PlayerItemEffectFamily.FavorBoost:
+                case PlayerItemEffectFamily.MovementSpeedBoost:
                     return PlayerMenuSfxCue.FavorActivate;
                 case PlayerItemEffectFamily.HealParty:
                     return PlayerMenuSfxCue.HealTick;
@@ -93,6 +95,7 @@ namespace SignalJam.UI.MenuNavigation
                 case PlayerItemEffectFamily.HealParty:
                     return PlayerMenuSfxCue.PartyHealComplete;
                 case PlayerItemEffectFamily.FavorBoost:
+                case PlayerItemEffectFamily.MovementSpeedBoost:
                     return PlayerMenuSfxCue.FavorActivate;
                 default:
                     return PlayerMenuSfxCue.HealComplete;

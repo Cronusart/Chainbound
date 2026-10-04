@@ -1100,7 +1100,10 @@ namespace SignalJam.UI.MenuNavigation
                             actionPromptLabel.text = "Use confirms a party-wide patch.";
                             break;
                         case InventoryItemCeremonyId.SelfConfirm:
-                            actionPromptLabel.text = "Use confirms Favor Boost.";
+                            actionPromptLabel.text = definition != null &&
+                                definition.effectFamily == PlayerItemEffectFamily.MovementSpeedBoost
+                                ? "Use confirms a short movement-speed boost."
+                                : "Use confirms Favor Boost.";
                             break;
                         case InventoryItemCeremonyId.ItemInspect:
                             actionPromptLabel.text = "Use or Detailed View inspects this item.";
@@ -1763,9 +1766,21 @@ namespace SignalJam.UI.MenuNavigation
             };
 
             if (ceremony == InventoryItemCeremonyId.SelfConfirm && definition != null)
-                FillFavorContext(context, definition);
+            {
+                if (definition.effectFamily == PlayerItemEffectFamily.MovementSpeedBoost)
+                    FillMovementSpeedContext(context);
+                else
+                    FillFavorContext(context, definition);
+            }
 
             return context;
+        }
+
+        private static void FillMovementSpeedContext(InventoryItemCeremonyContext context)
+        {
+            context.SelfStatusText =
+                "This tonic is one speed source. Terrain, wearables, and party passives keep theirs.";
+            context.SelfApplyText = InventoryItemEffectCopy.FormatMovementSpeedApplyBlock();
         }
 
         private void FillFavorContext(InventoryItemCeremonyContext context, PlayerItemDefinition definition)
@@ -1817,7 +1832,12 @@ namespace SignalJam.UI.MenuNavigation
 
             if (ceremony == InventoryItemCeremonyId.SelfConfirm)
             {
-                await ApplySelfConfirmCeremonyAsync();
+                PlayerItemDefinition selfDefinition = ResolveDefinition(selectedStack);
+                if (selfDefinition != null &&
+                    selfDefinition.effectFamily == PlayerItemEffectFamily.MovementSpeedBoost)
+                    await ApplyMovementSpeedCeremonyAsync();
+                else
+                    await ApplySelfConfirmCeremonyAsync();
                 return;
             }
 
@@ -2048,6 +2068,53 @@ namespace SignalJam.UI.MenuNavigation
             {
                 PlaySfxCue(InventoryItemCeremonyResolver.ResolveApplyCompleteCue(PlayerItemEffectFamily.HealParty));
             });
+
+            selectedStack = FindStack(selectedStack.itemId, selectedStack.coreAssetId);
+            Render();
+        }
+
+        private async Task ApplyMovementSpeedCeremonyAsync()
+        {
+            PlayerItemDefinition definition = ResolveDefinition(selectedStack);
+            string displayName = ResolveDisplayName(selectedStack, definition);
+            EnsureServices();
+            IPlayerItemUseService useService = itemUseServiceBehaviour as IPlayerItemUseService;
+            if (useService == null)
+            {
+                usePopup.ShowInvalidMessage("Item use service unavailable.");
+                PlaySfxCue(PlayerMenuSfxCue.Invalid);
+                return;
+            }
+
+            busy = true;
+            PlayerItemUseResult result = await useService.UseItemAsync(
+                GameSessionContext.Instance != null ? GameSessionContext.Instance.PlayerProfileId : "",
+                GameSessionContext.Instance != null ? GameSessionContext.Instance.WalletAddress : "",
+                new PlayerItemUseRequest
+                {
+                    itemId = selectedStack.itemId,
+                    coreAssetId = selectedStack.coreAssetId,
+                });
+            busy = false;
+
+            if (result == null || !result.success)
+            {
+                string code = result != null ? result.error : "use_failed";
+                usePopup.ShowInvalidMessage(InventoryItemUseMessageUtility.FormatInvalid(
+                    code,
+                    displayName,
+                    definition != null ? definition.effectFamily : PlayerItemEffectFamily.MovementSpeedBoost));
+                PlaySfxCue(PlayerMenuSfxCue.Invalid);
+                return;
+            }
+
+            if (result.inventory != null)
+                snapshot = result.inventory;
+
+            string successMessage = InventoryItemUseMessageUtility.FormatMovementSpeedApplied();
+            SetStatus(successMessage);
+            PlaySfxCue(InventoryItemCeremonyResolver.ResolveApplyCompleteCue(PlayerItemEffectFamily.MovementSpeedBoost));
+            usePopup.PlayFavorSuccess(successMessage);
 
             selectedStack = FindStack(selectedStack.itemId, selectedStack.coreAssetId);
             Render();

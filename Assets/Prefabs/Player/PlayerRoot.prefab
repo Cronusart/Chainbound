@@ -665,6 +665,7 @@ GameObject:
   - component: {fileID: 2959136035111340551}
   - component: {fileID: 271994950526361076}
   - component: {fileID: 5249186208308068005}
+  - component: {fileID: 7342198650432187654}
   - component: {fileID: 4317914077014853645}
   - component: {fileID: 4985364811494964535}
   - component: {fileID: 3083946537705388917}
@@ -870,6 +871,18 @@ MonoBehaviour:
   enableDebugLogs: 0
   logDriftDetection: 0
   drawGroundCheckGizmo: 1
+--- !u!114 &7342198650432187654
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7560339582212496662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8d4f2c05a3e4d19c7b26f0e4d8159a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &4317914077014853645
 MonoBehaviour:
   m_ObjectHideFlags: 0

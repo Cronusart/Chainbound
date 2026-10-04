@@ -48,6 +48,11 @@ namespace SignalJam.UI.MenuNavigation
             return $"Favor set to {Mathf.Max(0, favorScore)} for {Mathf.Max(0, battlesRemaining)} battles.";
         }
 
+        public static string FormatMovementSpeedApplied()
+        {
+            return InventoryItemEffectCopy.FormatMovementSpeedLabel();
+        }
+
         public static string FormatInvalid(
             string errorCode,
             string displayName,
@@ -72,6 +77,10 @@ namespace SignalJam.UI.MenuNavigation
                     return "No party Chainlings available.";
                 case "item_not_in_inventory":
                     return "You don't have that item.";
+                case "movement_speed_host_missing":
+                    return "Movement speed can't be changed right now.";
+                case "movement_speed_boost_not_server_backed":
+                    return "That speed tonic can't be used on this connection.";
                 default:
                     if (family == PlayerItemEffectFamily.Revive)
                         return $"{name} doesn't need a Chainling Reboot.";
@@ -81,6 +90,8 @@ namespace SignalJam.UI.MenuNavigation
                         return "The party can't use that right now.";
                     if (family == PlayerItemEffectFamily.FavorBoost)
                         return "That Favor Boost can't be used right now.";
+                    if (family == PlayerItemEffectFamily.MovementSpeedBoost)
+                        return "That speed tonic can't be used right now.";
                     return "That item can't be used right now.";
             }
         }

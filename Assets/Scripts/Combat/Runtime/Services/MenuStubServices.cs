@@ -64,6 +64,8 @@ namespace Chainbound.Combat
             stacks.Add(PlayerItemCatalogSeed.CreateStack("favor_boost_s", 2));
             stacks.Add(PlayerItemCatalogSeed.CreateStack("party_patch", 2));
             stacks.Add(PlayerItemCatalogSeed.CreateStack("system_flush", 1));
+            // Sandbox bag only. Quest sequences do not grant this item.
+            stacks.Add(PlayerItemCatalogSeed.CreateStack(PlayerMovementSpeedConsumable.ItemId, 2));
             stacks.Add(PlayerItemCatalogSeed.CreateStack("stamp_solvent", 1));
             stacks.Add(PlayerItemCatalogSeed.CreateStack("archive_key", 1, "DevArchiveKey111111111111111111111111111"));
             stacks.Add(PlayerItemCatalogSeed.CreateStack("case_binding_standard", 1, "DevCaseBinding1111111111111111111111111"));

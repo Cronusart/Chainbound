@@ -40,6 +40,12 @@ MonoBehaviour:
     fallbackTint: {r: 0, g: 0, b: 0, a: 0}
     accentColor: {r: 0, g: 0, b: 0, a: 0}
     displayNameOverride: Cold Beer
+  - itemId: stride_tonic
+    rowIcon: {fileID: 0}
+    detailPortrait: {fileID: 0}
+    fallbackTint: {r: 0, g: 0, b: 0, a: 0}
+    accentColor: {r: 0, g: 0, b: 0, a: 0}
+    displayNameOverride: Stride Tonic
   - itemId: tobys_delivery
     rowIcon: {fileID: 0}
     detailPortrait: {fileID: 0}

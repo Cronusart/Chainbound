@@ -35,6 +35,15 @@ public sealed class InventoryItemCeremonyResolverTests
     }
 
     [Test]
+    public void Resolve_MapsMovementSpeedBoostToSelfConfirm()
+    {
+        Assert.AreEqual(
+            InventoryItemCeremonyId.SelfConfirm,
+            InventoryItemCeremonyResolver.Resolve(Def(PlayerItemEffectFamily.MovementSpeedBoost)));
+        Assert.IsTrue(InventoryItemCeremonyResolver.IsConsumableCeremony(InventoryItemCeremonyId.SelfConfirm));
+    }
+
+    [Test]
     public void Resolve_MapsCaptureAndBinderyToInspect()
     {
         Assert.AreEqual(

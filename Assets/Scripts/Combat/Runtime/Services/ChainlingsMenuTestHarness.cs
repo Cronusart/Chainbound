@@ -1051,6 +1051,8 @@ namespace Chainbound.Combat
                 stacks.Add(PlayerItemCatalogSeed.CreateStack("favor_boost_s", rng != null ? rng.Next(1, 4) : 2));
                 stacks.Add(PlayerItemCatalogSeed.CreateStack("favor_boost_m", 1));
                 stacks.Add(PlayerItemCatalogSeed.CreateStack("system_flush", rng != null ? rng.Next(1, 3) : 1));
+                // Sandbox bag only. Quest sequences do not grant this item.
+                stacks.Add(PlayerItemCatalogSeed.CreateStack(PlayerMovementSpeedConsumable.ItemId, 2));
                 stacks.Add(PlayerItemCatalogSeed.CreateStack("chainling_reformat", 1));
                 stacks.Add(PlayerItemCatalogSeed.CreateStack("stamp_solvent", 1));
                 stacks.Add(PlayerItemCatalogSeed.CreateStack("seal_breaker", 1));

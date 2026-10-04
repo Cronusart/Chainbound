@@ -30,6 +30,8 @@ namespace SignalJam.UI.MenuNavigation
                     return $"Patches the whole party for +{Mathf.Max(0, definition.healAmount)} HP.";
                 case PlayerItemEffectFamily.FavorBoost:
                     return $"Sets Favor Boost to {Mathf.Max(0, definition.favorPoints)} for {Mathf.Max(0, definition.favorDurationBattles)} battles.";
+                case PlayerItemEffectFamily.MovementSpeedBoost:
+                    return FormatMovementSpeedLabel();
                 case PlayerItemEffectFamily.CaptureTool:
                     return FormatCaptureEffects(definition) + " Select it during Record in battle.";
                 case PlayerItemEffectFamily.UtilityGear:
@@ -149,6 +151,10 @@ namespace SignalJam.UI.MenuNavigation
                         sb.AppendLine($"Favor points: {definition.favorPoints}");
                         sb.AppendLine($"Duration: {definition.favorDurationBattles} battles (refresh, does not stack).");
                         break;
+                    case PlayerItemEffectFamily.MovementSpeedBoost:
+                        sb.AppendLine(FormatMovementSpeedApplyBlock());
+                        sb.AppendLine("Using it again refreshes the timer. Wearables, party passives, and terrain keep their own modifiers.");
+                        break;
                     case PlayerItemEffectFamily.Revive:
                         sb.AppendLine("Usable from Inventory on fainted party members.");
                         break;
@@ -185,6 +191,22 @@ namespace SignalJam.UI.MenuNavigation
                 : "  Party grants: 0");
             sb.AppendLine("  Accessories: none (coming soon)");
             return sb.ToString().TrimEnd();
+        }
+
+        public static string FormatMovementSpeedLabel()
+        {
+            int percent = Mathf.RoundToInt(PlayerMovementSpeedConsumable.BonusFraction * 100f);
+            int seconds = Mathf.RoundToInt(PlayerMovementSpeedConsumable.DurationSeconds);
+            return $"Raises movement speed by {percent}% for {seconds} seconds.";
+        }
+
+        public static string FormatMovementSpeedApplyBlock()
+        {
+            int percent = Mathf.RoundToInt(PlayerMovementSpeedConsumable.BonusFraction * 100f);
+            int seconds = Mathf.RoundToInt(PlayerMovementSpeedConsumable.DurationSeconds);
+            return
+                $"Apply: +{percent}% movement speed for {seconds} seconds\n" +
+                "(refreshes this tonic; other speed sources stay)";
         }
 
         public static string FormatFavorApplyBlock(

@@ -28,5 +28,7 @@ namespace SignalJam.UI.MenuNavigation
         public float ProjectedLuckStrength01;
 
         public string InspectBodyText = "";
+        public string SelfStatusText = "";
+        public string SelfApplyText = "";
     }
 }
