@@ -1,3 +1,7 @@
+// New claims are rejected when any other non-blank player display name matches
+// ignoring case, including grandfathered rows (rule a). The partial unique
+// index only covers rows stamped by profile_set_display_name_tx. The same
+// profile may re-set its own name. Chainling names are not unique.
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import {
   JsonMap,

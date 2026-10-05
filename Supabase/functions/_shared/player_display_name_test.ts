@@ -1,7 +1,9 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
+  isPlayerDisplayNameClaimBlocked,
   isPlayerDisplayNameUniqueViolation,
   playerDisplayNamesConflict,
+  shouldStampDisplayNameClaim,
 } from "./player_display_name.ts";
 
 Deno.test("player names collide case-insensitively and ignore surrounding space", () => {
@@ -15,6 +17,21 @@ Deno.test("player names collide case-insensitively and ignore surrounding space"
 Deno.test("the same profile can re-set its own name", () => {
   assertEquals(playerDisplayNamesConflict("profile-a", "profile-a", "NOVA", "nova"), false);
   assertEquals(playerDisplayNamesConflict("profile-a", "profile-a", "Nova", "Nova"), false);
+  assertEquals(isPlayerDisplayNameClaimBlocked("tonic", "TONIC", ["tonic", "Tonic"]), false);
+  assertEquals(isPlayerDisplayNameClaimBlocked("Nova", "nova", ["Nova"]), false);
+});
+
+Deno.test("a new claim is blocked by a grandfathered name and by another new claim", () => {
+  assertEquals(isPlayerDisplayNameClaimBlocked(null, " TONIC ", ["tonic", "TONIC"]), true);
+  assertEquals(isPlayerDisplayNameClaimBlocked("", "Nova", ["nova"]), true);
+  assertEquals(isPlayerDisplayNameClaimBlocked("Pebble", "Nova", ["NOVA"]), true);
+  assertEquals(isPlayerDisplayNameClaimBlocked(null, "Pebble", ["tonic"]), false);
+});
+
+Deno.test("only the sole holder is stamped into the unique index", () => {
+  assertEquals(shouldStampDisplayNameClaim("Nova", []), true);
+  assertEquals(shouldStampDisplayNameClaim("Pebble", ["tonic"]), true);
+  assertEquals(shouldStampDisplayNameClaim("tonic", ["Tonic"]), false);
 });
 
 Deno.test("unique violations map to the name_taken race", () => {
@@ -47,7 +64,11 @@ Deno.test("display name function and migration keep the case-insensitive contrac
   assertEquals(functionSource.includes("isPlayerDisplayNameUniqueViolation"), true);
   assertEquals(migration.includes("ux_player_profiles_display_name_ci"), true);
   assertEquals(migration.includes("lower(btrim(display_name))"), true);
-  assertEquals(migration.includes("RAISE EXCEPTION"), true);
-  assertEquals(migration.includes("This migration does not rename or delete existing rows."), true);
+  assertEquals(migration.includes("display_name_claimed_at IS NOT NULL"), true);
+  assertEquals(migration.includes("ADD COLUMN IF NOT EXISTS display_name_claimed_at TIMESTAMPTZ NULL"), true);
+  assertEquals(migration.includes("IF NOT v_same_name AND NOT v_sole_holder"), true);
+  assertEquals(migration.includes("'name_taken'"), true);
+  assertEquals(migration.includes("RAISE EXCEPTION"), false);
+  assertEquals(migration.includes("This migration does not change existing display_name values."), true);
   assertEquals(/DELETE\s+FROM\s+public\.player_profiles/i.test(migration), false);
 });
