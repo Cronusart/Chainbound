@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03ddf8c5b52c5f345a2c6955d56f7a85, type: 3}
+  m_Name: intro_checkpoint_after_first_creature
+  m_EditorClassIdentifier: 
+  stepName: intro_checkpoint_after_first_creature
+  enableDebugLogs: 0
+  executeOnce: 0
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: 5e7a1c84-6b29-4d0f-9a33-c8e2f14b7d60
+  checkpointId: intro_after_first_creature
+  checkpointLabel: after_first_creature
+  saveToState: 1
+  resumeSceneId: Loomville
+  resumeSpawnId: encounter_return

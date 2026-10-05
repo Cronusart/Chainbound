@@ -20,7 +20,7 @@ MonoBehaviour:
   retryAttempts: 0
   stepGuid: 7bc7de34-31cf-449c-af97-31b9640df102
   checkpointId: intro_after_choose_starter
-  checkpointLabel: choosestarter
+  checkpointLabel: starter_committed
   saveToState: 1
   resumeSceneId: loom_lab
   resumeSpawnId: lab_from_loomville

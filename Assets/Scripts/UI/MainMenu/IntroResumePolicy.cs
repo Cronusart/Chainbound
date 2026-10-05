@@ -66,6 +66,81 @@ public static class IntroResumePolicy
         return !string.IsNullOrWhiteSpace(checkpointId);
     }
 
+    /// <summary>
+    /// A blank display name must not honor a resume point after the name commit.
+    /// Applies to every resume entry, not only the main menu.
+    /// </summary>
+    public static bool ShouldHoldNamelessResume(
+        string sequenceId,
+        string displayName,
+        int nameCommitStepIndex,
+        int resumeStepIndex)
+    {
+        if (!string.Equals(sequenceId, IntroSequenceId, StringComparison.Ordinal))
+            return false;
+        if (HasCommittedDisplayName(displayName))
+            return false;
+        if (nameCommitStepIndex < 0 || resumeStepIndex < 0)
+            return false;
+        return resumeStepIndex > nameCommitStepIndex;
+    }
+
+    public static IntroCheckpointResume HoldNamelessPastNameCommit(
+        IntroCheckpointResume choice,
+        string sequenceId,
+        string displayName,
+        int nameCommitStepIndex,
+        int resumeLabelStepIndex)
+    {
+        int effectiveIndex = choice.StepIndex;
+        if (!choice.RestartAtBeginning && resumeLabelStepIndex > effectiveIndex)
+            effectiveIndex = resumeLabelStepIndex;
+
+        if (!ShouldHoldNamelessResume(sequenceId, displayName, nameCommitStepIndex, effectiveIndex))
+            return choice;
+
+        return new IntroCheckpointResume(
+            0,
+            "",
+            true,
+            "Display name is unset; not resuming past the name commit.");
+    }
+
+    /// <summary>
+    /// A nameless intro that is about to run from step 0 must forget execute-once
+    /// progress in memory. Otherwise the name prompt, which is execute-once, is
+    /// skipped and the player never gets a chance to commit a name.
+    /// </summary>
+    public static bool ShouldDiscardNamelessStepProgress(
+        string sequenceId,
+        string displayName,
+        int resumeStepIndex)
+    {
+        return string.Equals(sequenceId, IntroSequenceId, StringComparison.Ordinal) &&
+               !HasCommittedDisplayName(displayName) &&
+               resumeStepIndex <= 0;
+    }
+
+    /// <summary>
+    /// The authored resume scene wins over a scene id already stored on the
+    /// checkpoint row, so a content fix applies to saves written earlier.
+    /// </summary>
+    public static void PreferAuthoredResumePlacement(
+        string savedSceneId,
+        string savedSpawnId,
+        string authoredSceneId,
+        string authoredSpawnId,
+        out string sceneId,
+        out string spawnId)
+    {
+        sceneId = !string.IsNullOrWhiteSpace(authoredSceneId)
+            ? authoredSceneId.Trim()
+            : (savedSceneId ?? "").Trim();
+        spawnId = !string.IsNullOrWhiteSpace(authoredSpawnId)
+            ? authoredSpawnId.Trim()
+            : (savedSpawnId ?? "").Trim();
+    }
+
     public static IntroCheckpointResume Choose(
         string checkpointId,
         bool checkpointIdFound,

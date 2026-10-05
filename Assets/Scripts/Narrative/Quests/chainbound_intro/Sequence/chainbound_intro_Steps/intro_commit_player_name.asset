@@ -15,7 +15,7 @@ MonoBehaviour:
   stepName: intro_commit_player_name
   enableDebugLogs: 0
   executeOnce: 0
-  failurePolicy: 2
+  failurePolicy: 1
   onFailLabel: 
   retryAttempts: 0
   stepGuid: db8dab65-1eae-4a9e-80de-1d4091f93c7e

@@ -227,6 +227,12 @@ public class SequenceRunner : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(recoveryReason))
             Debug.LogWarning($"[SequenceRunner] {recoveryReason}");
 
+        if (IntroResumePolicy.ShouldDiscardNamelessStepProgress(
+                mainExecution.Sequence.SequenceId,
+                CurrentDisplayName(),
+                resumeIndex))
+            DiscardNamelessIntroProgressInMemory();
+
         mainExecution.CurrentStepIndex = resumeIndex - 1;
         mainExecution.Context.CurrentSequenceId = ps.currentSequenceId;
         mainExecution.Context.CurrentStepIndex = resumeIndex;
@@ -250,6 +256,19 @@ public class SequenceRunner : MonoBehaviour
             Debug.LogWarning($"[SequenceRunner] Cannot resume - label '{label}' not found!");
             return;
         }
+
+        if (ShouldHoldNamelessResume(mainExecution.Sequence, stepIndex))
+        {
+            Debug.LogWarning(
+                $"[SequenceRunner] Display name is unset. Ignoring resume label '{label}' and starting at step 0.");
+            stepIndex = 0;
+        }
+
+        if (IntroResumePolicy.ShouldDiscardNamelessStepProgress(
+                mainExecution.Sequence.SequenceId,
+                CurrentDisplayName(),
+                stepIndex))
+            DiscardNamelessIntroProgressInMemory();
 
         mainExecution.CurrentStepIndex = stepIndex - 1;
         mainExecution.Context.CurrentStepIndex = stepIndex;
@@ -689,6 +708,43 @@ public class SequenceRunner : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Drops in-memory intro progress so a nameless restart re-runs the name
+    /// prompt. Keeps <see cref="SequenceState.currentSequenceId"/> so the state
+    /// stays valid, and does not notify persistence: the server checkpoint is
+    /// restored on the next launch and this guard runs again until a name commits.
+    /// </summary>
+    private void DiscardNamelessIntroProgressInMemory()
+    {
+        SequenceState ps = mainExecution.PersistentState;
+        if (ps == null)
+            return;
+
+        string sequenceId = ps.currentSequenceId;
+        ps.currentStepIndex = -1;
+        ps.checkpointId = "";
+        ps.checkpointLabel = "";
+        ps.checkpointStepIndex = -1;
+        ps.lastCompletedLabel = "";
+        ps.sceneId = "";
+        ps.spawnId = "";
+        ps.playerName = "";
+        ps.starterSelected = "";
+        if (ps.persistentVariables == null)
+            ps.persistentVariables = new Dictionary<string, string>();
+        else
+            ps.persistentVariables.Clear();
+        if (ps.railFlagSnapshot == null)
+            ps.railFlagSnapshot = new Dictionary<string, bool>(StringComparer.Ordinal);
+        else
+            ps.railFlagSnapshot.Clear();
+        if (ps.completedStepGuids == null)
+            ps.completedStepGuids = new HashSet<string>();
+        else
+            ps.completedStepGuids.Clear();
+        ps.currentSequenceId = sequenceId;
+    }
+
     private void LoadStateToContext()
     {
         SequenceState ps = mainExecution.PersistentState;
@@ -846,10 +902,13 @@ public class SequenceRunner : MonoBehaviour
 
         if (authored != null)
         {
-            if (string.IsNullOrWhiteSpace(sceneId))
-                sceneId = authored.ResumeSceneId;
-            if (string.IsNullOrWhiteSpace(spawnId))
-                spawnId = authored.ResumeSpawnId;
+            IntroResumePolicy.PreferAuthoredResumePlacement(
+                sceneId,
+                spawnId,
+                authored.ResumeSceneId,
+                authored.ResumeSpawnId,
+                out sceneId,
+                out spawnId);
             if (string.IsNullOrWhiteSpace(resumeLabel))
                 resumeLabel = authored.CheckpointLabel;
         }
@@ -1036,7 +1095,7 @@ public class SequenceRunner : MonoBehaviour
         bool safeFound = !string.IsNullOrWhiteSpace(sequence.SafeResumeLabel) &&
             mainExecution.LabelIndex.TryGetValue(sequence.SafeResumeLabel, out safeIndex);
 
-        return IntroResumePolicy.Choose(
+        IntroCheckpointResume choice = IntroResumePolicy.Choose(
             state.checkpointId,
             checkpointFound,
             checkpointIndex,
@@ -1047,6 +1106,50 @@ public class SequenceRunner : MonoBehaviour
             sequence.SafeResumeLabel,
             safeFound,
             safeIndex);
+
+        int resumeLabelIndex = -1;
+        if (!string.IsNullOrWhiteSpace(choice.ResumeLabel) &&
+            mainExecution.LabelIndex.TryGetValue(choice.ResumeLabel, out int foundLabelIndex))
+            resumeLabelIndex = foundLabelIndex;
+
+        return IntroResumePolicy.HoldNamelessPastNameCommit(
+            choice,
+            sequence.SequenceId,
+            CurrentDisplayName(),
+            FindNameCommitStepIndex(sequence),
+            resumeLabelIndex);
+    }
+
+    private static bool ShouldHoldNamelessResume(SequenceAsset sequence, int resumeStepIndex)
+    {
+        if (sequence == null)
+            return false;
+
+        return IntroResumePolicy.ShouldHoldNamelessResume(
+            sequence.SequenceId,
+            CurrentDisplayName(),
+            FindNameCommitStepIndex(sequence),
+            resumeStepIndex);
+    }
+
+    private static int FindNameCommitStepIndex(SequenceAsset sequence)
+    {
+        if (sequence == null)
+            return -1;
+
+        for (int i = 0; i < sequence.StepCount; i++)
+        {
+            if (sequence.GetStep(i) is Step_CommitPlayerName)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static string CurrentDisplayName()
+    {
+        GameSessionContext session = GameSessionContext.Instance;
+        return session != null ? session.DisplayName ?? "" : "";
     }
 
     private static bool TryResolveCheckpointId(

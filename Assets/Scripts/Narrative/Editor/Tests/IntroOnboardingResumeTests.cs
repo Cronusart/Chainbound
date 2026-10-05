@@ -115,4 +115,159 @@ public sealed class IntroOnboardingResumeTests
         Assert.That(PlayerNameCommitFlow.ShouldRePrompt(other), Is.False);
         Assert.That(PlayerNameCommitFlow.ShouldRePrompt(PlayerNameCommitResult.FromSuccess("Nova")), Is.False);
     }
+
+    [Test]
+    public void NamelessResume_DoesNotHonorAStepPastTheNameCommit()
+    {
+        Assert.That(IntroResumePolicy.ShouldHoldNamelessResume(
+            IntroResumePolicy.IntroSequenceId, "", 4, 9), Is.True);
+        Assert.That(IntroResumePolicy.ShouldHoldNamelessResume(
+            IntroResumePolicy.IntroSequenceId, "   ", 4, 7), Is.True);
+        Assert.That(IntroResumePolicy.ShouldHoldNamelessResume(
+            IntroResumePolicy.IntroSequenceId, "Nova", 4, 9), Is.False);
+        Assert.That(IntroResumePolicy.ShouldHoldNamelessResume(
+            IntroResumePolicy.IntroSequenceId, "", 4, 4), Is.False);
+        Assert.That(IntroResumePolicy.ShouldHoldNamelessResume(
+            "some_other_sequence", "", 4, 9), Is.False);
+
+        IntroCheckpointResume pastName = new IntroCheckpointResume(7, "intro_player_room", false, "");
+        IntroCheckpointResume held = IntroResumePolicy.HoldNamelessPastNameCommit(
+            pastName,
+            IntroResumePolicy.IntroSequenceId,
+            "",
+            4,
+            9);
+        Assert.That(held.RestartAtBeginning, Is.True);
+        Assert.That(held.StepIndex, Is.EqualTo(0));
+        Assert.That(held.ResumeLabel, Is.Empty);
+
+        IntroCheckpointResume named = IntroResumePolicy.HoldNamelessPastNameCommit(
+            pastName,
+            IntroResumePolicy.IntroSequenceId,
+            "Nova",
+            4,
+            9);
+        Assert.That(named.RestartAtBeginning, Is.False);
+        Assert.That(named.ResumeLabel, Is.EqualTo("intro_player_room"));
+
+        Assert.That(IntroResumePolicy.ShouldDiscardNamelessStepProgress(
+            IntroResumePolicy.IntroSequenceId, "", 0), Is.True);
+        Assert.That(IntroResumePolicy.ShouldDiscardNamelessStepProgress(
+            IntroResumePolicy.IntroSequenceId, "   ", 0), Is.True);
+        Assert.That(IntroResumePolicy.ShouldDiscardNamelessStepProgress(
+            IntroResumePolicy.IntroSequenceId, "Nova", 0), Is.False);
+        Assert.That(IntroResumePolicy.ShouldDiscardNamelessStepProgress(
+            IntroResumePolicy.IntroSequenceId, "", 7), Is.False);
+        Assert.That(IntroResumePolicy.ShouldDiscardNamelessStepProgress(
+            "some_other_sequence", "", 0), Is.False);
+    }
+
+    [Test]
+    public void AuthoredResumeScene_ReplacesAStaleBedroomSave()
+    {
+        IntroResumePolicy.PreferAuthoredResumePlacement(
+            "player_room",
+            "player_room_start",
+            "loom_lab",
+            "lab_from_loomville",
+            out string sceneId,
+            out string spawnId);
+
+        Assert.That(sceneId, Is.EqualTo("loom_lab"));
+        Assert.That(spawnId, Is.EqualTo("lab_from_loomville"));
+
+        IntroResumePolicy.PreferAuthoredResumePlacement(
+            "Loomville",
+            "encounter_return",
+            "",
+            "",
+            out sceneId,
+            out spawnId);
+        Assert.That(sceneId, Is.EqualTo("Loomville"));
+        Assert.That(spawnId, Is.EqualTo("encounter_return"));
+    }
+
+    [Test]
+    public void IntroResumeAuthoring_SplitsStarterLabelAndBattleCheckpoint()
+    {
+        SequenceAsset sequence = AssetDatabase.LoadAssetAtPath<SequenceAsset>(IntroSequencePath);
+        Assert.That(sequence, Is.Not.Null);
+
+        int nameCommit = -1;
+        int encounter = -1;
+        int afterBattleCheckpoint = -1;
+        int afterBattleLabel = -1;
+        int starterCommit = -1;
+        int starterCommittedLabel = -1;
+        int beforeStarter = -1;
+        int afterStarter = -1;
+        int toby = -1;
+
+        for (int i = 0; i < sequence.StepCount; i++)
+        {
+            SequenceStep step = sequence.GetStep(i);
+            if (step is Step_CommitPlayerName)
+            {
+                nameCommit = i;
+                Assert.That(step.GetFailurePolicy(), Is.EqualTo(StepFailurePolicy.AbortSequence));
+            }
+
+            if (step is Step_StartEncounter)
+                encounter = i;
+
+            if (step is Step_CommitStarterChainling)
+                starterCommit = i;
+
+            if (step is Step_Label label)
+            {
+                if (label.GetLabelName() == "after_first_creature")
+                    afterBattleLabel = i;
+                if (label.GetLabelName() == "starter_committed")
+                    starterCommittedLabel = i;
+            }
+
+            if (step is Step_SetCheckpoint checkpoint)
+            {
+                if (checkpoint.CheckpointId == "intro_after_first_creature")
+                {
+                    afterBattleCheckpoint = i;
+                    Assert.That(checkpoint.CheckpointLabel, Is.EqualTo("after_first_creature"));
+                    Assert.That(checkpoint.ResumeSceneId, Is.EqualTo("Loomville"));
+                    Assert.That(checkpoint.ResumeSpawnId, Is.EqualTo("encounter_return"));
+                }
+
+                if (checkpoint.CheckpointId == "intro_before_choose_starter")
+                {
+                    beforeStarter = i;
+                    Assert.That(checkpoint.CheckpointLabel, Is.EqualTo("choosestarter"));
+                }
+
+                if (checkpoint.CheckpointId == "intro_after_choose_starter")
+                {
+                    afterStarter = i;
+                    Assert.That(checkpoint.CheckpointLabel, Is.EqualTo("starter_committed"));
+                    Assert.That(checkpoint.ResumeSceneId, Is.EqualTo("loom_lab"));
+                }
+
+                if (checkpoint.CheckpointId == "intro_wait_for_toby")
+                {
+                    toby = i;
+                    Assert.That(checkpoint.ResumeSceneId, Is.EqualTo("loom_lab"));
+                    Assert.That(checkpoint.ResumeSpawnId, Is.EqualTo("lab_from_loomville"));
+                    Assert.That(checkpoint.CheckpointLabel, Is.EqualTo("waitfortoby"));
+                }
+            }
+        }
+
+        Assert.That(nameCommit, Is.GreaterThanOrEqualTo(0));
+        Assert.That(encounter, Is.GreaterThan(nameCommit));
+        Assert.That(afterBattleCheckpoint, Is.GreaterThan(encounter));
+        Assert.That(afterBattleLabel, Is.GreaterThan(afterBattleCheckpoint));
+        Assert.That(starterCommit, Is.GreaterThan(afterBattleLabel));
+        Assert.That(starterCommittedLabel, Is.GreaterThan(starterCommit));
+        Assert.That(beforeStarter, Is.LessThan(starterCommit));
+        Assert.That(afterStarter, Is.GreaterThan(starterCommittedLabel));
+        Assert.That(toby, Is.GreaterThan(afterBattleLabel));
+        Assert.That(toby, Is.LessThan(beforeStarter));
+    }
 }

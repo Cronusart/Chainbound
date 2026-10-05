@@ -22,8 +22,8 @@ MonoBehaviour:
   checkpointId: intro_wait_for_toby
   checkpointLabel: waitfortoby
   saveToState: 1
-  resumeSceneId: player_room
-  resumeSpawnId: player_room_start
+  resumeSceneId: loom_lab
+  resumeSpawnId: lab_from_loomville
   resumeProfileWorldFlags:
   - flagKey: intro.guardrail.Intro_Collider1
     flagValue: 0

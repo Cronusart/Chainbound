@@ -146,7 +146,7 @@ public abstract class SequenceStep : ScriptableObject
     /// <summary>
     /// Get failure policy for this step.
     /// </summary>
-    public StepFailurePolicy GetFailurePolicy() => failurePolicy;
+    public virtual StepFailurePolicy GetFailurePolicy() => failurePolicy;
     
     /// <summary>
     /// Get on-fail label for this step.

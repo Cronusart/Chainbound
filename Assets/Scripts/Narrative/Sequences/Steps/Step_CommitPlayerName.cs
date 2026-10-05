@@ -139,6 +139,13 @@ public class Step_CommitPlayerName : SequenceStep
         onName?.Invoke(playerName);
     }
 
+    /// <summary>
+    /// A failed name save must stop the intro. Skip-and-continue would walk
+    /// into the bedroom, starter grant, and intro complete with a null server name.
+    /// name_taken is handled inside Execute and does not fail the step.
+    /// </summary>
+    public override StepFailurePolicy GetFailurePolicy() => StepFailurePolicy.AbortSequence;
+
     public override bool Validate()
     {
         bool valid = base.Validate();
