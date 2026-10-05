@@ -44,6 +44,7 @@ public class SequenceRunner : MonoBehaviour
 
     public event Action<SequenceAsset> OnSequenceStarted;
     public event Action<SequenceAsset> OnSequenceComplete;
+    public event Action<SequenceAsset, StepOutcome> OnSequenceAborted;
     public event Action<SequenceStep, int> OnStepStarted;
     public event Action<SequenceStep, int> OnStepComplete;
     public event Action<SequenceStep, StepOutcome> OnStepFailed;
@@ -461,6 +462,7 @@ public class SequenceRunner : MonoBehaviour
         exec.IsRunning = true;
         activeControlExecution = exec;
         bool releaseInputLocksOnExit = false;
+        bool aborted = false;
 
         if (enableDebugLogs)
             Debug.Log($"[SequenceRunner] Starting track '{exec.TrackId}': {exec.Sequence.name} ({exec.Sequence.StepCount} steps)");
@@ -527,7 +529,11 @@ public class SequenceRunner : MonoBehaviour
                 if (exec == mainExecution && step is Step_Label completedLabel)
                 {
                     exec.PersistentState.lastCompletedLabel = completedLabel.GetLabelName();
-                    NotifyPersistentStateChanged(SequenceCheckpointStatus.Active);
+                    // A label before the first authored checkpoint must not become a
+                    // resume record. That record used to fall through to the safe
+                    // label and skip name entry.
+                    if (IntroResumePolicy.ShouldPersistLabelProgress(exec.PersistentState.checkpointId))
+                        NotifyPersistentStateChanged(SequenceCheckpointStatus.Active);
                 }
                 if (exec == mainExecution)
                     OnStepComplete?.Invoke(step, exec.CurrentStepIndex);
@@ -537,6 +543,7 @@ public class SequenceRunner : MonoBehaviour
                 if (!HandleStepFailure(exec, step, outcome))
                 {
                     releaseInputLocksOnExit = true;
+                    aborted = true;
                     break;
                 }
             }
@@ -545,6 +552,7 @@ public class SequenceRunner : MonoBehaviour
                 if (enableDebugLogs)
                     Debug.Log($"[SequenceRunner] Step cancelled: {step.GetStepName()}");
                 releaseInputLocksOnExit = true;
+                aborted = true;
                 break;
             }
         }
@@ -561,11 +569,15 @@ public class SequenceRunner : MonoBehaviour
         if (exec == mainExecution)
         {
             exec.Context.Variables.ClearLocal();
-            if (exec.LastStepOutcome.Result == StepResult.Success)
+            if (!aborted && exec.LastStepOutcome.Result == StepResult.Success)
             {
                 SavePersistentStateFor(exec);
                 NotifyPersistentStateChanged(SequenceCheckpointStatus.Completed);
                 exec.PersistentState.Reset();
+            }
+            else if (aborted)
+            {
+                OnSequenceAborted?.Invoke(exec.Sequence, exec.LastStepOutcome);
             }
             StopChildrenOnParentEnd();
             OnSequenceComplete?.Invoke(exec.Sequence);
@@ -777,6 +789,29 @@ public class SequenceRunner : MonoBehaviour
     /// <summary>
     /// Scene/spawn/label used to place the player before continuing a hydrated sequence.
     /// </summary>
+    /// <summary>
+    /// Drops a hydrated intro checkpoint so the next play starts at step 0
+    /// on the same in-memory runner. Used when the profile still has no name.
+    /// </summary>
+    public void DiscardRestoredCheckpoint(string sequenceId)
+    {
+        if (mainExecution.IsRunning)
+            StopSequence();
+
+        SequenceState state = mainExecution.PersistentState;
+        bool matches = string.IsNullOrWhiteSpace(sequenceId) ||
+            (state != null && string.Equals(state.currentSequenceId, sequenceId, StringComparison.Ordinal)) ||
+            (mainExecution.Sequence != null && string.Equals(mainExecution.Sequence.SequenceId, sequenceId, StringComparison.Ordinal));
+        if (!matches)
+            return;
+
+        if (state != null)
+            state.Reset();
+        mainExecution.Sequence = null;
+        mainExecution.CurrentStepIndex = -1;
+        mainExecution.Context.Clear();
+    }
+
     public bool TryGetResumePlacement(out string sceneId, out string spawnId, out string resumeLabel)
     {
         sceneId = "";
@@ -788,11 +823,27 @@ public class SequenceRunner : MonoBehaviour
             return false;
 
         BuildLabelIndex(mainExecution, sequence);
+        IntroCheckpointResume choice = BuildResumeChoice(sequence, state);
+        if (choice.RestartAtBeginning)
+        {
+            if (!string.IsNullOrWhiteSpace(choice.RecoveryReason) && enableDebugLogs)
+                Debug.LogWarning($"[SequenceRunner] {choice.RecoveryReason}");
+            return true;
+        }
+
         sceneId = state.sceneId ?? "";
         spawnId = state.spawnId ?? "";
-        resumeLabel = state.checkpointLabel ?? "";
+        resumeLabel = choice.ResumeLabel ?? "";
 
         Step_SetCheckpoint authored = FindCheckpointStep(sequence, state.checkpointId);
+        if ((authored == null || string.IsNullOrWhiteSpace(authored.ResumeSceneId)) &&
+            !string.IsNullOrWhiteSpace(resumeLabel))
+        {
+            Step_SetCheckpoint labeled = FindCheckpointByLabel(sequence, resumeLabel);
+            if (labeled != null)
+                authored = labeled;
+        }
+
         if (authored != null)
         {
             if (string.IsNullOrWhiteSpace(sceneId))
@@ -808,6 +859,9 @@ public class SequenceRunner : MonoBehaviour
         {
             resumeLabel = "";
         }
+
+        if (!string.IsNullOrWhiteSpace(choice.RecoveryReason) && enableDebugLogs)
+            Debug.LogWarning($"[SequenceRunner] {choice.RecoveryReason}");
 
         return true;
     }
@@ -857,6 +911,27 @@ public class SequenceRunner : MonoBehaviour
         }
 
         return null;
+    }
+
+    private static Step_SetCheckpoint FindCheckpointByLabel(SequenceAsset sequence, string label)
+    {
+        if (sequence == null || string.IsNullOrWhiteSpace(label))
+            return null;
+
+        Step_SetCheckpoint fallback = null;
+        for (int i = 0; i < sequence.StepCount; i++)
+        {
+            if (sequence.GetStep(i) is Step_SetCheckpoint checkpoint &&
+                string.Equals(checkpoint.CheckpointLabel, label, StringComparison.Ordinal))
+            {
+                if (!string.IsNullOrWhiteSpace(checkpoint.ResumeSceneId))
+                    return checkpoint;
+                if (fallback == null)
+                    fallback = checkpoint;
+            }
+        }
+
+        return fallback;
     }
 
     public void ClearPersistentState(string sequenceId)
@@ -937,33 +1012,41 @@ public class SequenceRunner : MonoBehaviour
 
     private int ResolveResumeIndex(SequenceAsset sequence, SequenceState state, out string recoveryReason)
     {
-        recoveryReason = "";
+        IntroCheckpointResume choice = BuildResumeChoice(sequence, state);
+        recoveryReason = choice.RecoveryReason ?? "";
+        return choice.StepIndex;
+    }
+
+    private IntroCheckpointResume BuildResumeChoice(SequenceAsset sequence, SequenceState state)
+    {
         if (sequence == null || state == null)
-            return 0;
-
-        if (!string.IsNullOrWhiteSpace(state.checkpointId) &&
-            TryResolveCheckpointId(sequence, state.checkpointId, out int checkpointIndex, out string authoredLabel))
         {
-            return checkpointIndex;
+            return IntroResumePolicy.Choose("", false, -1, "", "", false, -1, "", false, -1);
         }
 
-        if (!string.IsNullOrWhiteSpace(state.checkpointLabel) &&
-            mainExecution.LabelIndex.TryGetValue(state.checkpointLabel, out int labelIndex))
-        {
-            if (!string.IsNullOrWhiteSpace(state.checkpointId))
-                recoveryReason = $"Checkpoint '{state.checkpointId}' no longer exists in '{sequence.SequenceId}'; recovered with label '{state.checkpointLabel}'.";
-            return labelIndex;
-        }
+        bool checkpointFound = TryResolveCheckpointId(
+            sequence,
+            state.checkpointId,
+            out int checkpointIndex,
+            out string authoredLabel);
+        int labelIndex = -1;
+        bool labelFound = !string.IsNullOrWhiteSpace(state.checkpointLabel) &&
+            mainExecution.LabelIndex.TryGetValue(state.checkpointLabel, out labelIndex);
+        int safeIndex = -1;
+        bool safeFound = !string.IsNullOrWhiteSpace(sequence.SafeResumeLabel) &&
+            mainExecution.LabelIndex.TryGetValue(sequence.SafeResumeLabel, out safeIndex);
 
-        if (!string.IsNullOrWhiteSpace(sequence.SafeResumeLabel) &&
-            mainExecution.LabelIndex.TryGetValue(sequence.SafeResumeLabel, out int safeIndex))
-        {
-            recoveryReason = $"Checkpoint for '{sequence.SequenceId}' could not be resolved; restarting at safe label '{sequence.SafeResumeLabel}'.";
-            return safeIndex;
-        }
-
-        recoveryReason = $"Checkpoint for '{sequence.SequenceId}' could not be resolved and no safe label was valid; restarting at sequence beginning.";
-        return 0;
+        return IntroResumePolicy.Choose(
+            state.checkpointId,
+            checkpointFound,
+            checkpointIndex,
+            authoredLabel,
+            state.checkpointLabel,
+            labelFound,
+            labelIndex,
+            sequence.SafeResumeLabel,
+            safeFound,
+            safeIndex);
     }
 
     private static bool TryResolveCheckpointId(

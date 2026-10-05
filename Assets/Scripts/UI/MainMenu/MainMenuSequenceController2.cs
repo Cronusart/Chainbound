@@ -286,6 +286,7 @@ public class MainMenuSequenceController2 : MonoBehaviour
     private bool _bootstrapFailed;
     private bool _startingNewGame;
     private bool _skipNewGameWalletPrompt;
+    private bool _introAbortArmed;
     private string _profileServiceError = "";
     private AudioHandle _menuMusicHandle;
     private float _menuMusicStartVolume = 1f;
@@ -419,6 +420,7 @@ public class MainMenuSequenceController2 : MonoBehaviour
         // net for every route, including authored/test sequences that load a
         // scene without passing through the normal Play-button handoff.
         StopMenuMusicImmediate();
+        DisarmIntroAbortRecovery();
 
         if (_sceneLoader != null)
             _sceneLoader.BeforeReveal -= HandleSceneBeforeReveal;
@@ -1066,6 +1068,78 @@ public class MainMenuSequenceController2 : MonoBehaviour
             return;
         }
 
+        bool skipWalletPrompt = _skipNewGameWalletPrompt;
+        _skipNewGameWalletPrompt = false;
+        if (skipWalletPrompt)
+        {
+            BeginNewGameThenRoute();
+            return;
+        }
+
+        StartCoroutine(PromptForWalletThenBeginNewGame());
+    }
+
+    /// <summary>
+    /// Legacy New Game asks about a wallet before the profile is marked started.
+    /// Cancelling that prompt must leave has_started_game false so the menu
+    /// still offers New Game on this same profile.
+    /// </summary>
+    private IEnumerator PromptForWalletThenBeginNewGame()
+    {
+        _accountFlowInFlight = true;
+        SetConnectButtonsInteractable(false);
+
+        WalletConnectionPromptService prompt = ResolveWalletPromptService();
+        if (prompt == null)
+        {
+            OnAccountFlowFailed("Wallet access prompt is unavailable.");
+            yield break;
+        }
+
+        WalletPromptDefinitionSO definition = mainMenuWalletPrompt != null
+            ? mainMenuWalletPrompt
+            : Resources.Load<WalletPromptDefinitionSO>("WalletPrompts/MainMenuWalletPrompt") ?? CreateRuntimeMainMenuWalletPrompt();
+        var task = prompt.ShowAsync(definition);
+        while (!task.IsCompleted)
+            yield return null;
+
+        WalletPromptResult result = task.Result;
+        if (result.Kind == WalletPromptResultKind.Failed || result.Kind == WalletPromptResultKind.Cancelled)
+        {
+            OnAccountFlowFailed(string.IsNullOrWhiteSpace(result.Message) ? "Wallet prompt cancelled." : result.Message);
+            yield break;
+        }
+
+        BeginNewGameThenRoute();
+    }
+
+    private void BeginNewGameThenRoute()
+    {
+        MainMenuFlowOrchestrator orchestrator = ResolveFlowOrchestrator();
+        if (orchestrator == null)
+        {
+            if (enableOfflineNewGameTest)
+            {
+                StartOfflineNewGameTest();
+                return;
+            }
+
+            OnAccountFlowFailed("Profile service is unavailable.");
+            return;
+        }
+
+        // An offline cached profile already exists. Replaying the intro must
+        // not wait on a network write that cannot succeed.
+        if (_cachedSnapshot.fetchError && _cachedSnapshot.hasProfile)
+        {
+            _accountFlowInFlight = false;
+            _startingNewGame = true;
+            _routeDecision = DecideRoute(_cachedSnapshot, routeMode);
+            _routeReady = true;
+            StartCoroutine(PlayRouteCoroutine());
+            return;
+        }
+
         _accountFlowInFlight = true;
         _startingNewGame = true;
         SetConnectButtonsInteractable(false);
@@ -1073,15 +1147,9 @@ public class MainMenuSequenceController2 : MonoBehaviour
         {
             _accountFlowInFlight = false;
             CacheResolvedSession(session);
-            bool routeWithoutPrompt = _skipNewGameWalletPrompt;
-            _skipNewGameWalletPrompt = false;
-            if (routeWithoutPrompt)
-                StartCoroutine(PlayRouteCoroutine());
-            else
-                StartCoroutine(ShowMainMenuWalletPromptThenRoute());
+            StartCoroutine(PlayRouteCoroutine());
         }, error =>
         {
-            _skipNewGameWalletPrompt = false;
             if (enableOfflineNewGameTest)
             {
                 _accountFlowInFlight = false;
@@ -1217,27 +1285,6 @@ public class MainMenuSequenceController2 : MonoBehaviour
         }
     }
 
-    private IEnumerator ShowMainMenuWalletPromptThenRoute()
-    {
-        WalletConnectionPromptService prompt = ResolveWalletPromptService();
-        WalletPromptDefinitionSO definition = mainMenuWalletPrompt != null
-            ? mainMenuWalletPrompt
-            : Resources.Load<WalletPromptDefinitionSO>("WalletPrompts/MainMenuWalletPrompt") ?? CreateRuntimeMainMenuWalletPrompt();
-        var task = prompt.ShowAsync(definition);
-        while (!task.IsCompleted)
-            yield return null;
-
-        WalletPromptResult result = task.Result;
-        if (result.Kind == WalletPromptResultKind.Failed || result.Kind == WalletPromptResultKind.Cancelled)
-        {
-            OnAccountFlowFailed(result.Message);
-            yield break;
-        }
-
-        CacheResolvedSession(ResolveFlowOrchestrator().CurrentSession);
-        StartCoroutine(PlayRouteCoroutine());
-    }
-
     private WalletConnectionPromptService ResolveWalletPromptService()
     {
         if (walletPromptService == null)
@@ -1283,8 +1330,8 @@ public class MainMenuSequenceController2 : MonoBehaviour
     private void ApplyProfileActionLayout()
     {
         bool hasProfile = _routeReady && _cachedSnapshot.hasProfile;
-        bool hasStarted = hasProfile && _cachedSnapshot.hasStartedGame;
-        bool showRestore = !hasStarted && (!hasProfile || !_cachedSnapshot.isRecoverable);
+        bool showContinue = IntroResumePolicy.ShowContinue(hasProfile, _cachedSnapshot.hasStartedGame, _cachedSnapshot.displayName);
+        bool showRestore = !showContinue && (!hasProfile || !_cachedSnapshot.isRecoverable);
 
         if (objectNavigator != null)
         {
@@ -1292,11 +1339,11 @@ public class MainMenuSequenceController2 : MonoBehaviour
             SetGroupState(playButtonGroup, false, 0f, false);
             bonkDogPanel?.Configure(
                 _cachedSnapshot,
-                hasStarted,
+                showContinue,
                 _bootstrapFailed,
                 _profileServiceError);
             bonkDogPanel?.SetActionsInteractable(!_accountFlowInFlight && !_playInFlight);
-            bonkDogHotspot?.SetBubbleLabel(hasStarted ? "CONTINUE" : "NEW GAME");
+            bonkDogHotspot?.SetBubbleLabel(showContinue ? "CONTINUE" : "NEW GAME");
 
             if (bonkDogPanel != null && bonkDogPanel.IsOpen)
             {
@@ -1314,11 +1361,11 @@ public class MainMenuSequenceController2 : MonoBehaviour
         }
 
         SetGroupState(connectSettingsGroup, true, 1f, true);
-        SetGroupState(playButtonGroup, hasStarted, hasStarted ? 1f : 0f, hasStarted);
+        SetGroupState(playButtonGroup, showContinue, showContinue ? 1f : 0f, showContinue);
 
         if (continueAsGuestButton != null) continueAsGuestButton.gameObject.SetActive(false);
-        if (connectWalletButton != null) connectWalletButton.gameObject.SetActive(!hasStarted);
-        if (playButton != null) playButton.gameObject.SetActive(hasStarted);
+        if (connectWalletButton != null) connectWalletButton.gameObject.SetActive(!showContinue);
+        if (playButton != null) playButton.gameObject.SetActive(showContinue);
         if (settingsButton != null) settingsButton.gameObject.SetActive(true);
         if (restoreAccountButton != null) restoreAccountButton.gameObject.SetActive(showRestore);
         if (linkWalletButton != null && linkWalletButton != connectWalletButton)
@@ -1334,10 +1381,10 @@ public class MainMenuSequenceController2 : MonoBehaviour
         SetButtonLabel(restoreAccountButton, "Restore Profile");
 
         SetConnectButtonsInteractable(!_accountFlowInFlight && !_playInFlight);
-        ConfigurePrimaryActionNavigation(hasStarted, showRestore);
+        ConfigurePrimaryActionNavigation(showContinue, showRestore);
         _menuState = MenuState.ConnectGroup;
 
-        Button primary = hasStarted ? playButton : connectWalletButton;
+        Button primary = showContinue ? playButton : connectWalletButton;
         if (primary != null && primary.gameObject.activeInHierarchy)
             SetSelectedButton(primary);
 
@@ -1673,14 +1720,14 @@ public class MainMenuSequenceController2 : MonoBehaviour
             return;
 
         bool hasProfile = _routeReady && _cachedSnapshot.hasProfile;
-        bool hasStarted = hasProfile && _cachedSnapshot.hasStartedGame;
+        bool showContinue = IntroResumePolicy.ShowContinue(hasProfile, _cachedSnapshot.hasStartedGame, _cachedSnapshot.displayName);
         // A message from a previous visit describes an action the player already saw
         // the result of. Reopening the panel is a fresh start, so only a still-true
         // bootstrap failure should greet them.
         if (_routeReady)
             _profileServiceError = "";
 
-        bonkDogPanel.Configure(_cachedSnapshot, hasStarted, _bootstrapFailed, _profileServiceError);
+        bonkDogPanel.Configure(_cachedSnapshot, showContinue, _bootstrapFailed, _profileServiceError);
         bonkDogPanel.SetActionsInteractable(true);
         OpenObjectPanel(bonkDogPanel, bonkDogHotspot);
     }
@@ -1982,11 +2029,7 @@ public class MainMenuSequenceController2 : MonoBehaviour
         if (hydrationTask.IsFaulted || !narrativeCoordinator.IsReady)
         {
             Debug.LogError($"[MainMenuSequenceController2] Narrative profile hydration failed: {hydrationTask.Exception}");
-            _playInFlight = false;
-            _menuState = objectNavigator != null ? MenuState.ObjectNavigation : MenuState.PlayGroup;
-            menuInputController?.SetInteractionEnabled(true);
-            if (playButton != null)
-                playButton.interactable = true;
+            RestorePlayRouteAfterFailure("Narrative profile hydration failed.");
             yield break;
         }
 
@@ -2001,9 +2044,11 @@ public class MainMenuSequenceController2 : MonoBehaviour
             PopulateGameSessionContext();
         }
 
+        bool replayUnnamedIntro = IntroResumePolicy.ShouldReplayIntroFromBeginning(_cachedSnapshot.displayName);
         bool resumesAfterIntroCinematic =
             _routeDecision.route == PlayRoute.IntroPath &&
-            _cachedSnapshot.introCinematicComplete;
+            _cachedSnapshot.introCinematicComplete &&
+            !replayUnnamedIntro;
 
         if (resumesAfterIntroCinematic)
         {
@@ -2018,13 +2063,25 @@ public class MainMenuSequenceController2 : MonoBehaviour
         if (_routeDecision.route == PlayRoute.IntroPath && introSequence != null)
         {
             SanctuarySpawnDirector.ClearPendingPresentation();
-            if (enableDebugLogs)
-                Debug.Log($"[MainMenuSequenceController2] State=Routing → intro path (resume or play)");
-            if (!SequenceDirector.Instance.ResumeHydratedSequence(
-                    introSequence.SequenceId,
-                    onFailed: RestorePlayRouteAfterFailure))
+            _ = SequenceDirector.Instance;
+            ArmIntroAbortRecovery();
+            if (replayUnnamedIntro)
             {
+                if (enableDebugLogs)
+                    Debug.Log("[MainMenuSequenceController2] State=Routing → intro path from the start (no display name)");
+                SequenceRunner.Instance?.DiscardRestoredCheckpoint(introSequence.SequenceId);
                 SequenceDirector.Instance.Play(introSequence);
+            }
+            else
+            {
+                if (enableDebugLogs)
+                    Debug.Log("[MainMenuSequenceController2] State=Routing → intro path (resume or play)");
+                if (!SequenceDirector.Instance.ResumeHydratedSequence(
+                        introSequence.SequenceId,
+                        onFailed: RestorePlayRouteAfterFailure))
+                {
+                    SequenceDirector.Instance.Play(introSequence);
+                }
             }
         }
 
@@ -2121,8 +2178,47 @@ public class MainMenuSequenceController2 : MonoBehaviour
         yield break;
     }
 
+    private void ArmIntroAbortRecovery()
+    {
+        SequenceRunner runner = SequenceRunner.Instance;
+        if (runner == null || _introAbortArmed)
+            return;
+
+        runner.OnSequenceAborted += HandleIntroSequenceAborted;
+        _introAbortArmed = true;
+    }
+
+    private void DisarmIntroAbortRecovery()
+    {
+        if (!_introAbortArmed)
+            return;
+
+        SequenceRunner runner = SequenceRunner.Instance;
+        if (runner != null)
+            runner.OnSequenceAborted -= HandleIntroSequenceAborted;
+        _introAbortArmed = false;
+    }
+
+    private void HandleIntroSequenceAborted(SequenceAsset sequence, StepOutcome outcome)
+    {
+        if (introSequence == null || sequence == null ||
+            !string.Equals(sequence.SequenceId, introSequence.SequenceId, System.StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (!isActiveAndEnabled)
+            return;
+
+        string message = outcome.Message;
+        if (string.IsNullOrWhiteSpace(message))
+            message = "Intro sequence stopped.";
+        RestorePlayRouteAfterFailure(message);
+    }
+
     private void RestorePlayRouteAfterFailure(string message)
     {
+        DisarmIntroAbortRecovery();
         Debug.LogError($"[MainMenuSequenceController2] Intro resume failed: {message}");
         _playInFlight = false;
         _menuState = objectNavigator != null ? MenuState.ObjectNavigation : MenuState.PlayGroup;
@@ -2228,12 +2324,14 @@ public class MainMenuSequenceController2 : MonoBehaviour
             };
         }
 
-        // A crash before the cinematic checkpoint intentionally replays the
-        // cinematic; once it is complete an interrupted quest resumes from its
-        // normal narrative checkpoint, and completed intro routes directly.
-        bool shouldUseIntroPath = !profile.hasStartedGame ||
-                                 !profile.introCinematicComplete ||
-                                 !profile.introQuestComplete;
+        // A profile with no committed name is not started: always open the intro
+        // from the beginning on this same profile. Named players still replay
+        // the intro until the cinematic and the intro quest are both complete.
+        bool shouldUseIntroPath = IntroResumePolicy.ShouldRouteToIntro(
+            profile.hasStartedGame,
+            profile.introCinematicComplete,
+            profile.introQuestComplete,
+            profile.displayName);
         if (shouldUseIntroPath)
         {
             return new RouteDecision

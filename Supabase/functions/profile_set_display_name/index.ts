@@ -8,17 +8,23 @@ import {
   str,
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
+import {
+  isPlayerDisplayNameLengthValid,
+  isPlayerDisplayNameUniqueViolation,
+  normalizePlayerDisplayName,
+  PLAYER_DISPLAY_NAME_TAKEN,
+} from "../_shared/player_display_name.ts";
 
 serve(async (req: Request) => {
   const early = requirePost(req);
   if (early) return early;
 
   const body = await readJsonBody<JsonMap>(req);
-  if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
+  if (!body) return jsonResponse({ success: false, error: "invalid_json" }, 400);
 
-  const displayName = str(body.display_name);
-  if (displayName.length < 1 || displayName.length > 16) {
-    return jsonResponse({ success: false, error: "display_name must be between 1 and 16 characters" }, 400);
+  const displayName = normalizePlayerDisplayName(str(body.display_name));
+  if (!isPlayerDisplayNameLengthValid(displayName)) {
+    return jsonResponse({ success: false, error: "invalid_display_name" }, 400);
   }
 
   const supabase = supabaseAdmin();
@@ -26,22 +32,41 @@ serve(async (req: Request) => {
     const profile = await resolveAuthenticatedProfile(req, supabase, body);
     if (!profile) return jsonResponse({ success: false, error: "profile_not_found" }, 404);
 
-    const { data: updatedProfile, error: profileError } = await supabase
-      .from("player_profiles")
-      .update({ display_name: displayName })
-      .eq("player_profile_id", profile.player_profile_id)
-      .select("display_name")
-      .single();
+    const { data, error } = await supabase.rpc("profile_set_display_name_tx", {
+      p_profile_id: profile.player_profile_id,
+      p_display_name: displayName,
+    });
 
-    if (profileError) throw profileError;
+    if (error) {
+      if (isPlayerDisplayNameUniqueViolation(error)) {
+        return jsonResponse({ success: false, error: PLAYER_DISPLAY_NAME_TAKEN }, 409);
+      }
+      throw error;
+    }
+
+    const result = (data ?? {}) as JsonMap;
+    if (result.success !== true) {
+      const errorCode = str(result.error) || "profile_set_display_name_failed";
+      const status = errorCode === PLAYER_DISPLAY_NAME_TAKEN
+        ? 409
+        : errorCode === "invalid_display_name"
+        ? 400
+        : errorCode === "profile_not_found"
+        ? 404
+        : 500;
+      return jsonResponse({ success: false, error: errorCode }, status);
+    }
 
     return jsonResponse({
       success: true,
-      player_profile_id: profile.player_profile_id,
-      display_name: updatedProfile?.display_name ?? displayName,
+      player_profile_id: str(result.player_profile_id) || profile.player_profile_id,
+      display_name: str(result.display_name) || displayName,
     });
   } catch (error) {
     console.error("[profile_set_display_name]", error);
+    if (isPlayerDisplayNameUniqueViolation(error as { code?: string; message?: string; details?: string })) {
+      return jsonResponse({ success: false, error: PLAYER_DISPLAY_NAME_TAKEN }, 409);
+    }
     return jsonResponse({ success: false, error: "profile_set_display_name_failed" }, 500);
   }
 });

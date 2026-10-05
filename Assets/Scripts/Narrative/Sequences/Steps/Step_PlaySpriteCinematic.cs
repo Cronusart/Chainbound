@@ -16,7 +16,11 @@ public class Step_PlaySpriteCinematic : SequenceStep
             yield break;
         }
 
-        if (suppressWhenProfileComplete && GameSessionContext.Instance != null && GameSessionContext.Instance.IntroCinematicComplete)
+        GameSessionContext session = GameSessionContext.Instance;
+        if (IntroResumePolicy.ShouldSuppressCompletedCinematic(
+                suppressWhenProfileComplete,
+                session != null && session.IntroCinematicComplete,
+                session != null ? session.DisplayName : ""))
         {
             onComplete?.Invoke(StepOutcome.Success("Sprite cinematic already complete."));
             yield break;

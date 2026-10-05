@@ -95,6 +95,18 @@ public class NameInputUI : MonoBehaviour
         UnbindUiEvents();
     }
 
+    /// <summary>
+    /// Replaces the keyboard title and prompt for the next Show call.
+    /// Used when a committed name is already taken.
+    /// </summary>
+    public void SetEntryCopy(string title, string prompt)
+    {
+        if (!string.IsNullOrWhiteSpace(title))
+            keyboardTitle = title;
+        if (prompt != null)
+            keyboardPrompt = prompt;
+    }
+
     public bool Show()
     {
         if (!EnsureUi())

@@ -57,8 +57,13 @@ public class SupabasePlayerNameService : MonoBehaviour, IPlayerNameService
                         $"[SupabasePlayerNameService] {functionName} returned {response.statusCode}: {response.body}");
                 }
 
+                PlayerNameCommitResult parsed = PlayerNameCommitFlow.FromEdgeBody(response.body);
+                if (PlayerNameCommitFlow.ShouldRePrompt(parsed))
+                    return parsed;
+
                 return PlayerNameCommitResult.FromError(
-                    $"{functionName} returned {response.statusCode}: {response.body}");
+                    $"{functionName} returned {response.statusCode}: {response.body}",
+                    parsed.ErrorCode);
             }
 
             SetDisplayNameResponse payload = JsonUtility.FromJson<SetDisplayNameResponse>(response.body);

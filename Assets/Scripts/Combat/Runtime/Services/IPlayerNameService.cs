@@ -6,6 +6,7 @@ public struct PlayerNameCommitResult
     public bool Success;
     public string DisplayName;
     public string ErrorMessage;
+    public string ErrorCode;
 
     public static PlayerNameCommitResult FromSuccess(string displayName)
     {
@@ -14,16 +15,18 @@ public struct PlayerNameCommitResult
             Success = true,
             DisplayName = displayName ?? "",
             ErrorMessage = "",
+            ErrorCode = "",
         };
     }
 
-    public static PlayerNameCommitResult FromError(string errorMessage)
+    public static PlayerNameCommitResult FromError(string errorMessage, string errorCode = "")
     {
         return new PlayerNameCommitResult
         {
             Success = false,
             DisplayName = "",
             ErrorMessage = errorMessage ?? "Unknown error.",
+            ErrorCode = errorCode ?? "",
         };
     }
 }

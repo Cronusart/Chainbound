@@ -46,31 +46,97 @@ public class Step_CommitPlayerName : SequenceStep
             yield break;
         }
 
-        Task<PlayerNameCommitResult> commitTask = service.CommitDisplayNameAsync(walletAddress, playerName, supabaseConfig);
-        while (!commitTask.IsCompleted)
+        while (true)
+        {
+            Task<PlayerNameCommitResult> commitTask = service.CommitDisplayNameAsync(walletAddress, playerName, supabaseConfig);
+            while (!commitTask.IsCompleted)
+                yield return null;
+
+            if (commitTask.IsFaulted)
+            {
+                onComplete?.Invoke(StepOutcome.Failed(commitTask.Exception?.GetBaseException().Message ?? "Unknown commit failure."));
+                yield break;
+            }
+
+            PlayerNameCommitResult result = commitTask.Result;
+            if (result.Success)
+            {
+                string confirmedName = string.IsNullOrWhiteSpace(result.DisplayName) ? playerName.Trim() : result.DisplayName.Trim();
+                context.PlayerName = confirmedName;
+                GameSessionContext.Instance?.SetDisplayName(confirmedName);
+
+                if (enableDebugLogs)
+                    Debug.Log($"[Step_CommitPlayerName] Display name committed: {confirmedName}");
+
+                onComplete?.Invoke(StepOutcome.Success());
+                yield break;
+            }
+
+            if (!PlayerNameCommitFlow.ShouldRePrompt(result))
+            {
+                onComplete?.Invoke(StepOutcome.Failed(result.ErrorMessage));
+                yield break;
+            }
+
+            if (enableDebugLogs)
+                Debug.LogWarning($"[Step_CommitPlayerName] {PlayerNameCommitFlow.NameTakenMessage}");
+
+            string replacement = null;
+            bool promptFinished = false;
+            // SequenceRunner pumps this enumerator itself and forwards each yield
+            // to Unity. A nested IEnumerator must be walked here or the prompt
+            // never runs and the sequence fails immediately.
+            IEnumerator prompt = PromptReplacementName(PlayerNameCommitFlow.NameTakenMessage, name =>
+            {
+                replacement = name;
+                promptFinished = true;
+            });
+            while (prompt.MoveNext())
+                yield return prompt.Current;
+
+            if (!promptFinished || string.IsNullOrWhiteSpace(replacement))
+            {
+                onComplete?.Invoke(StepOutcome.Failed(PlayerNameCommitFlow.NameTakenMessage));
+                yield break;
+            }
+
+            playerName = replacement.Trim();
+            context.PlayerName = playerName;
+            GameSessionContext.Instance?.SetDisplayName(playerName);
+        }
+    }
+
+    private static IEnumerator PromptReplacementName(string message, System.Action<string> onName)
+    {
+        NameInputUI nameInputUI = Object.FindFirstObjectByType<NameInputUI>(FindObjectsInactive.Include);
+        if (nameInputUI == null)
+        {
+            onName?.Invoke(null);
+            yield break;
+        }
+
+        nameInputUI.SetEntryCopy("Dog's Name", message);
+        if (!nameInputUI.gameObject.activeSelf)
+            nameInputUI.gameObject.SetActive(true);
+
+        string playerName = null;
+        void HandleConfirmed(string name) => playerName = name;
+        nameInputUI.OnNameConfirmed += HandleConfirmed;
+
+        bool shown = nameInputUI.Show();
+        if (!shown)
+        {
+            nameInputUI.OnNameConfirmed -= HandleConfirmed;
+            onName?.Invoke(null);
+            yield break;
+        }
+
+        while (playerName == null)
             yield return null;
 
-        if (commitTask.IsFaulted)
-        {
-            onComplete?.Invoke(StepOutcome.Failed(commitTask.Exception?.GetBaseException().Message ?? "Unknown commit failure."));
-            yield break;
-        }
-
-        PlayerNameCommitResult result = commitTask.Result;
-        if (!result.Success)
-        {
-            onComplete?.Invoke(StepOutcome.Failed(result.ErrorMessage));
-            yield break;
-        }
-
-        string confirmedName = string.IsNullOrWhiteSpace(result.DisplayName) ? playerName.Trim() : result.DisplayName.Trim();
-        context.PlayerName = confirmedName;
-        GameSessionContext.Instance?.SetDisplayName(confirmedName);
-
-        if (enableDebugLogs)
-            Debug.Log($"[Step_CommitPlayerName] Display name committed: {confirmedName}");
-
-        onComplete?.Invoke(StepOutcome.Success());
+        nameInputUI.OnNameConfirmed -= HandleConfirmed;
+        nameInputUI.Hide();
+        onName?.Invoke(playerName);
     }
 
     public override bool Validate()

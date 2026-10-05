@@ -122,9 +122,16 @@ public class LocalSaveServiceStub : MonoBehaviour, ISaveService, IPlayerNameServ
     }
 
     /// <summary>
-    /// Offline onboarding adapter used by the main-menu New Game test route.
+    /// Offline onboarding adapter used when the session cannot reach Supabase.
     /// Keeps the sequence's interface-driven commit steps moving without
     /// attempting a network request or requiring a wallet/profile identity.
+    /// Uniqueness cannot be checked offline. The name is stored only in local
+    /// PlayerPrefs. The next online profile_set_display_name call is the source
+    /// of truth: a case-insensitive collision returns name_taken and the intro
+    /// name step asks again. If this device never reaches that online commit,
+    /// the server display name stays empty and the menu treats the profile as
+    /// not started, so the intro replays on the same profile row.
+    /// Chainling and starter names are not unique.
     /// </summary>
     public Task<PlayerNameCommitResult> CommitDisplayNameAsync(
         string walletAddress,

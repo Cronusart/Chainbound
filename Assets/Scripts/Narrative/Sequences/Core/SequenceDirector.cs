@@ -147,9 +147,17 @@ public class SequenceDirector : MonoBehaviour
         SequenceParameters parameters,
         Action<string> onFailed)
     {
-        if (!runner.TryGetResumePlacement(out string sceneId, out string spawnId, out _))
+        if (!runner.TryGetResumePlacement(out string sceneId, out string spawnId, out string resumeLabel))
         {
             FailResume(onFailed, "Restored sequence checkpoint was invalid.");
+            yield break;
+        }
+
+        // A gameplay label with no scene would keep running bedroom steps on the
+        // main menu. Fail closed so the menu can take input again.
+        if (!string.IsNullOrWhiteSpace(resumeLabel) && string.IsNullOrWhiteSpace(sceneId))
+        {
+            FailResume(onFailed, $"Resume label '{resumeLabel}' has no scene to load. Returning to the menu.");
             yield break;
         }
 
