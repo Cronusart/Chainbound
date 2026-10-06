@@ -77,7 +77,7 @@ namespace Chainbound.Combat
                 Def("system_flush", "System Flush", "Heals and clears common statuses.", PlayerItemCategory.Field, PlayerItemEffectFamily.StatusClear, heal: 40),
                 Def("chainling_reboot", "Chainling Reboot", "Reboots a fainted Chainling.", PlayerItemCategory.Field, PlayerItemEffectFamily.Revive),
                 Def("party_patch", "Party Patch", "Applies a small HP patch to the whole party.", PlayerItemCategory.Field, PlayerItemEffectFamily.HealParty, heal: 15),
-                Def(PlayerMovementSpeedConsumable.ItemId, "Stride Tonic", "A short-burn motor patch. Movement quickens, then settles back to your normal pace.", PlayerItemCategory.Field, PlayerItemEffectFamily.MovementSpeedBoost),
+                Def(PlayerMovementSpeedConsumable.ItemId, "Nitro Brew", "A short-burn motor brew. Movement quickens, then settles back to your normal pace.", PlayerItemCategory.Field, PlayerItemEffectFamily.MovementSpeedBoost),
 
                 Def("signal_orb", "Signal Orb", "Neutral capture band and lock profile.", PlayerItemCategory.Capture, PlayerItemEffectFamily.CaptureTool),
                 Def("lattice_orb", "Lattice Orb", "Widens the capture band by 25%, but reduces Lock Rate by 15%.", PlayerItemCategory.Capture, PlayerItemEffectFamily.CaptureTool, bandWidthBp: 2500, lockRateBp: -1500),

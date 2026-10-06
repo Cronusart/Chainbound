@@ -28,8 +28,8 @@ Chainbound is a Unity-built creature battler that combines party-based combat, s
 ## Quickstart
 1. Install Unity `6000.0.24f1`.
 2. Open this folder in Unity Hub.
-3. Copy `Assets/StreamingAssets/Config.sample.json` to `Assets/StreamingAssets/Config.json`.
-4. Set `solanaRpcEndpoint` to a devnet-safe RPC endpoint, or use `CHAINBOUND_SOLANA_RPC_ENDPOINT`.
+3. For Editor-only development, copy `Assets/StreamingAssets/Config.sample.json` to `Assets/StreamingAssets/Config.json`.
+4. For Android builds, copy that sample to `Assets/Resources/ChainboundLocalConfig.json`, keep `ownershipCluster` pinned to `devnet`, and set `solanaRpcEndpoint` to the authenticated `solana_rpc_proxy` Edge Function URL. The provider credential remains in Supabase secrets and is never packaged in the APK. `CHAINBOUND_SOLANA_RPC_ENDPOINT` remains an Editor-only override for direct local testing.
 5. If you want backend profile flows, create a local `.env` from `.env.example` for Supabase secrets.
 6. Open one of the main demo scenes and press Play.
 
@@ -50,7 +50,7 @@ Chainbound is a Unity-built creature battler that combines party-based combat, s
 ## Config And Security
 - No service-role keys, wallet seed phrases, or private RPC credentials should be committed.
 - Public-safe samples live in `.env.example` and `Assets/StreamingAssets/Config.sample.json`.
-- Real runtime values come from ignored local config or environment variables.
+- Real runtime values come from ignored local config or Editor environment variables. Android uses the public Supabase proxy URL; client RPC URLs packaged in an APK are observable and must never carry a provider key.
 - See [SECURITY_NOTES.md](SECURITY_NOTES.md) for the repo's secret-handling policy.
 
 ## Current State And Limitations

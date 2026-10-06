@@ -24,6 +24,7 @@ MonoBehaviour:
     sequenceProgressPredicates: []
     resolutionPredicates: []
     flagPredicates: []
+    worldFlagPredicates: []
     counterPredicates: []
     timeOfDay:
       allowedSegments: 0
@@ -45,6 +46,7 @@ MonoBehaviour:
     sequenceProgressPredicates: []
     resolutionPredicates: []
     flagPredicates: []
+    worldFlagPredicates: []
     counterPredicates: []
     timeOfDay:
       allowedSegments: 0
@@ -53,7 +55,7 @@ MonoBehaviour:
       maxNormalizedTime: 0
     dialogue: {fileID: 11400000, guid: a186a6e722c2b7c46a4bdaa656889765, type: 2}
     useDialogueCamera: 1
-    triggerId:
+    triggerId: 
     npcBehavior:
       mode: 1
       behaviorOverride: {fileID: 0}
@@ -68,7 +70,7 @@ MonoBehaviour:
     mode: 1
     behaviorOverride: {fileID: 0}
   designerNotes: Packing until the town-exit intercept. That intercept is the only
-    leftover speech and the only shop unlock. After it, Mart stays to load the
-    truck until the player enters the store.
+    leftover speech and the only shop unlock. After it, Mart stays to load the truck
+    until the player enters the store.
   activateQuestOnInactiveInteract: 0
   completeObjectiveOnActivate: 

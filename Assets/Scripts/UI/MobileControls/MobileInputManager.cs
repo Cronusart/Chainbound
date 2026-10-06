@@ -53,6 +53,7 @@ namespace SignalJam.UI.MobileControls
         [Tooltip("Optional editor-only override for testing the virtual movement pad. Keep disabled for normal keyboard/gamepad editor play.")]
         [SerializeField] private bool enableEditorMovementInput = false;
         [SerializeField] private bool enableDebugLogs = false;
+        [SerializeField, Min(0.05f)] private float doubleTapWindowSeconds = 0.32f;
 
         [Header("HUD Service")]
         [Tooltip("Optional explicit MobileHudService reference. When null the manager resolves MobileHudService.Instance lazily so PSG1 hotplug can push a Hidden context token.")]
@@ -71,6 +72,7 @@ namespace SignalJam.UI.MobileControls
         private bool isMobilePlatform;
         private bool isPlaySolanaDevice;
         private bool isSprintingMobile;
+        private readonly MobileSprintLock sprintLock = new MobileSprintLock();
         private Vector2 currentMoveInput;
         private bool wasMobileControlsActive;
 
@@ -132,6 +134,8 @@ namespace SignalJam.UI.MobileControls
         public HybridMovementPad MovementPad => movementPad;
         public GameboyButton JumpButton => jumpButton;
         public GameboyButton SprintButton => buttonX != null ? buttonX : sprintButton;
+        public bool SprintLocked => sprintLock.IsLocked;
+        public float DoubleTapWindowSeconds => doubleTapWindowSeconds;
 
         #endregion
 
@@ -414,6 +418,8 @@ namespace SignalJam.UI.MobileControls
         private void HandleXPressed()
         {
             if (!CanRouteHudButtonInput) return;
+            sprintLock.WindowSeconds = doubleTapWindowSeconds;
+            sprintLock.RegisterDown(Time.unscaledTime);
             isSprintingMobile = true;
             OnXPressed?.Invoke();
             OnSecondaryInteract?.Invoke();
@@ -527,10 +533,8 @@ namespace SignalJam.UI.MobileControls
             if (IsMobileControlsActive)
             {
                 if (buttonX != null)
-                {
-                    return buttonX.IsPressed;
-                }
-                return isSprintingMobile;
+                    return sprintLock.IsLocked || buttonX.IsPressed;
+                return sprintLock.IsLocked || isSprintingMobile;
             }
 
             return sprintAction != null && sprintAction.IsPressed();

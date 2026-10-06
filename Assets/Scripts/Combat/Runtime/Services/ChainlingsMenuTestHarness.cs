@@ -175,6 +175,33 @@ namespace Chainbound.Combat
             return Task.FromResult(ApplyPartyLineup(orderedPartyChainlingBackendIds));
         }
 
+        public Task<MenuMutationResult> ReleaseChainlingAsync(
+            string playerProfileId,
+            string walletAddress,
+            string authUserId,
+            string chainlingBackendId)
+        {
+            EnsureGenerated();
+            if (roster == null || roster.chainlings == null || string.IsNullOrWhiteSpace(chainlingBackendId))
+                return Task.FromResult(MenuMutationResult.Failed("chainling_id_required"));
+
+            for (int i = 0; i < roster.chainlings.Count; i++)
+            {
+                PlayerRosterEntry entry = roster.chainlings[i];
+                if (entry?.snapshot == null ||
+                    !string.Equals(entry.snapshot.backendChainlingId, chainlingBackendId, StringComparison.Ordinal))
+                    continue;
+
+                if (entry.isPartyMember)
+                    return Task.FromResult(MenuMutationResult.Failed("still_in_party"));
+
+                roster.chainlings.RemoveAt(i);
+                return Task.FromResult(MenuMutationResult.Ok());
+            }
+
+            return Task.FromResult(MenuMutationResult.Failed("chainling_not_found"));
+        }
+
         public Task<PlayerRosterSnapshot> RegenerateRosterAsync(string playerProfileId, string walletAddress)
         {
             RegenerateInternal();

@@ -13849,8 +13849,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71354c2f7e3c57749a6828f92d1bbe63, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unlockFlagKey: world.player.chainling_pc
-  legacyUnlockFlagKey: world.loomville_mart.open
+  unlockFlagKey: world.player.menu
+  legacyUnlockFlagKey: world.coffee.zeb_talked
 --- !u!114 &5554079314750780843
 MonoBehaviour:
   m_ObjectHideFlags: 0

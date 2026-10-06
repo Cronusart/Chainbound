@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using SignalJam.UI.MobileControls;
 using UnityEditor;
 using UnityEditor.Events;
 using UnityEditor.SceneManagement;
@@ -35,6 +36,12 @@ public static class CoffeeCourierHuntAuthoring
     public const string ZebRetryAdviceRuleLabel = "lost to cofi — advise and reopen";
     public const string MomoBeerTriggerId = "trigger_coffee_momo_beer";
     public const string ReynardBrewTriggerId = "trigger_coffee_reynard_brew";
+    public const string ReynardCheckInTriggerId = "trigger_coffee_reynard_checkin";
+    public const string CheckInSequenceId = "coffee_reynard_checkin_sequence";
+    public const string CheckInTrackId = "reynard_checkin";
+    public const string NitroBrewItemId = "nitro_brew";
+    public const string NitroBrewIdempotencyKey = "quest:coffee_and_beer:nitro_brew";
+    public const string TalkToReynardObjective = "talk_to_reynard";
     public const string CofiTriggerId = "trigger_cofi_lootwak";
     public const string ZebSequenceId = "coffee_courier_zeb_sequence";
     public const string CofiSequenceId = "coffee_cofi_lootwak_sequence";
@@ -55,10 +62,16 @@ public static class CoffeeCourierHuntAuthoring
 
     public static readonly string[] ReynardCheckInLines =
     {
-        "Toby sent you, huh? Figures. That dog runs on coffee and bad decisions.",
-        "Two blacks and a beer. Trouble is, my bean shipment's still playing hard to get.",
-        "My courier Zeb went deep into the jungle to pick it up. Find him and send those beans home.",
-        "Head out past the trail into the jungle. You want Toby's order, you start with Zeb.",
+        "Toby sent you? Ha! That dog runs on coffee and bad decisions, and he is fresh out of both.",
+        "Zeb, my courier, went for the beans and never came back. Probably stuck on the trail, arguing with a root.",
+        "Follow the path out of Loomville and keep going until the jungle closes over the road. Watch for Zeb.",
+        "The trail has been mean. Things out there like a slow runner. Take this Nitro Brew. It'll get you to him faster, and if something gives chase, you can outrun it.",
+    };
+
+    public static readonly string[] ReynardCheckInClosingLines =
+    {
+        "It's in your bag. Drink it when your legs need it, not before the walk even starts.",
+        "Be careful out there. Good luck, runner. Bring my beans home.",
     };
 
     public static readonly string[] ReynardReminderLines =
@@ -140,7 +153,6 @@ public static class CoffeeCourierHuntAuthoring
 
     private const string CoffeeQuestPath = "Assets/Scripts/Narrative/Quests/Quest_CoffeeAndBeer.asset";
     private const string DialogueFolder = "Assets/Scripts/Narrative/Quests/coffee_and_beer/DialogueSO";
-    private const string IntroDialogueFolder = "Assets/Scripts/Narrative/Quests/chainbound_intro/DialogueSO";
     private const string SequenceFolder = "Assets/Scripts/Narrative/Quests/coffee_and_beer/Sequence";
     private const string StepsFolder = SequenceFolder + "/Steps";
     private const string CatalogPath = "Assets/Resources/Narrative/SequenceCatalog.asset";
@@ -153,7 +165,6 @@ public static class CoffeeCourierHuntAuthoring
     private const string MomoProfilePath = "Assets/Scripts/NPC/Interaction/Academy/Momo/momo_academy_profile.asset";
     private const string LoominaryProfilePath = "Assets/Scripts/NPC/Interaction/Loominary/Loominary_QuestInteractionProfile.asset";
     private const string LoominaryBrokenPath = "Assets/Scripts/Narrative/Quests/chainbound_intro/DialogueSO/Dial_LoominaryBroken.asset";
-    private const string ReynardCheckInPath = IntroDialogueFolder + "/Dial_ReynardCoffeeCheckIn.asset";
     private const string EncounterSourcePath = "Assets/Data/Combat/BattleProviders/IntroFirstCreature_Encounter.asset";
     private const string EncounterPath = "Assets/Data/Combat/BattleProviders/CofiLootwak_Encounter.asset";
     private const string BertPrefabPath = "Assets/Prefabs/NPC/Bert.prefab";
@@ -181,10 +192,13 @@ public static class CoffeeCourierHuntAuthoring
         CameraShotPresetSO shot = AssetDatabase.LoadAssetAtPath<CameraShotPresetSO>(
             AssetDatabase.GUIDToAssetPath("e2e99b5b538b6914d99ce0ebfaca93f7"));
 
-        DialogueSequenceSO reynardCheckIn = AssetDatabase.LoadAssetAtPath<DialogueSequenceSO>(ReynardCheckInPath);
-        if (reynardCheckIn == null)
-            throw new InvalidOperationException($"Missing Reynard check-in dialogue at '{ReynardCheckInPath}'.");
+        DialogueSequenceSO reynardCheckIn = EnsureAsset<DialogueSequenceSO>(
+            DialogueFolder + "/Dial_Reynard_CheckInOffer.asset");
         AuthorDialogue(reynardCheckIn, chatter, shot, "Reynard", "reynard", ReynardCheckInLines);
+
+        DialogueSequenceSO reynardCheckInClose = EnsureAsset<DialogueSequenceSO>(
+            DialogueFolder + "/Dial_Reynard_CheckInClose.asset");
+        AuthorDialogue(reynardCheckInClose, chatter, shot, "Reynard", "reynard", ReynardCheckInClosingLines);
 
         DialogueSequenceSO reynardReminder = EnsureAsset<DialogueSequenceSO>(
             DialogueFolder + "/Dial_Reynard_FindCourier.asset");
@@ -238,7 +252,7 @@ public static class CoffeeCourierHuntAuthoring
             DialogueFolder + "/Dial_CofiLootwak_BossIntro.asset");
         AuthorCombatBossIntroDialogue(cofiIntro, chatter);
 
-        AuthorReynardCoffeeProfile(coffeeQuest, reynardCheckIn, reynardReminder, reynardNeedBeer, reynardBrew, reynardBrewed);
+        AuthorReynardCoffeeProfile(coffeeQuest, reynardReminder, reynardNeedBeer, reynardBrew, reynardBrewed);
         AuthorTobyActiveProfile(coffeeQuest, tobyThirsty, tobyBeans, tobyStall);
         AuthorTobyRouter();
         AuthorZebProfile(coffeeQuest, zebTalk, zebReturn, zebReminder, zebRetry);
@@ -256,7 +270,11 @@ public static class CoffeeCourierHuntAuthoring
         AuthorZebReturnSequence(zebReturnSequence, momoBeerSequence);
         AuthorMomoBeerSequence(momoBeerSequence, coffeeQuest, reynardBrewSequence);
         AuthorReynardBrewSequence(reynardBrewSequence);
+        SequenceAsset checkInSequence = EnsureAsset<SequenceAsset>(
+            SequenceFolder + "/coffee_reynard_checkin_sequence.asset");
+        AuthorReynardCheckInSequence(checkInSequence, reynardCheckIn, reynardCheckInClose);
         AuthorCatalog(zebSequence, cofiSequence, zebReturnSequence, momoBeerSequence, reynardBrewSequence);
+        CoffeeMartGateAuthoring.EnsureReynardCheckInTrack(checkInSequence);
         AuthorZebPrefab(zebTalk);
         AuthorEncounterRegistry(encounter);
         QueueOnGateSequence(zebSequence);
@@ -352,7 +370,6 @@ public static class CoffeeCourierHuntAuthoring
 
     private static void AuthorReynardCoffeeProfile(
         QuestDefinitionSO coffeeQuest,
-        DialogueSequenceSO checkIn,
         DialogueSequenceSO reminder,
         DialogueSequenceSO needBeer,
         DialogueSequenceSO brew,
@@ -404,14 +421,17 @@ public static class CoffeeCourierHuntAuthoring
             rules.GetArrayElementAtIndex(3),
             "after check-in — find Zeb",
             NarrativeQuestLifecycleMask.Active,
-            "talk_to_reynard",
+            TalkToReynardObjective,
             QuestInteractionObjectiveComparison.Complete,
             reminder,
             "");
-        serialized.FindProperty("inactiveDialogue").objectReferenceValue = checkIn;
+        serialized.FindProperty("inactiveDialogue").objectReferenceValue = null;
+        serialized.FindProperty("inactiveTriggerId").stringValue = ReynardCheckInTriggerId;
+        serialized.FindProperty("activateQuestOnInactiveInteract").boolValue = true;
+        serialized.FindProperty("completeObjectiveOnActivate").stringValue = TalkToReynardObjective;
         serialized.FindProperty("activeFallbackDialogue").objectReferenceValue = reminder;
         serialized.FindProperty("designerNotes").stringValue =
-            "Check-in sends the player after Zeb. Later rules ask for the beer, brew the order, or remind Toby's parcel is packed.";
+            "Check-in fires the Nitro Brew sequence, then sends the player after Zeb. Later rules ask for the beer, brew the order, or remind Toby's parcel is packed.";
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(profile);
     }
@@ -670,6 +690,61 @@ public static class CoffeeCourierHuntAuthoring
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(encounter);
         return encounter;
+    }
+
+    private static void AuthorReynardCheckInSequence(
+        SequenceAsset sequence,
+        DialogueSequenceSO offer,
+        DialogueSequenceSO closing)
+    {
+        var report = new List<string>();
+        TutorialReadAlongSnippetSO menuSnippet = TutorialReadAlongAuthoring.AuthorSnippet(
+            TutorialReadAlongAuthoring.MenuSnippetPath,
+            TutorialReadAlongAuthoring.MenuSnippetId,
+            TutorialReadAlongAuthoring.MenuSnippetTitle,
+            TutorialReadAlongAuthoring.MenuSnippetBody,
+            MobileHudEmphasisTarget.MenuY,
+            report);
+
+        var steps = new List<SequenceStep>
+        {
+            Label("coffee_checkin_idle", "coffee_checkin_label_idle"),
+            UnlockInput("coffee_checkin_unlock"),
+            WaitForTrigger(ReynardCheckInTriggerId, "coffee_checkin_wait", saveReturn: false),
+            PlayDialogue(offer, "coffee_checkin_offer"),
+            Label("coffee_checkin_grant", "coffee_checkin_label_grant"),
+            ItemDelta(NitroBrewIdempotencyKey, NitroBrewItemId, "", "", "coffee_checkin_grant_brew"),
+            IfEquals(
+                "lastItemDeltaOk",
+                "true",
+                "coffee_checkin_granted",
+                "coffee_checkin_retry",
+                "coffee_checkin_if_brew",
+                "coffee_checkin_brew_condition"),
+            Label("coffee_checkin_granted", "coffee_checkin_label_granted"),
+            ShowItem(NitroBrewItemId, 1, "coffee_checkin_obtain"),
+            PlayDialogue(closing, "coffee_checkin_close"),
+            WorldFlag(GameplayMenuWorldFlagGate.MenuUnlockFlagKey, "coffee_checkin_menu_flag"),
+            ShowTutorial(menuSnippet, "coffee_checkin_menu_tutorial"),
+            Jump("coffee_checkin_end", "coffee_checkin_jump_end"),
+            Label("coffee_checkin_retry", "coffee_checkin_label_retry"),
+            WaitSeconds(2f, "coffee_checkin_retry_wait"),
+            Jump("coffee_checkin_grant", "coffee_checkin_jump_grant"),
+            Label("coffee_checkin_end", "coffee_checkin_label_end"),
+        };
+
+        SerializedObject serialized = WriteSequence(
+            sequence,
+            CheckInSequenceId,
+            "coffee_checkin_idle",
+            "coffee_checkin_idle",
+            steps);
+        serialized.FindProperty("autoStartWhenNoSequenceRunning").boolValue = false;
+        serialized.FindProperty("autoStartQuestId").stringValue = "";
+        serialized.FindProperty("autoStartRequiredWorldFlagKey").stringValue = "";
+        serialized.FindProperty("autoStartSkipWorldFlagKey").stringValue = "";
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(sequence);
     }
 
     private static void AuthorZebSequence(
@@ -1123,6 +1198,26 @@ public static class CoffeeCourierHuntAuthoring
 
     private static Step_UnlockInput UnlockInput(string fileName) =>
         ConfigureStep<Step_UnlockInput>(fileName, _ => { });
+
+    private static Step_PlayDialogue PlayDialogue(DialogueSequenceSO dialogue, string fileName) =>
+        ConfigureStep<Step_PlayDialogue>(fileName, so =>
+        {
+            so.FindProperty("dialogueSequence").objectReferenceValue = dialogue;
+            so.FindProperty("lockInputDuringDialogue").boolValue = true;
+            so.FindProperty("useSpeakerCameraBridge").boolValue = true;
+            so.FindProperty("persistSpeakerCameraAfterDialogue").boolValue = false;
+        });
+
+    private static Step_ShowItemObtain ShowItem(string itemId, int quantity, string fileName) =>
+        ConfigureStep<Step_ShowItemObtain>(fileName, so =>
+        {
+            so.FindProperty("itemId").stringValue = itemId;
+            so.FindProperty("quantity").intValue = quantity;
+        });
+
+    private static Step_ShowTutorialReadAlong ShowTutorial(TutorialReadAlongSnippetSO snippet, string fileName) =>
+        ConfigureStep<Step_ShowTutorialReadAlong>(fileName, so =>
+            so.FindProperty("snippet").objectReferenceValue = snippet);
 
     private static Step_WaitForTrigger WaitForTrigger(string triggerId, string fileName, bool saveReturn) =>
         ConfigureStep<Step_WaitForTrigger>(fileName, so =>

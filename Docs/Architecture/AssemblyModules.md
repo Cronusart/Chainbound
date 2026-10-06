@@ -83,7 +83,7 @@ Editor tools under `Assets/Scripts/Editor/` (global) compile to **Assembly-CShar
 | Assembly | Referenced by | Notes |
 |---|---|---|
 | `Unity.InputSystem` | Combat.Runtime, MobileControls, MenuNavigation | New Input System |
-| `Unity.TextMeshPro` | Combat.Runtime, MenuNavigation | TMP |
+| `Unity.TextMeshPro` | Combat.Runtime, MenuNavigation, MobileControls | TMP. MobileControls uses it for the auto-sprint HUD label. |
 | `UnityEngine.UI` | MobileControls | uGUI |
 | `Unity.RenderPipelines.Universal.Runtime` | Combat.Runtime, TimeOfDay | URP |
 | `Unity.RenderPipelines.Core.Runtime` | Combat.Runtime, TimeOfDay | URP core (`Volume` / `VolumeProfile` for combat Post FX) |
@@ -123,6 +123,7 @@ flowchart BT
   TimeOfDay --> URP[URP packages]
   MobileControls --> PSG1
   MobileControls --> InputSystem[Unity.InputSystem]
+  MobileControls --> TMP[Unity.TextMeshPro]
 
   CombatRT --> CombatCore
   CombatRT --> TimeOfDay

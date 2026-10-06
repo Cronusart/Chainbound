@@ -96,6 +96,7 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
         OwnershipDeploymentEnvironment? environmentOverride)
     {
         var errors = new List<string>();
+        bool developmentBuild = (options & BuildOptions.Development) != 0;
         OwnershipDeploymentEnvironment? commandSelection = DevelopmentAndroidBuildCommand.ActiveDeploymentEnvironment;
         OwnershipDeploymentEnvironment? selected = environmentOverride
             ?? commandSelection
@@ -130,7 +131,19 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
                 errors.Add($"Profile environment {profile.OwnershipEnvironment} does not match build selection {selected.Value}.");
         }
 
-        SolanaConfigSO config = profile != null ? profile.SolanaConfig : null;
+        SolanaConfigSO sourceConfig = profile != null ? profile.SolanaConfig : null;
+        SolanaConfigSO config = null;
+        try
+        {
+            // Validate exactly what the Android player will load. Editor environment variables
+            // and the legacy StreamingAssets file are intentionally excluded from player builds.
+            config = PlatformContext.ApplyLocalSolanaOverrides(sourceConfig, false);
+        }
+        catch (Exception exception)
+        {
+            errors.Add("Local client RPC configuration is invalid: " + exception.Message);
+        }
+
         if (config != null)
         {
             if (!Uri.TryCreate(config.mwaIdentityUri, UriKind.Absolute, out Uri identity) ||
@@ -160,7 +173,7 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
                     string endpoint = config.rpcEndpoint.Trim();
                     string actualGenesis = Task.Run(async () =>
                     {
-                        using (var rpc = new SolanaRpcService(endpoint))
+                        using (var rpc = new SolanaRpcService(endpoint, profile.SupabaseConfig))
                             return await rpc.GetGenesisHashAsync().ConfigureAwait(false);
                     }).GetAwaiter().GetResult();
                     if (!string.Equals(actualGenesis, config.expectedGenesisHash.Trim(), StringComparison.Ordinal))
@@ -168,10 +181,23 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
                 }
                 catch (Exception exception)
                 {
-                    errors.Add("RPC genesis verification failed: " + exception.Message);
+                    if (developmentBuild)
+                    {
+                        Debug.LogWarning(
+                            "[SolanaMobileReleaseValidator] RPC genesis preflight was unavailable for this " +
+                            "Development build. The configured expected genesis hash is still pinned and the " +
+                            "runtime wallet cluster guard remains fail-closed. " + exception.Message);
+                    }
+                    else
+                    {
+                        errors.Add("RPC genesis verification failed: " + exception.Message);
+                    }
                 }
             }
         }
+
+        if (config != null && !ReferenceEquals(config, sourceConfig))
+            UnityEngine.Object.DestroyImmediate(config);
 
         ValidateEnvironmentIsolation(selected.Value, profile, errors);
 
@@ -226,7 +252,6 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
         if (PlayerSettings.Android.bundleVersionCode < 1)
             errors.Add("Android bundle version code must be positive.");
 
-        bool developmentBuild = (options & BuildOptions.Development) != 0;
         if (!developmentBuild && !PlayerSettings.Android.useCustomKeystore)
             errors.Add("Non-development dApp Store APKs must use a dedicated custom signing keystore.");
 

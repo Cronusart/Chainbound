@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Chainbound.Combat;
 using DG.Tweening;
+using SignalJam.UI.MenuNavigation.PartyTab;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -15,7 +16,7 @@ namespace SignalJam.UI.MenuNavigation
     /// Layout is the handheld Profile B frame: storage, party, selection, and a shared status line.
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class ChainlingPcTerminalScreen : MonoBehaviour
+    public sealed partial class ChainlingPcTerminalScreen : MonoBehaviour
     {
         private const string PlayerRoomTerminalId = "player_room_pc";
         private static readonly string[] SlotNames = { "LEAD", "PARTNER", "BENCH" };
@@ -30,11 +31,33 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private MonoBehaviour rosterProviderBehaviour;
         [SerializeField] private MonoBehaviour partyLineupServiceBehaviour;
 
+        [Header("Party rows")]
+        [SerializeField] private InventoryItemUseTargetSlot partyRowPrefab;
+        [SerializeField] private InventoryItemUseTargetSlot[] partyRows = new InventoryItemUseTargetSlot[CombatConstants.ROSTER_SIZE];
+        [SerializeField] private TypeIconPaletteSO typeIconPalette;
+        [SerializeField] private CompactStarRatingArtSO starArt;
+        [SerializeField] private CycleIconPaletteSO cyclePalette;
+        [SerializeField] private SignalJam.UI.MenuNavigation.PartyTab.PartyTabMotionProfileSO motionProfile;
+        [SerializeField] private ChainlingDetailScreen detailPrefab;
+
+        [Header("Action sheet")]
+        [SerializeField] private CanvasGroup actionSheet;
+        [SerializeField] private GameObject actionButtonGroup;
+        [SerializeField] private GameObject confirmGroup;
+        [SerializeField] private TMP_Text actionTitle;
+        [SerializeField] private TMP_Text confirmBody;
+        [SerializeField] private Button moveButton;
+        [SerializeField] private Button storageButton;
+        [SerializeField] private Button manageButton;
+        [SerializeField] private Button releaseButton;
+        [SerializeField] private Button actionCloseButton;
+        [SerializeField] private Button confirmButton;
+        [SerializeField] private Button confirmCancelButton;
+
         [Header("View")]
         [SerializeField] private CanvasGroup root;
         [SerializeField] private TMP_Text title;
         [SerializeField] private Button closeButton;
-        [SerializeField] private Button[] partyButtons = new Button[CombatConstants.ROSTER_SIZE];
         [SerializeField] private RectTransform storageRoot;
         [SerializeField] private TMP_Text emptyStorageLabel;
         [SerializeField] private TMP_Text status;
@@ -52,6 +75,14 @@ namespace SignalJam.UI.MenuNavigation
         private readonly List<GameObject> spawnedCards = new List<GameObject>();
         private PlayerRosterSnapshot roster;
         private PlayerRosterEntry selectedStorage;
+        private PlayerRosterEntry actionTarget;
+        private bool actionTargetInParty;
+        private bool choosingSlot;
+        private bool confirmingRelease;
+        private int focusedPartyRow = -1;
+        private float partyRevealUntil;
+        private int lastCloseFrame = -1;
+        private ChainlingDetailScreen openDetail;
         private InputLockHandle inputLock;
         private bool hasInputLock;
         private string terminalId;
@@ -74,11 +105,42 @@ namespace SignalJam.UI.MenuNavigation
             supabaseConfig = config;
         }
 
+        public void ConfigurePartyPresentation(
+            InventoryItemUseTargetSlot rowPrefab,
+            TypeIconPaletteSO types,
+            CompactStarRatingArtSO stars,
+            CycleIconPaletteSO cycles,
+            SignalJam.UI.MenuNavigation.PartyTab.PartyTabMotionProfileSO motion,
+            ChainlingDetailScreen detail)
+        {
+            if (rowPrefab != null)
+                partyRowPrefab = rowPrefab;
+            if (types != null)
+                typeIconPalette = types;
+            if (stars != null)
+                starArt = stars;
+            if (cycles != null)
+                cyclePalette = cycles;
+            if (motion != null)
+                motionProfile = motion;
+            if (detail != null)
+                detailPrefab = detail;
+        }
+
+        public static bool CanSendPartyMemberToStorage(int partyCount)
+        {
+            return partyCount > 1;
+        }
+
+        public static bool CanReleaseChainling(bool isPartyMember)
+        {
+            return !isPartyMember;
+        }
+
         public void BindView(
             CanvasGroup canvasGroup,
             TMP_Text titleLabel,
             Button close,
-            Button[] party,
             RectTransform storage,
             TMP_Text emptyLabel,
             TMP_Text statusLabel,
@@ -88,7 +150,6 @@ namespace SignalJam.UI.MenuNavigation
             root = canvasGroup;
             title = titleLabel;
             closeButton = close;
-            partyButtons = party ?? Array.Empty<Button>();
             storageRoot = storage;
             emptyStorageLabel = emptyLabel;
             status = statusLabel;
@@ -124,6 +185,11 @@ namespace SignalJam.UI.MenuNavigation
             AcquireInputLock();
             closing = false;
             entranceSettled = false;
+            choosingSlot = false;
+            confirmingRelease = false;
+            actionTarget = null;
+            actionTargetInParty = false;
+            HideActionSheetImmediate();
             root.gameObject.SetActive(true);
             root.alpha = 1f;
             root.blocksRaycasts = true;
@@ -149,7 +215,20 @@ namespace SignalJam.UI.MenuNavigation
 
         public void Close()
         {
+            if (Time.frameCount == lastCloseFrame)
+                return;
+            lastCloseFrame = Time.frameCount;
+
             if (closing)
+                return;
+
+            if (openDetail != null && openDetail.IsVisible)
+            {
+                openDetail.CloseFromHost();
+                return;
+            }
+
+            if (TryDismissRosterOverlay())
                 return;
 
             if (root == null || !root.gameObject.activeSelf)
@@ -160,17 +239,21 @@ namespace SignalJam.UI.MenuNavigation
 
             closing = true;
             entranceSettled = false;
+            choosingSlot = false;
             selectedStorage = null;
+            actionTarget = null;
             root.interactable = false;
             if (inputContext != null)
                 inputContext.SetAnimationHold(true);
-            DOTween.Kill(this);
+            KillPartyMotion();
             PlayCue(PlayerMenuSfxCue.MenuClose);
-
-            if (bootSequence != null && bootSequence.HasExitFrames)
-                bootSequence.PlayCloseSequence(FinishClose);
-            else
-                FinishClose();
+            PlayPartyRowClose(() =>
+            {
+                if (bootSequence != null && bootSequence.HasExitFrames)
+                    bootSequence.PlayCloseSequence(FinishClose);
+                else
+                    FinishClose();
+            });
         }
 
         private void Awake()
@@ -183,7 +266,7 @@ namespace SignalJam.UI.MenuNavigation
         private void OnDisable()
         {
             PlayerRosterRefreshSignal.ResolveOrCreate().Changed -= HandleRosterChanged;
-            DOTween.Kill(this);
+            KillPartyMotion();
             closing = false;
             entranceSettled = false;
             ReleaseInputLock();
@@ -227,6 +310,10 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             selectedStorage = null;
+            choosingSlot = false;
+            confirmingRelease = false;
+            actionTarget = null;
+            HideActionSheetImmediate();
             try
             {
                 Rebuild();
@@ -238,7 +325,7 @@ namespace SignalJam.UI.MenuNavigation
                 return;
             }
 
-            SetStatus("SELECT A STORED CHAINLING, THEN CHOOSE A PARTY SLOT.");
+            SetStatus("SELECT A STORED CHAINLING OR A PARTY SLOT.");
             UpdateTitle();
         }
 
@@ -251,23 +338,7 @@ namespace SignalJam.UI.MenuNavigation
             }
             spawnedCards.Clear();
 
-            List<PlayerRosterEntry> party = GetParty();
-            for (int slot = 0; slot < partyButtons.Length && slot < SlotNames.Length; slot++)
-            {
-                if (partyButtons[slot] == null)
-                    continue;
-
-                PlayerRosterEntry entry = slot < party.Count ? party[slot] : null;
-                TMP_Text label = partyButtons[slot].GetComponentInChildren<TMP_Text>(true);
-                if (label != null)
-                {
-                    label.text = entry != null
-                        ? $"{SlotNames[slot]}\n{ResolveName(entry)}"
-                        : $"{SlotNames[slot]}\nEMPTY";
-                }
-
-                partyButtons[slot].interactable = entry != null || slot <= party.Count;
-            }
+            BindPartyRows(GetParty());
 
             int storageCount = 0;
             if (roster != null && roster.chainlings != null)
@@ -337,17 +408,49 @@ namespace SignalJam.UI.MenuNavigation
 
         private void SelectStored(PlayerRosterEntry entry)
         {
+            if (entry == null)
+                return;
+
             selectedStorage = entry;
-            Rebuild();
-            SetStatus($"{ResolveName(entry)} SELECTED. CHOOSE LEAD, PARTNER, OR BENCH.");
+            BindPreview();
             PlayCue(PlayerMenuSfxCue.ChainlingSelect);
+            OpenActionSheet(entry, false);
+        }
+
+        private void SelectPartyRow(int slot)
+        {
+            if (choosingSlot)
+            {
+                AssignSelectedToSlot(slot);
+                return;
+            }
+
+            List<PlayerRosterEntry> party = GetParty();
+            if (slot < 0 || slot >= party.Count || party[slot] == null)
+            {
+                SetStatus("THAT SLOT IS EMPTY.");
+                PlayCue(PlayerMenuSfxCue.Invalid);
+                return;
+            }
+
+            PlayerRosterEntry entry = party[slot];
+            selectedStorage = entry;
+            BindPreview();
+            InventoryItemUseTargetSlot row = slot < partyRows.Length ? partyRows[slot] : null;
+            if (row != null)
+                row.PlaySelectPulse();
+            PlayCue(PlayerMenuSfxCue.ChainlingSelect);
+            DOVirtual.DelayedCall(0.16f, () => OpenActionSheet(entry, true), false)
+                .SetUpdate(true)
+                .SetTarget(this);
         }
 
         private async void AssignSelectedToSlot(int slot)
         {
-            if (selectedStorage == null)
+            PlayerRosterEntry selected = actionTarget != null ? actionTarget : selectedStorage;
+            if (selected == null || selected.snapshot == null)
             {
-                SetStatus("SELECT A CHAINLING FROM STORAGE FIRST.");
+                SetStatus("SELECT A CHAINLING FIRST.");
                 PlayCue(PlayerMenuSfxCue.Invalid);
                 return;
             }
@@ -360,41 +463,15 @@ namespace SignalJam.UI.MenuNavigation
                 return;
             }
 
-            var orderedIds = new List<string>(CombatConstants.ROSTER_SIZE);
-            for (int i = 0; i < party.Count; i++)
-                orderedIds.Add(party[i].snapshot.backendChainlingId);
-
-            string selectedId = selectedStorage.snapshot.backendChainlingId;
-            if (slot == orderedIds.Count)
-                orderedIds.Add(selectedId);
-            else
-                orderedIds[slot] = selectedId;
-
-            SetInteractable(false);
-            SetStatus("SAVING PARTY...");
-            IMenuPartyLineupService service = ResolvePartyService();
-            GameSessionContext session = GameSessionContext.Instance;
-            MenuMutationResult result = service != null && session != null
-                ? await service.SavePartyLineupAsync(
-                    session.PlayerProfileId,
-                    session.WalletAddress,
-                    session.AuthUserId,
-                    orderedIds.ToArray())
-                : MenuMutationResult.Failed("Party service unavailable.");
-
-            if (result == null || !result.success)
+            string selectedId = selected.snapshot.backendChainlingId;
+            if (!TryBuildPartyOrder(party, selectedId, slot, false, out string[] orderedIds))
             {
-                SetStatus(result != null && !string.IsNullOrWhiteSpace(result.error)
-                    ? result.error
-                    : "PARTY COULD NOT BE SAVED.");
+                SetStatus("THAT PARTY CHANGE IS NOT AVAILABLE.");
                 PlayCue(PlayerMenuSfxCue.Invalid);
-                SetInteractable(true);
                 return;
             }
 
-            PlayCue(PlayerMenuSfxCue.Confirm);
-            await RefreshAsync();
-            SetInteractable(true);
+            await SavePartyOrderAsync(orderedIds);
         }
 
         private List<PlayerRosterEntry> GetParty()
@@ -462,7 +539,12 @@ namespace SignalJam.UI.MenuNavigation
 
         private void EnsureUi()
         {
-            if (root != null && storageRoot != null && partyButtons != null && partyButtons.Length >= CombatConstants.ROSTER_SIZE)
+            if (root != null &&
+                storageRoot != null &&
+                actionSheet != null &&
+                partyRows != null &&
+                partyRows.Length >= CombatConstants.ROSTER_SIZE &&
+                partyRows[0] != null)
                 return;
 
             BuildAuthoredHierarchy();
@@ -557,23 +639,28 @@ namespace SignalJam.UI.MenuNavigation
             CreateSlotHeader(partySlot, "PartyHeader", "PARTY");
             RectTransform partyRoot = PlayerMenuUiFactory.CreateRect("PartySlots", partySlot);
             PlayerMenuUiFactory.LayoutElement(partyRoot.gameObject, preferredHeight: 280f, flexibleWidth: 1f, flexibleHeight: 1f);
-            VerticalLayoutGroup partyRows = PlayerMenuUiFactory.VerticalLayout(partyRoot.gameObject, 8f);
-            partyRows.childControlHeight = true;
-            partyRows.childForceExpandHeight = true;
-            partyRows.childAlignment = TextAnchor.UpperCenter;
-            partyButtons = new Button[CombatConstants.ROSTER_SIZE];
-            for (int slot = 0; slot < partyButtons.Length; slot++)
+            VerticalLayoutGroup partyRowLayout = PlayerMenuUiFactory.VerticalLayout(partyRoot.gameObject, 8f);
+            partyRowLayout.childControlHeight = true;
+            partyRowLayout.childForceExpandHeight = false;
+            partyRowLayout.childAlignment = TextAnchor.UpperCenter;
+            partyRows = new InventoryItemUseTargetSlot[CombatConstants.ROSTER_SIZE];
+            for (int slot = 0; slot < partyRows.Length; slot++)
             {
-                partyButtons[slot] = PlayerMenuUiFactory.CreateButton(
-                    $"Party_{SlotNames[slot]}",
-                    partyRoot,
-                    $"{SlotNames[slot]}\nEMPTY",
-                    PlayerMenuUiFactory.PanelAlt);
-                TMP_Text partyLabel = partyButtons[slot].GetComponentInChildren<TMP_Text>(true);
-                if (partyLabel != null)
-                    partyLabel.fontSize = 20f;
-                PlayerMenuUiFactory.LayoutElement(partyButtons[slot].gameObject, preferredHeight: 96f, flexibleWidth: 1f, flexibleHeight: 1f);
-                MenuSelectableFocusVisual.EnsureOn(partyButtons[slot], new Color(1f, 0.62f, 0.22f, 0.95f));
+                if (partyRowPrefab == null)
+                    break;
+
+                InventoryItemUseTargetSlot row = Instantiate(partyRowPrefab, partyRoot);
+                row.gameObject.name = $"Party_{SlotNames[slot]}";
+                row.gameObject.SetActive(true);
+                LayoutElement element = row.GetComponent<LayoutElement>();
+                if (element == null)
+                    element = row.gameObject.AddComponent<LayoutElement>();
+                element.preferredHeight = 96f;
+                element.minHeight = 72f;
+                element.flexibleWidth = 1f;
+                if (row.Button != null)
+                    MenuSelectableFocusVisual.EnsureOn(row.Button, new Color(1f, 0.62f, 0.22f, 0.95f));
+                partyRows[slot] = row;
             }
 
             partyLayout.childAlignment = TextAnchor.UpperCenter;
@@ -609,12 +696,14 @@ namespace SignalJam.UI.MenuNavigation
             status = PlayerMenuUiFactory.CreateText(
                 "Status",
                 dialogueSlot,
-                "SELECT A STORED CHAINLING, THEN CHOOSE A PARTY SLOT.",
+                "SELECT A STORED CHAINLING OR A PARTY SLOT.",
                 24f,
                 TextAlignmentOptions.TopLeft,
                 true);
             PlayerMenuUiFactory.LayoutElement(status.gameObject, preferredHeight: 96f, flexibleWidth: 1f, flexibleHeight: 1f);
             dialogueLayout.childAlignment = TextAnchor.UpperLeft;
+
+            BuildActionSheet(shell.transform);
 
             if (inputContext == null)
             {
@@ -623,7 +712,9 @@ namespace SignalJam.UI.MenuNavigation
                 inputContext.OnCancel.AddListener(Close);
             }
 
-            defaultSelection = partyButtons.Length > 0 ? partyButtons[0] : closeButton;
+            defaultSelection = partyRows != null && partyRows.Length > 0 && partyRows[0] != null && partyRows[0].Button != null
+                ? partyRows[0].Button
+                : closeButton;
             menuGroup.alpha = 1f;
             root.alpha = 1f;
             root.interactable = false;
@@ -768,15 +859,20 @@ namespace SignalJam.UI.MenuNavigation
                 closeButton.onClick.AddListener(Close);
             }
 
-            for (int slot = 0; slot < partyButtons.Length; slot++)
+            if (partyRows != null)
             {
-                if (partyButtons[slot] == null)
-                    continue;
+                for (int slot = 0; slot < partyRows.Length; slot++)
+                {
+                    if (partyRows[slot] == null || partyRows[slot].Button == null)
+                        continue;
 
-                int capturedSlot = slot;
-                partyButtons[slot].onClick.RemoveAllListeners();
-                partyButtons[slot].onClick.AddListener(() => AssignSelectedToSlot(capturedSlot));
+                    int capturedSlot = slot;
+                    partyRows[slot].Button.onClick.RemoveAllListeners();
+                    partyRows[slot].Button.onClick.AddListener(() => SelectPartyRow(capturedSlot));
+                }
             }
+
+            WireActionSheet();
 
             if (inputContext != null)
             {
@@ -791,35 +887,51 @@ namespace SignalJam.UI.MenuNavigation
                 return;
 
             var order = new List<Selectable>();
-            if (closeButton != null)
-                order.Add(closeButton);
-            for (int i = 0; i < partyButtons.Length; i++)
+            if (IsActionSheetOpen)
             {
-                if (partyButtons[i] != null)
-                    order.Add(partyButtons[i]);
+                AppendSheetNavigation(order);
             }
-
-            for (int i = 0; i < spawnedCards.Count; i++)
+            else
             {
-                Button button = spawnedCards[i] != null ? spawnedCards[i].GetComponent<Button>() : null;
-                if (button != null)
-                    order.Add(button);
+                AppendPartyNavigation(order);
+                for (int i = 0; i < spawnedCards.Count; i++)
+                {
+                    Button button = spawnedCards[i] != null ? spawnedCards[i].GetComponent<Button>() : null;
+                    if (button != null)
+                        order.Add(button);
+                }
+
+                if (closeButton != null)
+                    order.Add(closeButton);
             }
 
             Selectable first = defaultSelection;
-            for (int i = 0; i < spawnedCards.Count; i++)
+            if (IsActionSheetOpen)
             {
-                ChainlingCardWidget card = spawnedCards[i] != null ? spawnedCards[i].GetComponent<ChainlingCardWidget>() : null;
-                Button button = card != null ? card.Button : null;
-                if (button == null || !button.interactable)
-                    continue;
-
-                if (first == defaultSelection)
-                    first = button;
-                if (selectedStorage != null && card.BoundEntry == selectedStorage)
+                first = confirmingRelease && confirmButton != null ? confirmButton : moveButton;
+            }
+            else if (choosingSlot)
+            {
+                first = partyRows != null && partyRows.Length > 0 && partyRows[0] != null
+                    ? partyRows[0].Button
+                    : defaultSelection;
+            }
+            else
+            {
+                for (int i = 0; i < spawnedCards.Count; i++)
                 {
-                    first = button;
-                    break;
+                    ChainlingCardWidget card = spawnedCards[i] != null ? spawnedCards[i].GetComponent<ChainlingCardWidget>() : null;
+                    Button button = card != null ? card.Button : null;
+                    if (button == null || !button.interactable)
+                        continue;
+
+                    if (first == defaultSelection)
+                        first = button;
+                    if (selectedStorage != null && card.BoundEntry == selectedStorage && !actionTargetInParty)
+                    {
+                        first = button;
+                        break;
+                    }
                 }
             }
 
@@ -847,12 +959,13 @@ namespace SignalJam.UI.MenuNavigation
             root.interactable = true;
             if (inputContext != null)
                 inputContext.SetAnimationHold(false);
+            PlayPartyRowReveal();
             RefreshNavigation();
         }
 
         private void FinishClose()
         {
-            DOTween.Kill(this);
+            KillPartyMotion();
             if (root != null)
             {
                 root.interactable = false;
@@ -1028,8 +1141,8 @@ namespace SignalJam.UI.MenuNavigation
                 }
             }
 
-            if (partyButtons != null && partyButtons.Length > 0 && partyButtons[0] != null)
-                EventSystem.current.SetSelectedGameObject(partyButtons[0].gameObject);
+            if (partyRows != null && partyRows.Length > 0 && partyRows[0] != null && partyRows[0].Button != null)
+                EventSystem.current.SetSelectedGameObject(partyRows[0].Button.gameObject);
             else if (closeButton != null)
                 EventSystem.current.SetSelectedGameObject(closeButton.gameObject);
         }

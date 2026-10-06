@@ -206,7 +206,7 @@ namespace SignalJam.UI.MenuNavigation
             int seconds = Mathf.RoundToInt(PlayerMovementSpeedConsumable.DurationSeconds);
             return
                 $"Apply: +{percent}% movement speed for {seconds} seconds\n" +
-                "(refreshes this tonic; other speed sources stay)";
+                "(refreshes this brew; other speed sources stay)";
         }
 
         public static string FormatFavorApplyBlock(

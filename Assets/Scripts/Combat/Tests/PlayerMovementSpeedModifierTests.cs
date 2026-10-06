@@ -23,7 +23,7 @@ namespace Chainbound.Combat.Tests
         {
             Assert.AreEqual(0.15f, PlayerMovementSpeedConsumable.BonusFraction);
             Assert.AreEqual(30f, PlayerMovementSpeedConsumable.DurationSeconds);
-            Assert.AreEqual("stride_tonic", PlayerMovementSpeedConsumable.ItemId);
+            Assert.AreEqual("nitro_brew", PlayerMovementSpeedConsumable.ItemId);
 
             Assert.IsTrue(PlayerItemCatalogSeed.TryGet(PlayerMovementSpeedConsumable.ItemId, out PlayerItemDefinition tonic));
             Assert.AreEqual(PlayerItemEffectFamily.MovementSpeedBoost, tonic.effectFamily);
@@ -102,7 +102,7 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
-        public void CancelExpiring_DropsTonicAndKeepsPartyPassive()
+        public void CancelExpiring_DropsBrewAndKeepsPartyPassive()
         {
             var pipeline = new PlayerMovementSpeedModifierPipeline();
             pipeline.SetSource(
@@ -128,9 +128,9 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
-        public void UseStrideTonic_AppliesThenExpiresWithoutConsumingOnFailure()
+        public void UseNitroBrew_AppliesThenExpiresWithoutConsumingOnFailure()
         {
-            var go = new GameObject("StrideTonicUse");
+            var go = new GameObject("NitroBrewUse");
             var host = new RecordingHost();
             try
             {

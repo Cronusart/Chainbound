@@ -33,10 +33,20 @@ public static class TutorialReadAlongAuthoring
     private static readonly Color DialogueFrame = new Color(0.21568628f, 0.30588236f, 0.2901961f, 1f);
     private static readonly Color DialogueText = new Color(0.78039217f, 0.8627451f, 0.8156863f, 1f);
 
+    private const string MobileServicesPath = "Assets/Prefabs/Controls/MobileServices.prefab";
+    private const string OutlineSpritePath = "Assets/Sprites/UI/PlayerMenu/9sliceborder_orange_smol.png";
+    private const string OutlineChildName = "ControlEmphasisFrame";
+
     public const string MoveSnippetPath = SnippetFolder + "/TutorialReadAlong_Move.asset";
+    public const string InteractSnippetPath = SnippetFolder + "/TutorialReadAlong_Interact.asset";
     public const string SprintSnippetPath = SnippetFolder + "/TutorialReadAlong_Sprint.asset";
     public const string JumpSnippetPath = SnippetFolder + "/TutorialReadAlong_Jump.asset";
+    public const string MenuSnippetPath = SnippetFolder + "/TutorialReadAlong_Menu.asset";
+    public const string MenuSnippetId = "tutorial.menu";
+    public const string MenuSnippetTitle = "Player menu";
+    public const string MenuSnippetBody = "Press Y to open the player menu.";
     public const string MoveStepPath = StepsFolder + "/intro_tutorial_move.asset";
+    public const string InteractStepPath = StepsFolder + "/intro_tutorial_interact.asset";
     public const string SprintStepPath = StepsFolder + "/intro_tutorial_sprint.asset";
     public const string JumpStepPath = StepsFolder + "/intro_tutorial_jump.asset";
 
@@ -49,18 +59,35 @@ public static class TutorialReadAlongAuthoring
             "tutorial.move",
             "Move",
             "Use the D-pad or joystick to move around.",
+            MobileHudEmphasisTarget.MovePad,
+            report);
+        TutorialReadAlongSnippetSO interact = AuthorSnippet(
+            InteractSnippetPath,
+            "tutorial.interact",
+            "Interact",
+            "Press A to interact.",
+            MobileHudEmphasisTarget.InteractA,
             report);
         TutorialReadAlongSnippetSO sprint = AuthorSnippet(
             SprintSnippetPath,
             "tutorial.sprint",
             "Sprint",
-            "Hold X to sprint.",
+            "Hold X to sprint. Double-tap X to lock it, then tap X again to stop.",
+            MobileHudEmphasisTarget.SprintX,
             report);
         TutorialReadAlongSnippetSO jump = AuthorSnippet(
             JumpSnippetPath,
             "tutorial.jump",
             "Jump",
             "Press B to jump.",
+            MobileHudEmphasisTarget.None,
+            report);
+        AuthorSnippet(
+            MenuSnippetPath,
+            MenuSnippetId,
+            MenuSnippetTitle,
+            MenuSnippetBody,
+            MobileHudEmphasisTarget.MenuY,
             report);
 
         AuthorPrefab(report);
@@ -70,6 +97,11 @@ public static class TutorialReadAlongAuthoring
             MoveStepPath,
             "intro_tutorial_move",
             move,
+            report);
+        Step_ShowTutorialReadAlong interactStep = AuthorIntroStep(
+            InteractStepPath,
+            "intro_tutorial_interact",
+            interact,
             report);
         Step_ShowTutorialReadAlong sprintStep = AuthorIntroStep(
             SprintStepPath,
@@ -82,7 +114,8 @@ public static class TutorialReadAlongAuthoring
             jump,
             report);
 
-        SpliceIntroSequence(moveStep, sprintStep, jumpStep, report);
+        SpliceIntroSequence(moveStep, interactStep, sprintStep, jumpStep, report);
+        AuthorMobileHudCallouts(report);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[TutorialReadAlongAuthoring]\n - " + string.Join("\n - ", report));
@@ -93,6 +126,7 @@ public static class TutorialReadAlongAuthoring
         string snippetId,
         string title,
         string body,
+        MobileHudEmphasisTarget emphasis,
         List<string> report)
     {
         TutorialReadAlongSnippetSO snippet = EnsureAsset<TutorialReadAlongSnippetSO>(path);
@@ -101,6 +135,7 @@ public static class TutorialReadAlongAuthoring
         serialized.FindProperty("title").stringValue = title;
         serialized.FindProperty("body").stringValue = body;
         serialized.FindProperty("continueHint").stringValue = TutorialReadAlongSnippetSO.DefaultContinueHint;
+        serialized.FindProperty("emphasis").enumValueIndex = (int)emphasis;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(snippet);
         report?.Add($"{snippetId} -> {path}");
@@ -191,6 +226,7 @@ public static class TutorialReadAlongAuthoring
 
     internal static void SpliceIntroSequence(
         SequenceStep moveStep,
+        SequenceStep interactStep,
         SequenceStep sprintStep,
         SequenceStep jumpStep,
         List<string> report)
@@ -209,6 +245,7 @@ public static class TutorialReadAlongAuthoring
         SerializedObject serialized = new SerializedObject(sequence);
         SerializedProperty steps = serialized.FindProperty("steps");
         InsertAfter(steps, restoreCamera, moveStep, report, "move");
+        InsertAfter(steps, moveStep, interactStep, report, "interact");
         InsertAfter(steps, startEncounter, sprintStep, report, "sprint");
         InsertAfter(steps, ledgeDialogue, jumpStep, report, "jump");
         serialized.ApplyModifiedPropertiesWithoutUndo();
@@ -370,6 +407,127 @@ public static class TutorialReadAlongAuthoring
         root.SetActive(true);
         EditorUtility.SetDirty(reveal);
         EditorUtility.SetDirty(presenter);
+    }
+
+    internal static void AuthorMobileHudCallouts(List<string> report)
+    {
+        GameObject root = PrefabUtility.LoadPrefabContents(MobileServicesPath);
+        if (root == null)
+        {
+            report?.Add($"FAILED to load {MobileServicesPath}");
+            return;
+        }
+
+        try
+        {
+            Transform movePad = FindDeep(root.transform, "MovementPad");
+            Transform interactButton = FindDeep(root.transform, "ButtonA");
+            Transform sprintButton = FindDeep(root.transform, "ButtonX");
+            Transform menuButton = FindDeep(root.transform, "ButtonY");
+            Transform hudRoot = FindDeep(root.transform, "HudRoot");
+            if (movePad == null || interactButton == null || sprintButton == null || menuButton == null || hudRoot == null)
+                throw new InvalidOperationException("MobileServices is missing MovementPad, ButtonA, ButtonX, ButtonY, or HudRoot.");
+
+            Image moveOutline = EnsureEmphasisOutline(movePad);
+            Image interactOutline = EnsureEmphasisOutline(interactButton);
+            Image sprintOutline = EnsureEmphasisOutline(sprintButton);
+            Image menuOutline = EnsureEmphasisOutline(menuButton);
+
+            MobileHudControlEmphasis emphasis = hudRoot.GetComponent<MobileHudControlEmphasis>();
+            if (emphasis == null)
+                emphasis = hudRoot.gameObject.AddComponent<MobileHudControlEmphasis>();
+
+            SerializedObject emphasisSerialized = new SerializedObject(emphasis);
+            emphasisSerialized.FindProperty("movePad").objectReferenceValue = movePad as RectTransform;
+            emphasisSerialized.FindProperty("moveOutline").objectReferenceValue = moveOutline;
+            emphasisSerialized.FindProperty("interactButton").objectReferenceValue = interactButton as RectTransform;
+            emphasisSerialized.FindProperty("interactOutline").objectReferenceValue = interactOutline;
+            emphasisSerialized.FindProperty("sprintButton").objectReferenceValue = sprintButton as RectTransform;
+            emphasisSerialized.FindProperty("sprintOutline").objectReferenceValue = sprintOutline;
+            emphasisSerialized.FindProperty("menuButton").objectReferenceValue = menuButton as RectTransform;
+            emphasisSerialized.FindProperty("menuOutline").objectReferenceValue = menuOutline;
+            emphasisSerialized.FindProperty("pulseCount").intValue = MobileHudControlEmphasis.DefaultPulseCount;
+            emphasisSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            MobileInputManager input = root.GetComponentInChildren<MobileInputManager>(true);
+            if (input == null)
+                throw new InvalidOperationException("MobileServices is missing MobileInputManager.");
+
+            SerializedObject inputSerialized = new SerializedObject(input);
+            SerializedProperty window = inputSerialized.FindProperty("doubleTapWindowSeconds");
+            if (window != null && window.floatValue <= 0f)
+                window.floatValue = 0.32f;
+            inputSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            AuthorAutoSprintLabel(hudRoot, input);
+            EditorUtility.SetDirty(root);
+            PrefabUtility.SaveAsPrefabAsset(root, MobileServicesPath);
+            report?.Add($"Mobile HUD callouts -> {MobileServicesPath}");
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    private static void AuthorAutoSprintLabel(Transform hudRoot, MobileInputManager input)
+    {
+        GameObject host = EnsureChild(hudRoot, "AutoSprintIndicator");
+        RectTransform hostRect = (RectTransform)host.transform;
+        Stretch(hostRect);
+        host.layer = hudRoot.gameObject.layer;
+        host.SetActive(true);
+
+        TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        Material fontMaterial = AssetDatabase.LoadAssetAtPath<Material>(FontMaterialPath);
+        TextMeshProUGUI label = EnsureText(
+            host.transform,
+            "Label",
+            font,
+            fontMaterial,
+            18f,
+            FontStyles.Bold,
+            TextAlignmentOptions.Center,
+            new Color(1f, 0.62f, 0.22f, 1f),
+            new Vector2(0.21f, 0.34f),
+            new Vector2(0.79f, 0.4f),
+            Vector2.zero,
+            Vector2.zero,
+            new Vector2(0.5f, 0.5f));
+        label.text = AutoSprintIndicator.DefaultLabel;
+        label.gameObject.layer = host.layer;
+        label.gameObject.SetActive(false);
+
+        AutoSprintIndicator indicator = host.GetComponent<AutoSprintIndicator>();
+        if (indicator == null)
+            indicator = host.AddComponent<AutoSprintIndicator>();
+
+        SerializedObject serialized = new SerializedObject(indicator);
+        serialized.FindProperty("input").objectReferenceValue = input;
+        serialized.FindProperty("label").objectReferenceValue = label;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(indicator);
+    }
+
+    private static Image EnsureEmphasisOutline(Transform parent)
+    {
+        GameObject frame = EnsureChild(parent, OutlineChildName);
+        RectTransform rect = (RectTransform)frame.transform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = new Vector2(-8f, -8f);
+        rect.offsetMax = new Vector2(8f, 8f);
+        rect.localScale = Vector3.one;
+
+        Image image = Require<Image>(frame);
+        image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(OutlineSpritePath);
+        image.type = Image.Type.Sliced;
+        image.color = Color.white;
+        image.raycastTarget = false;
+        frame.layer = parent.gameObject.layer;
+        frame.SetActive(false);
+        frame.transform.SetAsLastSibling();
+        return image;
     }
 
     private static void InsertAfter(

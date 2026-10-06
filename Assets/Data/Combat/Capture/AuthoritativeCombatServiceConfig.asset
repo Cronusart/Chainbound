@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0947487818b93048ac3ca8a0ba0ef01, type: 3}
   m_Name: AuthoritativeCombatServiceConfig
   m_EditorClassIdentifier: 
-  serviceBaseUrl: 
-  authoritativePveCaptureEnabled: 0
-  gameplayManifestHash: 2f8134610227e974f0c30bc28ae941426b526f6f10c9f117d90b48ae1da3982d
+  serviceBaseUrl: http://localhost:8080
+  authoritativePveCaptureEnabled: 1
+  gameplayManifestHash: 7798c43083bce8987e3671faf46add45a4dacb4095127fe4ed755007309b6f85
   requestTimeoutSeconds: 12
   allowLocalPracticeInEditor: 1

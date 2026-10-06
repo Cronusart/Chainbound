@@ -3,6 +3,7 @@
     "rootNamespace": "SignalJam.UI.MobileControls",
     "references": [
         "Unity.InputSystem",
+        "Unity.TextMeshPro",
         "UnityEngine.UI",
         "PSG1"
     ],

@@ -76,5 +76,57 @@ namespace Chainbound.Combat
 
             return (true, null);
         }
+
+        [Serializable]
+        private class ProfileReleaseChainlingRequest
+        {
+            public string player_profile_id;
+            public string wallet_address;
+            public string auth_user_id;
+            public string chainling_id;
+        }
+
+        /// <summary>
+        /// Deletes one stored Chainling. Party members and bound Chainlings are refused by the service.
+        /// </summary>
+        public static async Task<(bool Ok, string ErrorMessage)> ProfileReleaseChainlingAsync(
+            SupabaseConfigSO config,
+            string playerProfileId,
+            string walletAddress,
+            string authUserIdOrEmpty,
+            string chainlingBackendId)
+        {
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
+
+            if (string.IsNullOrWhiteSpace(chainlingBackendId))
+                return (false, "chainling_id_required");
+
+            string json = JsonUtility.ToJson(new ProfileReleaseChainlingRequest
+            {
+                player_profile_id = playerProfileId != null ? playerProfileId.Trim() : "",
+                wallet_address = walletAddress != null ? walletAddress.Trim() : "",
+                auth_user_id = authUserIdOrEmpty != null ? authUserIdOrEmpty.Trim() : "",
+                chainling_id = chainlingBackendId.Trim(),
+            });
+
+            SupabaseClient.Response response = await SupabaseClient.PostJsonAsync(config, "profile_release_chainling", json);
+            if (!response.IsSuccess)
+            {
+                return (false,
+                    $"profile_release_chainling_http_{response.statusCode}: {response.body}");
+            }
+
+            var envelope = JsonUtility.FromJson<ProfileSetPartyEnvelope>(response.body);
+            if (envelope == null || !envelope.success)
+            {
+                string err = envelope != null && !string.IsNullOrEmpty(envelope.error)
+                    ? envelope.error
+                    : "profile_release_chainling_invalid_payload";
+                return (false, err);
+            }
+
+            return (true, null);
+        }
     }
 }

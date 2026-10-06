@@ -20,6 +20,7 @@ MonoBehaviour:
   autoStartQuestId: 
   autoStartLifecycleMask: 0
   autoStartSkipWorldFlagKey: 
+  autoStartRequiredWorldFlagKey: 
   steps:
   - {fileID: 11400000, guid: ae230000000000000000000000000023, type: 2}
   - {fileID: 11400000, guid: 7c4e91a2b8d34f6e9a1c5d0e3f7b2a18, type: 2}
@@ -44,6 +45,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 26fbdcd1751e9294b9b008f2c1b37f25, type: 2}
   - {fileID: 11400000, guid: 3decc65de67b298448d0f211331278b5, type: 2}
   - {fileID: 11400000, guid: f5a78e20313626d4bb00b7a4684e56bb, type: 2}
+  - {fileID: 11400000, guid: c02d35c81a3a3844d9562e3ffc932334, type: 2}
   - {fileID: 11400000, guid: be5ea60f8cfed654fbb463d20c8e86d6, type: 2}
   - {fileID: 11400000, guid: bd44fff76f6be5242872008f4efe5317, type: 2}
   - {fileID: 11400000, guid: 7f8055ac3760de64eaf8b53ef0e6cf98, type: 2}

@@ -9,6 +9,8 @@ This folder contains the lightweight backend pieces used for profile-oriented ga
   - Authenticated profile bootstrap, session, identity, and wallet-link flows.
 - `functions/profile_*/`
   - Authenticated profile reads and gameplay/narrative mutations.
+- `functions/solana_rpc_proxy/`
+  - Authenticated, rate-limited JSON-RPC proxy for the Unity client. It exposes only the reviewed read/simulation/confirmation methods and keeps the provider URL server-side. Mobile Wallet Adapter remains responsible for player transaction submission.
 - `migrations/`
   - SQL migrations for the project's Supabase-side data model.
 
@@ -17,7 +19,8 @@ The edge functions expect server-side secrets from environment variables:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `CHAINBOUND_SOLANA_CLUSTER` (`devnet` or `mainnet-beta`)
-- `CHAINBOUND_SOLANA_RPC_ENDPOINT` (HTTPS, finalized-capable, and cluster-verified with `getGenesisHash`)
+- `CHAINBOUND_SOLANA_RPC_DEVNET_ENDPOINT` / `CHAINBOUND_SOLANA_RPC_MAINNET_ENDPOINT` (optional preferred cluster-specific Helius RPC URLs)
+- `CHAINBOUND_SOLANA_RPC_ENDPOINT` (legacy/shared HTTPS RPC fallback, finalized-capable and cluster-verified with `getGenesisHash`)
 - `HELIUS_DAS_URL` (server-only DAS endpoint whose host and cluster must match the selected environment)
 - `CHAINBOUND_GAME_PROGRAM_ID`
 - `CHAINBOUND_CORE_MOVES_COLLECTION`
@@ -39,6 +42,8 @@ Mainnet additionally requires:
 Mainnet fails closed when the kill switch is off, the wallet is not allowlisted, the Mainnet program equals the Devnet program, or the RPC genesis hash does not match Mainnet. Do not deploy Devnet grant/top-up/operator functions to the Mainnet project.
 
 Use `.env.example` at the repo root as the public-safe reference. Do not place real secrets in source files or Unity assets.
+
+`solana_rpc_proxy` validates every candidate against `CHAINBOUND_SOLANA_CLUSTER`. It prefers the matching cluster-specific RPC secret, then the shared RPC secret, and finally the matching `HELIUS_DAS_URL`. The last fallback lets older Devnet projects keep a public shared transaction RPC while the authenticated mobile proxy still uses the existing server-only Helius endpoint. A wrong-cluster or uncredentialed provider URL is skipped and the proxy fails closed when no valid candidate remains.
 
 ## Role In The Stack
 - Unity is the primary client.

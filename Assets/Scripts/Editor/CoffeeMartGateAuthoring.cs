@@ -20,9 +20,7 @@ public static class CoffeeMartGateAuthoring
         "If you're good enough for him, I can trust the dog too. That's as close to a credit check as I need.",
         "Shop's closing. Not folding — expanding. Loomspire's a bigger market, bigger workshop. One supershop for every tamer who can pay.",
         "Truck's leaving soon. I left an extra orb in one of the moving crates in the store. Help yourself. Consider it user acquisition.",
-        "And that house that appeared on the hill — that's yours, isn't it? Doesn't just materialize for walk-ins.",
-        "I'll send a tech up there to install a Chainling storage terminal. Once it's live, you can manage your roster from home. Don't make me regret the install.",
-        "I'm throwing in the handheld hardware too. That's your player menu — Chainlings, inventory, profile, handbook, and the database. Don't pawn it."
+        "Anything you catch with those orbs, you manage from a Chainling PC. Storage, party, the whole roster. Don't leave them rattling around in your pockets."
     };
 
     public const string OpenFlag = "world.loomville_mart.open";
@@ -361,11 +359,19 @@ public static class CoffeeMartGateAuthoring
             RunTrack("door_closed", doorTrack, "coffee_main_run_door"),
             RunTrack("exit_intercept", exitTrack, "coffee_main_run_exit"),
             RunTrack("standing_leftover", standingTrack, "coffee_main_run_standing"),
-            WaitForSignal(LeftoverSignalId, "coffee_main_wait_signal"),
-            StopTrack("door_closed", "coffee_main_stop_door"),
-            StopTrack("exit_intercept", "coffee_main_stop_exit"),
-            StopTrack("standing_leftover", "coffee_main_stop_standing")
         };
+
+        SequenceAsset checkIn = AssetDatabase.LoadAssetAtPath<SequenceAsset>(
+            SequenceFolder + "/coffee_reynard_checkin_sequence.asset");
+        if (checkIn != null)
+            steps.Add(RunTrack(CoffeeCourierHuntAuthoring.CheckInTrackId, checkIn, "coffee_main_run_checkin"));
+
+        steps.Add(WaitForSignal(LeftoverSignalId, "coffee_main_wait_signal"));
+        steps.Add(StopTrack("door_closed", "coffee_main_stop_door"));
+        steps.Add(StopTrack("exit_intercept", "coffee_main_stop_exit"));
+        steps.Add(StopTrack("standing_leftover", "coffee_main_stop_standing"));
+        if (checkIn != null)
+            steps.Add(StopTrack(CoffeeCourierHuntAuthoring.CheckInTrackId, "coffee_main_stop_checkin"));
 
         SequenceAsset courierHunt = AssetDatabase.LoadAssetAtPath<SequenceAsset>(
             SequenceFolder + "/coffee_courier_zeb_sequence.asset");
@@ -382,6 +388,88 @@ public static class CoffeeMartGateAuthoring
         serialized.FindProperty("autoStartSkipWorldFlagKey").stringValue = OpenFlag;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(sequence);
+    }
+
+    public static void EnsureReynardCheckInTrack(SequenceAsset checkIn)
+    {
+        if (checkIn == null)
+            throw new ArgumentNullException(nameof(checkIn));
+
+        SequenceAsset gate = AssetDatabase.LoadAssetAtPath<SequenceAsset>(
+            SequenceFolder + "/coffee_loomville_gate_sequence.asset");
+        if (gate == null)
+            throw new InvalidOperationException("coffee_loomville_gate_sequence is missing. Author Coffee Mart Gate first.");
+
+        Step_RunTrack run = RunTrack(CoffeeCourierHuntAuthoring.CheckInTrackId, checkIn, "coffee_main_run_checkin");
+        Step_StopTrack stop = StopTrack(CoffeeCourierHuntAuthoring.CheckInTrackId, "coffee_main_stop_checkin");
+        var serialized = new SerializedObject(gate);
+        SerializedProperty steps = serialized.FindProperty("steps");
+        if (IndexOfReference(steps, run) < 0)
+        {
+            int standing = IndexOfTrack(steps, "standing_leftover", runTrack: true);
+            InsertStep(steps, standing >= 0 ? standing + 1 : steps.arraySize, run);
+        }
+
+        if (IndexOfReference(steps, stop) < 0)
+        {
+            int standingStop = IndexOfTrack(steps, "standing_leftover", runTrack: false);
+            int insertAt = standingStop >= 0
+                ? standingStop + 1
+                : IndexOfQueue(steps);
+            InsertStep(steps, insertAt, stop);
+        }
+
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(gate);
+    }
+
+    private static int IndexOfReference(SerializedProperty steps, UnityEngine.Object target)
+    {
+        for (int i = 0; i < steps.arraySize; i++)
+        {
+            if (steps.GetArrayElementAtIndex(i).objectReferenceValue == target)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static int IndexOfTrack(SerializedProperty steps, string trackId, bool runTrack)
+    {
+        for (int i = 0; i < steps.arraySize; i++)
+        {
+            UnityEngine.Object step = steps.GetArrayElementAtIndex(i).objectReferenceValue;
+            if (runTrack && step is Step_RunTrack run && run.TrackId == trackId)
+                return i;
+            if (!runTrack && step is Step_StopTrack stop && stop.TrackId == trackId)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static int IndexOfQueue(SerializedProperty steps)
+    {
+        for (int i = 0; i < steps.arraySize; i++)
+        {
+            if (steps.GetArrayElementAtIndex(i).objectReferenceValue is Step_QueueSequence)
+                return i;
+        }
+
+        return steps.arraySize;
+    }
+
+    private static void InsertStep(SerializedProperty steps, int index, SequenceStep step)
+    {
+        if (index >= steps.arraySize)
+        {
+            steps.arraySize++;
+            steps.GetArrayElementAtIndex(steps.arraySize - 1).objectReferenceValue = step;
+            return;
+        }
+
+        steps.InsertArrayElementAtIndex(index);
+        steps.GetArrayElementAtIndex(index).objectReferenceValue = step;
     }
 
     private static void AuthorQueueStepOnIntro(SequenceAsset coffeeSequence)

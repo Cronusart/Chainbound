@@ -336,6 +336,23 @@ namespace SignalJam.UI.MenuNavigation
             ApplyPreviewIdentity(entry?.snapshot?.visualIdentity);
         }
 
+        /// <summary>
+        /// Opens the dossier the same way <see cref="Open"/> does, then lands on the Moves page.
+        /// Equipping still uses the existing move panel.
+        /// </summary>
+        public void OpenForManagement(PlayerRosterEntry rosterEntry, PlayerRosterSnapshot cache)
+        {
+            Open(rosterEntry, cache);
+            ShowPanel(DetailPanel.Moves, playSfx: false);
+        }
+
+        public event Action Closed;
+
+        public void CloseFromHost()
+        {
+            RequestClose();
+        }
+
         /// <summary>Switches this dossier instance into the blocking post-capture reveal.</summary>
         public void SetCapturePresentation(Action onContinue)
         {
@@ -579,6 +596,9 @@ namespace SignalJam.UI.MenuNavigation
                     stack.Pop();
                 else
                     Hide();
+
+                if (!capturePresentation)
+                    Closed?.Invoke();
             };
 
             if (!Application.isPlaying || bookPageRoot == null)

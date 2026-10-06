@@ -20,6 +20,7 @@ MonoBehaviour:
   autoStartQuestId: coffee_and_beer
   autoStartLifecycleMask: 12
   autoStartSkipWorldFlagKey: world.loomville_mart.open
+  autoStartRequiredWorldFlagKey: 
   steps:
   - {fileID: 11400000, guid: 6039483fda59a594fb67d80a3a880724, type: 2}
   - {fileID: 11400000, guid: 35ccea59516acda4295d8b9a0214103f, type: 2}
@@ -28,8 +29,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 98396b0de49471745a4479b4e250f5bb, type: 2}
   - {fileID: 11400000, guid: 87f1a6608c83b264f8eff4ba1a632bce, type: 2}
   - {fileID: 11400000, guid: 396e32ca9f014994ab22cddca9816334, type: 2}
+  - {fileID: 11400000, guid: 85ce8cb644ce15f47aa2bea80d0efd20, type: 2}
   - {fileID: 11400000, guid: 99d878c3115c8bc418a849c58ebca2e8, type: 2}
   - {fileID: 11400000, guid: 8bcfc491c6171e84493caa17ecbbc871, type: 2}
   - {fileID: 11400000, guid: d26e7482a0c250744a44de9f14182bc9, type: 2}
   - {fileID: 11400000, guid: 5cae6cb26d2479b41b68acd8a8e59936, type: 2}
+  - {fileID: 11400000, guid: 2f2a7c7c58334e645bfecf9871fe4402, type: 2}
   - {fileID: 11400000, guid: c0ffee0100010001aaaabbbbcccc0109, type: 2}

@@ -1,3 +1,4 @@
+using SignalJam.UI.MobileControls;
 using UnityEngine;
 
 /// <summary>
@@ -18,6 +19,7 @@ public sealed class TutorialReadAlongSnippetSO : ScriptableObject
     [SerializeField] private string body = "";
     [SerializeField] private Sprite icon;
     [SerializeField] private string continueHint = DefaultContinueHint;
+    [SerializeField] private MobileHudEmphasisTarget emphasis = MobileHudEmphasisTarget.None;
 
     public string SnippetId => snippetId != null ? snippetId.Trim() : "";
     public string Title => title != null ? title.Trim() : "";
@@ -26,6 +28,8 @@ public sealed class TutorialReadAlongSnippetSO : ScriptableObject
     public string ContinueHint => string.IsNullOrWhiteSpace(continueHint)
         ? DefaultContinueHint
         : continueHint.Trim();
+    public MobileHudEmphasisTarget Emphasis => emphasis;
+    public bool KeepsHudVisible => emphasis != MobileHudEmphasisTarget.None;
 
     public bool IsValid => !string.IsNullOrWhiteSpace(SnippetId) && !string.IsNullOrWhiteSpace(Body);
 }

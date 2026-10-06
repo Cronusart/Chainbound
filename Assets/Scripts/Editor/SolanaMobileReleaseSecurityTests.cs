@@ -157,12 +157,21 @@ public sealed class SolanaMobileReleaseSecurityTests
     {
         string wallet = File.ReadAllText(WalletServicePath);
         string guard = File.ReadAllText(ClusterGuardPath);
+        string context = File.ReadAllText(PlatformContextPath);
+        string bridge = File.ReadAllText(SolanaBridgePath);
         string account = File.ReadAllText(AccountSessionPath);
         string auth = File.ReadAllText(SupabaseAuthPath);
 
         StringAssert.Contains("SolanaClusterGuard.EnsureExpectedClusterAsync", wallet);
         StringAssert.Contains("getGenesisHash", File.ReadAllText("Assets/Scripts/Solana/Rpc/SolanaRpcService.cs"));
         StringAssert.Contains("RPC cluster mismatch", guard);
+        StringAssert.Contains("ChainboundLocalConfig", context);
+        StringAssert.Contains("ApplyLocalSolanaOverrides", context);
+        StringAssert.Contains("ApplyLocalSolanaOverrides(sourceConfig, false)", File.ReadAllText(ReleaseValidatorPath));
+        StringAssert.DoesNotContain("ResolveRpcEndpoint", bridge,
+            "Wallet verification and RPC services must resolve one shared runtime Solana config.");
+        StringAssert.Contains("SupabaseAuthSessionContext.AccessToken", File.ReadAllText("Assets/Scripts/Solana/Rpc/SolanaRpcService.cs"));
+        StringAssert.Contains("/solana_rpc_proxy", File.ReadAllText("Assets/Scripts/Solana/Rpc/SolanaRpcService.cs"));
         StringAssert.Contains("BuildScopedStorageKey", account);
         StringAssert.Contains("BuildScopedStorageKey", auth);
         StringAssert.Contains("DevnetOwnership", auth,

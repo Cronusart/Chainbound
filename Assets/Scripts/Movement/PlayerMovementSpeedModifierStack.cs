@@ -76,7 +76,7 @@ public sealed class PlayerMovementSpeedModifierStack : MonoBehaviour, IPlayerMov
     }
 
     /// <summary>
-    /// Registers the Stride Tonic source (+15% for <see cref="PlayerMovementSpeedConsumable.DurationSeconds"/>).
+    /// Registers the Nitro Brew source (+15% for <see cref="PlayerMovementSpeedConsumable.DurationSeconds"/>).
     /// A second use refreshes that same source instead of stacking another +15%.
     /// </summary>
     public bool ApplyConsumable(float? now = null)

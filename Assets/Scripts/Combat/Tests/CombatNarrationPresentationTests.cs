@@ -119,6 +119,24 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void DialogueView_ChoiceNavigation_MovesRightThenBackWithoutWrapping()
+        {
+            DialogueBoxView view = CreateDialogueView();
+            _testRoot.AddComponent<EventSystem>();
+            view.InitializeHidden();
+            view.Show();
+
+            int picked = -1;
+            view.ShowChoices(new[] { "Yes", "No" }, index => picked = index);
+            view.SelectChoiceRelative(-1);
+            view.SelectChoiceRelative(1);
+            view.SelectChoiceRelative(-1);
+            view.SubmitSelectedChoice();
+
+            Assert.AreEqual(0, picked);
+        }
+
+        [Test]
         public void DialogueView_PointerButtonClick_CommitsChoice()
         {
             DialogueBoxView view = CreateDialogueView();

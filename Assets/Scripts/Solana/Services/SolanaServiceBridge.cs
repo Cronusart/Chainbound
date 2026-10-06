@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using UnityEngine;
 using Chainbound.Solana;
@@ -42,14 +41,6 @@ namespace Chainbound.Combat
         private PublicKey _vrfProgramPk;
         private PublicKey _vrfOracleQueuePk;
         private string _resolvedRpcEndpoint;
-        private const string RpcEndpointEnvVar = "CHAINBOUND_SOLANA_RPC_ENDPOINT";
-        private const string RuntimeConfigFileName = "Config.json";
-
-        [Serializable]
-        private class RuntimeConfigOverrides
-        {
-            public string solanaRpcEndpoint;
-        }
 
         // â”€â”€ Service Instances â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -189,7 +180,7 @@ namespace Chainbound.Combat
                 Debug.LogError("[SolanaServiceBridge] SolanaConfigSO is null. Assign it in the Inspector.");
                 return false;
             }
-            _resolvedRpcEndpoint = ResolveRpcEndpoint();
+            _resolvedRpcEndpoint = NormalizeConfigValue(solanaConfig.rpcEndpoint);
             if (string.IsNullOrEmpty(_resolvedRpcEndpoint))
             {
                 Debug.LogError("[SolanaServiceBridge] rpcEndpoint is empty in SolanaConfigSO.");
@@ -252,7 +243,9 @@ namespace Chainbound.Combat
 
             // â”€â”€ Layer 1: Wallet + RPC â”€â”€
             _walletService = new SolanaWalletService(solanaConfig);
-            _rpcService = new SolanaRpcService(_resolvedRpcEndpoint);
+            _rpcService = new SolanaRpcService(
+                _resolvedRpcEndpoint,
+                PlatformContext.ResolveSupabaseConfig());
 
             // â”€â”€ Layer 2: Tx Orchestrator â”€â”€
             _txOrchestrator = new SolanaChainTxOrchestrator(
@@ -314,33 +307,6 @@ namespace Chainbound.Combat
             };
 
             Debug.Log("[SolanaServiceBridge] All services initialized.");
-        }
-
-        private string ResolveRpcEndpoint()
-        {
-#if UNITY_EDITOR
-            string envEndpoint = Environment.GetEnvironmentVariable(RpcEndpointEnvVar);
-            if (!string.IsNullOrWhiteSpace(envEndpoint))
-                return envEndpoint.Trim();
-
-            try
-            {
-                string runtimeConfigPath = Path.Combine(Application.streamingAssetsPath, RuntimeConfigFileName);
-                if (File.Exists(runtimeConfigPath))
-                {
-                    string json = File.ReadAllText(runtimeConfigPath);
-                    var overrides = JsonUtility.FromJson<RuntimeConfigOverrides>(json);
-                    if (!string.IsNullOrWhiteSpace(overrides?.solanaRpcEndpoint))
-                        return overrides.solanaRpcEndpoint.Trim();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[SolanaServiceBridge] Failed to read StreamingAssets/{RuntimeConfigFileName}: {ex.Message}");
-            }
-#endif
-
-            return solanaConfig != null ? NormalizeConfigValue(solanaConfig.rpcEndpoint) : string.Empty;
         }
 
         private static string NormalizeConfigValue(string value)

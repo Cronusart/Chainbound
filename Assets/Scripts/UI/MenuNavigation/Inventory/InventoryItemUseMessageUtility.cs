@@ -80,7 +80,7 @@ namespace SignalJam.UI.MenuNavigation
                 case "movement_speed_host_missing":
                     return "Movement speed can't be changed right now.";
                 case "movement_speed_boost_not_server_backed":
-                    return "That speed tonic can't be used on this connection.";
+                    return "Nitro Brew can't be used on this connection.";
                 default:
                     if (family == PlayerItemEffectFamily.Revive)
                         return $"{name} doesn't need a Chainling Reboot.";
@@ -91,7 +91,7 @@ namespace SignalJam.UI.MenuNavigation
                     if (family == PlayerItemEffectFamily.FavorBoost)
                         return "That Favor Boost can't be used right now.";
                     if (family == PlayerItemEffectFamily.MovementSpeedBoost)
-                        return "That speed tonic can't be used right now.";
+                        return "Nitro Brew can't be used right now.";
                     return "That item can't be used right now.";
             }
         }

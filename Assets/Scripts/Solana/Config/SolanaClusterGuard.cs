@@ -50,7 +50,7 @@ namespace Chainbound.Combat
 
         private static async Task VerifyAsync(string endpoint, string expected)
         {
-            using (var rpc = new SolanaRpcService(endpoint))
+            using (var rpc = new SolanaRpcService(endpoint, PlatformContext.ResolveSupabaseConfig()))
             {
                 string actual = await rpc.GetGenesisHashAsync();
                 if (!string.Equals(actual, expected, StringComparison.Ordinal))

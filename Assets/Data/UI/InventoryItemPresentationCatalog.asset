@@ -40,12 +40,12 @@ MonoBehaviour:
     fallbackTint: {r: 0, g: 0, b: 0, a: 0}
     accentColor: {r: 0, g: 0, b: 0, a: 0}
     displayNameOverride: Cold Beer
-  - itemId: stride_tonic
-    rowIcon: {fileID: 0}
-    detailPortrait: {fileID: 0}
+  - itemId: nitro_brew
+    rowIcon: {fileID: 21300000, guid: eaf3ed4d9e97fba4d80ddd13726f1edf, type: 3}
+    detailPortrait: {fileID: 21300000, guid: eaf3ed4d9e97fba4d80ddd13726f1edf, type: 3}
     fallbackTint: {r: 0, g: 0, b: 0, a: 0}
     accentColor: {r: 0, g: 0, b: 0, a: 0}
-    displayNameOverride: Stride Tonic
+    displayNameOverride: Nitro Brew
   - itemId: tobys_delivery
     rowIcon: {fileID: 0}
     detailPortrait: {fileID: 0}

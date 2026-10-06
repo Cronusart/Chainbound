@@ -3,16 +3,21 @@ using SignalJam.UI.MenuNavigation;
 using UnityEngine;
 
 /// <summary>
-/// Keeps the player menu suppressed until Mart leftover permission installs
-/// house tech (<see cref="ChainlingPcTerminalIds.UnlockFlagKey"/>).
+/// Keeps the player menu suppressed until Reynard's check-in sets
+/// <see cref="MenuUnlockFlagKey"/>. Saves already past that beat stay open
+/// when <see cref="PastCheckInUnlockFlagKey"/> is set. The house Chainling PC
+/// keeps its own flags.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class GameplayMenuWorldFlagGate : MonoBehaviour
 {
+    public const string MenuUnlockFlagKey = "world.player.menu";
+    public const string PastCheckInUnlockFlagKey = "world.coffee.zeb_talked";
+
     private const string SuppressionReason = "chainling_pc_locked";
 
-    [SerializeField] private string unlockFlagKey = ChainlingPcTerminalIds.UnlockFlagKey;
-    [SerializeField] private string legacyUnlockFlagKey = ChainlingPcTerminalIds.LegacyUnlockFlagKey;
+    [SerializeField] private string unlockFlagKey = MenuUnlockFlagKey;
+    [SerializeField] private string legacyUnlockFlagKey = PastCheckInUnlockFlagKey;
 
     private static GameplayMenuWorldFlagGate instance;
 

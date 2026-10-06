@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,11 +25,13 @@ namespace Chainbound.Combat
         private static readonly int[] BlockTimeSlotOffsets = { 0, 30, 150, 300 };
         private readonly Uri _endpoint;
         private readonly HttpClient _httpClient;
+        private readonly SupabaseConfigSO _proxyConfig;
+        private readonly bool _usesAuthenticatedProxy;
         private string _cachedBlockhash;
         private DateTime _blockhashCachedAtUtc;
         private int _requestId;
 
-        public SolanaRpcService(string rpcEndpoint)
+        public SolanaRpcService(string rpcEndpoint, SupabaseConfigSO supabaseConfig = null)
         {
             if (!Uri.TryCreate(rpcEndpoint, UriKind.Absolute, out Uri endpoint))
                 throw new ArgumentException("RPC endpoint must be an absolute URI.", nameof(rpcEndpoint));
@@ -36,6 +39,8 @@ namespace Chainbound.Combat
             if (_endpoint.Scheme != Uri.UriSchemeHttps && !(_endpoint.Scheme == Uri.UriSchemeHttp && _endpoint.IsLoopback))
                 throw new ArgumentException("RPC endpoint must use HTTPS unless it targets localhost.", nameof(rpcEndpoint));
 
+            _proxyConfig = PlatformContext.ResolveSupabaseConfig(supabaseConfig);
+            _usesAuthenticatedProxy = IsAuthenticatedProxyEndpoint(_endpoint, _proxyConfig);
             _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(35) };
         }
 
@@ -256,8 +261,22 @@ namespace Chainbound.Combat
             };
 
             using (var content = new StringContent(request.ToString(Formatting.None), Encoding.UTF8, "application/json"))
-            using (HttpResponseMessage httpResponse = await _httpClient.PostAsync(_endpoint, content))
+            using (var httpRequest = new HttpRequestMessage(HttpMethod.Post, _endpoint))
             {
+                httpRequest.Content = content;
+                if (_usesAuthenticatedProxy)
+                {
+                    string accessToken = SupabaseAuthSessionContext.AccessToken?.Trim();
+                    if (string.IsNullOrWhiteSpace(accessToken))
+                        throw new InvalidOperationException("Authenticated profile session is required for Solana RPC access.");
+                    if (string.IsNullOrWhiteSpace(_proxyConfig?.supabaseAnonKey))
+                        throw new InvalidOperationException("Supabase publishable key is unavailable for Solana RPC access.");
+
+                    httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                    httpRequest.Headers.TryAddWithoutValidation("apikey", _proxyConfig.supabaseAnonKey.Trim());
+                }
+
+                using HttpResponseMessage httpResponse = await _httpClient.SendAsync(httpRequest);
                 string json = await httpResponse.Content.ReadAsStringAsync();
                 if (!httpResponse.IsSuccessStatusCode)
                     throw new HttpRequestException($"RPC HTTP {(int)httpResponse.StatusCode} ({httpResponse.ReasonPhrase}).");
@@ -276,6 +295,27 @@ namespace Chainbound.Combat
                 }
                 return response;
             }
+        }
+
+        private static bool IsAuthenticatedProxyEndpoint(Uri endpoint, SupabaseConfigSO config)
+        {
+            if (endpoint == null || config == null || string.IsNullOrWhiteSpace(config.ResolvedEdgeFunctionBaseUrl))
+                return false;
+
+            if (!Uri.TryCreate(
+                    config.ResolvedEdgeFunctionBaseUrl.TrimEnd('/') + "/solana_rpc_proxy",
+                    UriKind.Absolute,
+                    out Uri expected))
+            {
+                return false;
+            }
+
+            return Uri.Compare(
+                endpoint,
+                expected,
+                UriComponents.SchemeAndServer | UriComponents.Path,
+                UriFormat.SafeUnescaped,
+                StringComparison.OrdinalIgnoreCase) == 0;
         }
 
         private static RpcAccountInfo DecodeAccount(string publicKey, JObject response, JToken account)

@@ -13,6 +13,7 @@ import {
   CHAINBOUND_PROGRAM_ID,
   DEVNET_GENESIS_HASH,
   ensureOwnershipRpcCluster,
+  fetchChainRamBalance,
   loadOwnershipConfig,
   MAINNET_GENESIS_HASH,
 } from "./ownership_spine.ts";
@@ -92,6 +93,51 @@ export function loadRamShopRuntimeConfig(): RamShopRuntimeConfig {
   return { cluster, rpcUrl, expectedGenesisHash, programId: new PublicKey(programText), programVersion };
 }
 
+async function tryAuditLinkedLedger(
+  supabase: SupabaseClient,
+  profileId: string,
+): Promise<{ status: string; reason: string }> {
+  try {
+    const wallet = await getActiveWallet(supabase, profileId);
+    const walletAddress = str(wallet?.wallet_public_key);
+    if (!walletAddress) return { status: "pending_audit", reason: "linked_wallet_required" };
+    const config = loadOwnershipConfig();
+    await ensureOwnershipRpcCluster(config);
+    const chainBalance = await fetchChainRamBalance({ config, walletAddress });
+    const { data, error } = await supabase.rpc("ram_ledger_register_audit", {
+      p_player_profile_id: profileId,
+      p_wallet_address: walletAddress,
+      p_cluster: config.cluster,
+      p_chain_balance: chainBalance,
+    });
+    if (error) throw error;
+    const payload = (typeof data === "string" ? JSON.parse(data) : data) as JsonMap;
+    const status = str(payload?.status) || "pending_audit";
+    return {
+      status,
+      reason: status === "active" ? "" : "ram_reconciliation_required",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    return {
+      status: "pending_audit",
+      reason: message === "player_profile_not_initialized" ? message : "ram_ledger_audit_pending",
+    };
+  }
+}
+
+function closedCatalog(authoritativeBalance: string, ledgerStatus: string, reason: string): JsonMap {
+  return {
+    success: true,
+    checkout_available: false,
+    maintenance_reason: reason,
+    authoritative_balance: authoritativeBalance,
+    ledger_status: ledgerStatus,
+    bundles: [],
+    tenders: [],
+  };
+}
+
 export async function catalogResponse(supabase: SupabaseClient, profileId: string): Promise<JsonMap> {
   const [{ data: profile, error: profileError }, { data: ledger, error: ledgerError }] = await Promise.all([
     supabase.from("player_profiles").select("ram_balance").eq("player_profile_id", profileId).single(),
@@ -100,7 +146,14 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
   if (profileError) throw profileError;
   if (ledgerError) throw ledgerError;
   const authoritativeBalance = String(profile.ram_balance ?? 0);
-  const ledgerStatus = str(ledger?.status) || "pending_audit";
+  let ledgerStatus = str(ledger?.status) || "pending_audit";
+  if (ledgerStatus === "pending_audit") {
+    const audited = await tryAuditLinkedLedger(supabase, profileId);
+    ledgerStatus = audited.status;
+    if (ledgerStatus !== "active") {
+      return closedCatalog(authoritativeBalance, ledgerStatus, audited.reason);
+    }
+  }
 
   const { data: settings, error: settingsError } = await supabase
     .from("ram_shop_settings")
@@ -638,6 +691,8 @@ export function orderResponse(order: PurchaseOrderRow): JsonMap {
     mint: order.mint_address,
     decimals: order.decimals,
     destination: order.destination,
+    program_id: CHAINBOUND_PROGRAM_ID,
+    payment_program: SystemProgram.programId.toBase58(),
     reference: order.reference_address,
     unsigned_transaction_base64: order.unsigned_transaction_base64,
     message_hash: order.expected_message_hash,

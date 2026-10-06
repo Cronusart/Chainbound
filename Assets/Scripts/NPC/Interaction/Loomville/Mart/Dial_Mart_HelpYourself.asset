@@ -16,7 +16,8 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Mart
-    text: Last of the stock is going in the truck. Shop's open if you still want that leftover orb.
+    text: Last of the stock is going in the truck. Shop's open if you still want
+      that leftover orb.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -28,7 +29,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Mart
-    text: Don't linger. Loomspire won't wait, and neither will I. Safe travels — try not to waste the hardware.
+    text: "Don't linger. Loomspire won't wait, and neither will I. Safe travels \u2014
+      try not to waste the hardware."
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

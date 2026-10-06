@@ -412,6 +412,12 @@ namespace Chainbound.Combat
             string walletAddress,
             string authUserId,
             string[] orderedPartyChainlingBackendIds);
+
+        Task<MenuMutationResult> ReleaseChainlingAsync(
+            string playerProfileId,
+            string walletAddress,
+            string authUserId,
+            string chainlingBackendId);
     }
 
     public interface IMenuVisualIdentityService

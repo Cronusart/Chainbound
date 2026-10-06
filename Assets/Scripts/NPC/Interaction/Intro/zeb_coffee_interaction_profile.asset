@@ -101,9 +101,8 @@ MonoBehaviour:
   activeFallbackNpcBehavior:
     mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: First talk points at Cofi. A loss returns the player to the sanctuary.
-    Talking to Zeb again gives party advice and reopens the boss trigger. After
-    the win, Zeb sends the player to Reynard and Momo. He stays until Jungle loads
-    again.
+  designerNotes: First talk points at Cofi. A loss sends the player to the sanctuary;
+    talking to Zeb again gives party advice and reopens the boss trigger. After the
+    win, Zeb sends the player to Reynard and Momo. He stays until Jungle loads again.
   activateQuestOnInactiveInteract: 0
   completeObjectiveOnActivate: 

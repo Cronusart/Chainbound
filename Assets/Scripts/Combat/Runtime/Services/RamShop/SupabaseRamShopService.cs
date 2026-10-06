@@ -101,6 +101,8 @@ namespace Chainbound.Combat
                     feePayer = response.wallet,
                     estimatedFeeLamports = response.estimated_fee_lamports,
                     reference = response.reference,
+                    programId = response.program_id,
+                    paymentProgram = response.payment_program,
                 },
             };
         }
@@ -184,6 +186,8 @@ namespace Chainbound.Combat
             public int decimals;
             public string destination;
             public string reference;
+            public string program_id;
+            public string payment_program;
             public string unsigned_transaction_base64;
             public string message_hash;
             public string estimated_fee_lamports;

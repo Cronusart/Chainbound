@@ -17,3 +17,4 @@ MonoBehaviour:
   body: Use the D-pad or joystick to move around.
   icon: {fileID: 0}
   continueHint: Press any button
+  emphasis: 1

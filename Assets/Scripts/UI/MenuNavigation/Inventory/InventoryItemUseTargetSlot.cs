@@ -345,7 +345,8 @@ namespace SignalJam.UI.MenuNavigation
             TypeIconPaletteSO typeIconPalette,
             CompactStarRatingArtSO starArt,
             CycleIconPaletteSO cyclePalette,
-            PartyTabMotionProfileSO motionProfile)
+            PartyTabMotionProfileSO motionProfile,
+            string caption = null)
         {
             EnsureMissingLayoutForEditor(forceLayoutElementDefaults: false);
             ConfigurePresentation(typeIconPalette, starArt, cyclePalette);
@@ -363,7 +364,11 @@ namespace SignalJam.UI.MenuNavigation
             }
 
             if (nameLabel != null)
-                nameLabel.text = displayName.ToUpperInvariant();
+            {
+                nameLabel.text = string.IsNullOrWhiteSpace(caption)
+                    ? displayName.ToUpperInvariant()
+                    : caption.Trim().ToUpperInvariant();
+            }
 
             if (typeIcon != null)
             {
@@ -471,6 +476,28 @@ namespace SignalJam.UI.MenuNavigation
 
             if (hpLabel != null)
                 hpLabel.text = string.IsNullOrWhiteSpace(label) ? "— / —" : label;
+        }
+
+        public void PlaySelectPulse()
+        {
+            if (scaleTween != null && scaleTween.IsActive())
+                scaleTween.Kill();
+
+            if (!Application.isPlaying)
+                return;
+
+            transform.localScale = Vector3.one * selectedScale;
+            scaleTween = transform
+                .DOPunchScale(Vector3.one * 0.06f, 0.16f, 1, 0f)
+                .SetUpdate(true);
+        }
+
+        public void KillMotion()
+        {
+            if (scaleTween != null && scaleTween.IsActive())
+                scaleTween.Kill();
+            scaleTween = null;
+            KillProgressTweens();
         }
 
         public void SetSelected(bool isSelected, bool animate)

@@ -1,3 +1,5 @@
 {
-  "solanaRpcEndpoint": "https://api.devnet.solana.com"
+  "ownershipCluster": "devnet",
+  "solanaRpcEndpoint": "https://api.devnet.solana.com",
+  "solanaWsEndpoint": "wss://api.devnet.solana.com"
 }

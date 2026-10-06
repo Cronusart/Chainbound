@@ -93,34 +93,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Mart
-    text: "And that house that appeared on the hill \u2014 that's yours, isn't it?
-      Doesn't just materialize for walk-ins."
-    typeSpeed: 75
-    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
-    portraitSprite: {fileID: 0}
-    portraitTint: {r: 1, g: 1, b: 1, a: 1}
-    camera:
-      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
-      targetSource: 3
-      npcId: mart
-      targetTag: 
-    choices: []
-  - speakerName: Mart
-    text: I'll send a tech up there to install a Chainling storage terminal. Once
-      it's live, you can manage your roster from home. Don't make me regret the install.
-    typeSpeed: 75
-    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
-    portraitSprite: {fileID: 0}
-    portraitTint: {r: 1, g: 1, b: 1, a: 1}
-    camera:
-      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
-      targetSource: 3
-      npcId: mart
-      targetTag: 
-    choices: []
-  - speakerName: Mart
-    text: "I'm throwing in the handheld hardware too. That's your player menu \u2014
-      Chainlings, inventory, profile, handbook, and the database. Don't pawn it."
+    text: Anything you catch with those orbs, you manage from a Chainling PC. Storage,
+      party, the whole roster. Don't leave them rattling around in your pockets.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

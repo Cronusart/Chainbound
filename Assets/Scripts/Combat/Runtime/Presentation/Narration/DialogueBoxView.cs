@@ -205,11 +205,14 @@ namespace Chainbound.Combat
                 _fadeRoutine = StartCoroutine(AnimateVisibility(showing: true));
             else
                 ApplyVisibleImmediate();
+
+            AutoSprintIndicator.SetDialogueShowing(true);
         }
 
         public void Hide()
         {
             _isShowing = false;
+            AutoSprintIndicator.SetDialogueShowing(false);
             _isRevealing = false;
             _isLineComplete = false;
             _canAdvance = false;
@@ -473,7 +476,11 @@ namespace Chainbound.Combat
                 }
             }
 
-            int next = (current + (direction > 0 ? 1 : -1) + _choiceButtons.Count) % _choiceButtons.Count;
+            int step = direction > 0 ? 1 : -1;
+            int next = Mathf.Clamp(current + step, 0, _choiceButtons.Count - 1);
+            if (next == current)
+                return;
+
             Button button = _choiceButtons[next];
             if (button == null || !button.IsInteractable())
                 return;
@@ -943,13 +950,9 @@ namespace Chainbound.Combat
                 if (button == null)
                     continue;
 
-                var navigation = new Navigation
-                {
-                    mode = Navigation.Mode.Explicit,
-                    selectOnLeft = i > 0 ? _choiceButtons[i - 1] : button,
-                    selectOnRight = i < _choiceButtons.Count - 1 ? _choiceButtons[i + 1] : button,
-                };
-                button.navigation = navigation;
+                // Choice movement is owned by PollChoiceInput. Explicit UI navigation
+                // would step again in the same direction and land on the opposite option.
+                button.navigation = new Navigation { mode = Navigation.Mode.None };
             }
         }
 

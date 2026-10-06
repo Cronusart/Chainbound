@@ -2,6 +2,7 @@
 using System.Reflection;
 using Chainbound.Combat;
 using SignalJam.UI.MenuNavigation;
+using SignalJam.UI.MenuNavigation.PartyTab;
 using UnityEditor;
 using UnityEditor.Events;
 using UnityEditor.SceneManagement;
@@ -36,6 +37,15 @@ public static class ChainlingPcTerminalAuthoring
     {
         EnsureFolder("Assets/Prefabs/UI", "PlayerMenu");
 
+        InventoryItemUseTargetSlot rowPrefab = LoadPrefabComponent<InventoryItemUseTargetSlot>(
+            "Assets/Prefabs/UI/ChainlingRow/TargetRow.prefab");
+        ChainlingDetailScreen detailPrefab = LoadPrefabComponent<ChainlingDetailScreen>(
+            "Assets/Prefabs/UI/PlayerMenu/ChainlingDetailView.prefab");
+        if (rowPrefab == null)
+            throw new System.InvalidOperationException("TargetRow prefab is missing.");
+        if (detailPrefab == null)
+            throw new System.InvalidOperationException("ChainlingDetailView prefab is missing.");
+
         GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(ScreenPrefabPath);
         if (existing != null)
             AssetDatabase.DeleteAsset(ScreenPrefabPath);
@@ -48,10 +58,17 @@ public static class ChainlingPcTerminalAuthoring
                 "Assets/Data/Combat/ChainlingSpecies/Database/SpeciesDatabase.asset"),
             AssetDatabase.LoadAssetAtPath<CombatVisualDatabaseSO>(
                 "Assets/Data/Combat/ChainlingSpecies/Visual/Database/CombatVisualDatabase.asset"),
-            AssetDatabase.LoadAssetAtPath<ChainlingCardWidget>(
+            LoadPrefabComponent<ChainlingCardWidget>(
                 "Assets/Prefabs/UI/PlayerMenu/ChainlingCardView.prefab"),
             AssetDatabase.LoadAssetAtPath<SupabaseConfigSO>(
                 "Assets/Resources/SupabaseConfig.asset"));
+        screen.ConfigurePartyPresentation(
+            rowPrefab,
+            AssetDatabase.LoadAssetAtPath<TypeIconPaletteSO>("Assets/Data/Combat/Type/Icons/Type_Icons.asset"),
+            AssetDatabase.LoadAssetAtPath<CompactStarRatingArtSO>("Assets/Data/UI/CompactStarRatingArt_Smol.asset"),
+            AssetDatabase.LoadAssetAtPath<CycleIconPaletteSO>("Assets/Data/UI/CycleIconPalette.asset"),
+            AssetDatabase.LoadAssetAtPath<PartyTabMotionProfileSO>("Assets/Data/UI/PartyTabMotionProfile.asset"),
+            detailPrefab);
         screen.BuildDefaultLayoutForEditor();
         ApplyTerminalChrome(root);
 
@@ -69,6 +86,16 @@ public static class ChainlingPcTerminalAuthoring
         PrefabUtility.SaveAsPrefabAsset(root, ScreenPrefabPath);
         Object.DestroyImmediate(root);
         return AssetDatabase.LoadAssetAtPath<ChainlingPcTerminalScreen>(ScreenPrefabPath);
+    }
+
+    private static T LoadPrefabComponent<T>(string path) where T : Component
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        if (prefab == null)
+            return null;
+
+        T component = prefab.GetComponent<T>();
+        return component != null ? component : prefab.GetComponentInChildren<T>(true);
     }
 
     private static void AuthorPlayerRoom(ChainlingPcTerminalScreen screenPrefab)
@@ -153,8 +180,8 @@ public static class ChainlingPcTerminalAuthoring
                 gate = root.AddComponent<GameplayMenuWorldFlagGate>();
 
             var serialized = new SerializedObject(gate);
-            serialized.FindProperty("unlockFlagKey").stringValue = ChainlingPcTerminalIds.UnlockFlagKey;
-            serialized.FindProperty("legacyUnlockFlagKey").stringValue = ChainlingPcTerminalIds.LegacyUnlockFlagKey;
+            serialized.FindProperty("unlockFlagKey").stringValue = GameplayMenuWorldFlagGate.MenuUnlockFlagKey;
+            serialized.FindProperty("legacyUnlockFlagKey").stringValue = GameplayMenuWorldFlagGate.PastCheckInUnlockFlagKey;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.SaveAsPrefabAsset(root, GameServicesPrefabPath);
         }

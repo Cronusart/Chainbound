@@ -115,8 +115,8 @@ MonoBehaviour:
     npcBehavior:
       mode: 1
       behaviorOverride: {fileID: 0}
-  inactiveDialogue: {fileID: 11400000, guid: 1f2e3d4c5b6a7980a1b2c3d4e5f60718, type: 2}
-  inactiveTriggerId: 
+  inactiveDialogue: {fileID: 0}
+  inactiveTriggerId: trigger_coffee_reynard_checkin
   inactiveNpcBehavior:
     mode: 1
     behaviorOverride: {fileID: 0}
@@ -125,7 +125,8 @@ MonoBehaviour:
   activeFallbackNpcBehavior:
     mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: Check-in sends the player after Zeb. Later rules ask for the beer,
-    brew the order, or remind Toby's parcel is packed.
+  designerNotes: Check-in fires the Nitro Brew sequence, then sends the player after
+    Zeb. Later rules ask for the beer, brew the order, or remind Toby's parcel is
+    packed.
   activateQuestOnInactiveInteract: 1
   completeObjectiveOnActivate: talk_to_reynard

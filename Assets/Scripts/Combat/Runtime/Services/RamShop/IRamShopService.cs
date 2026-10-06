@@ -58,6 +58,8 @@ namespace Chainbound.Combat
         public string feePayer;
         public string estimatedFeeLamports;
         public string reference;
+        public string programId;
+        public string paymentProgram;
         public RpcSimulationResult simulation;
     }
 

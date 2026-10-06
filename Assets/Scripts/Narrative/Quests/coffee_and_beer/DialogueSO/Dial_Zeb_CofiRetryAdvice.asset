@@ -16,7 +16,8 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Zeb
-    text: Cofi sent you back to the sanctuary. One Chainling was never going to hold that trail.
+    text: Cofi sent you back to the sanctuary. One Chainling was never going to hold
+      that trail.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

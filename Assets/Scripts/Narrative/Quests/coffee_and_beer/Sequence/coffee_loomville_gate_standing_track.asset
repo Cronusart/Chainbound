@@ -20,6 +20,7 @@ MonoBehaviour:
   autoStartQuestId: 
   autoStartLifecycleMask: 0
   autoStartSkipWorldFlagKey: 
+  autoStartRequiredWorldFlagKey: 
   steps:
   - {fileID: 11400000, guid: 14ffba47eb9ba424ab12984223333b4c, type: 2}
   - {fileID: 11400000, guid: 83829d1c3527d734aa03118974880851, type: 2}

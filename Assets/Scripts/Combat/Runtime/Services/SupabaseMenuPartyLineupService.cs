@@ -32,5 +32,26 @@ namespace Chainbound.Combat
                 ? MenuMutationResult.Ok()
                 : MenuMutationResult.Failed(result.ErrorMessage);
         }
+
+        public async Task<MenuMutationResult> ReleaseChainlingAsync(
+            string playerProfileId,
+            string walletAddress,
+            string authUserId,
+            string chainlingBackendId)
+        {
+            if (supabaseConfig == null)
+                return MenuMutationResult.Failed("SupabaseConfigSO was not assigned.");
+
+            var result = await SupabasePartyLineupMutation.ProfileReleaseChainlingAsync(
+                supabaseConfig,
+                playerProfileId,
+                walletAddress,
+                authUserId,
+                chainlingBackendId);
+
+            return result.Ok
+                ? MenuMutationResult.Ok()
+                : MenuMutationResult.Failed(result.ErrorMessage);
+        }
     }
 }

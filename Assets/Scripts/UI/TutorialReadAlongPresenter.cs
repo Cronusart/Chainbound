@@ -89,11 +89,11 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
             canvasGroup.blocksRaycasts = true;
         }
 
-        AcquireGameplayFreeze();
+        AcquireGameplayFreeze(snippet.KeepsHudVisible);
         SubscribeDismiss();
         SetDismissInteractable(false);
         if (Application.isPlaying && isActiveAndEnabled)
-            StartCoroutine(ArmDismissAfterReveal());
+            StartCoroutine(ArmDismissAfterReveal(snippet.Emphasis));
         return true;
     }
 
@@ -116,6 +116,7 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
         IsShowing = false;
         dismissArmed = false;
         UnsubscribeDismiss();
+        MobileHudControlEmphasis.Instance?.Cancel();
         ReleaseGameplayFreeze();
 
         if (panelReveal != null)
@@ -128,7 +129,7 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
         }
     }
 
-    private IEnumerator ArmDismissAfterReveal()
+    private IEnumerator ArmDismissAfterReveal(MobileHudEmphasisTarget emphasis)
     {
         int generation = showGeneration;
         if (panelReveal != null)
@@ -140,6 +141,27 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
                 yield return null;
             }
         }
+
+        if (emphasis != MobileHudEmphasisTarget.None)
+        {
+            MobileHudControlEmphasis emphasisPlayer = MobileHudControlEmphasis.Instance;
+            if (emphasisPlayer == null)
+                emphasisPlayer = FindFirstObjectByType<MobileHudControlEmphasis>(FindObjectsInactive.Include);
+
+            if (emphasisPlayer != null)
+            {
+                emphasisPlayer.Begin(emphasis);
+                while (emphasisPlayer.IsPlaying)
+                {
+                    if (generation != showGeneration || !IsShowing)
+                        yield break;
+                    yield return null;
+                }
+            }
+        }
+
+        if (generation != showGeneration || !IsShowing)
+            yield break;
 
         float elapsed = 0f;
         while (elapsed < dismissDelayAfterRevealSeconds)
@@ -180,7 +202,7 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
         }
     }
 
-    private void AcquireGameplayFreeze()
+    private void AcquireGameplayFreeze(bool keepHudVisible)
     {
         InputLockService lockService = ResolveInputLockService();
         if (lockService != null && !inputLockHandle.IsValid)
@@ -193,12 +215,28 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
             hasMenuSuppression = menuSuppression.IsValid;
         }
 
+        if (keepHudVisible)
+        {
+            ReleaseHudToken();
+            return;
+        }
+
         MobileHudService hudService = ResolveHudService();
         if (hudService != null && !hasHudToken)
         {
             hudToken = hudService.AcquireContext(MobileHudContext.Dialogue, InputLockReason);
             hasHudToken = hudToken.IsValid;
         }
+    }
+
+    private void ReleaseHudToken()
+    {
+        if (!hasHudToken)
+            return;
+
+        hudToken.Release();
+        hudToken = default;
+        hasHudToken = false;
     }
 
     private void ReleaseGameplayFreeze()
@@ -216,12 +254,7 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
             hasMenuSuppression = false;
         }
 
-        if (hasHudToken)
-        {
-            hudToken.Release();
-            hudToken = default;
-            hasHudToken = false;
-        }
+        ReleaseHudToken();
     }
 
     private void SubscribeDismiss()

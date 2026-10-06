@@ -76,10 +76,14 @@ Supabase/.temp/
 
 # Runtime local config (keep only samples in git)
 Assets/StreamingAssets/Config.json
+Assets/Resources/ChainboundLocalConfig.json
+Assets/Resources/ChainboundLocalConfig.json.meta
 Config.json
 !**/Config.sample.json
 
 # Public repo exclusions / internal working material
+# Parent-directory ignore. A later !**/*.md rule cannot re-include files inside this folder.
+Docs/Private/
 .cursor/
 AGENTS.md
 mcp.json

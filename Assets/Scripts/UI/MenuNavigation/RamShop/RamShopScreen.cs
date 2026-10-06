@@ -13,7 +13,7 @@ namespace SignalJam.UI.MenuNavigation
     public sealed class RamShopScreen : MenuScreen
     {
         public const string RamShopScreenId = "ram_shop";
-        private const int MaxStatusPolls = 8;
+        private const int MaxStatusPolls = 20;
 
         [Header("Services")]
         [SerializeField] private SupabaseConfigSO supabaseConfig;
@@ -185,7 +185,7 @@ namespace SignalJam.UI.MenuNavigation
                     return;
                 }
                 if (unavailableLabel != null) unavailableLabel.gameObject.SetActive(false);
-                SetStatus("Choose a tender. Every selection requests a new server quote.");
+                SetStatus("Choose SOL. The Seeker wallet signs the payment.");
             }
             catch (Exception ex)
             {
@@ -208,9 +208,11 @@ namespace SignalJam.UI.MenuNavigation
             });
             if (bundle == null)
             {
-                string reason = catalog != null && !string.IsNullOrWhiteSpace(catalog.maintenanceReason)
-                    ? catalog.maintenanceReason
-                    : "RAM bundles are not available yet.";
+                string reason = catalog != null && catalog.checkoutAvailable
+                    ? $"{selectedTender} has no verified devnet price. Pay with SOL from the Seeker wallet."
+                    : catalog != null && !string.IsNullOrWhiteSpace(catalog.maintenanceReason)
+                        ? ShopperMessage(catalog.maintenanceReason)
+                        : "RAM bundles are not available yet.";
                 SetStatus(reason);
                 return;
             }
@@ -255,7 +257,7 @@ namespace SignalJam.UI.MenuNavigation
             }
             if (!wallet.SupportsSignAndSend)
             {
-                SetStatus("Device checkout requires an Android wallet with SignAndSend support.");
+                SetStatus("Open this shop on a Seeker and approve the payment in the wallet.");
                 return;
             }
 
@@ -304,9 +306,18 @@ namespace SignalJam.UI.MenuNavigation
                     return;
                 }
 
-                RamPurchaseOrder settled = !string.IsNullOrWhiteSpace(result.txSignature)
-                    ? await shop.ConfirmAsync(order.orderId, result.txSignature)
-                    : await shop.GetStatusAsync(order.orderId, null, order.payment.reference);
+                RamPurchaseOrder settled;
+                try
+                {
+                    settled = !string.IsNullOrWhiteSpace(result.txSignature)
+                        ? await shop.ConfirmAsync(order.orderId, result.txSignature)
+                        : await shop.GetStatusAsync(order.orderId, null, order.payment.reference);
+                }
+                catch (RamShopServiceException ex) when (ex.ErrorCode == "payment_not_finalized")
+                {
+                    SetStatus("Payment is on devnet. Waiting for it to finalize.");
+                    settled = order;
+                }
                 selectedOrder = settled;
                 if (settled.state != RamPurchaseState.Settled)
                     settled = await PollStatusAsync(settled);
@@ -321,7 +332,7 @@ namespace SignalJam.UI.MenuNavigation
                 }
                 else
                 {
-                    SetStatus("Payment recovery is still running. You can safely close this menu.");
+                    SetStatus("The Seeker payment was sent. Keep this shop open until devnet finalizes it.");
                 }
             }
             catch (Exception ex)
@@ -341,7 +352,14 @@ namespace SignalJam.UI.MenuNavigation
             for (int attempt = 0; attempt < MaxStatusPolls && current.state != RamPurchaseState.Settled; attempt++)
             {
                 await Task.Delay(2000);
-                current = await shop.GetStatusAsync(current.orderId, current.paymentSignature, current.payment.reference);
+                try
+                {
+                    current = await shop.GetStatusAsync(current.orderId, current.paymentSignature, current.payment.reference);
+                }
+                catch (RamShopServiceException ex) when (ex.ErrorCode == "payment_not_finalized")
+                {
+                    continue;
+                }
                 if (current.state == RamPurchaseState.Rejected || current.state == RamPurchaseState.Failed ||
                     current.state == RamPurchaseState.ExpiredUnpaid || current.state == RamPurchaseState.ManualReview)
                     break;
@@ -356,10 +374,18 @@ namespace SignalJam.UI.MenuNavigation
             string simulation = order.payment.simulation != null && order.payment.simulation.success
                 ? $"Simulation passed ({order.payment.simulation.unitsConsumed} CU)"
                 : "Simulation unavailable";
+            string paymentProgram = string.IsNullOrWhiteSpace(order.payment.paymentProgram)
+                ? "System Program"
+                : order.payment.paymentProgram;
+            string creditProgram = string.IsNullOrWhiteSpace(order.payment.programId)
+                ? "Chainbound program"
+                : order.payment.programId;
             confirmSummaryLabel.text =
                 $"{order.bundleName}  •  {order.ramAmount} RAM\n" +
                 $"Pay {RamAtomicAmountFormatter.Format(order.payment.atomicAmount, order.payment.decimals)} {order.payment.tender}\n" +
-                $"Cluster: {order.payment.cluster}\nDestination: {order.payment.destination}\n" +
+                $"Cluster: {order.payment.cluster}\n" +
+                $"Payment program: {paymentProgram}\nCredit program: {creditProgram}\n" +
+                $"Destination: {order.payment.destination}\n" +
                 $"Mint: {mint}\nFee payer: {order.payment.feePayer}\n" +
                 $"Estimated fee: {order.payment.estimatedFeeLamports} lamports\n{simulation}";
         }
@@ -409,12 +435,30 @@ namespace SignalJam.UI.MenuNavigation
 
         private void ShowUnavailable(string message)
         {
+            string readable = ShopperMessage(message);
             if (unavailableLabel != null)
             {
                 unavailableLabel.gameObject.SetActive(true);
-                unavailableLabel.text = message;
+                unavailableLabel.text = readable;
             }
-            SetStatus(message);
+            SetStatus(readable);
+        }
+
+        private static string ShopperMessage(string reason)
+        {
+            switch ((reason ?? string.Empty).Trim())
+            {
+                case "linked_wallet_required":
+                    return "Link this Seeker wallet to your profile before buying RAM.";
+                case "player_profile_not_initialized":
+                    return "This wallet needs an on-chain player profile before it can buy RAM.";
+                case "ram_reconciliation_required":
+                    return "Profile RAM and on-chain RAM do not match yet.";
+                case "ram_ledger_audit_pending":
+                    return "Checking this wallet against the devnet profile.";
+                default:
+                    return reason ?? string.Empty;
+            }
         }
 
         private void SetStatus(string message)

@@ -3,6 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using SignalJam.Narrative.Combat;
 using SignalJam.UI.MenuNavigation;
+using SignalJam.UI.MobileControls;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Events;
@@ -116,7 +117,10 @@ public sealed class TutorialReadAlongTests
         NarrativeTestUtility.SetPrivateField(reveal, "revealPlaying", true);
         NarrativeTestUtility.SetPrivateField(presenter, "dismissDelayAfterRevealSeconds", 100f);
 
-        System.Collections.IEnumerator arm = InvokePrivateEnumerator(presenter, "ArmDismissAfterReveal");
+        System.Collections.IEnumerator arm = InvokePrivateEnumerator(
+            presenter,
+            "ArmDismissAfterReveal",
+            MobileHudEmphasisTarget.None);
         Assert.That(arm.MoveNext(), Is.True);
         Assert.That(NarrativeTestUtility.GetPrivateField<bool>(presenter, "dismissArmed"), Is.False);
 
@@ -218,6 +222,8 @@ public sealed class TutorialReadAlongTests
 
         Step_ShowTutorialReadAlong move = AssetDatabase.LoadAssetAtPath<Step_ShowTutorialReadAlong>(
             TutorialReadAlongAuthoring.MoveStepPath);
+        Step_ShowTutorialReadAlong interact = AssetDatabase.LoadAssetAtPath<Step_ShowTutorialReadAlong>(
+            TutorialReadAlongAuthoring.InteractStepPath);
         Step_ShowTutorialReadAlong sprint = AssetDatabase.LoadAssetAtPath<Step_ShowTutorialReadAlong>(
             TutorialReadAlongAuthoring.SprintStepPath);
         Step_ShowTutorialReadAlong jump = AssetDatabase.LoadAssetAtPath<Step_ShowTutorialReadAlong>(
@@ -230,16 +236,82 @@ public sealed class TutorialReadAlongTests
             "Assets/Scripts/Narrative/Quests/chainbound_intro/Sequence/chainbound_intro_Steps/intro_playdial_ledge.asset");
 
         Assert.That(move, Is.Not.Null);
+        Assert.That(interact, Is.Not.Null);
         Assert.That(sprint, Is.Not.Null);
         Assert.That(jump, Is.Not.Null);
         Assert.That(move.Snippet, Is.Not.Null);
         Assert.That(move.Snippet.IsValid, Is.True);
-        Assert.That(sprint.Snippet.Body, Does.Contain("sprint").IgnoreCase);
+        Assert.That(move.Snippet.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.MovePad));
+        Assert.That(move.Snippet.KeepsHudVisible, Is.True);
+        Assert.That(interact.Snippet.Body, Does.Contain("Press A").IgnoreCase);
+        Assert.That(interact.Snippet.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.InteractA));
+        Assert.That(sprint.Snippet.Body, Does.Contain("Double-tap").IgnoreCase);
+        Assert.That(sprint.Snippet.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.SprintX));
         Assert.That(jump.Snippet.Body, Does.Contain("jump").IgnoreCase);
+        Assert.That(jump.Snippet.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.None));
+        Assert.That(jump.Snippet.KeepsHudVisible, Is.False);
 
         Assert.That(IndexOf(sequence, restore) + 1, Is.EqualTo(IndexOf(sequence, move)));
+        Assert.That(IndexOf(sequence, move) + 1, Is.EqualTo(IndexOf(sequence, interact)));
         Assert.That(IndexOf(sequence, encounter) + 1, Is.EqualTo(IndexOf(sequence, sprint)));
         Assert.That(IndexOf(sequence, ledge) + 1, Is.EqualTo(IndexOf(sequence, jump)));
+    }
+
+    [Test]
+    public void SprintLock_DoubleTapInsideWindowLocksWithoutClearingOnThatPress()
+    {
+        MobileSprintLock sprintLock = new MobileSprintLock { WindowSeconds = 0.32f };
+        sprintLock.RegisterDown(1f);
+        Assert.That(sprintLock.IsLocked, Is.False);
+        sprintLock.RegisterDown(1.2f);
+        Assert.That(sprintLock.IsLocked, Is.True);
+    }
+
+    [Test]
+    public void SprintLock_TapOutsideWindowStartsANewWindow()
+    {
+        MobileSprintLock sprintLock = new MobileSprintLock { WindowSeconds = 0.32f };
+        sprintLock.RegisterDown(1f);
+        sprintLock.RegisterDown(1.4f);
+        Assert.That(sprintLock.IsLocked, Is.False);
+        sprintLock.RegisterDown(1.6f);
+        Assert.That(sprintLock.IsLocked, Is.True);
+    }
+
+    [Test]
+    public void SprintLock_LaterTapClearsAndDoesNotRelock()
+    {
+        MobileSprintLock sprintLock = new MobileSprintLock { WindowSeconds = 0.32f };
+        sprintLock.RegisterDown(1f);
+        sprintLock.RegisterDown(1.2f);
+        sprintLock.RegisterDown(2f);
+        Assert.That(sprintLock.IsLocked, Is.False);
+        sprintLock.RegisterDown(2.1f);
+        Assert.That(sprintLock.IsLocked, Is.False);
+    }
+
+    [Test]
+    public void MobileHud_HasEmphasisOutlinesAndAutoSprintLabel()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/Prefabs/Controls/MobileServices.prefab");
+        Assert.That(prefab, Is.Not.Null);
+        Assert.That(prefab.GetComponentInChildren<MobileHudControlEmphasis>(true), Is.Not.Null);
+        Assert.That(prefab.GetComponentInChildren<AutoSprintIndicator>(true), Is.Not.Null);
+        Assert.That(CountNamed(prefab.transform, "ControlEmphasisFrame"), Is.EqualTo(4));
+        TutorialReadAlongSnippetSO menu = AssetDatabase.LoadAssetAtPath<TutorialReadAlongSnippetSO>(
+            TutorialReadAlongAuthoring.MenuSnippetPath);
+        Assert.That(menu, Is.Not.Null);
+        Assert.That(menu.Body, Is.EqualTo(TutorialReadAlongAuthoring.MenuSnippetBody));
+        Assert.That(menu.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.MenuY));
+        Assert.That(menu.KeepsHudVisible, Is.True);
+
+        Transform label = FindChild(prefab.transform, "Label");
+        Assert.That(label, Is.Not.Null);
+        TMPro.TMP_Text text = label.GetComponent<TMPro.TMP_Text>();
+        Assert.That(text, Is.Not.Null);
+        Assert.That(text.text, Is.EqualTo(AutoSprintIndicator.DefaultLabel));
+        Assert.That(label.gameObject.activeSelf, Is.False);
     }
 
     [Test]
@@ -282,6 +354,14 @@ public sealed class TutorialReadAlongTests
         return -1;
     }
 
+    private static int CountNamed(Transform root, string name)
+    {
+        int count = root.name == name ? 1 : 0;
+        for (int i = 0; i < root.childCount; i++)
+            count += CountNamed(root.GetChild(i), name);
+        return count;
+    }
+
     private static Transform FindChild(Transform root, string name)
     {
         if (root.name == name)
@@ -305,12 +385,15 @@ public sealed class TutorialReadAlongTests
         method.Invoke(target, args);
     }
 
-    private static System.Collections.IEnumerator InvokePrivateEnumerator(object target, string methodName)
+    private static System.Collections.IEnumerator InvokePrivateEnumerator(
+        object target,
+        string methodName,
+        params object[] args)
     {
         MethodInfo method = target.GetType().GetMethod(
             methodName,
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.That(method, Is.Not.Null, methodName);
-        return (System.Collections.IEnumerator)method.Invoke(target, null);
+        return (System.Collections.IEnumerator)method.Invoke(target, args);
     }
 }

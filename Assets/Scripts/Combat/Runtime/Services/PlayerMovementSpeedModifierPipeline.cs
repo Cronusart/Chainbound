@@ -348,12 +348,12 @@ namespace Chainbound.Combat
     }
 
     /// <summary>
-    /// Stride Tonic tuning. Call sites read these constants; do not duplicate the numbers.
+    /// Nitro Brew tuning. Call sites read these constants; do not duplicate the numbers.
     /// </summary>
     public static class PlayerMovementSpeedConsumable
     {
-        public const string ItemId = "stride_tonic";
-        public const string SourceId = "consumable.stride_tonic";
+        public const string ItemId = "nitro_brew";
+        public const string SourceId = "consumable.nitro_brew";
         public const float BonusFraction = 0.15f;
         public const float DurationSeconds = 30f;
 

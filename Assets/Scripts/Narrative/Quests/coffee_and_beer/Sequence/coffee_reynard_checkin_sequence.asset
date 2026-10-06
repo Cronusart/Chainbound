@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_reynard_checkin_sequence
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_reynard_checkin_sequence
+  startCheckpointId: coffee_checkin_idle
+  safeResumeLabel: coffee_checkin_idle
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 0
+  autoStartQuestId: 
+  autoStartLifecycleMask: 0
+  autoStartSkipWorldFlagKey: 
+  autoStartRequiredWorldFlagKey: 
+  steps:
+  - {fileID: 11400000, guid: 88ddabea1a0cca64a971d14f574c06d4, type: 2}
+  - {fileID: 11400000, guid: 41204446c9e63144aadf56a750887965, type: 2}
+  - {fileID: 11400000, guid: 53b3966d9e9fb9b42a31cdf603c1fad3, type: 2}
+  - {fileID: 11400000, guid: d07157cb75cbaa84e8c3a2a82d6457df, type: 2}
+  - {fileID: 11400000, guid: 8be1f911ebb8c614588f3c6da50ca9ab, type: 2}
+  - {fileID: 11400000, guid: c8b7c5a967825f74eb2ddfe72462288f, type: 2}
+  - {fileID: 11400000, guid: 870863976475ffd4386f1b573cfcac3e, type: 2}
+  - {fileID: 11400000, guid: 89256c36cf3da7249ba4479991adf507, type: 2}
+  - {fileID: 11400000, guid: ec10dfa6a447f684d88b1687d6634c86, type: 2}
+  - {fileID: 11400000, guid: ed30481ae3232d540b923eeea18daac2, type: 2}
+  - {fileID: 11400000, guid: fd24f48ee4909124eae007ca39619ecb, type: 2}
+  - {fileID: 11400000, guid: e245d67ae547efe468b5fc3c0b2e7674, type: 2}
+  - {fileID: 11400000, guid: 881e8313cee1c4d418e3565b30955c7a, type: 2}
+  - {fileID: 11400000, guid: b1da48d9ef3b79348b3a3ae6afe30bc0, type: 2}
+  - {fileID: 11400000, guid: a085e5a30d95166458a69d5f8b028bd4, type: 2}
+  - {fileID: 11400000, guid: e60330df0baff0141a55142925a832f1, type: 2}
+  - {fileID: 11400000, guid: d470ed31891e07142a873a27e2f6fec9, type: 2}

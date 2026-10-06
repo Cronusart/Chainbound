@@ -192,9 +192,13 @@ public sealed class MartNpcAuthoringTests
         Assert.That(intercept.Lines.Any(line =>
             line.text != null && line.text.IndexOf("user acquisition", StringComparison.OrdinalIgnoreCase) >= 0), Is.True);
         Assert.That(intercept.Lines.Any(line =>
-            line.text != null && line.text.IndexOf("storage terminal", StringComparison.OrdinalIgnoreCase) >= 0), Is.True);
+            line.text != null && line.text.IndexOf("Chainling PC", StringComparison.Ordinal) >= 0), Is.True);
         Assert.That(intercept.Lines.Any(line =>
-            line.text != null && line.text.IndexOf("player menu", StringComparison.OrdinalIgnoreCase) >= 0), Is.True);
+            line.text != null && line.text.IndexOf("player menu", StringComparison.OrdinalIgnoreCase) >= 0), Is.False);
+        Assert.That(intercept.Lines.Any(line =>
+            line.text != null && line.text.IndexOf("handheld", StringComparison.OrdinalIgnoreCase) >= 0), Is.False);
+        Assert.That(intercept.Lines.Any(line =>
+            line.text != null && line.text.IndexOf("send a tech", StringComparison.OrdinalIgnoreCase) >= 0), Is.False);
         Assert.That(beforeIntercept.useDialogueCamera, Is.True);
     }
 
@@ -468,11 +472,39 @@ public sealed class MartNpcAuthoringTests
         Assert.That(scaler.uiScaleMode, Is.EqualTo(CanvasScaler.ScaleMode.ScaleWithScreenSize));
         Assert.That(prefab.transform.Find("SafeArea"), Is.Not.Null);
         Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopLeft/StorageScroll"), Is.Not.Null);
-        Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopCenter/PartySlots"), Is.Not.Null);
+        Transform partySlots = prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopCenter/PartySlots");
+        Assert.That(partySlots, Is.Not.Null);
+        Assert.That(partySlots.childCount, Is.EqualTo(3));
+        for (int i = 0; i < partySlots.childCount; i++)
+            Assert.That(partySlots.GetChild(i).GetComponent<InventoryItemUseTargetSlot>(), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/ActionSheet"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/ActionSheet/Panel/Actions/MoveToParty"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/ActionSheet/Panel/Actions/SendToStorage"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/ActionSheet/Panel/Actions/Manage"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/ActionSheet/Panel/Actions/Release"), Is.Not.Null);
+        Assert.That(prefab.transform.Find("SafeArea/ActionSheet/Panel/Confirm"), Is.Not.Null);
+        SerializedObject serialized = new SerializedObject(screen);
+        Assert.That(serialized.FindProperty("detailPrefab").objectReferenceValue, Is.Not.Null);
+        Assert.That(serialized.FindProperty("partyRowPrefab").objectReferenceValue, Is.Not.Null);
         Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopRight/Close"), Is.Not.Null);
         Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/DialogueLowerCenter/Status"), Is.Not.Null);
         Assert.That(prefab.GetComponentInChildren<PlayerMenuBackgroundController>(true), Is.Not.Null);
         Assert.That(prefab.GetComponentInChildren<PlayerMenuBootSequenceController>(true), Is.Not.Null);
+    }
+
+    [Test]
+    public void ChainlingPcRoster_LastPartyMemberCannotBeStored()
+    {
+        Assert.That(ChainlingPcTerminalScreen.CanSendPartyMemberToStorage(1), Is.False);
+        Assert.That(ChainlingPcTerminalScreen.CanSendPartyMemberToStorage(2), Is.True);
+        Assert.That(ChainlingPcTerminalScreen.CanSendPartyMemberToStorage(3), Is.True);
+    }
+
+    [Test]
+    public void ChainlingPcRoster_PartyMemberCannotBeReleased()
+    {
+        Assert.That(ChainlingPcTerminalScreen.CanReleaseChainling(true), Is.False);
+        Assert.That(ChainlingPcTerminalScreen.CanReleaseChainling(false), Is.True);
     }
 
     private static bool TrackSetsFlag(string sequencePath, string flagKey)

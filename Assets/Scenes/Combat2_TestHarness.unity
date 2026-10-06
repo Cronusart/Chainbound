@@ -10201,23 +10201,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4727373681313806611, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 58
       objectReference: {fileID: 0}
     - target: {fileID: 4727373681313806611, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 232.5
       objectReference: {fileID: 0}
     - target: {fileID: 5218125558907464121, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 72
       objectReference: {fileID: 0}
     - target: {fileID: 5218125558907464121, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 340
       objectReference: {fileID: 0}
     - target: {fileID: 5218125558907464121, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -35
       objectReference: {fileID: 0}
     - target: {fileID: 5367007545443256938, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_AnchorMax.x
@@ -10445,11 +10445,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8748037461969498065, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: -186
       objectReference: {fileID: 0}
     - target: {fileID: 8748037461969498065, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -3
       objectReference: {fileID: 0}
     - target: {fileID: 8810010010010010002, guid: 8f4a4a8b90d14b4f8e3485b7c5d4a222, type: 3}
       propertyPath: m_AnchorMax.y
@@ -12666,7 +12666,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1861726876}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6debd3bfd5d6233498383b542f2dca9d, type: 3}
   m_Name: 

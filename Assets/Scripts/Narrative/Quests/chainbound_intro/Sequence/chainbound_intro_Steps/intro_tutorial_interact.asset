@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c305b625097fc23499e4b1ee9d638f6b, type: 3}
+  m_Name: intro_tutorial_interact
+  m_EditorClassIdentifier: 
+  stepName: intro_tutorial_interact
+  enableDebugLogs: 0
+  executeOnce: 1
+  failurePolicy: 0
+  onFailLabel: 
+  retryAttempts: 0
+  stepGuid: dc15e46a-04f9-44b7-bf2c-2cae9177a25d
+  snippet: {fileID: 11400000, guid: 4d160a2f3801aa44186290ae13b63546, type: 2}

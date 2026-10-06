@@ -45,16 +45,102 @@ public sealed class CoffeeCourierHuntAuthoringTests
     {
         QuestInteractionProfileSO profile = AssetDatabase.LoadAssetAtPath<QuestInteractionProfileSO>(ReynardCoffeePath);
         Assert.That(profile, Is.Not.Null);
-        Assert.That(profile.InactiveDialogue, Is.Not.Null);
-        string checkIn = string.Join(" ", Enumerable.Range(0, profile.InactiveDialogue.LineCount)
-            .Select(i => profile.InactiveDialogue.GetLine(i).text));
+        Assert.That(profile.InactiveDialogue, Is.Null);
+        Assert.That(profile.InactiveTriggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardCheckInTriggerId));
+        Assert.That(profile.ActivateQuestOnInactiveInteract, Is.True);
+        Assert.That(profile.CompleteObjectiveOnActivate, Is.EqualTo(CoffeeCourierHuntAuthoring.TalkToReynardObjective));
+
+        DialogueSequenceSO offer = AssetDatabase.LoadAssetAtPath<DialogueSequenceSO>(
+            "Assets/Scripts/Narrative/Quests/coffee_and_beer/DialogueSO/Dial_Reynard_CheckInOffer.asset");
+        Assert.That(offer, Is.Not.Null);
+        string checkIn = string.Join(" ", Enumerable.Range(0, offer.LineCount).Select(i => offer.GetLine(i).text));
         Assert.That(checkIn, Does.Contain("Zeb"));
         Assert.That(checkIn, Does.Contain("jungle").IgnoreCase);
+        Assert.That(checkIn, Does.Contain("Nitro Brew"));
+
         Assert.That(profile.ActiveFallbackDialogue, Is.Not.Null);
         string reminder = string.Join(" ", Enumerable.Range(0, profile.ActiveFallbackDialogue.LineCount)
             .Select(i => profile.ActiveFallbackDialogue.GetLine(i).text));
         Assert.That(reminder, Does.Contain("Zeb"));
         Assert.That(reminder, Does.Contain("jungle").IgnoreCase);
+        Assert.That(reminder, Does.Not.Contain("Nitro Brew"));
+    }
+
+    [Test]
+    public void ReynardCheckIn_GrantsBrewThenPanelThenClosingDialogue()
+    {
+        SequenceAsset checkIn = AssetDatabase.LoadAssetAtPath<SequenceAsset>(
+            "Assets/Scripts/Narrative/Quests/coffee_and_beer/Sequence/coffee_reynard_checkin_sequence.asset");
+        SequenceAsset gate = AssetDatabase.LoadAssetAtPath<SequenceAsset>(GateSequencePath);
+        Assert.That(checkIn, Is.Not.Null);
+        Assert.That(checkIn.SequenceId, Is.EqualTo(CoffeeCourierHuntAuthoring.CheckInSequenceId));
+        Assert.That(checkIn.AutoStartWhenNoSequenceRunning, Is.False);
+
+        int offer = -1;
+        int grant = -1;
+        int obtain = -1;
+        int closing = -1;
+        int menuFlag = -1;
+        int tutorial = -1;
+        int offerCount = 0;
+        for (int i = 0; i < checkIn.StepCount; i++)
+        {
+            SequenceStep step = checkIn.GetStep(i);
+            if (step is Step_PlayDialogue dialogue)
+            {
+                SerializedObject so = new SerializedObject(dialogue);
+                if (offerCount == 0)
+                {
+                    offer = i;
+                    Assert.That(so.FindProperty("useSpeakerCameraBridge").boolValue, Is.True);
+                }
+                else if (offerCount == 1)
+                    closing = i;
+                offerCount++;
+            }
+
+            if (step is Step_ApplyProfileItemDelta delta)
+            {
+                grant = i;
+                Assert.That(delta.IdempotencyKey, Is.EqualTo(CoffeeCourierHuntAuthoring.NitroBrewIdempotencyKey));
+                Assert.That(delta.Grants[0].itemId, Is.EqualTo(CoffeeCourierHuntAuthoring.NitroBrewItemId));
+            }
+
+            if (step is Step_ShowItemObtain shown)
+            {
+                obtain = i;
+                Assert.That(shown.ItemId, Is.EqualTo(CoffeeCourierHuntAuthoring.NitroBrewItemId));
+            }
+
+            if (step is Step_SetProfileWorldFlag flag &&
+                flag.FlagKey == GameplayMenuWorldFlagGate.MenuUnlockFlagKey)
+                menuFlag = i;
+
+            if (step is Step_ShowTutorialReadAlong readAlong)
+            {
+                tutorial = i;
+                Assert.That(readAlong.Snippet, Is.Not.Null);
+                Assert.That(readAlong.Snippet.Emphasis, Is.EqualTo(SignalJam.UI.MobileControls.MobileHudEmphasisTarget.MenuY));
+            }
+        }
+
+        Assert.That(offer, Is.GreaterThanOrEqualTo(0));
+        Assert.That(grant, Is.GreaterThan(offer));
+        Assert.That(obtain, Is.GreaterThan(grant));
+        Assert.That(closing, Is.GreaterThan(obtain));
+        Assert.That(menuFlag, Is.GreaterThan(closing));
+        Assert.That(tutorial, Is.GreaterThan(menuFlag));
+
+        bool runsCheckIn = false;
+        for (int i = 0; i < gate.StepCount; i++)
+        {
+            if (gate.GetStep(i) is Step_RunTrack track &&
+                track.TrackId == CoffeeCourierHuntAuthoring.CheckInTrackId &&
+                track.Sequence == checkIn)
+                runsCheckIn = true;
+        }
+
+        Assert.That(runsCheckIn, Is.True);
     }
 
     [Test]
