@@ -1,5 +1,5 @@
-import { sha256 } from "npm:@noble/hashes@1.7.1/sha256";
-import { ed25519 } from "npm:@noble/curves@1.8.1/ed25519";
+import { sha256 } from "npm:@noble/hashes@1.8.0/sha2";
+import { ed25519 } from "npm:@noble/curves@1.9.7/ed25519";
 import bs58 from "npm:bs58@5.0.0";
 
 const PDA_MARKER = new TextEncoder().encode("ProgramDerivedAddress");
