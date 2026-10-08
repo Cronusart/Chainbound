@@ -307,6 +307,12 @@ namespace SignalJam.UI.MenuNavigation
 
         public void OpenToTab(string tabId)
         {
+            if (!ColosseumMenuVisibility.IsMenuTabAllowed(tabId))
+            {
+                Open();
+                return;
+            }
+
             int index = ResolveTabIndex(tabId);
             OpenAtTab(index >= 0 ? index : ResolveDefaultTabIndex());
         }
@@ -682,7 +688,7 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (tabBar != null)
             {
-                tabBar.SetTabs(tabDefinitions);
+                tabBar.SetTabs(ColosseumMenuVisibility.ForMenuBar(tabDefinitions));
                 tabBar.SetSelectedIndex(-1);
             }
         }
@@ -695,8 +701,8 @@ namespace SignalJam.UI.MenuNavigation
             {
                 MenuTabDefinitionSO definition = tabDefinitions[i];
                 bool locked = definition != null &&
-                    definition.LockRule == PlayerMenuTabLock.HandbookUnlock &&
-                    !handbookUnlocked;
+                    (!ColosseumMenuVisibility.IsMenuTabAllowed(definition.TabId) ||
+                     (definition.LockRule == PlayerMenuTabLock.HandbookUnlock && !handbookUnlocked));
                 tabBar.SetLocked(i, locked);
             }
 

@@ -1,4 +1,6 @@
-> **Parked for review.** Yet to implement. No lobby or matchmaking types in the Unity scripts. The NGO package is only a manifest dependency. Review list: [../README.md](../README.md).
+> **H0 presence is in progress on `hub/h0`.** Social lobby uses NGO 2.x and `com.unity.services.multiplayer` (Sessions), shard size 8. Casual battle traffic stays on the Supabase spine. Review list: [../README.md](../README.md).
+
+> **Shipping order:** Implement battle spine first — see [PVP_00_Battle_Spine_First.md](PVP_00_Battle_Spine_First.md). NGO lobby (§3.1) is **M2**; matchmaking + dual-sim (§§3.2–3.5) is **M0**.
 
 # PvP Phase 1 — Social Lobby & Casual Matchmaking
 
@@ -29,7 +31,7 @@ This phase is the beta PvP surface. No SOL, no NFT deposits, no rating movement.
 
 | Concern | Stack | Why |
 |---------|-------|-----|
-| Lobby presence (transform, emotes, chat later) | **Unity Netcode for GameObjects (NGO) 1.8.x** + **UGS Relay + Lobby** (or Unity 6 Multiplayer Sessions API) | Soft state; client-authoritative transforms OK; package already present |
+| Lobby presence (transform, emotes, chat later) | **Unity Netcode for GameObjects (NGO) 2.x** + **`com.unity.services.multiplayer` (Sessions)** | Soft state; client-authoritative transforms OK. H0 shard size is 8 |
 | Matchmaking | **Supabase** (`matchmaking_queue` + edge matcher) | Same backend as profiles/outcomes; no dedicated game server |
 | Battle turns | **Supabase Realtime channel per match** + edge functions for submit/validate | Turn-based; needs server witness, not physics sync |
 | Combat outcome | Both clients run `CombatResolver` with server-issued seed + pinned `configHash` | Already deterministic; stamps `ConfigStamp` / `forensicHash` |
@@ -70,7 +72,7 @@ flowchart LR
 
 | Asset | Path / note |
 |-------|-------------|
-| NGO package | `com.unity.netcode.gameobjects` **1.8.1** in `Packages/manifest.json` — **unused in scripts today** |
+| NGO package | `com.unity.netcode.gameobjects` **2.13.2** and `com.unity.services.multiplayer` **2.3.3** (Sessions) in `Packages/manifest.json` |
 | Player locomotion | `Assets/Scripts/Movement/PlayerMovement3D.cs` |
 | Player visuals | `MeshRendererPlayerVisual`, `PlayerAnimationController3D_*` |
 | Scene loading | `Assets/Scripts/Core/Services/SceneLoader.cs` (spawn IDs, fade, input freeze) |
@@ -89,19 +91,19 @@ flowchart LR
 
 **Create / configure:**
 
-1. **Scene:** e.g. `Assets/Scenes/PvP/SocialLobby.unity` (use existing scene folder conventions; do not invent scripts folders outside project rules).
+1. **Scene:** `Assets/Scenes/SocialLobby.unity`, in build settings.
 2. **Network bootstrap MonoBehaviour** (Assembly-CSharp unless an existing multiplayer folder appears — prefer `Assets/Scripts/UI/` or `Assets/Scripts/Core/Services/` for lobby services; combat-facing match handoff stays behind interfaces in Combat.Runtime).
 3. **Player lobby prefab** with:
-   - NGO `NetworkObject` + `NetworkTransform` (or lightweight custom transform sync).
-   - Visual driven by cosmetic IDs already known to the profile (catalog IDs only — never trust peer-sent ownership).
-   - Local input: reuse `PlayerMovement3D` patterns; remote peers: disable local input, apply networked pose.
-4. **Lobby shard capacity:** 12–16 players per Relay session. When full, allocate a new Lobby/Relay instance (plaza shards).
+   - NGO `NetworkObject` + owner-authoritative `NetworkTransform` (position and facing, tick about 10 Hz).
+   - Visual driven by the server presence card (display name and cosmetic catalog ids — never trust a peer-sent name or ownership).
+   - Local input: a small kinematic motor. Remote copies do not run `PlayerMovement3D`.
+4. **Lobby shard capacity:** 8 players per Sessions quick-join for H0. When full, the next client creates another session. Filter by build stamp and `Application.version`. No host migration.
 5. **Colosseum interactable:** On interact → open queue UI (casual / later ranked). Check wallet only when entering ranked or when product requires wallet for casual (configurable flag on `MatchmakingConfigSO`).
 
-**Packages to add (Editor):**
+**Packages (Editor):**
 
-- `com.unity.services.multiplayer` / Lobby + Relay packages matching Unity version (verify against current UGS docs at implement time).
-- Initialize UGS with anonymous or project-auth; do **not** confuse UGS player ID with Supabase profile ID — store a mapping table if both exist.
+- `com.unity.netcode.gameobjects` 2.x (pinned 2.13.2) and `com.unity.services.multiplayer` (Sessions, pinned 2.3.3). Do not add standalone Lobby or Relay packages.
+- Initialize UGS with anonymous auth after the Supabase session exists; do **not** confuse UGS player ID with Supabase profile ID — `hub_identities` stores the mapping.
 
 ### 3.2 Unity — Matchmaking client
 
@@ -194,7 +196,7 @@ New board per Rule 11 (lever boards). Own these values **only here**:
 | `casualEnabled` / `rankedEnabled` | Feature flags |
 | `requireWalletForCasual` | Default **false** for funnel |
 | `requireWalletForRanked` | Default **true** (Phase 2) |
-| `lobbyMaxPlayers` | 12–16 |
+| `lobbyMaxPlayers` | 8 for H0 |
 | `queueTimeoutSeconds` | Expire waiting players |
 | `ratingBandStart` / `widenPerSecond` / `bandCap` | Used lightly in Phase 1 if soft skill hints exist; required in Phase 2 |
 | `rematchCooldownSeconds` | Anti-spam |
