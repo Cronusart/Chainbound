@@ -12,6 +12,7 @@ namespace Chainbound.Hub
         public static HubLobbyDirector Instance { get; private set; }
 
         [SerializeField] private GameObject avatarPrefab;
+        [SerializeField] private GameObject networkPrefab;
         [SerializeField] private Transform spawnPoint;
 
         private GameObject soloAvatar;
@@ -29,6 +30,7 @@ namespace Chainbound.Hub
 
         private void Start()
         {
+            HubSessionService.Ensure(networkPrefab);
             ShowSolo();
         }
 

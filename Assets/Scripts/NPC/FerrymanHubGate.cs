@@ -4,18 +4,21 @@ using UnityEngine;
 namespace Chainbound.Hub
 {
     /// <summary>
-    /// Dock gate. Release builds and a locked server stay ashore. A development
-    /// build with multiplayer unlocked stamps the profile and loads the hub.
+    /// Dock gate. The Loomville ferry stamps a development profile and loads the hub.
+    /// The SocialLobby ferry sails back to Loomville without that gate.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class FerrymanHubGate : MonoBehaviour
     {
         public const string HubSceneName = "SocialLobby";
+        public const string OverworldSceneName = "Loomville";
 
+        [SerializeField] private string destinationScene = HubSceneName;
+        [SerializeField] private bool requireUnlock = true;
         [SerializeField] private TMP_Text statusLabel;
         [SerializeField] private string dockedLine = "The ferry is not sailing yet.";
 
-        private bool traveling;
+        bool traveling;
 
         public void Talk()
         {
@@ -23,8 +26,14 @@ namespace Chainbound.Hub
                 _ = TravelAsync();
         }
 
-        private async System.Threading.Tasks.Task TravelAsync()
+        async System.Threading.Tasks.Task TravelAsync()
         {
+            if (!requireUnlock)
+            {
+                LoadDestination();
+                return;
+            }
+
             if (!HubBuild.Enabled)
             {
                 ShowLine(dockedLine);
@@ -52,6 +61,14 @@ namespace Chainbound.Hub
                 return;
             }
 
+            LoadDestination();
+        }
+
+        void LoadDestination()
+        {
+            if (string.IsNullOrWhiteSpace(destinationScene))
+                destinationScene = HubSceneName;
+
             if (SceneLoader.Instance == null)
             {
                 Debug.LogWarning("[Hub] SceneLoader is missing. Start through Bootstrap.");
@@ -59,11 +76,11 @@ namespace Chainbound.Hub
             }
 
             SceneLoader.Instance.RequestTransition(new SceneTransitionRequest(
-                HubSceneName,
+                destinationScene,
                 sourceId: "Ferryman"));
         }
 
-        private void ShowLine(string line)
+        void ShowLine(string line)
         {
             if (statusLabel != null)
                 statusLabel.text = line;

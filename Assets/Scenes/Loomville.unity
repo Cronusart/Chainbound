@@ -74736,6 +74736,115 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1001 &1124530885
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 483858538551981986, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: onInteracted.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1124530887}
+    - target: {fileID: 483858538551981986, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: onInteracted.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: Talk
+      objectReference: {fileID: 0}
+    - target: {fileID: 483858538551981986, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: onInteracted.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: Chainbound.Hub.FerrymanHubGate, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 483858538551981986, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: onInteracted.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 2492203463810547176, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4243541761339448948, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5558951636424383694, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_Name
+      value: Ferryman
+      objectReference: {fileID: 0}
+    - target: {fileID: 5735369476004910976, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -29.88
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.6200012
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -41.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8089302695354889557, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5558951636424383694, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1124530887}
+  m_SourcePrefab: {fileID: 100100000, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+--- !u!1 &1124530886 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5558951636424383694, guid: 6a17c9e4d2b84f30a56197ec08bd40ff, type: 3}
+  m_PrefabInstance: {fileID: 1124530885}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1124530887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1124530886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 418381bd59cc4d44d899f0394eab2643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  destinationScene: SocialLobby
+  requireUnlock: 1
+  statusLabel: {fileID: 0}
+  dockedLine: The ferry is not sailing yet.
 --- !u!1 &1125839085
 GameObject:
   m_ObjectHideFlags: 0
@@ -140440,3 +140549,4 @@ SceneRoots:
   - {fileID: 1574530395}
   - {fileID: 188422727}
   - {fileID: 281997135}
+  - {fileID: 1124530885}

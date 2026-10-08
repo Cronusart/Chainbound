@@ -2,14 +2,14 @@ using System.Threading.Tasks;
 using TMPro;
 using Unity.Collections;
 using Unity.Netcode;
-using Unity.Services.Authentication;
+using Unity.Netcode.Components;
 using UnityEngine;
 
 namespace Chainbound.Hub
 {
     /// <summary>
-    /// Owner-authoritative hub body. The network carries a UGS player id and a walk bit.
-    /// The visible name and cosmetic ids come from the presence card.
+    /// Hub body. The host writes the UGS player id after it verifies the presence ticket.
+    /// The walk bit stays owner-authored. Name and cosmetics come from the presence card.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkObject))]
@@ -28,7 +28,7 @@ namespace Chainbound.Hub
         private readonly NetworkVariable<FixedString128Bytes> ugsPlayerId = new(
             default,
             NetworkVariableReadPermission.Everyone,
-            NetworkVariableWritePermission.Owner);
+            NetworkVariableWritePermission.Server);
 
         public string AppliedDisplayName { get; private set; } = "Trainer";
 
@@ -38,18 +38,23 @@ namespace Chainbound.Hub
         {
             if (motor == null)
                 motor = GetComponent<HubWalkMotor>();
+            NetworkTransform networkTransform = GetComponent<NetworkTransform>();
+            if (networkTransform != null)
+            {
+                networkTransform.UseHalfFloatPrecision = true;
+                networkTransform.UseQuaternionSynchronization = true;
+                networkTransform.UseQuaternionCompression = true;
+            }
+
             EnsureLabel();
         }
 
         public override void OnNetworkSpawn()
         {
             ugsPlayerId.OnValueChanged += HandleIdChanged;
-            if (IsOwner)
-            {
-                SnapToSpawn();
-                PublishOwnerId();
-            }
-            else
+            if (IsServer && HubSessionService.TryGetApprovedUgsId(OwnerClientId, out string id) && id.Length <= 120)
+                ugsPlayerId.Value = new FixedString128Bytes(id);
+            if (!IsOwner)
                 motor.enabled = false;
 
             ApplyCard(ugsPlayerId.Value.ToString());
@@ -82,27 +87,6 @@ namespace Chainbound.Hub
             nameLabel.transform.rotation = Quaternion.LookRotation(
                 nameLabel.transform.position - Camera.main.transform.position,
                 Vector3.up);
-        }
-
-        private void SnapToSpawn()
-        {
-            GameObject spawn = GameObject.Find("HubSpawn");
-            if (spawn == null)
-                return;
-
-            transform.SetPositionAndRotation(spawn.transform.position, spawn.transform.rotation);
-        }
-
-        private void PublishOwnerId()
-        {
-            if (!AuthenticationService.Instance.IsSignedIn)
-                return;
-
-            string id = AuthenticationService.Instance.PlayerId;
-            if (string.IsNullOrEmpty(id))
-                return;
-
-            ugsPlayerId.Value = new FixedString128Bytes(id);
         }
 
         private void HandleIdChanged(FixedString128Bytes previous, FixedString128Bytes next)

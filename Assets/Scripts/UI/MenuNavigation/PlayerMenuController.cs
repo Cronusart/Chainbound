@@ -319,6 +319,12 @@ namespace SignalJam.UI.MenuNavigation
 
         public void OpenToTab(int tabIndex)
         {
+            if (!IsMenuTabIndexAllowed(tabIndex))
+            {
+                Open();
+                return;
+            }
+
             OpenAtTab(IsValidDefinition(tabIndex) ? tabIndex : ResolveDefaultTabIndex());
         }
 
@@ -776,6 +782,15 @@ namespace SignalJam.UI.MenuNavigation
                 tabDefinitions[index] != null;
         }
 
+        private bool IsMenuTabIndexAllowed(int index)
+        {
+            if (tabDefinitions == null || index < 0 || index >= tabDefinitions.Length)
+                return true;
+
+            MenuTabDefinitionSO definition = tabDefinitions[index];
+            return definition == null || ColosseumMenuVisibility.IsMenuTabAllowed(definition.TabId);
+        }
+
         private void SelectFocusedButton()
         {
             if (tabBar == null || inputContext == null || focusedTabIndex < 0)
@@ -805,7 +820,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private void ApplyHubFocus(int index, bool playSfx)
         {
-            if (!IsValidDefinition(index))
+            if (!IsValidDefinition(index) || !IsMenuTabIndexAllowed(index))
                 return;
 
             focusedTabIndex = index;

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
 using Chainbound.Combat;
+using Chainbound.Hub;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -68,13 +69,27 @@ namespace SignalJam.Narrative.Combat
 
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             SceneManager.sceneLoaded += HandleSceneLoaded;
+            _ = LeaveHubThenLoad(payload.MatchId);
+        }
+
+        private async Task LeaveHubThenLoad(string matchId)
+        {
+            try
+            {
+                await HubSessionService.LeaveBeforeBattleAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[PvPMatch] hub leave failed: " + ex.Message);
+            }
+
             if (SceneLoader.Instance == null)
             {
                 Debug.LogWarning("[PvPMatch] SceneLoader is missing. Start through Bootstrap.");
                 return;
             }
 
-            Debug.Log($"[PvPMatch] Loading {BattleSceneName} for match {payload.MatchId}.");
+            Debug.Log($"[PvPMatch] Loading {BattleSceneName} for match {matchId}.");
             SceneLoader.Instance.RequestTransition(new SceneTransitionRequest(
                 BattleSceneName,
                 sourceId: "CasualPvp"));

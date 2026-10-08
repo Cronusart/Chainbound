@@ -216,6 +216,8 @@ namespace SignalJam.UI.MenuNavigation
                     return "Search expired.";
                 case "enqueue_cooldown":
                     return "Wait a moment before searching again.";
+                case "hub_locked":
+                    return "The Colosseum is closed. The ferry is not sailing yet.";
                 case "party_fainted":
                     return "Your party has no chainlings that can battle.";
                 case "party_too_large":
