@@ -290,7 +290,26 @@ namespace Chainbound.Combat.Core
         public string Kind { get; set; } = "";
         public string TargetId { get; set; } = "";
         public string OrbId { get; set; } = "";
+        public string ActorId { get; set; } = "";
+        public string ActionId { get; set; } = "";
+        public int TurnNumber { get; set; }
+        public int StepIndex { get; set; }
+        public bool BattleActive { get; set; } = true;
+        public int WinnerTeamIndex { get; set; } = -1;
+        public string EndReason { get; set; } = "";
+        public List<CombatVitalSnapshot> Vitals { get; set; } = new List<CombatVitalSnapshot>();
         public Dictionary<string, string> Actions { get; set; } = new Dictionary<string, string>();
+    }
+
+    [Serializable]
+    public sealed class CombatVitalSnapshot
+    {
+        public string EntityId { get; set; } = "";
+        public int TeamIndex { get; set; }
+        public int RosterIndex { get; set; }
+        public int CurrentHp { get; set; }
+        public int CurrentAp { get; set; }
+        public bool IsActive { get; set; }
     }
 
     [Serializable]
@@ -304,6 +323,9 @@ namespace Chainbound.Combat.Core
         public string Message { get; set; } = "";
         public bool IsResumable { get; set; }
         public long ExpiresAtUnixMilliseconds { get; set; }
+        public bool RequiresResumeChoice { get; set; }
+        public bool RequiresWipe { get; set; }
+        public string EndReason { get; set; } = "";
     }
 
     public interface ICaptureSession : IDisposable
@@ -323,6 +345,13 @@ namespace Chainbound.Combat.Core
             CancellationToken cancellationToken = default(CancellationToken));
 
         Task<CombatSessionEnvelope> ResumeEncounterAsync(
+            string battleId,
+            CancellationToken cancellationToken = default(CancellationToken));
+
+        Task<CombatSessionEnvelope> GetCurrentEncounterAsync(
+            CancellationToken cancellationToken = default(CancellationToken));
+
+        Task<CombatSessionEnvelope> ForfeitEncounterAsync(
             string battleId,
             CancellationToken cancellationToken = default(CancellationToken));
 

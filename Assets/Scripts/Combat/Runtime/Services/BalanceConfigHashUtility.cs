@@ -119,6 +119,32 @@ namespace Chainbound.Combat
             return HashUtf8(sb.ToString());
         }
 
+        public static string HashMatchmakingConfig(MatchmakingConfigSO config)
+        {
+            if (config == null)
+                return HashUtf8("matchmaking:null");
+
+            var sb = new StringBuilder(256);
+            sb.Append("matchmaking|v=").Append(config.configVersion);
+            Append(sb, "casual", config.casualEnabled ? 1 : 0);
+            Append(sb, "ranked", config.rankedEnabled ? 1 : 0);
+            Append(sb, "walletCasual", config.requireWalletForCasual ? 1 : 0);
+            Append(sb, "walletRanked", config.requireWalletForRanked ? 1 : 0);
+            Append(sb, "queueTimeout", config.queueTimeoutSeconds);
+            Append(sb, "forfeitMisses", config.turnForfeitMissedTurns);
+            Append(sb, "turnLimit", config.turnActionTimeLimitSeconds);
+            Append(sb, "versionSkew", config.maxAppVersionSkew);
+            sb.Append("|ruleset=").Append(config.defaultCasualRulesetId ?? string.Empty);
+            Append(sb, "rematch", config.rematchCooldownSeconds);
+            Append(sb, "lobbyMax", config.lobbyMaxPlayers);
+            Append(sb, "ratingStart", config.ratingBandStart);
+            Append(sb, "widen", config.widenPerSecond);
+            Append(sb, "bandCap", config.bandCap);
+            Append(sb, "resultWindow", config.resultWindowSeconds);
+            Append(sb, "lockDeadline", config.lockDeadlineSeconds);
+            return HashUtf8(sb.ToString());
+        }
+
         public static string HashChainlingRecoveryConfig(ChainlingRecoveryConfigSO config)
         {
             if (config == null)

@@ -148,11 +148,7 @@ namespace Chainbound.Combat
             }
 
             if (scanlineOverlay == null)
-            {
-                var go = new GameObject(OverlayName, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
-                go.transform.SetParent(transform, false);
-                scanlineOverlay = go.GetComponent<RawImage>();
-            }
+                return;
 
             var rect = scanlineOverlay.rectTransform;
             rect.anchorMin = Vector2.zero;

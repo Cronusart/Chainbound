@@ -10,6 +10,7 @@ Open a file here only if you are deciding whether to build it. For what the repo
 
 | File | Why it is here |
 |---|---|
+| [Guides/PVP_00_Battle_Spine_First.md](Guides/PVP_00_Battle_Spine_First.md) | Shipping order: battle spine (M0) before NGO lobby / escrow / tournaments. Includes M0 agent prompt + anti-cheat foundations. |
 | [Guides/PVP_01_Social_Lobby_And_Casual_Matchmaking.md](Guides/PVP_01_Social_Lobby_And_Casual_Matchmaking.md) | Pre-build lobby and casual matchmaking. No lobby or matchmaking types in `Assets/Scripts`. Netcode for GameObjects is a package dependency only. |
 | [Guides/PVP_02_Ranked_Escrow_And_Ladder.md](Guides/PVP_02_Ranked_Escrow_And_Ladder.md) | Pre-build ranked escrow. Client wager types exist under `Assets/Scripts/Combat/Runtime/PvP/` and are not a playable mode. No escrow program. `ClosedBetaFeaturePolicy` does not allow wager instructions. |
 | [Guides/PVP_03_Tournaments_And_Themed_Brackets.md](Guides/PVP_03_Tournaments_And_Themed_Brackets.md) | Pre-build tournaments and brackets. No tournament code. |

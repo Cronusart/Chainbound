@@ -60,14 +60,22 @@ namespace Chainbound.Combat
             {
                 HttpResponse response = await SendAsync("GET", "/health/ready", null, false, cancellationToken);
                 bool ok = response.statusCode >= 200 && response.statusCode < 300;
-                SetAvailability(ok, ok ? "" : "SIGNAL SYNC UNAVAILABLE — RETRYING");
+                if (!ok)
+                {
+                    string detail = DescribeTransportFailure(response);
+                    SetAvailability(false, detail);
+                    Debug.LogWarning($"[AuthoritativeCombatSessionService] Battle service is not ready: {detail}", this);
+                }
+                else
+                {
+                    SetAvailability(true, "");
+                }
                 return ok;
             }
             catch (Exception exception)
             {
-                SetAvailability(false, "SIGNAL SYNC UNAVAILABLE — RETRYING");
-                if (enableDebugLogs)
-                    Debug.LogWarning($"[AuthoritativeCombatSessionService] Availability check failed: {exception.Message}", this);
+                SetAvailability(false, exception.Message);
+                Debug.LogWarning($"[AuthoritativeCombatSessionService] Battle service is not ready: {exception.Message}", this);
                 return false;
             }
         }
@@ -97,6 +105,30 @@ namespace Chainbound.Combat
             return ParseEnvelopeOrThrow(response);
         }
 
+        public async Task<CombatSessionEnvelope> GetCurrentEncounterAsync(
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireConfigured();
+            HttpResponse response = await SendAsync("GET", "/v1/pve/battles/current", null, true, cancellationToken);
+            if (response.statusCode == 204)
+                return null;
+            return ParseEnvelopeOrThrow(response);
+        }
+
+        public async Task<CombatSessionEnvelope> ForfeitEncounterAsync(
+            string battleId,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireConfigured();
+            HttpResponse response = await SendAsync(
+                "POST",
+                $"/v1/pve/battles/{Uri.EscapeDataString(battleId ?? "")}/forfeit",
+                "{}",
+                true,
+                cancellationToken);
+            return ParseEnvelopeOrThrow(response);
+        }
+
         public async Task<CombatSessionEnvelope> SubmitTeamCommandAsync(
             string battleId,
             CombatTeamCommand command,
@@ -110,6 +142,16 @@ namespace Chainbound.Combat
                 kind = command != null ? command.Kind : "",
                 targetId = command != null ? command.TargetId : "",
                 orbId = command != null ? command.OrbId : "",
+                actorId = command != null ? command.ActorId : "",
+                actionId = command != null ? command.ActionId : "",
+                turnNumber = command != null ? command.TurnNumber : 0,
+                stepIndex = command != null ? command.StepIndex : 0,
+                battleActive = command == null || command.BattleActive,
+                winnerTeamIndex = command != null ? command.WinnerTeamIndex : -1,
+                endReason = command != null ? command.EndReason : "",
+                vitals = command != null && command.Vitals != null
+                    ? command.Vitals.ConvertAll(ToDto).ToArray()
+                    : Array.Empty<VitalDto>(),
             };
             HttpResponse response = await SendAsync(
                 "POST",
@@ -205,6 +247,7 @@ namespace Chainbound.Combat
                 {
                     statusCode = (int)request.responseCode,
                     body = request.downloadHandler != null ? request.downloadHandler.text : "",
+                    transportError = request.error ?? "",
                 };
                 bool ok = result.statusCode >= 200 && result.statusCode < 300;
                 if (authenticated)
@@ -233,6 +276,22 @@ namespace Chainbound.Combat
                 Message = dto.message,
                 IsResumable = dto.isResumable,
                 ExpiresAtUnixMilliseconds = dto.expiresAtUnixMilliseconds,
+                RequiresResumeChoice = dto.requiresResumeChoice,
+                RequiresWipe = dto.requiresWipe,
+                EndReason = dto.endReason,
+            };
+        }
+
+        private static VitalDto ToDto(CombatVitalSnapshot source)
+        {
+            return new VitalDto
+            {
+                entityId = source != null ? source.EntityId : "",
+                teamIndex = source != null ? source.TeamIndex : 0,
+                rosterIndex = source != null ? source.RosterIndex : 0,
+                currentHp = source != null ? source.CurrentHp : 0,
+                currentAp = source != null ? source.CurrentAp : 0,
+                isActive = source != null && source.IsActive,
             };
         }
 
@@ -304,15 +363,34 @@ namespace Chainbound.Combat
                 AvailabilityChanged?.Invoke(isReachable, lastError);
         }
 
-        private struct HttpResponse { public int statusCode; public string body; }
+        private static string DescribeTransportFailure(HttpResponse response)
+        {
+            if (!string.IsNullOrWhiteSpace(response.transportError))
+                return response.transportError.Trim();
+            if (response.statusCode <= 0)
+                return "The battle service did not respond.";
+            return $"The battle service returned HTTP {response.statusCode}.";
+        }
+
+        private struct HttpResponse { public int statusCode; public string body; public string transportError; }
         [Serializable] private sealed class StartBattleRequestDto { public string commandId; public string zoneId; public string narrativeEncounterId; public string clientManifestHash; }
-        [Serializable] private sealed class TeamCommandDto { public string commandId; public int expectedVersion; public string kind; public string targetId; public string orbId; }
+        [Serializable] private sealed class TeamCommandDto
+        {
+            public string commandId; public int expectedVersion; public string kind; public string targetId; public string orbId;
+            public string actorId; public string actionId; public int turnNumber; public int stepIndex;
+            public bool battleActive; public int winnerTeamIndex; public string endReason; public VitalDto[] vitals;
+        }
+        [Serializable] private sealed class VitalDto
+        {
+            public string entityId; public int teamIndex; public int rosterIndex; public int currentHp; public int currentAp; public bool isActive;
+        }
         [Serializable] private sealed class EquipGearDto { public string slot; public string itemId; }
         [Serializable] private sealed class ErrorDto { public string code; public string message; public int stateVersion; }
         [Serializable] private sealed class CombatSessionEnvelopeDto
         {
             public string battleId; public int version; public string manifestHash; public string stateJson;
             public string errorCode; public string message; public bool isResumable; public long expiresAtUnixMilliseconds;
+            public bool requiresResumeChoice; public bool requiresWipe; public string endReason;
         }
         [Serializable] private sealed class CaptureLoadoutDto
         {

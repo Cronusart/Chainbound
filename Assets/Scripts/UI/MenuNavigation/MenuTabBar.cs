@@ -59,9 +59,85 @@ namespace SignalJam.UI.MenuNavigation
         public void SetTabs(MenuTabDefinitionSO[] definitions)
         {
             tabs = definitions;
+            bool grew = EnsureBindingCoverage();
             lockedStates = null;
+            if (grew && isActiveAndEnabled)
+                InstallButtonHandlers();
             RefreshAll();
             ConfigureVerticalNavigation();
+        }
+
+        private bool EnsureBindingCoverage()
+        {
+            if (tabs == null || bindings == null || bindings.Length == 0 || tabs.Length <= bindings.Length)
+                return false;
+
+            var grown = new System.Collections.Generic.List<TabBinding>(bindings);
+            while (grown.Count < tabs.Length)
+            {
+                TabBinding source = grown[grown.Count - 1];
+                if (source == null || source.button == null)
+                    break;
+
+                GameObject clone = Instantiate(source.button.gameObject, source.button.transform.parent);
+                clone.name = tabs[grown.Count] != null ? tabs[grown.Count].TabId + "TabButton" : "ExtraTabButton";
+                var binding = new TabBinding
+                {
+                    button = clone.GetComponent<Button>(),
+                    label = Remap(source.label, source.button.transform, clone.transform),
+                    icon = Remap(source.icon, source.button.transform, clone.transform),
+                    selectionFrame = Remap(source.selectionFrame, source.button.transform, clone.transform),
+                    lockedBadge = RemapObject(source.lockedBadge, source.button.transform, clone.transform),
+                    lockedLabel = Remap(source.lockedLabel, source.button.transform, clone.transform),
+                };
+                grown.Add(binding);
+            }
+
+            if (grown.Count == bindings.Length)
+                return false;
+
+            bindings = grown.ToArray();
+            return true;
+        }
+
+        private static T Remap<T>(T original, Transform sourceRoot, Transform cloneRoot) where T : Component
+        {
+            if (original == null || sourceRoot == null || cloneRoot == null)
+                return null;
+            if (original.transform == sourceRoot)
+                return cloneRoot.GetComponent<T>();
+
+            string path = RelativePath(original.transform, sourceRoot);
+            Transform mapped = string.IsNullOrEmpty(path) ? null : cloneRoot.Find(path);
+            return mapped != null ? mapped.GetComponent<T>() : null;
+        }
+
+        private static GameObject RemapObject(GameObject original, Transform sourceRoot, Transform cloneRoot)
+        {
+            if (original == null)
+                return null;
+            Component mapped = Remap<Transform>(original.transform, sourceRoot, cloneRoot);
+            return mapped != null ? mapped.gameObject : null;
+        }
+
+        private static string RelativePath(Transform child, Transform root)
+        {
+            if (child == null || root == null || child == root)
+                return string.Empty;
+
+            var names = new System.Collections.Generic.List<string>();
+            Transform cursor = child;
+            while (cursor != null && cursor != root)
+            {
+                names.Add(cursor.name);
+                cursor = cursor.parent;
+            }
+
+            if (cursor != root)
+                return string.Empty;
+
+            names.Reverse();
+            return string.Join("/", names);
         }
 
         public Button GetButton(int index)

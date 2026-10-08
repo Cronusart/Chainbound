@@ -31,15 +31,19 @@ Implementation lives under `Assets/Scripts/Combat/Runtime/ScriptableObjects/` + 
 | Capture board look (candles, dashes, copy) | `CapturePresentationConfigSO` (presentation only) |
 | Wild intro copy, trait order, trait colors | `BattleIntroCopyConfigSO` |
 | World-presence lifetime prefixes and hydrate/rewind policy | `WorldPresenceConfigSO` (narrative / Assembly-CSharp; not Combat.Runtime) |
+| Casual queue flags, queue timeout, online turn deadline, forfeit misses, app-version skew, casual ruleset id | `MatchmakingConfigSO` |
 
 ## Boards
 
 ### 1. CombatResolverConfigSO
-AP, random roll, crit, progression damage factor, chemistry factors, STAB (`enableStab` default **false** to preserve current behavior), stage caps, mitigation/barrier exclusivity, status proc chances, `turnActionTimeLimitSeconds` (0 = disabled; UI enforcement is a separate feature).
+AP, random roll, crit, progression damage factor, chemistry factors, STAB (`enableStab` default **false** to preserve current behavior), stage caps, mitigation/barrier exclusivity, status proc chances, `turnActionTimeLimitSeconds` (0 = disabled; this field stays unwired for wild battles). The casual online turn deadline is owned by `MatchmakingConfigSO`, not this shared resolver board.
+
+### 1b. MatchmakingConfigSO
+Casual and ranked queue flags, wallet requirements, queue timeout, missed-turn forfeit count, online turn deadline, result window, lock deadline, app-version skew, default casual ruleset id, rematch cooldown, and the later lobby/rating levers. Server mirror: `Supabase/functions/_shared/matchmaking_config.ts` and `get_pvp_config`. Shipped default: `Assets/Data/Combat/Config/MatchmakingConfig_Default.asset`. Casual ruleset: `Ruleset_PvP_Casual.asset` (`pvp_casual`).
 
 ### 2. CombatRulesetSO (profiles)
 `rulesetId`, `resolverConfig`, stat mutators, roster eligibility (allowed types, required/banned moves).
-Shipped defaults: `Assets/Data/Combat/Config/Ruleset_PvE_Default.asset`, `Ruleset_PvP_Ranked.asset`.
+Shipped defaults: `Assets/Data/Combat/Config/Ruleset_PvE_Default.asset`, `Ruleset_PvP_Ranked.asset`, `Ruleset_PvP_Casual.asset`.
 
 ### 3. PostBattleRewardsConfigSO
 What is granted after battle. Does **not** own XP thresholds.

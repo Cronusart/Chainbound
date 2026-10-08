@@ -410,7 +410,7 @@ namespace Chainbound.Combat
 
         private void HandlePlayerTurnWaiting(CombatState state, int teamIndex)
         {
-            if (teamIndex != 0 || state == null)
+            if (battleController == null || teamIndex != battleController.LocalControlledTeamIndex || state == null)
                 return;
             if (battleController != null && battleController.CapturePreviewMode)
                 return;
@@ -427,7 +427,7 @@ namespace Chainbound.Combat
             _reservedBenchIndices.Clear();
             _pendingSlotCursor = -1;
 
-            var playerTeam = state.team0;
+            var playerTeam = battleController.GetControlledTeam(state);
             if (playerTeam == null || playerTeam.activeIndices == null || playerTeam.activeIndices.Count == 0)
             {
                 SubmitFallbackPass();
@@ -501,7 +501,7 @@ namespace Chainbound.Combat
             var actor = GetCurrentActor();
             if (actor == null)
             {
-                QueueActionForCurrentSlot(CombatAction.Pass(0));
+                QueueActionForCurrentSlot(CombatAction.Pass(ControlledTeamIndex));
                 AdvanceToNextPendingSlot();
                 return;
             }
@@ -513,7 +513,7 @@ namespace Chainbound.Combat
             // Fight stays available even when every move is unaffordable: Move Select always
             // includes Rest, so the player can see locked moves and choose to rest for AP.
             bool canFight = actor.isAlive;
-            bool canSwap = TryFindBenchSwapIndex(actor, _pendingState.team0, reservedSwapTargets, out _);
+            bool canSwap = TryFindBenchSwapIndex(actor, ControlledTeam(), reservedSwapTargets, out _);
 
             if (_combatActionMap == null || _confirmAction == null)
             {
@@ -551,7 +551,7 @@ namespace Chainbound.Combat
             available[(int)CombatActionSelectorController.SelectorOption.Record] = !captureAlreadyQueued &&
                 canFight &&
                 captureCoordinator != null &&
-                captureCoordinator.CanCapture(_pendingState, battleController != null ? battleController.CurrentEncounter : null, battleController != null && battleController.IsPvP);
+                captureCoordinator.CanCapture(_pendingState, battleController != null ? battleController.CurrentEncounter : null, battleController != null && (battleController.IsPvP || battleController.IsCasualPvpSession));
             actionSelector.SetAvailableOptions(available);
             actionSelector.Show();
             SetInputSelectionState(selecting: true);
@@ -587,7 +587,7 @@ namespace Chainbound.Combat
                     if (!opened)
                     {
                         if (!TryBuildFightAction(out var fightAction))
-                            fightAction = CombatAction.Pass(0);
+                            fightAction = CombatAction.Pass(ControlledTeamIndex);
                         QueueActionForCurrentSlot(fightAction);
                         AdvanceToNextPendingSlot();
                     }
@@ -619,7 +619,7 @@ namespace Chainbound.Combat
                     if (!opened)
                     {
                         if (!TryBuildSwapAction(out var swapAction))
-                            swapAction = CombatAction.Pass(0);
+                            swapAction = CombatAction.Pass(ControlledTeamIndex);
                         QueueActionForCurrentSlot(swapAction);
                         AdvanceToNextPendingSlot();
                     }
@@ -688,7 +688,7 @@ namespace Chainbound.Combat
                 return;
 
             actionSelector?.SetSingleCombatTiltLiftActive(false);
-            QueueActionForCurrentSlot(action ?? CombatAction.Pass(0));
+            QueueActionForCurrentSlot(action ?? CombatAction.Pass(ControlledTeamIndex));
             AdvanceToNextPendingSlot();
         }
 
@@ -712,7 +712,7 @@ namespace Chainbound.Combat
                 return;
 
             actionSelector?.SetSingleCombatTiltLiftActive(false);
-            QueueActionForCurrentSlot(action ?? CombatAction.Pass(0));
+            QueueActionForCurrentSlot(action ?? CombatAction.Pass(ControlledTeamIndex));
             AdvanceToNextPendingSlot();
         }
 
@@ -724,7 +724,7 @@ namespace Chainbound.Combat
                 return false;
 
             EncounterSnapshot currentEncounter = battleController != null ? battleController.CurrentEncounter : null;
-            bool isPvp = battleController != null && battleController.IsPvP;
+            bool isPvp = battleController != null && (battleController.IsPvP || battleController.IsCasualPvpSession);
             IReadOnlyList<string> eligible = captureCoordinator.GetEligibleTargetInstanceIds(
                 _pendingState,
                 currentEncounter,
@@ -814,29 +814,29 @@ namespace Chainbound.Combat
                 return;
 
             int activeSlotCount = _pendingState != null &&
-                _pendingState.team0 != null &&
-                _pendingState.team0.activeIndices != null
-                ? _pendingState.team0.activeIndices.Count
+                ControlledTeam() != null &&
+                ControlledTeam().activeIndices != null
+                ? ControlledTeam().activeIndices.Count
                 : 0;
 
             var outgoing = new List<CombatAction>(activeSlotCount > 0 ? activeSlotCount : 1);
             for (int slot = 0; slot < activeSlotCount; slot++)
             {
-                var actor = _pendingState.team0.GetActiveInSlot(slot);
+                var actor = ControlledTeam().GetActiveInSlot(slot);
                 if (actor == null || !actor.isAlive)
                 {
-                    outgoing.Add(CombatAction.Pass(0));
+                    outgoing.Add(CombatAction.Pass(ControlledTeamIndex));
                     continue;
                 }
 
                 if (_queuedActionsBySlot.TryGetValue(slot, out CombatAction queued))
-                    outgoing.Add(queued ?? CombatAction.Pass(0));
+                    outgoing.Add(queued ?? CombatAction.Pass(ControlledTeamIndex));
                 else
-                    outgoing.Add(CombatAction.Pass(0));
+                    outgoing.Add(CombatAction.Pass(ControlledTeamIndex));
             }
 
             if (outgoing.Count == 0)
-                outgoing.Add(CombatAction.Pass(0));
+                outgoing.Add(CombatAction.Pass(ControlledTeamIndex));
 
             if (verboseLogs)
                 Debug.Log($"[CombatActionSelectorBridge] Submitting {outgoing.Count} queued player action(s).");
@@ -850,20 +850,20 @@ namespace Chainbound.Combat
                 return;
 
             int activeSlotCount = _pendingState != null &&
-                _pendingState.team0 != null &&
-                _pendingState.team0.activeIndices != null
-                ? _pendingState.team0.activeIndices.Count
+                ControlledTeam() != null &&
+                ControlledTeam().activeIndices != null
+                ? ControlledTeam().activeIndices.Count
                 : 0;
 
             var fallback = new List<CombatAction>(activeSlotCount > 0 ? activeSlotCount : 1);
             if (activeSlotCount <= 0)
             {
-                fallback.Add(CombatAction.Pass(0));
+                fallback.Add(CombatAction.Pass(ControlledTeamIndex));
             }
             else
             {
                 for (int slot = 0; slot < activeSlotCount; slot++)
-                    fallback.Add(CombatAction.Pass(0));
+                    fallback.Add(CombatAction.Pass(ControlledTeamIndex));
             }
 
             battleController.SubmitPlayerActions(fallback);
@@ -928,15 +928,24 @@ namespace Chainbound.Combat
                 LogInputState(selecting ? "SetInputSelectionState(selecting=true)" : "SetInputSelectionState(selecting=false)");
         }
 
+        private int ControlledTeamIndex => battleController != null ? battleController.LocalControlledTeamIndex : 0;
+
+        private TeamState ControlledTeam()
+        {
+            if (battleController == null)
+                return null;
+            return battleController.GetControlledTeam(_pendingState);
+        }
+
         private ChainlingInstance GetCurrentActor()
         {
-            if (_pendingState == null || _pendingState.team0 == null)
+            if (_pendingState == null || ControlledTeam() == null)
                 return null;
             if (_pendingSlotCursor < 0 || _pendingSlotCursor >= _pendingSlots.Count)
                 return null;
 
             int slot = _pendingSlots[_pendingSlotCursor];
-            return _pendingState.team0.GetActiveInSlot(slot);
+            return ControlledTeam().GetActiveInSlot(slot);
         }
 
         private CombatAction BuildFallbackActionForCurrentSlot()
@@ -945,28 +954,28 @@ namespace Chainbound.Combat
                 return fightAction;
             if (TryBuildSwapAction(out var swapAction))
                 return swapAction;
-            return CombatAction.Pass(0);
+            return CombatAction.Pass(ControlledTeamIndex);
         }
 
         private bool TryBuildFightAction(out CombatAction action)
         {
-            action = CombatAction.Pass(0);
+            action = CombatAction.Pass(ControlledTeamIndex);
             var actor = GetCurrentActor();
             if (!TryFindUsableMoveIndex(actor, out int moveIndex))
                 return false;
 
-            action = CombatAction.UseMove(0, moveIndex);
+            action = CombatAction.UseMove(ControlledTeamIndex, moveIndex);
             return true;
         }
 
         private bool TryBuildSwapAction(out CombatAction action)
         {
-            action = CombatAction.Pass(0);
+            action = CombatAction.Pass(ControlledTeamIndex);
             HashSet<int> reservedSwapTargets = GetReservedBenchIndicesExcludingCurrentSlot();
-            if (!TryFindBenchSwapIndex(GetCurrentActor(), _pendingState != null ? _pendingState.team0 : null, reservedSwapTargets, out int benchIndex))
+            if (!TryFindBenchSwapIndex(GetCurrentActor(), _pendingState != null ? ControlledTeam() : null, reservedSwapTargets, out int benchIndex))
                 return false;
 
-            action = CombatAction.Swap(0, benchIndex);
+            action = CombatAction.Swap(ControlledTeamIndex, benchIndex);
             return true;
         }
 
@@ -1012,7 +1021,7 @@ namespace Chainbound.Combat
 
             RemoveQueuedActionForSlot(slot);
 
-            CombatAction queued = action ?? CombatAction.Pass(0);
+            CombatAction queued = action ?? CombatAction.Pass(ControlledTeamIndex);
             _queuedActionsBySlot[slot] = queued;
             if (queued.actionType == CombatActionType.Swap)
                 _reservedBenchIndices.Add(queued.swapTargetIndex);

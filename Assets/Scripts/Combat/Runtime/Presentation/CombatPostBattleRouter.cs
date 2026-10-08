@@ -175,6 +175,13 @@ namespace Chainbound.Combat
             _result = result;
             _rewardSummary = prepared != null ? prepared.summary : _rewardSummary;
 
+            if (result != null && result.casualSpineMatch)
+            {
+                _result = result;
+                Debug.Log($"[PvPMatch] Casual match {result.pvpMatchId} finished state-winner={result.winnerTeamIndex}.");
+                return;
+            }
+
             if (result != null && result.IsPvP)
             {
                 RouteToPvPSelection(result);
@@ -186,6 +193,12 @@ namespace Chainbound.Combat
 
         public PreparedBattleRewards PrepareRewards(BattleResult result)
         {
+            if (result != null && result.casualSpineMatch)
+            {
+                _result = result;
+                return null;
+            }
+
             if (_preparedRewards != null && ReferenceEquals(_preparedRewards.result, result))
                 return _preparedRewards;
 
@@ -217,6 +230,13 @@ namespace Chainbound.Combat
 
         private void HandleOutcomeDismissed(BattleResult result)
         {
+            if (result != null && result.casualSpineMatch)
+            {
+                _result = result;
+                RouteToRewards(result);
+                return;
+            }
+
             PreparedBattleRewards prepared = PrepareRewards(result);
             _result = result;
             _rewardSummary = prepared != null ? prepared.summary : _rewardSummary;

@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Chainbound.Combat.Core;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -142,6 +144,14 @@ namespace Chainbound.Combat
         // so it cannot be serialized in the Inspector. Inject it at runtime
         // via SetWagerOrchestrator() before starting a PvP battle.
         private WagerMatchOrchestrator _wagerOrchestrator;
+        private CasualPvpLaunchPayload _casualPvp;
+        private IPvPTurnBridge _pvpTurnBridge;
+        private List<CombatAction> _casualActions0;
+        private List<CombatAction> _casualActions1;
+        private bool _casualTurnAborted;
+        private bool _casualResultSubmitted;
+        private string _casualForfeitState;
+        private bool _battleFinalized;
         private IPlayerPartyProvider _runtimePlayerPartyProvider;
         private IEncounterProvider _runtimeEncounterProvider;
         private CombatRulesetSO _runtimeRulesetOverride;
@@ -213,6 +223,27 @@ namespace Chainbound.Combat
             _wagerOrchestrator = orchestrator;
         }
 
+        /// <summary>
+        /// Arms a casual dual-sim session. Parties stay in seat order: A is team 0, B is team 1.
+        /// </summary>
+        public void BeginCasualPvp(CasualPvpLaunchPayload payload)
+        {
+            _casualPvp = payload;
+            _pvpTurnBridge = payload != null ? payload.TurnBridge : null;
+            _casualForfeitState = null;
+            _casualResultSubmitted = false;
+            _battleFinalized = false;
+        }
+
+        public int LocalControlledTeamIndex => _casualPvp != null ? _casualPvp.LocalTeamIndex : 0;
+
+        public TeamState GetControlledTeam(CombatState state)
+        {
+            if (state == null)
+                return null;
+            return LocalControlledTeamIndex == 1 ? state.team1 : state.team0;
+        }
+
         public void SetPlayerPartyProviderOverride(IPlayerPartyProvider provider, MonoBehaviour providerComponent = null)
         {
             _runtimePlayerPartyProvider = provider;
@@ -272,6 +303,8 @@ namespace Chainbound.Combat
         private bool _scriptedFleeSkipPresentation;
         private float _battleStartTime;
         private Coroutine _battleCoroutine;
+        private bool _skipNextBeginTurn;
+        private bool _authorityCommitBlocked;
         private bool _captureAttempted;
         private bool _captureSucceeded;
         private BattleCompletionReason _captureCompletionReason;
@@ -350,6 +383,9 @@ namespace Chainbound.Combat
         /// <summary>True when this battle is being driven by the PvP wager flow.</summary>
         public bool IsPvP => _wagerOrchestrator != null;
 
+        /// <summary>True for a casual server-locked dual sim. This does not require a wager orchestrator.</summary>
+        public bool IsCasualPvpSession => _casualPvp != null;
+
         /// <summary>Resolved flee rule for the current encounter, including any launch-time override.</summary>
         public EncounterFleePolicy CurrentFleePolicy => EncounterFleePolicyResolver.Resolve(
             CurrentEncounter,
@@ -376,7 +412,14 @@ namespace Chainbound.Combat
             if (presenter == null)
                 presenter = FindObjectOfType<Combat2BattlefieldPresenter>(true);
 
-            int battleSeed = deterministicMode ? seed : Environment.TickCount;
+            AuthoritativeClientBattleState authoritativeState = null;
+            if (_casualPvp == null)
+                AuthoritativeBattleLaunchContext.TryReadState(out authoritativeState);
+            int battleSeed = _casualPvp != null && _casualPvp.Seed != 0
+                ? _casualPvp.Seed
+                : authoritativeState != null && authoritativeState.seed != 0
+                    ? unchecked((int)authoritativeState.seed)
+                    : deterministicMode ? seed : Environment.TickCount;
             CombatRulesetSO activeRuleset = ResolveRuleset();
             CombatResolverConfigSO resolverConfig = activeRuleset != null
                 ? activeRuleset.ResolveResolverConfig()
@@ -416,6 +459,16 @@ namespace Chainbound.Combat
                 0, playerParty, speciesDatabase, moveDatabase, battleSeed, _resolver.Rng, modifierCatalog, rosterRuleset);
             var team1 = RosterSlotUtility.BuildTeamFromEncounter(
                 1, encounter, speciesDatabase, moveDatabase, battleSeed, _resolver.Rng, modifierCatalog, rosterRuleset);
+            if (_casualPvp != null)
+            {
+                RosterSlotUtility.StampStablePvpIds(team0);
+                RosterSlotUtility.StampStablePvpIds(team1);
+                if (_casualPvp.FullHeal)
+                {
+                    RosterSlotUtility.ApplyFullHeal(team0);
+                    RosterSlotUtility.ApplyFullHeal(team1);
+                }
+            }
 
             // Create AIs
             _playerAI = CreateAI(playerAI);
@@ -426,8 +479,14 @@ namespace Chainbound.Combat
 
             // Initialize battle
             _state = _resolver.InitializeBattle(team0, team1);
+            if (_casualPvp == null && authoritativeState != null && authoritativeState.vitals != null && authoritativeState.vitals.Count > 0)
+                ApplyAuthoritativeCheckpoint(authoritativeState, authoritativeState.hasActionCheckpoint);
             _battleStarted = true;
-            _turnCount = 0;
+            _turnCount = authoritativeState != null && authoritativeState.hasActionCheckpoint
+                ? Mathf.Max(1, authoritativeState.turnNumber)
+                : 0;
+            _skipNextBeginTurn = authoritativeState != null && authoritativeState.hasActionCheckpoint;
+            _authorityCommitBlocked = false;
             _captureAttempted = false;
             _captureSucceeded = false;
             _captureCompletionReason = BattleCompletionReason.Standard;
@@ -487,7 +546,7 @@ namespace Chainbound.Combat
         /// </summary>
         public void ExecuteNextTurn()
         {
-            if (!_battleStarted || _state == null || !_state.isActive)
+            if (!_battleStarted || _state == null || !_state.isActive || _authorityCommitBlocked)
                 return;
 
             if (_waitingForBattleIntro)
@@ -541,7 +600,7 @@ namespace Chainbound.Combat
                 return new FleeRequestResult(FleeRequestStatus.BattleInactive, CurrentFleePolicy, "There is no active battle to flee.");
             if (_fleeRoutine != null)
                 return new FleeRequestResult(FleeRequestStatus.AlreadyResolving, CurrentFleePolicy, "Your team is already withdrawing.");
-            if (IsPvP)
+            if (IsPvP || IsCasualPvpSession)
                 return new FleeRequestResult(FleeRequestStatus.UnavailableInPvP, CurrentFleePolicy, "Scripted flee is unavailable in PvP.");
 
             _scriptedFleeSkipPresentation = true;
@@ -555,7 +614,7 @@ namespace Chainbound.Combat
             return EncounterFleePolicyResolver.Evaluate(
                 isActive,
                 _fleeRoutine != null,
-                IsPvP,
+                IsPvP || IsCasualPvpSession,
                 CurrentEncounter,
                 _runtimeFleePolicyOverride);
         }
@@ -637,9 +696,7 @@ namespace Chainbound.Combat
                         _resolver.Log);
                     result.pveStatContributions = BattleStatsAggregator.AggregateCombatStats(_resolver.Log.Events, result);
                     string eventHash = BattleStatsAggregator.ComputeLegacyEventHash(_resolver.Log.Events, result.seed);
-                    result.forensicHash = !string.IsNullOrWhiteSpace(_resolver.Log.BattleId)
-                        ? $"{_resolver.Log.BattleId}:{eventHash}"
-                        : eventHash;
+                    result.forensicHash = BuildForensicHash(eventHash);
                 }
 
                 Debug.Log($"[CombatBattleController] Battle fled after {_turnCount} turns ({result.durationSeconds:F1}s)");
@@ -795,7 +852,9 @@ namespace Chainbound.Combat
                 return;
             }
 
-            _pendingPlayerActions = NormalizeSubmittedActionsForTeam(_state.team0, actions, 0);
+            int controlledTeam = LocalControlledTeamIndex;
+            TeamState controlled = controlledTeam == 1 ? _state.team1 : _state.team0;
+            _pendingPlayerActions = NormalizeSubmittedActionsForTeam(controlled, actions, controlledTeam);
             _playerActionsReady = true;
             _isWaitingForPlayerActions = false;
         }
@@ -1043,7 +1102,7 @@ namespace Chainbound.Combat
 
         private IEnumerator AutoRunBattle()
         {
-            while (_state != null && _state.isActive && _turnCount < maxTurns)
+            while (_state != null && _state.isActive && !_authorityCommitBlocked && _turnCount < maxTurns)
             {
                 yield return ExecuteTurnCoroutine();
 
@@ -1071,14 +1130,36 @@ namespace Chainbound.Combat
             }
 
             // â”€â”€ Begin Turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            _resolver.BeginTurn(_state);
-            _turnCount++;
+            if (_skipNextBeginTurn)
+            {
+                _skipNextBeginTurn = false;
+                _state.currentPhase = TurnPhase.ActionSelection;
+            }
+            else
+            {
+                _resolver.BeginTurn(_state);
+                _turnCount++;
+            }
             EmitVitalsChangedIfNeeded();
 
             // â”€â”€ Generate actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            List<CombatAction> actions0;
+            List<CombatAction> actions0 = null;
+            List<CombatAction> actions1 = null;
 
-            if (usePlayerInput)
+            if (_casualPvp != null)
+            {
+                _casualTurnAborted = false;
+                yield return RunCasualPvpTurn();
+                if (_casualTurnAborted || _state == null || !_state.isActive)
+                {
+                    _battleCoroutine = null;
+                    yield break;
+                }
+
+                actions0 = _casualActions0 ?? new List<CombatAction>();
+                actions1 = _casualActions1 ?? new List<CombatAction>();
+            }
+            else if (usePlayerInput)
             {
                 // Wait for the UI to provide player actions
                 _playerActionsReady = false;
@@ -1110,9 +1191,12 @@ namespace Chainbound.Combat
                 actions0 = _playerAI.GenerateActions(_state, 0, _resolver.Rng);
             }
 
-            List<CombatAction> actions1 = _capturePreviewMode
-                ? CombatCapturePreviewActions.BuildOpponentPasses(_state)
-                : _cpuAI.GenerateActions(_state, 1, _resolver.Rng);
+            if (_casualPvp == null)
+            {
+                actions1 = _capturePreviewMode
+                    ? CombatCapturePreviewActions.BuildOpponentPasses(_state)
+                    : _cpuAI.GenerateActions(_state, 1, _resolver.Rng);
+            }
 
             // â”€â”€ Record turn actions for replay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (_replayData != null)
@@ -1131,12 +1215,25 @@ namespace Chainbound.Combat
                 if (!_state.isActive) break;
 
                 var step = actionQueue[i];
-                var actorRef = EmitStepSelectionEvents(step);
+                HudSlotRef actorRef = default;
 
                 int stepEventStart = prevEventCount;
                 bool stillActive = _resolver.ExecuteActionStep(_state, step);
                 int stepEventEnd = _resolver.Log.EventCount;
-                bool narrationHandled = ComposeAndQueueNarration(stepEventStart, stepEventEnd, _turnCount, i);
+                bool narrationHandled = false;
+
+                if (_casualPvp == null && (step.action == null || step.action.actionType != CombatActionType.Capture))
+                {
+                    yield return CommitAuthoritativeStep(step, i);
+                    if (_authorityCommitBlocked)
+                    {
+                        _battleCoroutine = null;
+                        yield break;
+                    }
+                }
+
+                actorRef = EmitStepSelectionEvents(step);
+                narrationHandled = ComposeAndQueueNarration(stepEventStart, stepEventEnd, _turnCount, i);
 
                 // Fire events for new combat events generated by this step
                 FireNewEvents(stepEventStart);
@@ -1183,6 +1280,17 @@ namespace Chainbound.Combat
                 int endTurnEventStart = prevEventCount;
                 bool continues = _resolver.EndTurn(_state);
                 int endTurnEventEnd = _resolver.Log.EventCount;
+
+                if (_casualPvp == null)
+                {
+                    yield return CommitAuthoritativeStep(default, actionQueue.Count, "end_turn");
+                    if (_authorityCommitBlocked)
+                    {
+                        _battleCoroutine = null;
+                        yield break;
+                    }
+                }
+
                 ComposeAndQueueNarration(endTurnEventStart, endTurnEventEnd, _turnCount, actionQueue.Count);
 
                 // Fire any end-of-turn events (DoT damage, status expiry, etc.)
@@ -1206,6 +1314,170 @@ namespace Chainbound.Combat
             }
 
             _battleCoroutine = null;
+        }
+
+        private void ApplyAuthoritativeCheckpoint(AuthoritativeClientBattleState checkpoint, bool restoreTurn)
+        {
+            if (_state == null || checkpoint?.vitals == null)
+                return;
+
+            ApplyTeamCheckpoint(_state.team0, checkpoint.vitals, 0);
+            ApplyTeamCheckpoint(_state.team1, checkpoint.vitals, 1);
+            if (!restoreTurn)
+                return;
+
+            _state.currentTurn = Mathf.Max(1, checkpoint.turnNumber);
+            _state.currentPhase = TurnPhase.ActionSelection;
+        }
+
+        private static void ApplyTeamCheckpoint(
+            TeamState team,
+            List<AuthoritativeClientBattleVital> vitals,
+            int teamIndex)
+        {
+            if (team?.chainlings == null)
+                return;
+
+            var active = new List<int>(CombatConstants.ACTIVE_PER_TEAM);
+            for (int rosterIndex = 0; rosterIndex < team.chainlings.Count; rosterIndex++)
+            {
+                AuthoritativeClientBattleVital saved = vitals.Find(v =>
+                    v != null && v.teamIndex == teamIndex && v.rosterIndex == rosterIndex);
+                if (saved == null)
+                    continue;
+
+                ChainlingInstance chainling = team.chainlings[rosterIndex];
+                chainling.currentHP = Mathf.Clamp(saved.currentHp, 0, Mathf.Max(1, chainling.EffectiveMaxHP));
+                chainling.currentAP = Mathf.Max(0, saved.currentAp);
+                chainling.ClampAP();
+                chainling.isAlive = chainling.currentHP > 0;
+                chainling.SyncDisplayVitals();
+                if (saved.isActive && chainling.isAlive && active.Count < CombatConstants.ACTIVE_PER_TEAM)
+                    active.Add(rosterIndex);
+            }
+
+            if (active.Count > 0)
+                team.activeIndices = active;
+        }
+
+        private IEnumerator CommitAuthoritativeStep(
+            CombatResolver.CombatActionStep step,
+            int stepIndex,
+            string actionOverride = null)
+        {
+            CombatSessionEnvelope current = AuthoritativeBattleLaunchContext.Current;
+            if (current == null || !current.IsResumable || string.IsNullOrWhiteSpace(current.BattleId))
+                yield break;
+
+            ICombatSessionService service = SolanaServiceBridge.Instance != null
+                ? SolanaServiceBridge.Instance.CombatSessionService
+                : null;
+            if (service == null)
+            {
+                BlockOnAuthorityFailure("Battle authority is unavailable.");
+                yield break;
+            }
+
+            string actionId = !string.IsNullOrWhiteSpace(actionOverride) ? actionOverride : ResolveActionId(step);
+            var command = new CombatTeamCommand
+            {
+                CommandId = BuildActionCheckpointCommandId(current, stepIndex, actionId),
+                ExpectedVersion = current.Version,
+                Kind = "action_step",
+                ActorId = step.actor != null ? ResolveAuthorityEntityId(step.actor) : string.Empty,
+                ActionId = actionId,
+                TurnNumber = Mathf.Max(1, _turnCount),
+                StepIndex = Mathf.Max(0, stepIndex),
+                BattleActive = _state != null && _state.isActive,
+                WinnerTeamIndex = _state != null ? _state.winnerTeamIndex : -1,
+                EndReason = _state != null && !_state.isActive
+                    ? (_state.winnerTeamIndex == 0 ? "Victory" : "Defeat")
+                    : string.Empty,
+                Vitals = BuildAuthorityVitals(),
+            };
+
+            Task<CombatSessionEnvelope> commit = service.SubmitTeamCommandAsync(current.BattleId, command);
+            while (!commit.IsCompleted)
+                yield return null;
+
+            if (commit.IsFaulted || commit.IsCanceled || commit.Result == null)
+            {
+                string detail = commit.Exception != null
+                    ? commit.Exception.GetBaseException().Message
+                    : "The battle checkpoint was not acknowledged.";
+                BlockOnAuthorityFailure(detail);
+                yield break;
+            }
+
+            AuthoritativeBattleLaunchContext.Publish(commit.Result);
+        }
+
+        private static string BuildActionCheckpointCommandId(CombatSessionEnvelope current, int stepIndex, string actionId)
+        {
+            return string.Concat(
+                current.BattleId,
+                ":",
+                current.Version.ToString(),
+                ":",
+                Mathf.Max(0, stepIndex).ToString(),
+                ":",
+                actionId ?? string.Empty);
+        }
+
+        private List<CombatVitalSnapshot> BuildAuthorityVitals()
+        {
+            var result = new List<CombatVitalSnapshot>();
+            AppendTeamVitals(result, _state?.team0, 0);
+            AppendTeamVitals(result, _state?.team1, 1);
+            return result;
+        }
+
+        private static void AppendTeamVitals(List<CombatVitalSnapshot> destination, TeamState team, int teamIndex)
+        {
+            if (team?.chainlings == null)
+                return;
+            for (int i = 0; i < team.chainlings.Count; i++)
+            {
+                ChainlingInstance chainling = team.chainlings[i];
+                destination.Add(new CombatVitalSnapshot
+                {
+                    EntityId = ResolveAuthorityEntityId(chainling),
+                    TeamIndex = teamIndex,
+                    RosterIndex = i,
+                    CurrentHp = Mathf.Max(0, chainling.currentHP),
+                    CurrentAp = Mathf.Max(0, chainling.currentAP),
+                    IsActive = team.activeIndices != null && team.activeIndices.Contains(i),
+                });
+            }
+        }
+
+        private static string ResolveAuthorityEntityId(ChainlingInstance chainling)
+        {
+            if (chainling == null)
+                return string.Empty;
+            return string.IsNullOrWhiteSpace(chainling.backendChainlingId)
+                ? chainling.instanceId ?? string.Empty
+                : chainling.backendChainlingId;
+        }
+
+        private static string ResolveActionId(CombatResolver.CombatActionStep step)
+        {
+            CombatAction action = step.action;
+            if (action == null)
+                return "unknown";
+            if (action.actionType == CombatActionType.UseMove && step.actor?.moves != null &&
+                action.moveIndex >= 0 && action.moveIndex < step.actor.moves.Count)
+            {
+                return step.actor.moves[action.moveIndex]?.definitionId ?? "move";
+            }
+            return action.actionType.ToString().ToLowerInvariant();
+        }
+
+        private void BlockOnAuthorityFailure(string detail)
+        {
+            _authorityCommitBlocked = true;
+            AuthoritativeBattleLaunchContext.SetGateMessage("SIGNAL SYNC UNAVAILABLE — RETRYING");
+            Debug.LogError($"[CombatBattleController] Action presentation paused before an uncommitted result: {detail}", this);
         }
 
         private float ResolvePostSelectionConfirmDelay()
@@ -1608,12 +1880,173 @@ namespace Chainbound.Combat
             }
         }
 
+        private IEnumerator RunCasualPvpTurn()
+        {
+            _casualActions0 = null;
+            _casualActions1 = null;
+            if (TryTakeReplayTurn(out List<CombatAction> replay0, out List<CombatAction> replay1))
+            {
+                _casualActions0 = replay0;
+                _casualActions1 = replay1;
+                _isWaitingForPlayerActions = false;
+                Debug.Log($"[PvPTurn] Replaying turn {_turnCount} match={_casualPvp.MatchId}.");
+                yield break;
+            }
+
+            if (_pvpTurnBridge == null)
+            {
+                EndCasualFromServer("cancelled");
+                yield break;
+            }
+
+            List<CombatAction> resubmit = TakePendingLocalActions(_turnCount);
+            bool resentServerPending = false;
+            while (_state != null && _state.isActive)
+            {
+                List<CombatAction> localActions;
+                if (resubmit != null)
+                {
+                    localActions = resubmit;
+                    resubmit = null;
+                    _isWaitingForPlayerActions = false;
+                    Debug.Log($"[PvPTurn] Resubmitting pending turn {_turnCount} match={_casualPvp.MatchId}.");
+                }
+                else
+                {
+                    _playerActionsReady = false;
+                    _pendingPlayerActions = null;
+                    _isWaitingForPlayerActions = true;
+                    Debug.Log($"[PvPTurn] Waiting for seat {_casualPvp.Seat} turn {_turnCount}.");
+                    OnPlayerTurnWaiting?.Invoke(_state, LocalControlledTeamIndex);
+
+                    float pollIn = 0f;
+                    while (!_playerActionsReady)
+                    {
+                        if (_state == null || !_state.isActive)
+                        {
+                            _casualTurnAborted = true;
+                            _isWaitingForPlayerActions = false;
+                            yield break;
+                        }
+
+                        pollIn += Time.unscaledDeltaTime;
+                        if (pollIn >= 1f && _pvpTurnBridge != null)
+                        {
+                            pollIn = 0f;
+                            Task<PvpTurnCommit> poll = _pvpTurnBridge.PollMatchAsync(_casualPvp.MatchId, CancellationToken.None);
+                            yield return new WaitUntil(() => poll.IsCompleted);
+                            if (poll.Status == TaskStatus.RanToCompletion && poll.Result != null && poll.Result.Forfeited)
+                            {
+                                EndCasualFromServer(poll.Result.State);
+                                yield break;
+                            }
+                        }
+
+                        yield return null;
+                    }
+
+                    _isWaitingForPlayerActions = false;
+                    localActions = _pendingPlayerActions ?? new List<CombatAction>();
+                    _pendingPlayerActions = null;
+                    _playerActionsReady = false;
+                }
+
+                Task<PvpTurnCommit> submit = _pvpTurnBridge.SubmitTurnAndWaitAsync(
+                    _casualPvp.MatchId,
+                    _casualPvp.Seat,
+                    _turnCount,
+                    localActions,
+                    CancellationToken.None);
+                yield return new WaitUntil(() => submit.IsCompleted);
+                PvpTurnCommit commit = submit.Status == TaskStatus.RanToCompletion ? submit.Result : null;
+                if (commit != null && commit.Committed)
+                {
+                    _casualActions0 = commit.ActionsA;
+                    _casualActions1 = commit.ActionsB;
+                    Debug.Log($"[PvPTurn] Committed turn {_turnCount} match={_casualPvp.MatchId}.");
+                    yield break;
+                }
+
+                if (commit != null && (commit.Forfeited || PvpPartyMapper.IsTerminal(commit.State)))
+                {
+                    string state = !string.IsNullOrEmpty(commit.State) ? commit.State : "cancelled";
+                    EndCasualFromServer(state);
+                    yield break;
+                }
+
+                if (!resentServerPending &&
+                    commit != null &&
+                    commit.Error == "turn_conflict" &&
+                    commit.PendingLocalActions != null &&
+                    commit.PendingLocalActions.Count > 0 &&
+                    (commit.TurnIndex == 0 || commit.TurnIndex == _turnCount))
+                {
+                    resentServerPending = true;
+                    resubmit = commit.PendingLocalActions;
+                    Debug.LogWarning($"[PvPTurn] Turn {_turnCount} already has a pending action. Resubmitting it.");
+                    continue;
+                }
+
+                string reason = commit != null && !string.IsNullOrEmpty(commit.Error) ? commit.Error : "rejected";
+                Debug.LogWarning($"[PvPTurn] Turn {_turnCount} was not accepted ({reason}). Choose again.");
+            }
+        }
+
+        private List<CombatAction> TakePendingLocalActions(int turnIndex)
+        {
+            if (_casualPvp == null || _casualPvp.PendingLocalActions == null || _casualPvp.PendingLocalActions.Count == 0)
+                return null;
+            if (_casualPvp.PendingTurnIndex != turnIndex)
+                return null;
+
+            List<CombatAction> actions = _casualPvp.PendingLocalActions;
+            _casualPvp.PendingLocalActions = null;
+            return actions;
+        }
+
+        private void EndCasualFromServer(string state)
+        {
+            _casualForfeitState = string.IsNullOrEmpty(state) ? "cancelled" : state;
+            _casualTurnAborted = true;
+            _isWaitingForPlayerActions = false;
+            if (_state != null)
+            {
+                int winner = PvpPartyMapper.WinnerForForfeit(_casualForfeitState);
+                _state.winnerTeamIndex = winner >= 0 ? winner : -2;
+                _state.isActive = false;
+                _state.currentPhase = TurnPhase.BattleOver;
+            }
+
+            Debug.Log($"[PvPMatch] Server ended match {_casualPvp?.MatchId} as {_casualForfeitState}.");
+            FinalizeBattle();
+        }
+
+        private void StampCasualPvpResult(BattleResult result)
+        {
+            if (_casualPvp == null || result == null)
+                return;
+
+            result.battleType = BattleType.PvP;
+            result.pvpMatchId = _casualPvp.MatchId;
+            result.casualSpineMatch = true;
+            result.viewerTeamIndex = LocalControlledTeamIndex;
+            if (!string.IsNullOrEmpty(_casualForfeitState))
+            {
+                int winner = PvpPartyMapper.WinnerForForfeit(_casualForfeitState);
+                if (winner >= 0)
+                    result.winnerTeamIndex = winner;
+            }
+        }
+
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Battle Finalization
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         private void FinalizeBattle()
         {
+            if (_battleFinalized)
+                return;
+            _battleFinalized = true;
             _isWaitingForPlayerActions = false;
             ClearBattleIntroState();
 
@@ -1661,18 +2094,114 @@ namespace Chainbound.Combat
                     _resolver.Log);
                 result.pveStatContributions = BattleStatsAggregator.AggregateCombatStats(_resolver.Log.Events, result);
                 string eventHash = BattleStatsAggregator.ComputeLegacyEventHash(_resolver.Log.Events, result.seed);
-                result.forensicHash = !string.IsNullOrWhiteSpace(_resolver.Log.BattleId)
-                    ? $"{_resolver.Log.BattleId}:{eventHash}"
-                    : eventHash;
+                result.forensicHash = BuildForensicHash(eventHash);
             }
 
-            string winner = result.winnerTeamIndex switch
+            StampCasualPvpResult(result);
+            if (_casualPvp != null && string.IsNullOrEmpty(_casualForfeitState) && _pvpTurnBridge != null && !_casualResultSubmitted)
             {
-                0 => "Player",
-                1 => "Opponent",
-                -2 => "Draw",
-                _ => "Unknown"
-            };
+                _casualResultSubmitted = true;
+                StartCoroutine(SettleCasualThenPresent(result));
+                return;
+            }
+
+            PresentFinalizedBattle(result);
+        }
+
+        private IEnumerator SettleCasualThenPresent(BattleResult result)
+        {
+            string matchId = _casualPvp != null ? _casualPvp.MatchId : string.Empty;
+            string hash = result != null ? result.forensicHash ?? string.Empty : string.Empty;
+            Debug.Log($"[PvPMatch] Submitting forensic hash for {matchId}.");
+            Task<PvpResultCommit> task = _pvpTurnBridge.SubmitResultAsync(
+                matchId,
+                hash,
+                result != null ? result.winnerTeamIndex : -2,
+                CancellationToken.None);
+            yield return new WaitUntil(() => task.IsCompleted);
+            if (task.Status == TaskStatus.RanToCompletion && task.Result != null)
+            {
+                Debug.Log($"[PvPMatch] Server state {task.Result.State} for {matchId}.");
+                ApplyAgreedCasualWinner(result, task.Result);
+            }
+
+            PresentFinalizedBattle(result);
+        }
+
+        private void ApplyAgreedCasualWinner(BattleResult result, PvpResultCommit commit)
+        {
+            if (result == null || commit == null)
+                return;
+
+            if (commit.State == "completed")
+            {
+                int agreed = PvpPartyMapper.WinnerTeamFromSeat(commit.WinnerSeat);
+                if (agreed != -1)
+                    result.winnerTeamIndex = agreed;
+                return;
+            }
+
+            if (commit.State == "forfeit_a" || commit.State == "forfeit_b")
+            {
+                int agreed = PvpPartyMapper.WinnerTeamFromSeat(commit.WinnerSeat);
+                if (agreed < 0)
+                    agreed = PvpPartyMapper.WinnerForForfeit(commit.State);
+                if (agreed >= 0)
+                    result.winnerTeamIndex = agreed;
+                return;
+            }
+
+            result.winnerTeamIndex = -2;
+        }
+
+        private bool TryTakeReplayTurn(out List<CombatAction> actions0, out List<CombatAction> actions1)
+        {
+            actions0 = null;
+            actions1 = null;
+            List<CasualPvpCommittedTurn> history = _casualPvp != null ? _casualPvp.History : null;
+            if (history == null)
+                return false;
+
+            for (int i = 0; i < history.Count; i++)
+            {
+                CasualPvpCommittedTurn turn = history[i];
+                if (turn == null || turn.TurnIndex != _turnCount || turn.ActionsA == null || turn.ActionsB == null)
+                    continue;
+
+                actions0 = turn.ActionsA;
+                actions1 = turn.ActionsB;
+                return true;
+            }
+
+            return false;
+        }
+
+        private string BuildForensicHash(string eventHash)
+        {
+            if (_casualPvp != null)
+                return BattleStatsAggregator.ComputePvpForensicHash(_casualPvp.MatchId, eventHash);
+
+            string battleId = _resolver != null && _resolver.Log != null ? _resolver.Log.BattleId : null;
+            return !string.IsNullOrWhiteSpace(battleId) ? $"{battleId}:{eventHash}" : eventHash;
+        }
+
+        private void PresentFinalizedBattle(BattleResult result)
+        {
+            string winner;
+            if (result != null && result.casualSpineMatch)
+            {
+                winner = result.IsDraw ? "Draw" : result.PlayerWon ? "Local" : "Opponent";
+            }
+            else
+            {
+                winner = result.winnerTeamIndex switch
+                {
+                    0 => "Player",
+                    1 => "Opponent",
+                    -2 => "Draw",
+                    _ => "Unknown"
+                };
+            }
             Debug.Log($"[CombatBattleController] Battle ended â€” {winner} wins after {_turnCount} turns ({result.durationSeconds:F1}s)");
 
             if (_resolver?.Log != null)

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4e8b1a07d2f49e6a5c3b8d1f607294e, type: 3}
+  m_Name: MatchmakingConfig_Default
+  m_EditorClassIdentifier: 
+  configVersion: 1
+  casualEnabled: 1
+  rankedEnabled: 0
+  requireWalletForCasual: 0
+  requireWalletForRanked: 1
+  queueTimeoutSeconds: 120
+  turnForfeitMissedTurns: 2
+  turnActionTimeLimitSeconds: 60
+  maxAppVersionSkew: 0
+  defaultCasualRulesetId: pvp_casual
+  rematchCooldownSeconds: 30
+  lobbyMaxPlayers: 16
+  ratingBandStart: 100
+  widenPerSecond: 1
+  bandCap: 400
+  resultWindowSeconds: 45
+  lockDeadlineSeconds: 30

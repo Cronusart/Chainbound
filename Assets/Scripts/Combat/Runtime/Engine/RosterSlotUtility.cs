@@ -142,6 +142,8 @@ namespace Chainbound.Combat
             if (instance == null)
                 return null;
 
+            instance.backendChainlingId = snapshot.backendChainlingId ?? string.Empty;
+
             instance.visualIdentity = ChainlingVisualIdentity.CloneOrDefault(snapshot.visualIdentity);
             instance.isMutated = snapshot.isMutated || BattleIntroCopySubject.IsMutated(instance);
             instance.isEntangled = snapshot.isEntangled;
@@ -393,6 +395,49 @@ namespace Chainbound.Combat
                 return;
             if (!list.Contains(def))
                 list.Add(def);
+        }
+
+        /// <summary>
+        /// Seat and roster slot ids (t0r0..t1r5). Move ids append m0.. Call after both teams exist and before the resolver logs anything.
+        /// </summary>
+        public static void StampStablePvpIds(TeamState team)
+        {
+            if (team?.chainlings == null)
+                return;
+
+            for (int i = 0; i < team.chainlings.Count; i++)
+            {
+                ChainlingInstance chainling = team.chainlings[i];
+                if (chainling == null)
+                    continue;
+
+                chainling.instanceId = $"t{team.teamIndex}r{i}";
+                if (chainling.moves == null)
+                    continue;
+
+                for (int move = 0; move < chainling.moves.Count; move++)
+                {
+                    if (chainling.moves[move] != null)
+                        chainling.moves[move].instanceId = $"t{team.teamIndex}r{i}m{move}";
+                }
+            }
+        }
+
+        public static void ApplyFullHeal(TeamState team)
+        {
+            if (team?.chainlings == null)
+                return;
+
+            for (int i = 0; i < team.chainlings.Count; i++)
+            {
+                ChainlingInstance chainling = team.chainlings[i];
+                if (chainling == null)
+                    continue;
+
+                chainling.currentHP = chainling.EffectiveMaxHP;
+                chainling.displayHP = chainling.currentHP;
+                chainling.isAlive = chainling.currentHP > 0;
+            }
         }
     }
 }

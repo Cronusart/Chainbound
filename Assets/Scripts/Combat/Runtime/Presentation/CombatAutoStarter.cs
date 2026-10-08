@@ -83,6 +83,15 @@ namespace Chainbound.Combat
                 }
             }
 
+            if (controller != null && controller.IsCasualPvpSession)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (verboseLogs)
+                    Debug.Log("[PvPMatch] Casual spine owns battle start.");
+#endif
+                yield break;
+            }
+
             BeginBattle();
         }
 

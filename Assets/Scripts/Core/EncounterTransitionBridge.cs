@@ -26,6 +26,7 @@ public class EncounterTransitionBridge : MonoBehaviour
         Narrative = 1,
         Zone = 2,
         ManualEncounter = 3,
+        AuthoritativeResume = 4,
     }
 
     [Serializable]
@@ -139,6 +140,12 @@ public class EncounterTransitionBridge : MonoBehaviour
 
         launchSource = expectedSource;
         return true;
+    }
+
+    public void ArmBattleSceneLaunchTicket(string battleSceneName, EncounterLaunchSource launchSource)
+    {
+        pendingBattleSceneLaunchTicket = battleSceneName?.Trim() ?? string.Empty;
+        pendingBattleSceneLaunchSource = launchSource;
     }
 
     private void Awake()
@@ -289,6 +296,9 @@ public class EncounterTransitionBridge : MonoBehaviour
             if (!CanStartSceneLoad(request))
                 yield break;
 
+            if (request.launchSource != EncounterLaunchSource.Narrative)
+                SignalJam.Narrative.Combat.NarrativeCombatLaunchBridge.ClearPendingPayload();
+
             request.onReadyToLoad?.Invoke();
 
             // Publish provenance before asking SceneLoader to activate the
@@ -354,12 +364,16 @@ public class EncounterTransitionBridge : MonoBehaviour
             yield break;
         }
 
-        SetAuthorityGateMessage("SIGNAL SYNC UNAVAILABLE — RETRYING");
         Task<bool> availability = service.RefreshAvailabilityAsync();
         while (!availability.IsCompleted)
             yield return null;
         if (availability.IsFaulted || availability.IsCanceled || !availability.Result)
         {
+            Exception availabilityError = availability.Exception != null ? availability.Exception.GetBaseException() : null;
+            string detail = availabilityError != null ? availabilityError.Message : service.LastAuthorityError;
+            SetAuthorityGateMessage("SIGNAL SYNC UNAVAILABLE — RETRYING");
+            if (!string.IsNullOrWhiteSpace(detail))
+                Debug.LogWarning($"[EncounterTransitionBridge] Battle service is not ready: {detail}", this);
             completed?.Invoke(false);
             yield break;
         }
@@ -376,6 +390,8 @@ public class EncounterTransitionBridge : MonoBehaviour
         if (start.IsFaulted || start.IsCanceled || start.Result == null)
         {
             Exception error = start.Exception != null ? start.Exception.GetBaseException() : null;
+            if (error != null)
+                Debug.LogWarning($"[EncounterTransitionBridge] Authoritative battle start failed: {error.Message}", this);
             SetAuthorityGateMessage(error != null && error is AuthoritativeCombatServiceException authorityError && authorityError.Code == "upgrade_required"
                 ? "GAME DATA UPDATE REQUIRED"
                 : "SIGNAL SYNC UNAVAILABLE — RETRYING");
@@ -383,7 +399,43 @@ public class EncounterTransitionBridge : MonoBehaviour
             yield break;
         }
 
-        AuthoritativeBattleLaunchContext.Publish(start.Result);
+        if (start.Result.RequiresResumeChoice || start.Result.RequiresWipe)
+        {
+            PendingBattleResumeCoordinator coordinator = PendingBattleResumeCoordinator.Instance;
+            if (coordinator == null)
+            {
+                Debug.LogError("[EncounterTransitionBridge] Pending battle prompt is unavailable; refusing to choose for the player.", this);
+                completed?.Invoke(false);
+                yield break;
+            }
+
+            Task<PendingBattleResumeResult> decision = coordinator.ResolveEnvelopeAsync(start.Result);
+            while (!decision.IsCompleted)
+                yield return null;
+            if (decision.IsFaulted || decision.IsCanceled)
+            {
+                Debug.LogWarning("[EncounterTransitionBridge] Pending battle decision did not complete.", this);
+                completed?.Invoke(false);
+                yield break;
+            }
+
+            if (decision.Result.Outcome == PendingBattleResumeOutcome.Wipe)
+            {
+                PendingBattleRouteUtility.RequestWipe(request.transitionStyle, "Encounter.PendingBattleWipe");
+                completed?.Invoke(false);
+                yield break;
+            }
+            if (decision.Result.Outcome != PendingBattleResumeOutcome.Rejoin)
+            {
+                completed?.Invoke(false);
+                yield break;
+            }
+            request.launchSource = EncounterLaunchSource.AuthoritativeResume;
+        }
+        else
+        {
+            AuthoritativeBattleLaunchContext.Publish(start.Result);
+        }
         SetAuthorityGateMessage(string.Empty);
         completed?.Invoke(true);
     }

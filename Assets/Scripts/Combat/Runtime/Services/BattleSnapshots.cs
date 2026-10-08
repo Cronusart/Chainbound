@@ -307,6 +307,12 @@ namespace Chainbound.Combat
         /// </summary>
         public string pvpMatchId;
 
+        /// <summary>Casual battle-spine match. Skips wager selection and PvE rewards.</summary>
+        public bool casualSpineMatch;
+
+        /// <summary>Team index of the local player. PvE stays 0. Casual seat B is 1.</summary>
+        public int viewerTeamIndex;
+
         /// <summary>Whether the player attempted a capture during this battle.</summary>
         public bool captureAttempted;
 
@@ -387,8 +393,8 @@ namespace Chainbound.Combat
             victoryKnownGrantResults = new List<EncounterVictoryKnownGrantResult>();
         }
 
-        /// <summary>True if the player won.</summary>
-        public bool PlayerWon => winnerTeamIndex == 0;
+        /// <summary>True if the viewing seat won. PvE viewers are team 0.</summary>
+        public bool PlayerWon => winnerTeamIndex == viewerTeamIndex;
 
         /// <summary>True if the battle ended in a draw.</summary>
         public bool IsDraw => winnerTeamIndex == -2;
