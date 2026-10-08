@@ -35,7 +35,7 @@ Deno.test("Edge functions never write player profile RAM directly", async () => 
 
 Deno.test("legacy receipt-less RAM writers are revoked after ledger activation", async () => {
   const source = await Deno.readTextFile(
-    new URL("20261003181500_ram_reconciliation_operator_flow.sql", migrationsRoot),
+    new URL("20261006110545_ram_reconciliation_operator_flow.sql", migrationsRoot),
   );
   for (
     const functionName of [

@@ -1,4 +1,5 @@
 -- Reservation-backed Bind preparation and replay-safe settlement.
+-- Canonical remote migration version: 20261006110715.
 -- The approved source registry is intentionally empty in production migrations.
 
 CREATE TABLE public.ownership_bind_sources (

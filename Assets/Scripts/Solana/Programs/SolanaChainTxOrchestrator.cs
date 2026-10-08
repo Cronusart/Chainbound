@@ -197,6 +197,22 @@ namespace Chainbound.Combat
             }
         }
 
+        public bool ForgetIfUnsubmitted(ChainTxScope scope)
+        {
+            if (scope == null) return false;
+            lock (journalGate)
+            {
+                if (journal.TryGetValue(scope.Key, out PendingTxRecord record) &&
+                    !string.IsNullOrWhiteSpace(record.signature))
+                    return false;
+
+                bool removed = journal.Remove(scope.Key);
+                txCache.Remove(scope.Key);
+                if (removed) WriteJournalAtomically();
+                return removed;
+            }
+        }
+
         public Task<TxResult> SubmitAsync(string idempotencyKey, byte[] transactionBytes)
         {
             var scope = new ChainTxScope("legacy-configured", wallet.PublicKey, idempotencyKey);

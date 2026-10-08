@@ -2,6 +2,23 @@
 -- faucet-funded wallet can sign them. They are not the dollar shelf.
 -- Destination is the devnet upgrade authority. No mainnet rows.
 
+UPDATE public.ram_shop_settings
+SET checkout_cluster = 'devnet', updated_at = now()
+WHERE singleton;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+          FROM public.ram_shop_settings
+         WHERE singleton
+           AND checkout_cluster = 'devnet'
+    ) THEN
+        RAISE EXCEPTION 'devnet_catalog_cluster_guard_failed';
+    END IF;
+END;
+$$;
+
 UPDATE public.ram_shop_catalog_versions
 SET enabled = FALSE
 WHERE enabled
@@ -67,6 +84,8 @@ SET atomic_amount = EXCLUDED.atomic_amount,
 
 UPDATE public.ram_shop_settings
 SET checkout_enabled = TRUE,
-    quote_ttl_seconds = 180,
+    checkout_cluster = 'devnet',
+    quote_ttl_seconds = 60,
     updated_at = now()
-WHERE singleton;
+WHERE singleton
+  AND checkout_cluster = 'devnet';

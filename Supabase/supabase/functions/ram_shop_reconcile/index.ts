@@ -7,7 +7,7 @@ import {
   loadOwnershipConfig,
 } from "../_shared/ownership_spine.ts";
 import { advanceBindOperation } from "../_shared/ownership_bind.ts";
-import { advancePurchaseSettlement, confirmPurchase, PurchaseOrderRow } from "../_shared/ram_shop.ts";
+import { advancePurchaseSettlement, PurchaseOrderRow, reconcileQuotedPurchase } from "../_shared/ram_shop.ts";
 
 serve(async (req: Request) => {
   const early = requirePost(req);
@@ -29,10 +29,8 @@ serve(async (req: Request) => {
     const failures: string[] = [];
     for (const raw of (data ?? []) as PurchaseOrderRow[]) {
       try {
-        if (raw.status === "submitted") {
-          const signature = raw.payment_signature ||
-            await findFinalizedSignatureForAddress(rpcUrlFor(raw.cluster), raw.reference_address);
-          if (signature) await confirmPurchase(supabase, raw, signature);
+        if (raw.status === "submitted" || raw.status === "quoted") {
+          await reconcileQuotedPurchase(supabase, raw, findFinalizedSignatureForAddress);
         } else {
           await advancePurchaseSettlement(supabase, raw);
         }
@@ -132,10 +130,3 @@ serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "ram_shop_reconcile_failed" }, 500);
   }
 });
-
-function rpcUrlFor(cluster: string): string {
-  if (str(Deno.env.get("RAM_SHOP_CLUSTER")) !== cluster) throw new Error("order_cluster_mismatch");
-  const url = str(Deno.env.get("CHAINBOUND_SOLANA_RPC_ENDPOINT"));
-  if (!url) throw new Error("rpc_missing");
-  return url;
-}

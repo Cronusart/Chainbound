@@ -7,6 +7,7 @@ namespace Chainbound.Combat
 {
     public sealed class SupabaseRamShopService : IRamShopService
     {
+        private const int RequestTimeoutSeconds = 60;
         private readonly SupabaseConfigSO config;
 
         public SupabaseRamShopService(SupabaseConfigSO config)
@@ -90,6 +91,7 @@ namespace Chainbound.Combat
                 creditSignature = response.credit_signature,
                 creditReceiptAddress = response.credit_receipt_address,
                 balanceAfter = response.balance_after,
+                failureCode = response.failure_code,
                 payment = new RamPaymentSummary
                 {
                     cluster = response.cluster,
@@ -109,7 +111,11 @@ namespace Chainbound.Combat
 
         private async Task<T> Post<T>(string functionName, string json) where T : ResponseEnvelope
         {
-            SupabaseClient.Response response = await SupabaseClient.PostJsonAsync(config, functionName, json);
+            SupabaseClient.Response response = await SupabaseClient.PostJsonAsync(
+                config,
+                functionName,
+                json,
+                RequestTimeoutSeconds);
             T payload = string.IsNullOrWhiteSpace(response.body) ? null : JsonUtility.FromJson<T>(response.body);
             if (!response.IsSuccess || payload == null || !payload.success)
                 throw new RamShopServiceException(payload?.error ?? "ram_shop_request_failed", response.statusCode);
@@ -196,6 +202,7 @@ namespace Chainbound.Combat
             public string credit_signature;
             public string credit_receipt_address;
             public string balance_after;
+            public string failure_code;
         }
     }
 }

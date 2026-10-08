@@ -78,6 +78,7 @@ namespace Chainbound.Combat
         public string creditSignature;
         public string creditReceiptAddress;
         public string balanceAfter;
+        public string failureCode;
         public RamPaymentSummary payment;
     }
 

@@ -1,4 +1,5 @@
 -- Explicit, replay-safe operator recovery for legacy RAM mismatches.
+-- Canonical remote migration version: 20261006110545.
 -- Reconciliation moves the on-chain balance by an audited delta; it never
 -- overwrites either source of truth.
 
@@ -214,9 +215,14 @@ REVOKE ALL ON FUNCTION public.profile_upgrade_move_item_tx(
 REVOKE ALL ON FUNCTION public.ownership_confirm_devnet_smoke_grant_atomic(
     UUID, UUID, TEXT, INTEGER, INTEGER, NUMERIC, NUMERIC
 ) FROM service_role;
-REVOKE ALL ON FUNCTION public.ownership_reconcile_operator_devnet_ram_topup_atomic(
-    UUID, UUID, TEXT, INTEGER, INTEGER, INTEGER, NUMERIC, NUMERIC
-) FROM service_role;
+-- Devnet sync note: this function is absent on this project, so guard the revoke.
+DO $guard$
+BEGIN
+    IF to_regprocedure('public.ownership_reconcile_operator_devnet_ram_topup_atomic(uuid, uuid, text, integer, integer, integer, numeric, numeric)') IS NOT NULL THEN
+        EXECUTE 'REVOKE ALL ON FUNCTION public.ownership_reconcile_operator_devnet_ram_topup_atomic(UUID, UUID, TEXT, INTEGER, INTEGER, INTEGER, NUMERIC, NUMERIC) FROM service_role';
+    END IF;
+END
+$guard$;
 
 ALTER TABLE public.ram_ledger_accounts
     ADD COLUMN IF NOT EXISTS audit_lease_owner TEXT NULL,

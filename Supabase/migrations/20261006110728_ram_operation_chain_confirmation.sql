@@ -1,4 +1,5 @@
 -- Explicit finalized-chain transition shared by receipt-backed RAM spends.
+-- Canonical remote migration version: 20261006110728.
 
 CREATE OR REPLACE FUNCTION public.ram_ledger_mark_chain_confirmed(
     p_operation_id UUID,

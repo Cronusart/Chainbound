@@ -1,4 +1,5 @@
 -- Replay-safe settlement for reservation-backed RAM spends.
+-- Canonical remote migration version: 20261006110459.
 -- Service-only functions deliberately use an empty search_path and lock the
 -- ledger/profile rows before making an idempotent state transition.
 

@@ -11,10 +11,10 @@ import {
 import { findFinalizedSignatureForAddress } from "../_shared/ownership_spine.ts";
 import {
   advancePurchaseSettlement,
-  confirmPurchase,
   orderResponse,
   PurchaseOrderRow,
   RamShopError,
+  reconcileQuotedPurchase,
 } from "../_shared/ram_shop.ts";
 
 const ALLOWED_KEYS = new Set(["order_id", "signature", "reference"]);
@@ -37,19 +37,29 @@ serve(async (req: Request) => {
   try {
     const profile = await resolveAuthenticatedProfile(req, supabase, {});
     if (!profile) return jsonResponse({ success: false, error: "profile_not_found" }, 404);
+    let numericOrderId: number | null = null;
+    if (!orderId && signature) {
+      const { data: attempt, error: attemptError } = await supabase.from("ram_payment_attempts")
+        .select("order_id").eq("signature", signature).maybeSingle();
+      if (attemptError) throw attemptError;
+      numericOrderId = attempt ? Number(attempt.order_id) : null;
+    }
     let query = supabase.from("ram_purchase_orders").select("*").eq("player_profile_id", profile.player_profile_id);
     if (orderId) query = query.eq("order_id", orderId);
-    else if (signature) query = query.eq("payment_signature", signature);
+    else if (signature) {
+      query = numericOrderId === null ? query.eq("payment_signature", signature) : query.eq("id", numericOrderId);
+    }
     else query = query.eq("reference_address", reference);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
     if (!data) throw new RamShopError("order_not_found", 404);
     let order = data as PurchaseOrderRow;
     if (order.status === "submitted" || order.status === "quoted") {
-      const recovered = order.payment_signature ||
-        await findFinalizedSignatureForAddress(rpcUrlFor(order.cluster), order.reference_address);
-      if (recovered) return jsonResponse(await confirmPurchase(supabase, order, recovered));
-      return jsonResponse(orderResponse(order));
+      return jsonResponse(await reconcileQuotedPurchase(
+        supabase,
+        order,
+        findFinalizedSignatureForAddress,
+      ));
     }
     if (order.status === "payment_verified" || order.status === "credit_submitted") {
       return jsonResponse(await advancePurchaseSettlement(supabase, order));
@@ -62,10 +72,3 @@ serve(async (req: Request) => {
     return jsonResponse({ success: false, error: code }, status);
   }
 });
-
-function rpcUrlFor(cluster: string): string {
-  const configuredCluster = str(Deno.env.get("RAM_SHOP_CLUSTER"));
-  const rpcUrl = str(Deno.env.get("CHAINBOUND_SOLANA_RPC_ENDPOINT"));
-  if (!rpcUrl || configuredCluster !== cluster) throw new RamShopError("order_cluster_mismatch", 503);
-  return rpcUrl;
-}

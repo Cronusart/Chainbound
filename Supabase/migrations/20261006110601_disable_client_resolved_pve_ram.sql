@@ -1,4 +1,5 @@
 -- PvE results are still client-resolved. Preserve non-RAM statistics while
+-- Canonical remote migration version: 20261006110601.
 -- ignoring both requested RAM reward and penalty until an authoritative
 -- battle verifier exists.
 
