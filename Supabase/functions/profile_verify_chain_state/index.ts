@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { PublicKey } from "https://esm.sh/@solana/web3.js@1.95.3";
 import {
   JsonMap,
   jsonResponse,
@@ -10,8 +9,8 @@ import {
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
 import { normalizePublicKey, resolveVerifiedWalletForProfile } from "../_shared/onchain_cosmetics.ts";
+import { derivePlayerProfilePda } from "../_shared/solana_pda.ts";
 
-const PROFILE_SEED = "player_profile";
 const PLAYER_PROFILE_ACCOUNT = "PlayerProfile";
 const PLAYER_PROFILE_DATA_LENGTH = 8 + 50;
 
@@ -45,18 +44,23 @@ serve(async (req: Request) => {
       );
     }
 
-    const [pda] = PublicKey.findProgramAddressSync(
-      [new TextEncoder().encode(PROFILE_SEED), new PublicKey(wallet.wallet_public_key).toBytes()],
-      new PublicKey(gameProgramId),
-    );
+    let pda: string;
+    try {
+      pda = derivePlayerProfilePda(wallet.wallet_public_key, gameProgramId);
+    } catch (error) {
+      if (error instanceof Error && error.message === "invalid_wallet") {
+        return jsonResponse({ success: false, error: "invalid_wallet" }, 400);
+      }
+      throw error;
+    }
 
-    const status = await verifyAccount(pda.toBase58(), gameProgramId);
+    const status = await verifyAccount(pda, gameProgramId);
     await upsertChainState(supabase, {
       player_profile_id: profile.player_profile_id,
       wallet_public_key: wallet.wallet_public_key,
       cluster,
       game_program_id: gameProgramId,
-      player_profile_pda: pda.toBase58(),
+      player_profile_pda: pda,
       verification_status: status.status,
       verification_error: status.error,
       metadata_json: status.metadata,
@@ -70,7 +74,7 @@ serve(async (req: Request) => {
       wallet_public_key: wallet.wallet_public_key,
       cluster,
       game_program_id: gameProgramId,
-      player_profile_pda: pda.toBase58(),
+      player_profile_pda: pda,
     }, status.httpStatus);
   } catch (error) {
     console.error("[profile_verify_chain_state]", error);
