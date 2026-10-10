@@ -310,7 +310,9 @@ namespace Chainbound.Combat
             return LastWalletConnection;
         }
 
-        public async Task<PlayerAccountSession> ConnectWalletAndResolveSessionAsync(string clientVersion = "")
+        public async Task<PlayerAccountSession> ConnectWalletAndResolveSessionAsync(
+            string clientVersion = "",
+            WalletConnectMode mode = WalletConnectMode.Link)
         {
             IPlayerProfileGateway gateway = profileGateway as IPlayerProfileGateway;
             if (gateway == null)
@@ -328,7 +330,8 @@ namespace Chainbound.Combat
             if (wallet == null || !wallet.success)
                 return FailedWalletLinkAttempt(wallet != null ? wallet.errorMessage : "Wallet connection failed.");
 
-            if (!string.IsNullOrWhiteSpace(linkedWallet) &&
+            if (mode == WalletConnectMode.Link &&
+                !string.IsNullOrWhiteSpace(linkedWallet) &&
                 !string.Equals(linkedWallet, wallet.walletPublicKey, StringComparison.Ordinal))
             {
                 await ClearCandidateAuthorizationAsync();
@@ -374,6 +377,7 @@ namespace Chainbound.Combat
 
             PlayerAccountSession session = await gateway.ConnectVerifiedWalletAsync(new AccountWalletVerifiedConnectRequest
             {
+                mode = mode,
                 playerProfileId = currentProfileId,
                 walletProviderType = wallet.providerType,
                 walletPublicKey = wallet.walletPublicKey,
@@ -385,6 +389,19 @@ namespace Chainbound.Combat
                 deviceId = installId,
             });
 
+            if (mode == WalletConnectMode.Resolve)
+            {
+                if (!IsVerifiedWalletResolution(session, wallet.walletPublicKey))
+                {
+                    string resolutionError = session != null && !string.IsNullOrWhiteSpace(session.errorMessage)
+                        ? session.errorMessage
+                        : "Verified wallet resolution was invalid.";
+                    return FailedWalletLinkAttempt(resolutionError);
+                }
+
+                return session;
+            }
+
             if (!IsVerifiedWalletSession(session, wallet.walletPublicKey))
             {
                 string error = session != null && !string.IsNullOrWhiteSpace(session.errorMessage)
@@ -395,6 +412,11 @@ namespace Chainbound.Combat
 
             SetSession(session);
             return CurrentSession;
+        }
+
+        public Task<PlayerAccountSession> CreateWalletProfileAsync(string clientVersion = "")
+        {
+            return ConnectWalletAndResolveSessionAsync(clientVersion, WalletConnectMode.Create);
         }
 
         /// <summary>
@@ -527,6 +549,7 @@ namespace Chainbound.Combat
 
             PlayerAccountSession verifiedSession = await gateway.ConnectVerifiedWalletAsync(new AccountWalletVerifiedConnectRequest
             {
+                mode = WalletConnectMode.Link,
                 playerProfileId = CurrentSession.PlayerProfileId,
                 walletProviderType = LastWalletConnection.providerType,
                 walletPublicKey = LastWalletConnection.walletPublicKey,
@@ -541,7 +564,11 @@ namespace Chainbound.Combat
             if (verifiedSession == null || !verifiedSession.hasSession || verifiedSession.fetchError)
             {
                 string error = verifiedSession != null ? verifiedSession.errorMessage : "Verified wallet link failed.";
-                AccountLinkError linkError = error != null && error.Contains("wallet_linked_to_different_profile", StringComparison.OrdinalIgnoreCase)
+                AccountLinkError linkError = error != null &&
+                    (error.Contains("wallet_linked_to_different_profile", StringComparison.OrdinalIgnoreCase) ||
+                     error.Contains("wallet_bound_to_other_profile", StringComparison.OrdinalIgnoreCase) ||
+                     error.Contains("wallet_already_bound_to_profile", StringComparison.OrdinalIgnoreCase) ||
+                     error.Contains("wallet_profile_mismatch", StringComparison.OrdinalIgnoreCase))
                     ? AccountLinkError.WalletLinkedToDifferentProfile
                     : AccountLinkError.InvalidProof;
                 return AccountLinkResult.Failed(linkError, error);
@@ -653,6 +680,23 @@ namespace Chainbound.Combat
                    !string.IsNullOrWhiteSpace(session.PlayerProfileId) &&
                    !string.IsNullOrWhiteSpace(session.WalletPublicKey) &&
                    string.Equals(session.WalletPublicKey, expectedWalletPublicKey, StringComparison.Ordinal);
+        }
+
+        private static bool IsVerifiedWalletResolution(PlayerAccountSession session, string expectedWalletPublicKey)
+        {
+            if (session == null || !session.hasSession || session.fetchError ||
+                session.walletIdentity == null || !session.walletIdentity.isActive ||
+                !session.isWalletConnected || !session.HasFreshWalletProof ||
+                !string.Equals(session.WalletPublicKey, expectedWalletPublicKey, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (string.Equals(session.walletResolutionStatus, "no_profile", StringComparison.Ordinal))
+                return string.IsNullOrWhiteSpace(session.PlayerProfileId);
+
+            return string.Equals(session.walletResolutionStatus, "profile_found", StringComparison.Ordinal) &&
+                   !string.IsNullOrWhiteSpace(session.PlayerProfileId);
         }
 
         private async Task ClearCandidateAuthorizationAsync()

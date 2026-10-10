@@ -3,6 +3,13 @@ using System.Collections.Generic;
 
 namespace Chainbound.Combat
 {
+    public enum WalletConnectMode
+    {
+        Resolve,
+        Link,
+        Create,
+    }
+
     [Serializable]
     public class PlayerProfileRef
     {
@@ -75,6 +82,7 @@ namespace Chainbound.Combat
         public string errorMessage = "";
         public string walletProofVerifiedAt = "";
         public string walletProofExpiresAt = "";
+        public string walletResolutionStatus = "";
 
         public string PlayerProfileId => profile != null ? profile.playerProfileId : "";
         public string WalletPublicKey => walletIdentity != null ? walletIdentity.walletPublicKey : "";
@@ -317,6 +325,7 @@ namespace Chainbound.Combat
     [Serializable]
     public class AccountWalletVerifiedConnectRequest
     {
+        public WalletConnectMode mode = WalletConnectMode.Link;
         public string playerProfileId = "";
         public WalletProviderType walletProviderType = WalletProviderType.None;
         public string walletPublicKey = "";

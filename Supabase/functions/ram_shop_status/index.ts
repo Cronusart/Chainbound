@@ -11,7 +11,7 @@ import {
 import { findFinalizedSignatureForAddress } from "../_shared/ownership_spine.ts";
 import {
   advancePurchaseSettlement,
-  orderResponse,
+  orderResponseWithBalanceVersion,
   PurchaseOrderRow,
   RamShopError,
   reconcileQuotedPurchase,
@@ -48,23 +48,24 @@ serve(async (req: Request) => {
     if (orderId) query = query.eq("order_id", orderId);
     else if (signature) {
       query = numericOrderId === null ? query.eq("payment_signature", signature) : query.eq("id", numericOrderId);
-    }
-    else query = query.eq("reference_address", reference);
+    } else query = query.eq("reference_address", reference);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
     if (!data) throw new RamShopError("order_not_found", 404);
     let order = data as PurchaseOrderRow;
     if (order.status === "submitted" || order.status === "quoted") {
-      return jsonResponse(await reconcileQuotedPurchase(
-        supabase,
-        order,
-        findFinalizedSignatureForAddress,
-      ));
+      return jsonResponse(
+        await reconcileQuotedPurchase(
+          supabase,
+          order,
+          findFinalizedSignatureForAddress,
+        ),
+      );
     }
     if (order.status === "payment_verified" || order.status === "credit_submitted") {
       return jsonResponse(await advancePurchaseSettlement(supabase, order));
     }
-    return jsonResponse(orderResponse(order));
+    return jsonResponse(await orderResponseWithBalanceVersion(supabase, order));
   } catch (error) {
     const status = error instanceof RamShopError ? error.httpStatus : 500;
     const code = error instanceof RamShopError ? error.code : "ram_shop_status_failed";

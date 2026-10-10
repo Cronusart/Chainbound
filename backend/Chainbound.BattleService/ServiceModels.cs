@@ -24,6 +24,14 @@ public sealed class TeamCommandApiRequest
     public string Kind { get; set; } = "";
     public string TargetId { get; set; } = "";
     public string OrbId { get; set; } = "";
+    public string ActorId { get; set; } = "";
+    public string ActionId { get; set; } = "";
+    public int TurnNumber { get; set; }
+    public int StepIndex { get; set; }
+    public bool BattleActive { get; set; } = true;
+    public int WinnerTeamIndex { get; set; } = -1;
+    public string EndReason { get; set; } = "";
+    public List<CombatVitalSnapshot> Vitals { get; set; } = new();
     public Dictionary<string, string> Actions { get; set; } = new();
 }
 
@@ -57,10 +65,26 @@ public sealed class ManifestEncounter
     public string EncounterId { get; set; } = "";
     public string ZoneId { get; set; } = "";
     public AuthoritativeBattleKind BattleKind { get; set; } = AuthoritativeBattleKind.Wild;
+    public string RewardTier { get; set; } = BattleRewardTier.Standard;
+    public string RewardEligibilityQuestId { get; set; } = "";
     public bool CaptureEnabled { get; set; } = true;
     public EncounterCapturePolicy CapturePolicy { get; set; } = EncounterCapturePolicy.UseEncounterDefault;
     public int Weight { get; set; } = 1;
     public List<ManifestTarget> Targets { get; set; } = new();
+}
+
+public sealed class BattleRewardsManifest
+{
+    public int SchemaVersion { get; set; } = 1;
+    public int ConfigVersion { get; set; } = 1;
+    public BattleRewardValues Rewards { get; set; } = new();
+}
+
+public sealed class BattleRewardValues
+{
+    public int Standard { get; set; }
+    public int Elite { get; set; }
+    public int Boss { get; set; }
 }
 
 public sealed class ManifestTarget
@@ -138,6 +162,7 @@ public sealed class AuthoritativeBattleState
 {
     public string Phase { get; set; } = "player_turn";
     public int TurnNumber { get; set; } = 1;
+    public bool HasActionCheckpoint { get; set; }
     public bool EncounterCaptureEnabled { get; set; }
     public EncounterCapturePolicy CapturePolicy { get; set; }
     public AuthoritativeBattleKind BattleKind { get; set; }
@@ -146,6 +171,7 @@ public sealed class AuthoritativeBattleState
     public CaptureChallengeSnapshot? ActiveChallenge { get; set; }
     public CaptureSimulationState? CaptureState { get; set; }
     public string EndReason { get; set; } = "";
+    public List<CombatVitalSnapshot> Vitals { get; set; } = new();
 }
 
 public sealed class BattleSessionRecord
@@ -158,10 +184,20 @@ public sealed class BattleSessionRecord
     public uint Seed { get; set; }
     public string ManifestHash { get; set; } = "";
     public string ConfigHash { get; set; } = "";
+    public string EncounterId { get; set; } = "";
+    public string RewardTier { get; set; } = BattleRewardTier.Standard;
+    public int RewardConfigVersion { get; set; }
+    public string RewardConfigHash { get; set; } = "";
+    public string TerminalOutcome { get; set; } = "";
+    public string TerminalReason { get; set; } = "";
+    public long? TerminalAtUnixMilliseconds { get; set; }
     public string Status { get; set; } = "active";
     public long ExpiresAtUnixMilliseconds { get; set; }
     public AuthorityLoadoutSnapshot LockedLoadout { get; set; } = new();
     public AuthoritativeBattleState State { get; set; } = new();
+
+    [JsonIgnore]
+    public BattleRewardSettlement? Settlement { get; set; }
 
     [JsonIgnore]
     public SemaphoreSlim Gate { get; } = new(1, 1);
@@ -169,13 +205,25 @@ public sealed class BattleSessionRecord
 
 public sealed class ClientBattleState
 {
+    public uint Seed { get; set; }
     public string Phase { get; set; } = "";
     public int TurnNumber { get; set; }
+    public bool HasActionCheckpoint { get; set; }
+    public AuthoritativeBattleKind BattleKind { get; set; }
+    public EncounterCapturePolicy CapturePolicy { get; set; }
+    public bool EncounterCaptureEnabled { get; set; }
+    public string ZoneId { get; set; } = "";
+    public string EncounterId { get; set; } = "";
+    public string RewardTier { get; set; } = BattleRewardTier.Standard;
+    public int RewardConfigVersion { get; set; }
+    public string RewardConfigHash { get; set; } = "";
+    public string TerminalOutcome { get; set; } = "";
     public int CaptureScannerRating { get; set; }
     public int CaptureLowHpThresholdBasisPoints { get; set; }
     public List<ClientBattleTarget> Targets { get; set; } = new();
     public CaptureChallengeSnapshot? CaptureChallenge { get; set; }
     public string EndReason { get; set; } = "";
+    public List<CombatVitalSnapshot> Vitals { get; set; } = new();
 }
 
 public sealed class ClientBattleTarget
@@ -189,6 +237,15 @@ public sealed class ClientBattleTarget
     public bool IsRemoved { get; set; }
     public bool CaptureEnabled { get; set; }
     public bool IsEntangled { get; set; }
+    public string VisualVariantId { get; set; } = "base";
+    public string MutationId { get; set; } = "none";
+    public string EntangledTypeId { get; set; } = "none";
+    public string DifficultyId { get; set; } = "standard";
+    public string KnownMoveId { get; set; } = "baseline_jab";
+    public int[] RawIvs { get; set; } = new int[6];
+    public int Stars { get; set; }
+    public int Level { get; set; } = 1;
+    public bool Mutated { get; set; }
 }
 
 public sealed class CommandServiceResult

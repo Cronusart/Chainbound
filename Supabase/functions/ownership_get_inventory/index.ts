@@ -4,6 +4,7 @@ import {
   JsonMap,
   jsonResponse,
   readJsonBody,
+  readRamBalanceSnapshot,
   requirePost,
   resolveAuthenticatedProfile,
   str,
@@ -32,11 +33,8 @@ serve(async (req: Request) => {
   try {
     loadRollConfig();
     const config = loadOwnershipConfig();
-    const { data: profileState, error: profileError } = await supabase.from("player_profiles")
-      .select("ram_balance").eq("player_profile_id", profile.player_profile_id).maybeSingle();
-    if (profileError) throw profileError;
-    if (!profileState) return jsonResponse({ success: false, error: "player_profile_not_found" }, 404);
-    const ramBalance = Math.max(0, Number(profileState.ram_balance ?? 0));
+    const ramSnapshot = await readRamBalanceSnapshot(supabase, profile.player_profile_id);
+    const ramBalance = ramSnapshot.balance;
     const { data: knownRows, error: knownError } = await supabase.from("ownership_known_moves").select("*")
       .eq("player_profile_id", profile.player_profile_id).is("consumed_at", null).order("created_at", {
         ascending: true,
@@ -60,6 +58,7 @@ serve(async (req: Request) => {
       return jsonResponse({
         success: true,
         ramBalance,
+        ramBalanceVersion: ramSnapshot.version,
         stampRamCost: config.stampRamCost,
         known,
         stamped: [],
@@ -130,7 +129,15 @@ serve(async (req: Request) => {
       delete item.knownOnchainInstanceId;
       return item;
     }))).filter((item): item is JsonMap => item != null);
-    return jsonResponse({ success: true, ramBalance, stampRamCost: config.stampRamCost, known, stamped, pendingStamp });
+    return jsonResponse({
+      success: true,
+      ramBalance,
+      ramBalanceVersion: ramSnapshot.version,
+      stampRamCost: config.stampRamCost,
+      known,
+      stamped,
+      pendingStamp,
+    });
   } catch (error) {
     if (error instanceof OwnershipConfigurationError) return jsonResponse({ success: false, error: error.code }, 503);
     console.error("[ownership_get_inventory]", error instanceof Error ? error.message : "unknown_error");

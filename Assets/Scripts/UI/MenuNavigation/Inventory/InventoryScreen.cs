@@ -159,6 +159,8 @@ namespace SignalJam.UI.MenuNavigation
 
         public override void Show()
         {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
+            PlayerRamBalanceStore.BalanceChanged += HandleRamBalanceChanged;
             EnsureBuilt();
             WireRuntimeHandlers();
             categoryRail?.SetCategory(selectedCategory, false);
@@ -181,6 +183,7 @@ namespace SignalJam.UI.MenuNavigation
 
         public override void Hide()
         {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
             StopRowPresentationRoutine();
             UnwireRuntimeHandlers();
             if (activeInputContext != null)
@@ -188,6 +191,23 @@ namespace SignalJam.UI.MenuNavigation
             activeInputContext = null;
             motionController?.ResetRowAnimation(rowDisplays);
             base.Hide();
+        }
+
+        private void OnDestroy()
+        {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
+        }
+
+        private void HandleRamBalanceChanged(string playerProfileId, long balance)
+        {
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session == null || !string.Equals(session.PlayerProfileId, playerProfileId, StringComparison.Ordinal))
+                return;
+
+            if (snapshot != null)
+                snapshot.ramBalance = balance;
+            if (ramLabel != null)
+                ramLabel.text = $"RAM {Math.Max(0, balance)}";
         }
 
         public override void Refresh()

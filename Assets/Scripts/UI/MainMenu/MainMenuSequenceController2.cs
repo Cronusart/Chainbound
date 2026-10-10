@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Chainbound.Combat;
 using SignalJam.UI.MenuNavigation;
@@ -1462,6 +1463,14 @@ public class MainMenuSequenceController2 : MonoBehaviour
             orchestrator.ConnectWalletAndResolveSession(session =>
             {
                 onWalletConnected?.Invoke();
+                if (session != null &&
+                    string.Equals(session.walletResolutionStatus, "no_profile", StringComparison.Ordinal))
+                {
+                    AppLifecycleService.Instance?.EndWalletSigning();
+                    StartCoroutine(PromptToCreateWalletProfile(orchestrator));
+                    return;
+                }
+
                 OnAccountSessionResolved(session);
             }, OnAccountFlowFailed);
             return;
@@ -1478,6 +1487,53 @@ public class MainMenuSequenceController2 : MonoBehaviour
         SetConnectButtonsInteractable(false);
 
         walletService.Connect(OnWalletConnectResult);
+    }
+
+    private IEnumerator PromptToCreateWalletProfile(MainMenuFlowOrchestrator orchestrator)
+    {
+        WalletConnectionPromptService prompt = ResolveWalletPromptService();
+        if (prompt == null)
+        {
+            OnAccountFlowFailed("Wallet access prompt is unavailable.");
+            yield break;
+        }
+
+        var task = prompt.ShowAccessAsync(new WalletAccessPromptModel
+        {
+            title = "No Save Found",
+            body = "No save found for this wallet. Start a new game?",
+            primaryLabel = "Start New Game",
+            primaryChoice = WalletAccessPromptChoice.Connect,
+            secondaryLabel = "Back",
+            secondaryChoice = WalletAccessPromptChoice.Cancel,
+            showTertiary = false,
+        });
+        while (!task.IsCompleted)
+            yield return null;
+
+        if (task.IsFaulted)
+        {
+            OnAccountFlowFailed(task.Exception?.GetBaseException().Message ?? "Wallet profile prompt failed.");
+            yield break;
+        }
+
+        if (task.Result != WalletAccessPromptChoice.Connect)
+        {
+            _accountFlowInFlight = false;
+            _profileServiceError = "";
+            ApplyProfileActionLayout();
+            yield break;
+        }
+
+        AppLifecycleService.Instance?.BeginWalletSigning();
+        orchestrator.CreateWalletProfileAndBeginNewGame(session =>
+        {
+            _accountFlowInFlight = false;
+            AppLifecycleService.Instance?.EndWalletSigning();
+            _startingNewGame = true;
+            CacheResolvedSession(session);
+            StartCoroutine(PlayRouteCoroutine());
+        }, OnAccountFlowFailed);
     }
 
     private void OnWalletConnectResult(MainMenuWalletConnectResult result)

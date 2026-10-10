@@ -4,6 +4,7 @@ import {
   JsonMap,
   jsonResponse,
   readJsonBody,
+  readRamBalanceSnapshot,
   requirePost,
   resolveAuthenticatedProfile,
   str,
@@ -59,6 +60,7 @@ serve(async (req: Request) => {
 
     const payload = data as JsonMap;
     const known = (payload.known ?? {}) as JsonMap;
+    const ramSnapshot = await readRamBalanceSnapshot(supabase, profile.player_profile_id);
     return jsonResponse({
       success: true,
       already_granted: Boolean(payload.replayed),
@@ -66,6 +68,8 @@ serve(async (req: Request) => {
       known_instance_id: str(known.known_id),
       move_item_id: str(payload.move_item_id),
       encounter_id: str(body.encounter_id),
+      ram_balance: ramSnapshot.balance,
+      ram_balance_version: ramSnapshot.version,
     });
   } catch (error) {
     if (error instanceof OwnershipConfigurationError) {

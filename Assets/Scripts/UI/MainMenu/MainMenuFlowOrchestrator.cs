@@ -226,7 +226,14 @@ public class MainMenuFlowOrchestrator : MonoBehaviour
             return;
         }
 
-        PlayerAccountSession session = await service.ConnectWalletAndResolveSessionAsync(Application.version);
+        PlayerAccountSession session = await service.ConnectWalletAndResolveSessionAsync(
+            Application.version,
+            WalletConnectMode.Resolve);
+        if (session != null && !session.fetchError &&
+            string.Equals(session.walletResolutionStatus, "profile_found", StringComparison.Ordinal))
+        {
+            session = await service.RestoreWalletProfileAsync(Application.version);
+        }
         CompleteSession(session, onComplete, onError, "ConnectWalletAndResolveSession");
     }
 
@@ -240,7 +247,29 @@ public class MainMenuFlowOrchestrator : MonoBehaviour
         if (service == null)
             return PlayerAccountSession.Empty();
 
-        return await service.ConnectWalletAndResolveSessionAsync(Application.version);
+        return await service.ConnectWalletAndResolveSessionAsync(Application.version, WalletConnectMode.Link);
+    }
+
+    public async void CreateWalletProfileAndBeginNewGame(
+        Action<PlayerAccountSession> onComplete,
+        Action<string> onError = null)
+    {
+        AccountSessionService service = ResolveAccountSessionService();
+        if (service == null)
+        {
+            onError?.Invoke("Account session service is not available.");
+            return;
+        }
+
+        PlayerAccountSession created = await service.CreateWalletProfileAsync(Application.version);
+        if (created == null || !created.hasSession || created.fetchError)
+        {
+            onError?.Invoke(created != null ? created.errorMessage : "Wallet profile creation failed.");
+            return;
+        }
+
+        PlayerAccountSession started = await service.BeginNewGameAsync(Application.version);
+        CompleteSession(started, onComplete, onError, "CreateWalletProfileAndBeginNewGame");
     }
 
     public async System.Threading.Tasks.Task<PlayerAccountSession> RestoreWalletProfileAsync()

@@ -15,12 +15,18 @@ import {
 import bs58 from "npm:bs58@5.0.0";
 import { Buffer } from "npm:buffer@6.0.3";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getActiveWallet, JsonMap, str } from "./account_helpers.ts";
+import {
+  ensureRamLedgerAccount,
+  getActiveWallet,
+  JsonMap,
+  requireBoundWallet,
+  str,
+  WalletBindingError,
+} from "./account_helpers.ts";
 import {
   CHAINBOUND_PROGRAM_ID,
   DEVNET_GENESIS_HASH,
   ensureOwnershipRpcCluster,
-  fetchChainRamBalance,
   loadOwnershipConfig,
   MAINNET_GENESIS_HASH,
 } from "./ownership_spine.ts";
@@ -79,6 +85,7 @@ export interface PurchaseOrderRow extends JsonMap {
   credit_signature: string | null;
   credit_receipt_address: string | null;
   balance_after: number | null;
+  balance_version?: number | null;
   failure_code: string | null;
   quote_expires_at: string;
 }
@@ -107,67 +114,13 @@ export function loadRamShopRuntimeConfig(): RamShopRuntimeConfig {
   return { cluster, rpcUrl, expectedGenesisHash, programId: new PublicKey(programText), programVersion };
 }
 
-async function tryAuditLinkedLedger(
-  supabase: SupabaseClient,
-  profileId: string,
-): Promise<{ status: string; reason: string }> {
-  try {
-    const wallet = await getActiveWallet(supabase, profileId);
-    const walletAddress = str(wallet?.wallet_public_key);
-    if (!walletAddress) return { status: "pending_audit", reason: "linked_wallet_required" };
-    const config = loadOwnershipConfig();
-    await ensureOwnershipRpcCluster(config);
-    const chainBalance = await fetchChainRamBalance({ config, walletAddress });
-    const { data, error } = await supabase.rpc("ram_ledger_register_audit", {
-      p_player_profile_id: profileId,
-      p_wallet_address: walletAddress,
-      p_cluster: config.cluster,
-      p_chain_balance: chainBalance,
-    });
-    if (error) throw error;
-    const payload = (typeof data === "string" ? JSON.parse(data) : data) as JsonMap;
-    const status = str(payload?.status) || "pending_audit";
-    return {
-      status,
-      reason: status === "active" ? "" : "ram_reconciliation_required",
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    return {
-      status: "pending_audit",
-      reason: message === "player_profile_not_initialized" ? message : "ram_ledger_audit_pending",
-    };
-  }
-}
-
-function closedCatalog(authoritativeBalance: string, ledgerStatus: string, reason: string): JsonMap {
-  return {
-    success: true,
-    checkout_available: false,
-    maintenance_reason: reason,
-    authoritative_balance: authoritativeBalance,
-    ledger_status: ledgerStatus,
-    bundles: [],
-    tenders: [],
-  };
-}
-
 export async function catalogResponse(supabase: SupabaseClient, profileId: string): Promise<JsonMap> {
-  const [{ data: profile, error: profileError }, { data: ledger, error: ledgerError }] = await Promise.all([
-    supabase.from("player_profiles").select("ram_balance").eq("player_profile_id", profileId).single(),
-    supabase.from("ram_ledger_accounts").select("status").eq("player_profile_id", profileId).maybeSingle(),
-  ]);
+  const { data: profile, error: profileError } = await supabase
+    .from("player_profiles").select("ram_balance, ram_balance_version").eq("player_profile_id", profileId).single();
   if (profileError) throw profileError;
-  if (ledgerError) throw ledgerError;
   const authoritativeBalance = String(profile.ram_balance ?? 0);
-  let ledgerStatus = str(ledger?.status) || "pending_audit";
-  if (ledgerStatus === "pending_audit") {
-    const audited = await tryAuditLinkedLedger(supabase, profileId);
-    ledgerStatus = audited.status;
-    if (ledgerStatus !== "active") {
-      return closedCatalog(authoritativeBalance, ledgerStatus, audited.reason);
-    }
-  }
+  const authoritativeBalanceVersion = Number(profile.ram_balance_version ?? 0);
+  const ledgerStatus = "postgres_canonical";
 
   const { data: settings, error: settingsError } = await supabase
     .from("ram_shop_settings")
@@ -187,25 +140,13 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
 
   const enabledByConfig = settings?.checkout_enabled === true && settings?.checkout_cluster === runtime?.cluster &&
     Number(settings?.quote_ttl_seconds ?? 0) > 0;
-  if (ledgerStatus !== "active") {
-    return {
-      success: true,
-      checkout_available: false,
-      maintenance_reason: ledgerStatus === "frozen_reconciliation"
-        ? "ram_reconciliation_required"
-        : "ram_ledger_audit_pending",
-      authoritative_balance: authoritativeBalance,
-      ledger_status: ledgerStatus,
-      bundles: [],
-      tenders: [],
-    };
-  }
   if (!runtime || !enabledByConfig) {
     return {
       success: true,
       checkout_available: false,
       maintenance_reason: reason,
       authoritative_balance: authoritativeBalance,
+      authoritative_balance_version: authoritativeBalanceVersion,
       ledger_status: ledgerStatus,
       bundles: [],
       tenders: [],
@@ -224,6 +165,7 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
       checkout_available: false,
       maintenance_reason: "catalog_not_configured",
       authoritative_balance: authoritativeBalance,
+      authoritative_balance_version: authoritativeBalanceVersion,
       ledger_status: ledgerStatus,
       bundles: [],
       tenders: [],
@@ -262,6 +204,7 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
     checkout_available: available,
     maintenance_reason: available ? null : "catalog_not_configured",
     authoritative_balance: authoritativeBalance,
+    authoritative_balance_version: authoritativeBalanceVersion,
     ledger_status: ledgerStatus,
     catalog_version: catalog.version,
     cluster: runtime.cluster,
@@ -273,6 +216,7 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
 export async function preparePurchase(
   supabase: SupabaseClient,
   profileId: string,
+  requestedWallet: string,
   sku: string,
   tenderText: string,
 ): Promise<JsonMap> {
@@ -295,16 +239,24 @@ export async function preparePurchase(
 
   const wallet = await getActiveWallet(supabase, profileId);
   const walletAddress = str(wallet?.wallet_public_key);
+  try {
+    await requireBoundWallet(supabase, profileId, requestedWallet);
+  } catch (error) {
+    if (error instanceof WalletBindingError) throw new RamShopError(error.code, error.httpStatus);
+    throw error;
+  }
+  if (walletAddress && walletAddress !== requestedWallet) throw new RamShopError("wallet_profile_mismatch", 409);
   if (!walletAddress) throw new RamShopError("linked_wallet_required", 409);
   const owner = publicKey(walletAddress, "invalid_linked_wallet");
+  await ensureRamLedgerAccount(supabase, profileId, walletAddress, runtime.cluster);
 
   const { data: ledger, error: ledgerError } = await supabase
     .from("ram_ledger_accounts")
-    .select("status, cluster, wallet_address")
+    .select("cluster, wallet_address")
     .eq("player_profile_id", profileId)
     .maybeSingle();
   if (ledgerError) throw ledgerError;
-  if (!ledger || ledger.status !== "active") throw new RamShopError("ram_reconciliation_required", 409);
+  if (!ledger) throw new RamShopError("ram_ledger_scope_missing", 409);
   if (ledger.cluster !== runtime.cluster || ledger.wallet_address !== walletAddress) {
     throw new RamShopError("ram_ledger_scope_mismatch", 409);
   }
@@ -380,7 +332,9 @@ export async function preparePurchase(
   const messageBytesArray = Uint8Array.from(messageBytes);
   const messageBase64 = Buffer.from(messageBytesArray).toString("base64");
   const messageHash = await sha256HexBytes(messageBytesArray);
-  const unsignedBase64 = Buffer.from(Uint8Array.from(transaction.serialize({ requireAllSignatures: false, verifySignatures: false })))
+  const unsignedBase64 = Buffer.from(
+    Uint8Array.from(transaction.serialize({ requireAllSignatures: false, verifySignatures: false })),
+  )
     .toString("base64");
   const estimatedFee = (await connection.getFeeForMessage(transaction.compileMessage(), "finalized")).value;
   if (estimatedFee === null) throw new RamShopError("fee_estimate_unavailable", 503);
@@ -412,7 +366,7 @@ export async function preparePurchase(
     reconcile_after: new Date().toISOString(),
   }).select("*").single();
   if (insertError) throw insertError;
-  return orderResponse(inserted as PurchaseOrderRow);
+  return await orderResponseWithBalanceVersion(supabase, inserted as PurchaseOrderRow);
 }
 
 export async function loadOwnedOrder(
@@ -480,7 +434,10 @@ async function markOrderTerminal(
     p_observed_signature: signature,
   });
   if (error) throw new RamShopError(normalizeDatabaseError(error.message), 409);
-  return orderResponse(await loadOwnedOrder(supabase, order.player_profile_id, order.order_id));
+  return await orderResponseWithBalanceVersion(
+    supabase,
+    await loadOwnedOrder(supabase, order.player_profile_id, order.order_id),
+  );
 }
 
 export async function reconcileQuotedPurchase(
@@ -508,21 +465,25 @@ export async function reconcileQuotedPurchase(
   if (recovered && recovered !== order.payment_signature) return await confirmPurchase(supabase, order, recovered);
 
   const expiredByTime = Date.parse(order.quote_expires_at) <= Date.now();
-  if (!expiredByTime) return orderResponse(order);
+  if (!expiredByTime) return await orderResponseWithBalanceVersion(supabase, order);
   const currentBlockHeight = await rpcCall<number>(runtime.rpcUrl, "getBlockHeight", [{ commitment: "finalized" }]);
   if (currentBlockHeight !== null && currentBlockHeight > Number(order.last_valid_block_height)) {
     return await markOrderTerminal(supabase, order, null, "expired_unpaid", "quote_expired_unpaid");
   }
-  return orderResponse(order);
+  return await orderResponseWithBalanceVersion(supabase, order);
 }
 
 export async function advancePurchaseSettlement(
   supabase: SupabaseClient,
   order: PurchaseOrderRow,
 ): Promise<JsonMap> {
-  if (order.status === "settled") return orderResponse(order);
-  if (order.status === "quoted" || order.status === "submitted") return orderResponse(order);
-  if (order.status !== "payment_verified" && order.status !== "credit_submitted") return orderResponse(order);
+  if (order.status === "settled") return await orderResponseWithBalanceVersion(supabase, order);
+  if (order.status === "quoted" || order.status === "submitted") {
+    return await orderResponseWithBalanceVersion(supabase, order);
+  }
+  if (order.status !== "payment_verified" && order.status !== "credit_submitted") {
+    return await orderResponseWithBalanceVersion(supabase, order);
+  }
 
   const config = loadOwnershipConfig();
   if (config.cluster !== order.cluster) throw new RamShopError("settlement_cluster_mismatch", 503);
@@ -667,7 +628,10 @@ export async function verifyPaymentTransaction(
 }
 
 function verifyComputeUnitLimitInstruction(ix: TransactionInstruction): void {
-  if (!ix.programId.equals(ComputeBudgetProgram.programId) || ix.keys.length !== 0 || ix.data.length !== 5 || ix.data[0] !== 2) {
+  if (
+    !ix.programId.equals(ComputeBudgetProgram.programId) || ix.keys.length !== 0 || ix.data.length !== 5 ||
+    ix.data[0] !== 2
+  ) {
     throw new RamShopError("payment_compute_limit_mismatch", 409);
   }
   const units = ix.data.readUInt32LE(1);
@@ -677,7 +641,10 @@ function verifyComputeUnitLimitInstruction(ix: TransactionInstruction): void {
 }
 
 function verifyComputeUnitPriceInstruction(ix: TransactionInstruction): void {
-  if (!ix.programId.equals(ComputeBudgetProgram.programId) || ix.keys.length !== 0 || ix.data.length !== 9 || ix.data[0] !== 3) {
+  if (
+    !ix.programId.equals(ComputeBudgetProgram.programId) || ix.keys.length !== 0 || ix.data.length !== 9 ||
+    ix.data[0] !== 3
+  ) {
     throw new RamShopError("payment_compute_price_mismatch", 409);
   }
   const price = ix.data.readBigUInt64LE(1);
@@ -808,8 +775,33 @@ export function orderResponse(order: PurchaseOrderRow): JsonMap {
     credit_signature: order.credit_signature,
     credit_receipt_address: order.credit_receipt_address,
     balance_after: order.balance_after === null ? null : String(order.balance_after),
+    balance_version: Number(order.balance_version ?? 0),
     failure_code: order.failure_code,
   };
+}
+
+export async function orderResponseWithBalanceVersion(
+  supabase: SupabaseClient,
+  order: PurchaseOrderRow,
+): Promise<JsonMap> {
+  if (order.balance_after !== null && Number(order.balance_version ?? 0) > 0) {
+    return orderResponse(order);
+  }
+  return orderResponse({
+    ...order,
+    balance_version: await readRamBalanceVersion(supabase, order.player_profile_id),
+  } as PurchaseOrderRow);
+}
+
+async function readRamBalanceVersion(supabase: SupabaseClient, profileId: string): Promise<number> {
+  const { data, error } = await supabase.from("player_profiles")
+    .select("ram_balance_version")
+    .eq("player_profile_id", profileId)
+    .single();
+  if (error) throw error;
+  const version = Number(data.ram_balance_version ?? 0);
+  if (!Number.isSafeInteger(version) || version <= 0) throw new RamShopError("ram_balance_version_missing", 503);
+  return version;
 }
 
 function isPaymentMismatch(code: string): boolean {

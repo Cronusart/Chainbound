@@ -244,9 +244,10 @@ Deno.test("inventory hydration includes the canonical RAM mirror", async () => {
   const inventory = await Deno.readTextFile(
     new URL("../ownership_get_inventory/index.ts", import.meta.url),
   );
-  assertEquals(inventory.includes('.select("ram_balance")'), true);
+  assertEquals(inventory.includes("readRamBalanceSnapshot"), true);
+  assertEquals(inventory.includes("ramBalanceVersion: ramSnapshot.version"), true);
   assertEquals(inventory.includes("stampRamCost: config.stampRamCost"), true);
-  assertEquals(inventory.includes("ramBalance, stampRamCost: config.stampRamCost, known, stamped"), true);
+  assertEquals(inventory.includes("ramBalance,"), true);
   assertEquals(inventory.includes("stampEffectFieldsFromOperation(operation)"), true);
 });
 
@@ -316,17 +317,20 @@ Deno.test("Stamp confirmation persists signature before RPC and settles from the
 Deno.test("Stamp preparation reserves coordinated RAM before chain build, metadata, or intent creation", async () => {
   const source = await Deno.readTextFile(new URL("../ownership_prepare_stamp/index.ts", import.meta.url));
   const reserve = source.indexOf('supabase.rpc("ram_ledger_reserve_operation"');
+  const ensure = source.indexOf("ensureRamLedgerAccount(");
   const chainReservation = source.indexOf("ensureRamReservationOnChain({");
   const chainBuild = source.indexOf("buildStampTransaction({");
   const preflight = source.indexOf("simulateStampTransaction(config.rpcUrl");
   const metadata = source.indexOf("publishStampedMetadata(");
   const operationWrite = source.indexOf(".insert(operation)");
   assertNotEquals(reserve, -1);
+  assertNotEquals(ensure, -1);
   assertNotEquals(chainReservation, -1);
   assertNotEquals(chainBuild, -1);
   assertNotEquals(preflight, -1);
   assertNotEquals(metadata, -1);
   assertNotEquals(operationWrite, -1);
+  assertEquals(ensure < reserve, true);
   assertEquals(reserve < chainReservation, true);
   assertEquals(chainReservation < chainBuild, true);
   assertEquals(chainBuild < preflight, true);

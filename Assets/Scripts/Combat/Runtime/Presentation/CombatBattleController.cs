@@ -309,6 +309,7 @@ namespace Chainbound.Combat
         private bool _captureSucceeded;
         private BattleCompletionReason _captureCompletionReason;
         private string _capturedBackendChainlingId;
+        private BattleRewardSettlement _authoritativeRamSettlement;
         private readonly List<BattleCaptureRecord> _captures = new List<BattleCaptureRecord>();
 
         // Previous KO state for detecting new faints between steps
@@ -491,6 +492,7 @@ namespace Chainbound.Combat
             _captureSucceeded = false;
             _captureCompletionReason = BattleCompletionReason.Standard;
             _capturedBackendChainlingId = string.Empty;
+            _authoritativeRamSettlement = null;
             _captures.Clear();
             _battleStartTime = Time.realtimeSinceStartup;
             _previouslyFainted.Clear();
@@ -681,6 +683,7 @@ namespace Chainbound.Combat
                     pvpMatchId = pvpMatchId,
                     rulesetId = _resolver != null ? _resolver.RulesetId : null,
                     configHash = _resolver != null ? _resolver.ConfigHash : null,
+                    authoritativeRamSettlement = ResolveAuthoritativeRamSettlement(),
                 };
 
                 var encounter = _replayData != null ? _replayData.encounter : null;
@@ -792,6 +795,7 @@ namespace Chainbound.Combat
             _captureSucceeded = false;
             _captureCompletionReason = BattleCompletionReason.Standard;
             _capturedBackendChainlingId = string.Empty;
+            _authoritativeRamSettlement = null;
             _captures.Clear();
             _previouslyFainted.Clear();
             _lastVitals.Clear();
@@ -874,6 +878,8 @@ namespace Chainbound.Combat
                 return false;
 
             _captureAttempted = true;
+            if (outcome.Settlement != null)
+                _authoritativeRamSettlement = outcome.Settlement;
             if (outcome.RemovesTargetFromBattle)
             {
                 if (!TryRemoveCaptureTarget(targetInstanceId, out string removedInstanceId))
@@ -2079,6 +2085,7 @@ namespace Chainbound.Combat
                 pvpMatchId = pvpMatchId,
                 rulesetId = _resolver != null ? _resolver.RulesetId : null,
                 configHash = _resolver != null ? _resolver.ConfigHash : null,
+                authoritativeRamSettlement = ResolveAuthoritativeRamSettlement(),
             };
 
             var encounter = _replayData != null ? _replayData.encounter : null;
@@ -2106,6 +2113,15 @@ namespace Chainbound.Combat
             }
 
             PresentFinalizedBattle(result);
+        }
+
+        private BattleRewardSettlement ResolveAuthoritativeRamSettlement()
+        {
+            if (_authoritativeRamSettlement != null)
+                return _authoritativeRamSettlement;
+
+            CombatSessionEnvelope current = AuthoritativeBattleLaunchContext.Current;
+            return current != null ? current.Settlement : null;
         }
 
         private IEnumerator SettleCasualThenPresent(BattleResult result)

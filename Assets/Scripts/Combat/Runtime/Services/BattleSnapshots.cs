@@ -382,6 +382,12 @@ namespace Chainbound.Combat
         /// <summary>Config hash of the active ruleset (+ resolver) stamped at battle start.</summary>
         public string configHash;
 
+        /// <summary>
+        /// BattleService's authoritative RAM receipt. The local reward calculator must never
+        /// be used as proof that RAM was credited.
+        /// </summary>
+        public BattleRewardSettlement authoritativeRamSettlement;
+
         public BattleResult()
         {
             encounterDifficulty = EncounterDifficulty.Standard;

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using Chainbound.Combat.Core;
 using DG.Tweening;
 using SignalJam.UI.MobileControls;
 using TMPro;
@@ -84,6 +85,9 @@ namespace Chainbound.Combat
         private CanvasGroup _rewardsGroup;
         private Vector3 _rewardsRestScale = Vector3.one;
         private bool _rewardsRestCached;
+        private bool _rewardsAuthored;
+        private float _lastRamTickUnscaledTime = -1f;
+        private readonly List<RewardRevealPiece> _rewardPieces = new List<RewardRevealPiece>();
         private TextMeshProUGUI _bannerTitle;
         private Image _bannerImage;
         private TextMeshProUGUI _bannerPrompt;
@@ -122,6 +126,7 @@ namespace Chainbound.Combat
         private int _bannerFrameIndex;
         private float _bannerFrameTimer;
         private bool _bannerAnimating;
+        private int _ramRecoveryVersion;
         private readonly List<Tween> _activeTweens = new List<Tween>();
         private readonly List<CombatPostBattleXpRowView> _xpRows = new List<CombatPostBattleXpRowView>();
         private readonly List<ChainlingXpReward> _xpRowRewards = new List<ChainlingXpReward>();
@@ -157,6 +162,7 @@ namespace Chainbound.Combat
 
         private void OnDisable()
         {
+            _ramRecoveryVersion++;
             Unbind();
             KillTweens();
             ReleaseInputLock();
@@ -239,6 +245,8 @@ namespace Chainbound.Combat
             }
             _result = result;
             _outcome = BattleOutcomePresentation.Resolve(result);
+            ApplyRamSettlement(result != null ? result.authoritativeRamSettlement : null);
+            RecoverRamSettlementIfNeeded(result, ++_ramRecoveryVersion);
             DidPresentThisBattle = false;
             CombatUiPresentationMode mode = _battleController?.CurrentEncounter?.EffectiveUiMode ?? CombatUiPresentationMode.Full;
             if (mode == CombatUiPresentationMode.Hidden ||
@@ -421,13 +429,18 @@ namespace Chainbound.Combat
                     CacheMenuPanelRest(_rewardsSurface, ref _rewardsGroup, ref _rewardsRestScale, ref _rewardsRestCached);
                     BindRewards();
                     ConfigureAdvanceNavigation();
-                    CombatMenuPanelReveal.ApplyClosedState(
-                        _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
-                        _rewardsRestScale,
-                        _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
-                        _rewardsRestScale,
-                        _rewardsGroup,
-                        CombatMenuPanelReveal.Settings.Default);
+                    if (_rewardsAuthored)
+                        PrepareAuthoredRewardsReveal();
+                    else
+                    {
+                        CombatMenuPanelReveal.ApplyClosedState(
+                            _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
+                            _rewardsRestScale,
+                            _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
+                            _rewardsRestScale,
+                            _rewardsGroup,
+                            CombatMenuPanelReveal.Settings.Default);
+                    }
                     break;
             }
         }
@@ -458,13 +471,15 @@ namespace Chainbound.Combat
                         CombatMenuPanelReveal.Settings.Default);
                     break;
                 case FlowPage.Rewards:
-                    sequence = CombatMenuPanelReveal.BuildOpen(
-                        _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
-                        _rewardsRestScale,
-                        _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
-                        _rewardsRestScale,
-                        _rewardsGroup,
-                        CombatMenuPanelReveal.Settings.Default);
+                    sequence = _rewardsAuthored
+                        ? BuildAuthoredRewardsReveal()
+                        : CombatMenuPanelReveal.BuildOpen(
+                            _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
+                            _rewardsRestScale,
+                            _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
+                            _rewardsRestScale,
+                            _rewardsGroup,
+                            CombatMenuPanelReveal.Settings.Default);
                     break;
             }
 
@@ -472,7 +487,8 @@ namespace Chainbound.Combat
                 yield break;
 
             _activeTweens.Add(sequence);
-            yield return AwaitTween(sequence);
+            float timeout = page == FlowPage.Rewards && _rewardsAuthored ? 8f : 4f;
+            yield return AwaitTween(sequence, timeout);
         }
 
         private IEnumerator PlayPageExit(FlowPage page)
@@ -502,13 +518,21 @@ namespace Chainbound.Combat
                         CombatMenuPanelReveal.Settings.Default);
                     break;
                 case FlowPage.Rewards:
-                    sequence = CombatMenuPanelReveal.BuildClose(
-                        _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
-                        _rewardsRestScale,
-                        _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
-                        _rewardsRestScale,
-                        _rewardsGroup,
-                        CombatMenuPanelReveal.Settings.Default);
+                    if (_rewardsAuthored && _rewardsGroup != null)
+                    {
+                        sequence = DOTween.Sequence().SetUpdate(true);
+                        sequence.Append(_rewardsGroup.DOFade(0f, 0.16f).SetEase(Ease.InSine));
+                    }
+                    else
+                    {
+                        sequence = CombatMenuPanelReveal.BuildClose(
+                            _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
+                            _rewardsRestScale,
+                            _rewardsSurface != null ? _rewardsSurface.transform as RectTransform : null,
+                            _rewardsRestScale,
+                            _rewardsGroup,
+                            CombatMenuPanelReveal.Settings.Default);
+                    }
                     break;
             }
 
@@ -636,6 +660,7 @@ namespace Chainbound.Combat
                     }
                     break;
                 case FlowPage.Rewards:
+                    RestoreAuthoredRewardsReveal();
                     if (_rewardsSurface != null)
                         _rewardsSurface.transform.localScale = _rewardsRestScale;
                     if (_rewardsGroup != null)
@@ -732,18 +757,12 @@ namespace Chainbound.Combat
         {
             if (_rewardSummary == null)
                 return "No rewards calculated.";
-            if (_outcome.DidCapture)
-            {
-                string name = BattleOutcomePresentation.ResolveCapturedDisplayName(_result);
-                return "Recorded " + name + ". XP saves after you confirm; RAM is not settled from client-resolved battles.";
-            }
 
-            if (_rewardSummary.chainlingRewards == null || _rewardSummary.chainlingRewards.Count == 0)
-                return _outcome.Kind == BattleOutcomeKind.Draw
-                    ? "Draw. No XP earned; RAM is not settled from client-resolved battles."
-                    : "No XP rewards available for this battle.";
-
-            return "XP fills live. Confirm saves the outcome.";
+            return FormatRewardsIntro(
+                _outcome.DidCapture,
+                _outcome.Kind,
+                BattleOutcomePresentation.ResolveCapturedDisplayName(_result),
+                _rewardSummary);
         }
 
         private string BuildDefeatCopy()
@@ -753,10 +772,36 @@ namespace Chainbound.Combat
             int recoveryPercent = config != null
                 ? Mathf.RoundToInt(Mathf.Clamp01(config.defeatKoRespawnHpFraction) * 100f)
                 : 0;
+            return FormatDefeatCopy(recoveryCount, recoveryPercent);
+        }
+
+        public static string FormatRewardsIntro(
+            bool didCapture,
+            BattleOutcomeKind kind,
+            string capturedDisplayName,
+            BattleRewardSummary summary)
+        {
+            if (didCapture)
+            {
+                string name = string.IsNullOrWhiteSpace(capturedDisplayName) ? "the target" : capturedDisplayName;
+                return "Recorded " + name + ". Confirm returns you to the overworld.";
+            }
+
+            if (summary == null || summary.chainlingRewards == null || summary.chainlingRewards.Count == 0)
+            {
+                return kind == BattleOutcomeKind.Draw
+                    ? "Draw. No XP earned. Confirm returns you to the overworld."
+                    : "No XP rewards available for this battle.";
+            }
+
+            return "XP fills live. RAM rewards apply automatically. Confirm saves XP and returns you to the overworld.";
+        }
+
+        public static string FormatDefeatCopy(int recoveryCount, int recoveryPercent)
+        {
             var builder = new StringBuilder();
             builder.AppendLine("No XP earned.");
-            builder.AppendLine("No RAM penalty is settled from this client-resolved battle.");
-            builder.AppendLine("You will return to your recovery point.");
+            builder.AppendLine("Confirm returns you to your recovery point.");
             if (recoveryCount > 0)
             {
                 string label = recoveryCount == 1 ? "Chainling" : "Chainlings";
@@ -765,6 +810,39 @@ namespace Chainbound.Combat
             }
 
             return builder.ToString();
+        }
+
+        public static string FormatRamTicker(bool defeatPage, int ramEarned)
+        {
+            _ = ramEarned;
+            return FormatRamTicker(defeatPage, null);
+        }
+
+        public static string FormatRamTicker(bool defeatPage, BattleRewardSettlement settlement)
+        {
+            if (settlement == null ||
+                string.Equals(settlement.Status, BattleRewardStatus.Pending, StringComparison.Ordinal) ||
+                string.Equals(settlement.Status, BattleRewardStatus.Unavailable, StringComparison.Ordinal) ||
+                string.Equals(settlement.Status, BattleRewardStatus.Failed, StringComparison.Ordinal))
+            {
+                return "RAM reward unavailable — check your balance";
+            }
+
+            if (settlement.AppliedRam > 0)
+            {
+                bool capped = settlement.RequestedRam > settlement.AppliedRam;
+                return capped
+                    ? $"+{settlement.AppliedRam:N0} RAM — daily cap reached"
+                    : $"+{settlement.AppliedRam:N0} RAM — granted";
+            }
+
+            bool dailyCapReached = string.Equals(settlement.Reason, "daily_cap_reached", StringComparison.Ordinal) ||
+                                   (settlement.RequestedRam > 0 && settlement.DailyCap.HasValue &&
+                                    settlement.DailyEarned.GetValueOrDefault() >= settlement.DailyCap.Value);
+            if (dailyCapReached)
+                return "Daily RAM cap reached";
+
+            return defeatPage ? "No RAM lost this battle" : "RAM unchanged this battle";
         }
 
         private static int CountKoRecoveryPreview(BattleResult result)
@@ -788,41 +866,66 @@ namespace Chainbound.Combat
             if (_ramLabel == null)
                 return;
 
-            _ramLabel.text = "RAM unchanged — authoritative settlement required";
+            BattleRewardSettlement settlement = _result != null ? _result.authoritativeRamSettlement : null;
+            _ramLabel.text = FormatRamTicker(defeatPage, settlement);
+            ApplyRamSettlement(settlement);
         }
 
-        private void TweenRamDelta(int from, int to)
+        private static void ApplyRamSettlement(BattleRewardSettlement settlement)
         {
-            int displayed = from;
-            Tween tween = DOTween.To(
-                    () => displayed,
-                    value =>
-                    {
-                        displayed = value;
-                        _ramLabel.text = displayed >= 0 ? $"+{displayed} RAM" : $"{displayed} RAM";
-                    },
-                    to,
-                    0.65f)
-                .SetEase(Ease.OutCubic)
-                .SetUpdate(true);
-            _activeTweens.Add(tween);
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session != null)
+                PlayerRamBalanceStore.ApplySettlement(session.PlayerProfileId, settlement);
         }
 
-        private static bool TryReadCachedRam(out long ram)
+        private async void RecoverRamSettlementIfNeeded(BattleResult result, int recoveryVersion)
         {
-            CoreBagItemInventoryService bag = FindFirstObjectByType<CoreBagItemInventoryService>(FindObjectsInactive.Include);
-            if (bag != null && bag.TryGetCachedRamBalance(out ram))
-                return true;
-
-            SupabasePlayerStatsProvider stats = FindFirstObjectByType<SupabasePlayerStatsProvider>(FindObjectsInactive.Include);
-            if (stats != null && stats.CachedStats != null)
+            BattleRewardSettlement currentSettlement = result != null ? result.authoritativeRamSettlement : null;
+            if (result == null || currentSettlement == null ||
+                (!string.Equals(currentSettlement.Status, BattleRewardStatus.Pending, StringComparison.Ordinal) &&
+                 !string.Equals(currentSettlement.Status, BattleRewardStatus.Unavailable, StringComparison.Ordinal)))
             {
-                ram = stats.CachedStats.ramBalance;
-                return true;
+                return;
             }
 
-            ram = 0;
-            return false;
+            CombatSessionEnvelope launch = AuthoritativeBattleLaunchContext.Current;
+            ICombatSessionService service = SolanaServiceBridge.Instance != null
+                ? SolanaServiceBridge.Instance.CombatSessionService
+                : null;
+            GameSessionContext session = GameSessionContext.Instance;
+            string profileId = session != null ? session.PlayerProfileId : string.Empty;
+            if (launch == null || string.IsNullOrWhiteSpace(launch.BattleId) || service == null ||
+                !string.Equals(currentSettlement.BattleId, launch.BattleId, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                // BattleService deliberately cools down missing-receipt settlement attempts.
+                // Wait through the default window so this single recovery read can perform
+                // useful work instead of immediately receiving reward_retry_throttled.
+                await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(5));
+                BattleRewardSettlement recovered = await service.GetBattleRewardAsync(launch.BattleId);
+                if (recovered == null ||
+                    !string.Equals(recovered.BattleId, launch.BattleId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                result.authoritativeRamSettlement = recovered;
+                launch.Settlement = recovered;
+                PlayerRamBalanceStore.ApplySettlement(profileId, recovered);
+                if (this == null || recoveryVersion != _ramRecoveryVersion ||
+                    !isActiveAndEnabled || !ReferenceEquals(_result, result) || _ramLabel == null)
+                {
+                    return;
+                }
+
+                _ramLabel.text = FormatRamTicker(_outcome.Kind == BattleOutcomeKind.Defeat, recovered);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[PostBattleReport] RAM reward recovery remains unavailable: {exception.Message}", this);
+            }
         }
 
         private void BindLootRow()
@@ -896,7 +999,8 @@ namespace Chainbound.Combat
             TMP_FontAsset font = xpRowFont != null
                 ? xpRowFont
                 : Resources.Load<TMP_FontAsset>("TextMesh Pro/Fonts/PixeloidSans SDF");
-            ConfigureXpRowsLayout();
+            if (!_rewardsAuthored)
+                ConfigureXpRowsLayout();
             for (int i = 0; i < _rewardSummary.chainlingRewards.Count; i++)
             {
                 ChainlingXpReward reward = _rewardSummary.chainlingRewards[i];
@@ -985,6 +1089,8 @@ namespace Chainbound.Combat
             TMP_FontAsset font)
         {
             CombatPostBattleXpRowView row = InstantiateXpRow(font);
+            if (row == null)
+                return;
 
             BattleParticipant participant = FindParticipant(reward);
             SpeciesDefinitionSO species = speciesDb != null && !string.IsNullOrWhiteSpace(reward.speciesId)
@@ -997,7 +1103,8 @@ namespace Chainbound.Combat
                 typeIconPalette,
                 compactStarArt,
                 cycleIconPalette,
-                progression);
+                progression,
+                _rewardsAuthored);
             _xpRows.Add(row);
             _xpRowRewards.Add(reward);
         }
@@ -1007,6 +1114,9 @@ namespace Chainbound.Combat
             Transform template = _xpRowsRoot != null ? _xpRowsRoot.Find(XpRowTemplateName) : null;
             if (template == null)
             {
+                if (_rewardsAuthored)
+                    return null;
+
                 return CombatPostBattleXpRowView.Create(
                     _xpRowsRoot,
                     xpRowBackground,
@@ -1025,21 +1135,24 @@ namespace Chainbound.Combat
             if (_xpRows.Count == 0)
                 yield break;
 
-            Sequence appear = DOTween.Sequence().SetUpdate(true);
-            appear.AppendInterval(RewardsRowAppearDelay);
-            for (int i = 0; i < _xpRows.Count; i++)
+            if (!_rewardsAuthored)
             {
-                CombatPostBattleXpRowView row = _xpRows[i];
-                if (row == null)
-                    continue;
-                Tween rowAppear = row.PlayAppear();
-                if (rowAppear == null)
-                    continue;
-                appear.Insert(RewardsRowAppearDelay + (i * RewardsRowStagger), rowAppear);
-            }
+                Sequence appear = DOTween.Sequence().SetUpdate(true);
+                appear.AppendInterval(RewardsRowAppearDelay);
+                for (int i = 0; i < _xpRows.Count; i++)
+                {
+                    CombatPostBattleXpRowView row = _xpRows[i];
+                    if (row == null)
+                        continue;
+                    Tween rowAppear = row.PlayAppear();
+                    if (rowAppear == null)
+                        continue;
+                    appear.Insert(RewardsRowAppearDelay + (i * RewardsRowStagger), rowAppear);
+                }
 
-            _activeTweens.Add(appear);
-            yield return AwaitTween(appear);
+                _activeTweens.Add(appear);
+                yield return AwaitTween(appear);
+            }
 
             bool anyXp = false;
             Sequence fills = DOTween.Sequence().SetUpdate(true);
@@ -1051,7 +1164,11 @@ namespace Chainbound.Combat
                 if (row.HasXpProgress)
                     anyXp = true;
                 Tween fill = row.PlayXpFill(RewardsXpFillDuration);
-                if (fill != null)
+                if (fill == null)
+                    continue;
+                if (_rewardsAuthored)
+                    fills.Insert(i * 0.08f, fill);
+                else
                     fills.Join(fill);
             }
 
@@ -1194,6 +1311,270 @@ namespace Chainbound.Combat
                     _activeTweens[i].Kill();
             }
             _activeTweens.Clear();
+            RestoreAuthoredRewardsReveal();
+        }
+
+        private void PrepareAuthoredRewardsReveal()
+        {
+            RestoreAuthoredRewardsReveal();
+            if (_rewardsSurface == null)
+                return;
+
+            if (_rewardsGroup != null)
+            {
+                _rewardsGroup.alpha = 1f;
+                _rewardsGroup.interactable = false;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            Transform root = _rewardsSurface.transform;
+            var ordered = new List<RectTransform>(root.childCount);
+            for (int i = 0; i < root.childCount; i++)
+            {
+                RectTransform rect = root.GetChild(i) as RectTransform;
+                if (rect == null || !rect.gameObject.activeInHierarchy)
+                    continue;
+                if (rect.name.IndexOf("Scanline", StringComparison.OrdinalIgnoreCase) >= 0)
+                    continue;
+                ordered.Add(rect);
+            }
+
+            ordered.Sort(CompareRewardRevealOrder);
+            bool countingRam = ResolveGrantedRam() > 0;
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                RectTransform rect = ordered[i];
+                CanvasGroup group = rect.GetComponent<CanvasGroup>();
+                if (group == null)
+                    group = rect.gameObject.AddComponent<CanvasGroup>();
+
+                bool fullBleed = rect.anchorMin.x <= 0.02f && rect.anchorMax.x >= 0.98f &&
+                                 rect.anchorMin.y <= 0.02f && rect.anchorMax.y >= 0.98f;
+                var piece = new RewardRevealPiece
+                {
+                    Rect = rect,
+                    RestPosition = rect.anchoredPosition,
+                    Group = group,
+                    RestAlpha = group.alpha > 0.01f ? group.alpha : 1f,
+                    CountsRam = _ramLabel != null && _ramLabel.transform.IsChildOf(rect),
+                    Slides = !fullBleed
+                };
+
+                if (piece.CountsRam && countingRam)
+                {
+                    _ramLabel.text = "+0 RAM";
+                    _ramLabel.maxVisibleCharacters = 99999;
+                }
+
+                TextMeshProUGUI[] texts = rect.GetComponentsInChildren<TextMeshProUGUI>(false);
+                for (int t = 0; t < texts.Length; t++)
+                {
+                    TextMeshProUGUI text = texts[t];
+                    if (text == null || (piece.CountsRam && countingRam && text == _ramLabel))
+                        continue;
+                    if (string.IsNullOrEmpty(text.text))
+                        continue;
+
+                    text.ForceMeshUpdate();
+                    int characters = text.textInfo != null ? text.textInfo.characterCount : 0;
+                    if (characters <= 0)
+                        continue;
+
+                    text.maxVisibleCharacters = 0;
+                    piece.Typewriters.Add(text);
+                }
+
+                group.alpha = 0f;
+                if (piece.Slides)
+                    rect.anchoredPosition = piece.RestPosition + new Vector2(0f, -28f);
+                _rewardPieces.Add(piece);
+            }
+        }
+
+        private Sequence BuildAuthoredRewardsReveal()
+        {
+            Sequence sequence = DOTween.Sequence().SetUpdate(true);
+            if (_rewardPieces.Count == 0)
+            {
+                sequence.AppendInterval(0.01f);
+                return sequence;
+            }
+
+            const float stagger = 0.12f;
+            for (int i = 0; i < _rewardPieces.Count; i++)
+            {
+                RewardRevealPiece piece = _rewardPieces[i];
+                float at = 0.04f + (i * stagger);
+                if (piece.Slides && piece.Rect != null)
+                {
+                    sequence.Insert(
+                        at,
+                        piece.Rect.DOAnchorPos(piece.RestPosition, 0.34f).SetEase(Ease.OutCubic).SetUpdate(true));
+                }
+
+                if (piece.Group != null)
+                {
+                    sequence.Insert(
+                        at,
+                        piece.Group.DOFade(piece.RestAlpha, 0.24f).SetEase(Ease.OutSine).SetUpdate(true));
+                }
+
+                if (piece.CountsRam)
+                {
+                    Tween counter = BuildRamCountTween();
+                    if (counter != null)
+                        sequence.Insert(at + 0.08f, counter);
+                }
+
+                for (int t = 0; t < piece.Typewriters.Count; t++)
+                {
+                    Tween typewriter = BuildTypewriterTween(piece.Typewriters[t]);
+                    if (typewriter != null)
+                        sequence.Insert(at + 0.05f, typewriter);
+                }
+            }
+
+            return sequence;
+        }
+
+        private Tween BuildRamCountTween()
+        {
+            int target = ResolveGrantedRam();
+            if (target <= 0 || _ramLabel == null)
+                return null;
+
+            float shown = 0f;
+            int lastDisplayed = 0;
+            _lastRamTickUnscaledTime = -1f;
+            float duration = Mathf.Clamp(0.55f + (target * 0.012f), 0.7f, 1.35f);
+            bool defeatPage = _outcome.Kind == BattleOutcomeKind.Defeat;
+            BattleRewardSettlement settlement = _result != null ? _result.authoritativeRamSettlement : null;
+            return DOTween.To(() => shown, value =>
+                {
+                    shown = value;
+                    int displayed = Mathf.Clamp(Mathf.RoundToInt(shown), 0, target);
+                    if (_ramLabel != null)
+                        _ramLabel.text = $"+{displayed:N0} RAM";
+                    if (displayed == lastDisplayed)
+                        return;
+
+                    lastDisplayed = displayed;
+                    float now = Time.unscaledTime;
+                    if (now - _lastRamTickUnscaledTime < 0.07f)
+                        return;
+
+                    _lastRamTickUnscaledTime = now;
+                    ResolveCombatSfx()?.PlayRamTick();
+                }, (float)target, duration)
+                .SetEase(Ease.OutCubic)
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    if (_ramLabel != null)
+                        _ramLabel.text = FormatRamTicker(defeatPage, settlement);
+                });
+        }
+
+        private static Tween BuildTypewriterTween(TextMeshProUGUI text)
+        {
+            if (text == null)
+                return null;
+
+            text.ForceMeshUpdate();
+            int count = text.textInfo != null ? text.textInfo.characterCount : 0;
+            if (count <= 0)
+            {
+                text.maxVisibleCharacters = 99999;
+                return null;
+            }
+
+            float visible = 0f;
+            text.maxVisibleCharacters = 0;
+            float duration = Mathf.Clamp(count / 52f, 0.18f, 0.95f);
+            return DOTween.To(() => visible, value =>
+                {
+                    visible = value;
+                    if (text != null)
+                        text.maxVisibleCharacters = Mathf.Clamp(Mathf.RoundToInt(value), 0, count);
+                }, (float)count, duration)
+                .SetEase(Ease.Linear)
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    if (text != null)
+                        text.maxVisibleCharacters = 99999;
+                });
+        }
+
+        private void RestoreAuthoredRewardsReveal()
+        {
+            bool defeatPage = _outcome.Kind == BattleOutcomeKind.Defeat;
+            BattleRewardSettlement settlement = _result != null ? _result.authoritativeRamSettlement : null;
+            for (int i = 0; i < _rewardPieces.Count; i++)
+            {
+                RewardRevealPiece piece = _rewardPieces[i];
+                if (piece.Rect != null)
+                    piece.Rect.anchoredPosition = piece.RestPosition;
+                if (piece.Group != null)
+                    piece.Group.alpha = piece.RestAlpha;
+                if (piece.CountsRam && _ramLabel != null)
+                {
+                    _ramLabel.maxVisibleCharacters = 99999;
+                    _ramLabel.text = FormatRamTicker(defeatPage, settlement);
+                }
+
+                for (int t = 0; t < piece.Typewriters.Count; t++)
+                {
+                    if (piece.Typewriters[t] != null)
+                        piece.Typewriters[t].maxVisibleCharacters = 99999;
+                }
+            }
+
+            _rewardPieces.Clear();
+        }
+
+        private int ResolveGrantedRam()
+        {
+            BattleRewardSettlement settlement = _result != null ? _result.authoritativeRamSettlement : null;
+            if (settlement == null || settlement.AppliedRam <= 0)
+                return 0;
+            if (string.Equals(settlement.Status, BattleRewardStatus.Pending, StringComparison.Ordinal) ||
+                string.Equals(settlement.Status, BattleRewardStatus.Unavailable, StringComparison.Ordinal) ||
+                string.Equals(settlement.Status, BattleRewardStatus.Failed, StringComparison.Ordinal))
+                return 0;
+
+            return settlement.AppliedRam > int.MaxValue ? int.MaxValue : (int)settlement.AppliedRam;
+        }
+
+        private static int CompareRewardRevealOrder(RectTransform a, RectTransform b)
+        {
+            int byTop = RewardRevealTop(b).CompareTo(RewardRevealTop(a));
+            if (byTop != 0)
+                return byTop;
+            if (a == null || b == null)
+                return 0;
+            return a.GetSiblingIndex().CompareTo(b.GetSiblingIndex());
+        }
+
+        private static float RewardRevealTop(RectTransform rect)
+        {
+            if (rect == null)
+                return 0f;
+
+            Vector3[] corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return corners[1].y;
+        }
+
+        private sealed class RewardRevealPiece
+        {
+            public RectTransform Rect;
+            public Vector2 RestPosition;
+            public CanvasGroup Group;
+            public float RestAlpha = 1f;
+            public bool CountsRam;
+            public bool Slides;
+            public readonly List<TextMeshProUGUI> Typewriters = new List<TextMeshProUGUI>();
         }
 
         private bool EnsureVisuals()
@@ -1266,6 +1647,7 @@ namespace Chainbound.Combat
                 return false;
 
             WireButtons();
+            _rewardsAuthored = _rewardsSurface != null;
             return true;
         }
 
@@ -1450,6 +1832,7 @@ namespace Chainbound.Combat
 
         private void BuildRewardsFallback()
         {
+            _rewardsAuthored = false;
             _rewardsSurface = NewUiObject("RewardsSurface", _overlay.transform, typeof(Image));
             rewardsSurface = _rewardsSurface;
             RectTransform rewardsRect = (RectTransform)_rewardsSurface.transform;

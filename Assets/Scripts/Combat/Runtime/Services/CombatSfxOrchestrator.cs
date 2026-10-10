@@ -249,6 +249,14 @@ namespace Chainbound.Combat
             Play(catalog.XpShare);
         }
 
+        public void PlayRamTick()
+        {
+            if (catalog == null)
+                return;
+
+            Play(catalog.RamGrantTick, volumeScale: 0.62f);
+        }
+
         public void PlayStarUp(BattleRewardSummary summary)
         {
             if (catalog == null || !HasStarRewards(summary))

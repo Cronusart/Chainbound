@@ -54,6 +54,8 @@ namespace Chainbound.Combat
         [SerializeField] private UnityEngine.Object defeatStinger;
         [SerializeField] private UnityEngine.Object captureStinger;
         [SerializeField] private UnityEngine.Object xpShare;
+        [Tooltip("Short blip played while a granted RAM total counts up.")]
+        [SerializeField] private UnityEngine.Object ramGrantTick;
         [Tooltip("SoundEventSO played when a Chainling gains a star after XP share.")]
         [SerializeField] private UnityEngine.Object starUp;
         [SerializeField] private UnityEngine.Object rewardConfirm;
@@ -129,6 +131,7 @@ namespace Chainbound.Combat
         public UnityEngine.Object SwapIn => swapIn != null ? swapIn : glitchIn;
         public UnityEngine.Object SwapOut => swapOut != null ? swapOut : glitchOut;
         public UnityEngine.Object XpShare => xpShare;
+        public UnityEngine.Object RamGrantTick => ramGrantTick != null ? ramGrantTick : apGain;
         public UnityEngine.Object StarUp => starUp;
         public UnityEngine.Object RewardConfirm => rewardConfirm;
         public UnityEngine.Object VictoryStinger => victoryStinger;

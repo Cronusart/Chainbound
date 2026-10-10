@@ -1,0 +1,9 @@
+{
+    "schemaVersion": 1,
+    "configVersion": 3,
+    "rewards": {
+        "standard": 5,
+        "elite": 15,
+        "boss": 25
+    }
+}

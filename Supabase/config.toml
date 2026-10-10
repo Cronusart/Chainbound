@@ -1,0 +1,4 @@
+project_id = "signal-jam-3d-local"
+
+[functions.battle_reward_settle]
+verify_jwt = false

@@ -20,6 +20,7 @@ namespace Chainbound.Combat
         public string catalogVersion;
         public string cluster;
         public string authoritativeBalance;
+        public long authoritativeBalanceVersion;
         public string ledgerStatus;
         public List<RamBundle> bundles = new List<RamBundle>();
         public List<string> tenders = new List<string>();
@@ -78,6 +79,7 @@ namespace Chainbound.Combat
         public string creditSignature;
         public string creditReceiptAddress;
         public string balanceAfter;
+        public long balanceVersion;
         public string failureCode;
         public RamPaymentSummary payment;
     }

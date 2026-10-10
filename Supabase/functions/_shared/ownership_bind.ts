@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { JsonMap, str } from "./account_helpers.ts";
+import { JsonMap, readRamBalanceSnapshot, str } from "./account_helpers.ts";
 import {
   BIND_RAM_COST_PIN,
   cancelRamReservationOnChain,
@@ -54,7 +54,12 @@ export async function advanceBindOperation(
   const config = loadBindConfig();
   if (str(operation.cluster) !== config.cluster) throw new Error("bind_cluster_mismatch");
   if (str(operation.status) === "settled" || str(operation.status) === "failed") {
-    return bindOperationResponse(operation, { confirmed: str(operation.status) === "settled" });
+    const ramSnapshot = await readRamBalanceSnapshot(supabase, playerProfileId);
+    return bindOperationResponse(operation, {
+      confirmed: str(operation.status) === "settled",
+      ram_balance: ramSnapshot.balance,
+      ram_balance_version: ramSnapshot.version,
+    });
   }
 
   const verified = await fetchAndVerifyBindReceipt({
@@ -133,10 +138,12 @@ export async function advanceBindOperation(
     p_archive_asset_address: verified.archiveAssetAddress,
   });
   if (settlementError) throw settlementError;
+  const ramSnapshot = await readRamBalanceSnapshot(supabase, playerProfileId);
   return bindOperationResponse({ ...operation, status: "settled", signature }, {
     confirmed: true,
     pending: false,
-    ram_balance: String((settlement as JsonMap)?.ram_balance ?? ""),
+    ram_balance: ramSnapshot.balance,
+    ram_balance_version: ramSnapshot.version,
     binding: (settlement as JsonMap)?.binding ?? verified,
   });
 }

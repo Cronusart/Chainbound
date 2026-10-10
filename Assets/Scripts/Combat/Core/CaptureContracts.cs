@@ -247,6 +247,7 @@ namespace Chainbound.Combat.Core
         public bool AddedToParty { get; set; }
         public bool BattleContinues { get; set; }
         public int FinalMeterBasisPoints { get; set; }
+        public BattleRewardSettlement? Settlement { get; set; }
         public int ElapsedTicks { get; set; }
         public float DurationSeconds { get; set; }
         public List<string> UnlockedAchievementIds { get; set; } = new List<string>();
@@ -326,6 +327,7 @@ namespace Chainbound.Combat.Core
         public bool RequiresResumeChoice { get; set; }
         public bool RequiresWipe { get; set; }
         public string EndReason { get; set; } = "";
+        public BattleRewardSettlement? Settlement { get; set; }
     }
 
     public interface ICaptureSession : IDisposable
@@ -358,6 +360,10 @@ namespace Chainbound.Combat.Core
         Task<CombatSessionEnvelope> SubmitTeamCommandAsync(
             string battleId,
             CombatTeamCommand command,
+            CancellationToken cancellationToken = default(CancellationToken));
+
+        Task<BattleRewardSettlement> GetBattleRewardAsync(
+            string battleId,
             CancellationToken cancellationToken = default(CancellationToken));
 
         Task<ICaptureSession> OpenCaptureSessionAsync(

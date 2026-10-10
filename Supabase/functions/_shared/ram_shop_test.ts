@@ -26,6 +26,16 @@ Deno.test("purchase credit settlement passes the canonical SQL signature", async
   assertEquals(settle.slice(0, settle.indexOf("});") + 3).includes("p_balance_after"), false);
 });
 
+Deno.test("shop prepare ensures the linked ledger account before scope lookup", async () => {
+  const source = await Deno.readTextFile(new URL("./ram_shop.ts", import.meta.url));
+  const prepare = source.slice(source.indexOf("export async function preparePurchase"));
+  const ensure = prepare.indexOf("ensureRamLedgerAccount(");
+  const ledgerLookup = prepare.indexOf('.from("ram_ledger_accounts")');
+  assertEquals(ensure >= 0, true);
+  assertEquals(ledgerLookup >= 0, true);
+  assertEquals(ensure < ledgerLookup, true);
+});
+
 Deno.test("purchase receipt validation pins ownership, identity, authority, and exact balance delta", async () => {
   const source = await Deno.readTextFile(new URL("./ram_shop.ts", import.meta.url));
   const receipt = source.slice(source.indexOf("async function readPurchaseReceiptBalance"));
@@ -176,7 +186,7 @@ Deno.test("payment verifier rejects an out-of-policy compute limit", async () =>
   await assertRejects(() => verifyFixture(transaction, order), RamShopError, "payment_compute_limit_mismatch");
 });
 
-Deno.test("an already-settled purchase is idempotent and performs no further RPC", async () => {
+Deno.test("an already-settled purchase returns its stored balance and version pair", async () => {
   const payer = Keypair.generate();
   const destination = Keypair.generate().publicKey;
   const reference = Keypair.generate().publicKey;
@@ -185,14 +195,19 @@ Deno.test("an already-settled purchase is idempotent and performs no further RPC
   order.status = "settled";
   order.payment_signature = bs58.encode(Uint8Array.from(transaction.signatures[0].signature!));
   order.balance_after = 120;
-  const rejectingSupabase = new Proxy({}, {
-    get() {
-      throw new Error("settled replay must not access Supabase");
+  order.balance_version = 41;
+  const readOnlySupabase = {
+    from() {
+      throw new Error("settled replay must not pair the stored balance with a current profile version");
     },
-  });
-  const first = await advancePurchaseSettlement(rejectingSupabase as never, order);
-  const second = await advancePurchaseSettlement(rejectingSupabase as never, order);
+    rpc() {
+      throw new Error("settled replay must not invoke a mutation RPC");
+    },
+  };
+  const first = await advancePurchaseSettlement(readOnlySupabase as never, order);
+  const second = await advancePurchaseSettlement(readOnlySupabase as never, order);
   assertEquals(first, second);
   assertEquals(first.state, "settled");
   assertEquals(first.balance_after, "120");
+  assertEquals(first.balance_version, 41);
 });

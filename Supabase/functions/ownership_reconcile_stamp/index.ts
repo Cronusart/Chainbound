@@ -4,6 +4,7 @@ import {
   JsonMap,
   jsonResponse,
   readJsonBody,
+  readRamBalanceSnapshot,
   requirePost,
   resolveAuthenticatedProfile,
   str,
@@ -220,6 +221,7 @@ serve(async (req: Request) => {
       p_receipt_address: str(operation.stamped_asset_address),
     });
     if (settlementError) throw settlementError;
+    const ramSnapshot = await readRamBalanceSnapshot(supabase, profile.player_profile_id);
     return jsonResponse({
       success: true,
       confirmed: true,
@@ -234,7 +236,8 @@ serve(async (req: Request) => {
       signature: str(settlement?.signature) || signature,
       asset: settlement?.asset ?? publicAsset,
       ram_cost: FIRST_STAMP_RAM_COST,
-      ram_balance: Number(settlement?.ram_balance ?? 0),
+      ram_balance: ramSnapshot.balance,
+      ram_balance_version: ramSnapshot.version,
     });
   } catch (error) {
     if (error instanceof OwnershipConfigurationError) return jsonResponse({ success: false, error: error.code }, 503);

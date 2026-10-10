@@ -47,12 +47,19 @@ namespace Chainbound.Combat
         public async Task<OwnershipKnownRollResult> RollKnownAsync(string idempotencyKey)
         {
             RequireEnabled();
+            ResolveChainDependencies();
+            if (wallet == null || !wallet.IsConnected)
+                throw new InvalidOperationException("Connect the profile wallet before rolling Known.");
             string profileId = RequireProfileId();
-            return await PostAsync<OwnershipKnownRollResult>("ownership_roll_known", new KnownRequest
+            OwnershipKnownRollResult result = await PostAsync<OwnershipKnownRollResult>("ownership_roll_known", new KnownRequest
             {
                 player_profile_id = profileId,
+                wallet_address = wallet != null ? wallet.PublicKey : string.Empty,
                 idempotency_key = idempotencyKey,
             });
+            if (result != null)
+                PlayerRamBalanceStore.TryApplyAuthoritative(profileId, result.ramBalance, result.ramBalanceVersion);
+            return result;
         }
 
         public async Task<OwnershipSpineSnapshot> FetchStateAsync()
@@ -74,7 +81,11 @@ namespace Chainbound.Combat
                 wallet_address = wallet.PublicKey,
                 idempotency_key = idempotencyKey,
             });
-            return FromReconciliation(response);
+            StampMoveResult result = FromReconciliation(response);
+            if (response != null)
+                PlayerRamBalanceStore.TryApplyAuthoritative(
+                    RequireProfileId(), response.ram_balance, response.ram_balance_version);
+            return result;
         }
 
         public async Task<IReadOnlyList<KnownMoveRecord>> FetchKnownAsync()
@@ -149,6 +160,9 @@ namespace Chainbound.Combat
                 idempotency_key = request.idempotencyKey,
                 signature = signature,
             });
+            if (confirmation != null)
+                PlayerRamBalanceStore.TryApplyAuthoritative(
+                    RequireProfileId(), confirmation.ram_balance, confirmation.ram_balance_version);
             return new StampMoveResult
             {
                 success = confirmation != null && confirmation.success,
@@ -163,6 +177,7 @@ namespace Chainbound.Combat
                 message = confirmation?.message,
                 signature = signature,
                 ramBalance = confirmation != null ? confirmation.ram_balance : 0L,
+                ramBalanceVersion = confirmation != null ? confirmation.ram_balance_version : 0L,
                 verifiedAsset = confirmation?.asset,
                 error = confirmation != null && confirmation.success && confirmation.confirmed
                     ? null
@@ -290,12 +305,20 @@ namespace Chainbound.Combat
             return payload;
         }
 
-        private Task<OwnershipSpineSnapshot> FetchInventoryAsync() => PostAsync<OwnershipSpineSnapshot>(
-            "ownership_get_inventory", new InventoryRequest
-            {
-                player_profile_id = RequireProfileId(),
-                wallet_address = wallet != null ? wallet.PublicKey : string.Empty,
-            });
+        private async Task<OwnershipSpineSnapshot> FetchInventoryAsync()
+        {
+            string profileId = RequireProfileId();
+            OwnershipSpineSnapshot snapshot = await PostAsync<OwnershipSpineSnapshot>(
+                "ownership_get_inventory", new InventoryRequest
+                {
+                    player_profile_id = profileId,
+                    wallet_address = wallet != null ? wallet.PublicKey : string.Empty,
+                });
+            if (snapshot != null)
+                PlayerRamBalanceStore.TryApplyAuthoritative(
+                    profileId, snapshot.ramBalance, snapshot.ramBalanceVersion);
+            return snapshot;
+        }
 
         private static StampMoveResult FromReconciliation(ReconcileResponse response)
         {
@@ -316,6 +339,7 @@ namespace Chainbound.Combat
                 signature = response.signature,
                 message = response.message,
                 ramBalance = response.ram_balance,
+                ramBalanceVersion = response.ram_balance_version,
                 verifiedAsset = response.asset,
                 error = response.success || none ? null : "Stamp reconciliation was not accepted by the authority.",
             };
@@ -389,13 +413,13 @@ namespace Chainbound.Combat
             if (solanaConfig == null) solanaConfig = bridge.Config;
         }
 
-        [Serializable] private sealed class KnownRequest { public string player_profile_id; public string idempotency_key; }
+        [Serializable] private sealed class KnownRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; }
         [Serializable] private sealed class InventoryRequest { public string player_profile_id; public string wallet_address; }
         [Serializable] private sealed class ReconcileRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; }
         [Serializable] private sealed class PrepareRequest { public string player_profile_id; public string wallet_address; public string known_instance_id; public int modifier_count; public string idempotency_key; }
         [Serializable] private sealed class ConfirmRequest { public string player_profile_id; public string wallet_address; public string known_instance_id; public string idempotency_key; public string signature; }
-        [Serializable] private sealed class ConfirmationResponse { public bool success; public bool confirmed; public bool pending; public string operation_id; public string operation_status; public string known_instance_id; public string idempotency_key; public string acquisition; public string stamped_asset_address; public string signature; public string message; public long ram_balance; public StampedMoveRecord asset; }
-        [Serializable] private sealed class ReconcileResponse { public bool success; public bool confirmed; public bool pending; public string operation_id; public string operation_status; public string known_instance_id; public string idempotency_key; public string acquisition; public string stamped_asset_address; public string signature; public string message; public long ram_balance; public StampedMoveRecord asset; }
+        [Serializable] private sealed class ConfirmationResponse { public bool success; public bool confirmed; public bool pending; public string operation_id; public string operation_status; public string known_instance_id; public string idempotency_key; public string acquisition; public string stamped_asset_address; public string signature; public string message; public long ram_balance; public long ram_balance_version; public StampedMoveRecord asset; }
+        [Serializable] private sealed class ReconcileResponse { public bool success; public bool confirmed; public bool pending; public string operation_id; public string operation_status; public string known_instance_id; public string idempotency_key; public string acquisition; public string stamped_asset_address; public string signature; public string message; public long ram_balance; public long ram_balance_version; public StampedMoveRecord asset; }
         [Serializable] private sealed class PreparedStampPayload { public string operation_id; public string operation_status; public string idempotency_key; public string known_instance_id; public string acquisition; public string stamped_asset_address; public string transaction_base64; public StampTransactionReview review; }
         [Serializable] private sealed class RamGrantPrepareRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; }
         [Serializable] private sealed class RamGrantConfirmRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; public string signature; }

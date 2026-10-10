@@ -162,6 +162,25 @@ namespace Chainbound.Combat
             return ParseEnvelopeOrThrow(response);
         }
 
+        public async Task<BattleRewardSettlement> GetBattleRewardAsync(
+            string battleId,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireConfigured();
+            HttpResponse response = await SendAsync(
+                "GET",
+                $"/v1/pve/battles/{Uri.EscapeDataString(battleId ?? "")}/reward",
+                null,
+                true,
+                cancellationToken);
+            if (response.statusCode < 200 || response.statusCode >= 300)
+                throw ParseServiceException(response);
+            BattleRewardSettlementDto dto = JsonUtility.FromJson<BattleRewardSettlementDto>(response.body);
+            if (dto == null || string.IsNullOrWhiteSpace(dto.battleId) || string.IsNullOrWhiteSpace(dto.status))
+                throw new InvalidOperationException("Battle authority returned an invalid reward receipt.");
+            return dto.ToCore();
+        }
+
         public async Task<ICaptureSession> OpenCaptureSessionAsync(
             string battleId,
             string attemptId,
@@ -279,6 +298,7 @@ namespace Chainbound.Combat
                 RequiresResumeChoice = dto.requiresResumeChoice,
                 RequiresWipe = dto.requiresWipe,
                 EndReason = dto.endReason,
+                Settlement = dto.settlement != null ? dto.settlement.ToCore() : null,
             };
         }
 
@@ -391,6 +411,7 @@ namespace Chainbound.Combat
             public string battleId; public int version; public string manifestHash; public string stateJson;
             public string errorCode; public string message; public bool isResumable; public long expiresAtUnixMilliseconds;
             public bool requiresResumeChoice; public bool requiresWipe; public string endReason;
+            public BattleRewardSettlementDto settlement;
         }
         [Serializable] private sealed class CaptureLoadoutDto
         {
@@ -620,15 +641,65 @@ namespace Chainbound.Combat
             public int kind; public string attemptId, errorCode, message, grantedChainlingId, grantedEntangledTypeId;
             public bool addedToParty, battleContinues; public int finalMeterBasisPoints, elapsedTicks;
             public string[] unlockedAchievementIds;
+            public BattleRewardSettlementDto settlement;
             public CaptureOutcome ToCore() => new CaptureOutcome
             {
                 Kind = (CaptureOutcomeKind)kind, AttemptId = attemptId, ErrorCode = errorCode, Message = message,
                 GrantedChainlingId = grantedChainlingId, GrantedEntangledTypeId = grantedEntangledTypeId,
                 AddedToParty = addedToParty, BattleContinues = battleContinues,
                 FinalMeterBasisPoints = finalMeterBasisPoints, ElapsedTicks = elapsedTicks,
+                Settlement = settlement != null ? settlement.ToCore() : null,
                 UnlockedAchievementIds = unlockedAchievementIds != null
                     ? new List<string>(unlockedAchievementIds)
                     : new List<string>(),
+            };
+        }
+    }
+
+    [Serializable]
+    internal sealed class BattleRewardSettlementDto
+    {
+        public string status;
+        public string battleId;
+        public string settlementId;
+        public string terminalOutcome;
+        public long requestedRam;
+        public long appliedRam;
+        public string reason;
+        public string rewardTier;
+        public int rewardConfigVersion;
+        public string rewardConfigHash;
+        public long dailyEarned;
+        public long dailyCap;
+        public long balanceAfter;
+        public long balanceBefore;
+        public long receiptSequence;
+        public string settledAt;
+        public bool alreadyApplied;
+
+        public BattleRewardSettlement ToCore()
+        {
+            bool hasLedgerResult = string.Equals(status, BattleRewardStatus.Settled, StringComparison.Ordinal) ||
+                                   string.Equals(status, BattleRewardStatus.Zero, StringComparison.Ordinal);
+            return new BattleRewardSettlement
+            {
+                Status = status ?? BattleRewardStatus.Unavailable,
+                BattleId = battleId ?? "",
+                SettlementId = settlementId ?? "",
+                TerminalOutcome = terminalOutcome ?? "",
+                RequestedRam = requestedRam,
+                AppliedRam = appliedRam,
+                Reason = reason ?? "",
+                RewardTier = rewardTier ?? BattleRewardTier.Standard,
+                RewardConfigVersion = rewardConfigVersion,
+                RewardConfigHash = rewardConfigHash ?? "",
+                DailyEarned = hasLedgerResult ? dailyEarned : (long?)null,
+                DailyCap = hasLedgerResult ? dailyCap : (long?)null,
+                BalanceAfter = hasLedgerResult ? balanceAfter : (long?)null,
+                BalanceBefore = hasLedgerResult ? balanceBefore : (long?)null,
+                ReceiptSequence = receiptSequence,
+                SettledAt = settledAt ?? "",
+                AlreadyApplied = alreadyApplied,
             };
         }
     }

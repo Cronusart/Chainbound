@@ -1,14 +1,17 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import {
+  ensureRamLedgerAccount,
   getActiveWallet,
   JsonMap,
   jsonResponse,
   readJsonBody,
+  requireBoundWallet,
   requirePost,
   resolveAuthenticatedProfile,
   SOLANA_BASE58_RE,
   str,
   supabaseAdmin,
+  WalletBindingError,
 } from "../_shared/account_helpers.ts";
 import { advanceBindOperation, bindOperationResponse } from "../_shared/ownership_bind.ts";
 import {
@@ -47,6 +50,7 @@ serve(async (req: Request) => {
   let config: ReturnType<typeof loadBindConfig> | null = null;
 
   try {
+    await requireBoundWallet(supabase, profile.player_profile_id, requestedWallet);
     const activeWallet = await getActiveWallet(supabase, profile.player_profile_id);
     const walletAddress = activeWallet ? str(activeWallet.wallet_public_key) : "";
     if (!walletAddress || walletAddress !== requestedWallet) {
@@ -57,6 +61,7 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
     }
     await ensureOwnershipRpcCluster(config);
+    await ensureRamLedgerAccount(supabase, profile.player_profile_id, walletAddress, config.cluster);
 
     const { data: existing, error: existingError } = await supabase.from("ownership_bind_operations").select("*")
       .eq("player_profile_id", profile.player_profile_id).eq("idempotency_key", idempotencyKey).maybeSingle();
@@ -160,6 +165,9 @@ serve(async (req: Request) => {
       },
     }));
   } catch (error) {
+    if (error instanceof WalletBindingError) {
+      return jsonResponse({ success: false, error: error.code }, error.httpStatus);
+    }
     if (ledgerReserved && config && operationId) {
       try {
         await cancelRamReservationOnChain({ config, walletAddress: requestedWallet, operationId });

@@ -130,6 +130,7 @@ public sealed class SupabaseAuthorityGateway
 
     public async Task<JsonElement> BeginBattleAsync(BattleSessionRecord session, CancellationToken cancellationToken)
     {
+        bool noReward = string.Equals(session.RewardTier, BattleRewardTier.None, StringComparison.Ordinal);
         return await RpcAsync("authoritative_begin_battle_service", new
         {
             p_battle_id = session.BattleId,
@@ -139,10 +140,46 @@ public sealed class SupabaseAuthorityGateway
             p_seed = (long)session.Seed,
             p_manifest_hash = session.ManifestHash,
             p_config_hash = session.ConfigHash,
+            p_encounter_id = session.EncounterId,
+            p_reward_tier = session.RewardTier,
+            p_reward_config_version = noReward ? 0 : session.RewardConfigVersion,
+            p_reward_config_hash = noReward ? new string('0', 64) : session.RewardConfigHash,
             p_state_json = session.State,
             p_equipment_snapshot = session.LockedLoadout,
             p_expires_at_unix_milliseconds = session.ExpiresAtUnixMilliseconds,
         }, cancellationToken);
+    }
+
+    public async Task<bool> IsNarrativeRewardEligibleAsync(
+        Guid profileId,
+        ManifestEncounter encounter,
+        CancellationToken cancellationToken)
+    {
+        if (encounter.BattleKind == AuthoritativeBattleKind.Wild)
+            return true;
+        if (string.IsNullOrWhiteSpace(encounter.RewardEligibilityQuestId))
+            return false;
+
+        string questId = Uri.EscapeDataString(encounter.RewardEligibilityQuestId.Trim());
+        string questUrl = $"{_options.SupabaseUrl}/rest/v1/profile_quest_states" +
+            $"?player_profile_id=eq.{profileId:D}&quest_id=eq.{questId}" +
+            "&lifecycle=in.(available,active)&select=quest_id&limit=1";
+        using var questRequest = CreateServiceRequest(HttpMethod.Get, questUrl);
+        using HttpResponseMessage questResponse = await _http.SendAsync(questRequest, cancellationToken);
+        await EnsureSuccess(questResponse, "narrative_reward_progress_lookup_failed", cancellationToken);
+        using JsonDocument questJson = JsonDocument.Parse(await questResponse.Content.ReadAsStringAsync(cancellationToken));
+        if (questJson.RootElement.ValueKind != JsonValueKind.Array || questJson.RootElement.GetArrayLength() == 0)
+            return false;
+
+        string encounterId = Uri.EscapeDataString(encounter.EncounterId.Trim());
+        string receiptUrl = $"{_options.SupabaseUrl}/rest/v1/battle_reward_settlements" +
+            $"?player_profile_id=eq.{profileId:D}&encounter_id=eq.{encounterId}" +
+            "&status=eq.settled&applied_amount=gt.0&select=settlement_id&limit=1";
+        using var receiptRequest = CreateServiceRequest(HttpMethod.Get, receiptUrl);
+        using HttpResponseMessage receiptResponse = await _http.SendAsync(receiptRequest, cancellationToken);
+        await EnsureSuccess(receiptResponse, "narrative_reward_history_lookup_failed", cancellationToken);
+        using JsonDocument receiptJson = JsonDocument.Parse(await receiptResponse.Content.ReadAsStringAsync(cancellationToken));
+        return receiptJson.RootElement.ValueKind == JsonValueKind.Array && receiptJson.RootElement.GetArrayLength() == 0;
     }
 
     public async Task<JsonElement> CheckpointBattleAsync(BattleSessionRecord session, int expectedVersion, CancellationToken cancellationToken)
@@ -159,21 +196,72 @@ public sealed class SupabaseAuthorityGateway
         }, cancellationToken);
     }
 
-    public async Task<JsonElement> ExpireBattleAsync(
+    public async Task<JsonElement> SettleBattleAsync(
         BattleSessionRecord session,
         long authorityUnixMilliseconds,
         int ramPenalty,
         int respawnHpBasisPoints,
+        string endReason,
+        bool requireExpired,
+        string terminalOutcome,
+        string terminalReason,
         CancellationToken cancellationToken)
     {
-        return await RpcAsync("authoritative_expire_battle_service", new
+        return await RpcAsync("authoritative_settle_battle_service", new
         {
             p_battle_id = session.BattleId,
             p_profile_id = session.ProfileId,
             p_authority_unix_milliseconds = authorityUnixMilliseconds,
             p_ram_penalty = ramPenalty,
             p_respawn_hp_basis_points = respawnHpBasisPoints,
+            p_end_reason = endReason,
+            p_require_expired = requireExpired,
+            p_terminal_outcome = terminalOutcome,
+            p_terminal_reason = terminalReason,
         }, cancellationToken);
+    }
+
+    public async Task<JsonElement> CommitActionStepAsync(
+        BattleSessionRecord session,
+        TeamCommandApiRequest command,
+        AuthoritativeBattleState nextState,
+        string nextStatus,
+        int nextVersion,
+        long expiresAtUnixMilliseconds,
+        string terminalOutcome,
+        string terminalReason,
+        CancellationToken cancellationToken)
+    {
+        return await RpcAsync("authoritative_commit_action_step_service", new
+        {
+            p_battle_id = session.BattleId,
+            p_profile_id = session.ProfileId,
+            p_command_id = command.CommandId,
+            p_expected_version = command.ExpectedVersion,
+            p_new_state_version = nextVersion,
+            p_new_status = nextStatus,
+            p_new_state_json = nextState,
+            p_request_json = command,
+            p_expires_at_unix_milliseconds = expiresAtUnixMilliseconds,
+            p_terminal_outcome = string.IsNullOrWhiteSpace(terminalOutcome) ? null : terminalOutcome,
+            p_terminal_reason = string.IsNullOrWhiteSpace(terminalReason) ? null : terminalReason,
+        }, cancellationToken);
+    }
+
+    public async Task<BattleRewardSettlement?> GetBattleRewardAsync(
+        Guid battleId,
+        CancellationToken cancellationToken)
+    {
+        JsonElement result = await RpcAsync("battle_reward_get_service", new
+        {
+            p_battle_id = battleId,
+        }, cancellationToken);
+        if (result.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return null;
+        BattleRewardSettlement? settlement = JsonSerializer.Deserialize<BattleRewardSettlement>(result.GetRawText(), JsonDefaults.Options);
+        if (settlement == null || !BattleRewardReceiptValidator.IsValid(settlement, battleId))
+            throw new AuthorityException("stored_reward_receipt_invalid", "The stored reward receipt failed integrity validation.", 503);
+        return settlement;
     }
 
     public async Task<JsonElement> RecordCommandAsync(
@@ -249,6 +337,8 @@ public sealed class SupabaseAuthorityGateway
         object history,
         bool perfectLock,
         string entangledType,
+        string? terminalOutcome,
+        string? terminalReason,
         CancellationToken cancellationToken)
     {
         return await RpcAsync("authoritative_finalize_capture_attempt_service", new
@@ -264,6 +354,8 @@ public sealed class SupabaseAuthorityGateway
             p_new_battle_status = session.Status,
             p_new_state_version = session.StateVersion,
             p_new_state_json = session.State,
+            p_terminal_outcome = terminalOutcome,
+            p_terminal_reason = terminalReason,
         }, cancellationToken);
     }
 
@@ -288,6 +380,91 @@ public sealed class SupabaseAuthorityGateway
             Seed = checked((uint)ReadLong(row, "seed")),
             ManifestHash = ReadString(row, "manifest_hash"),
             ConfigHash = ReadString(row, "config_hash"),
+            EncounterId = ReadString(row, "encounter_id"),
+            RewardTier = ReadString(row, "reward_tier"),
+            RewardConfigVersion = ReadInt(row, "reward_config_version"),
+            RewardConfigHash = ReadString(row, "reward_config_hash"),
+            TerminalOutcome = ReadString(row, "terminal_outcome"),
+            TerminalReason = ReadString(row, "terminal_reason"),
+            TerminalAtUnixMilliseconds = ReadOptionalTimestampMilliseconds(row, "terminal_at"),
+            Status = ReadString(row, "status"),
+            ExpiresAtUnixMilliseconds = DateTimeOffset.Parse(ReadString(row, "expires_at")).ToUnixTimeMilliseconds(),
+            State = state ?? new AuthoritativeBattleState(),
+            LockedLoadout = loadout ?? new AuthorityLoadoutSnapshot(),
+        };
+    }
+
+    public async Task<BattleSessionRecord?> GetCurrentBattleAsync(Guid profileId, CancellationToken cancellationToken)
+    {
+        string url = $"{_options.SupabaseUrl}/rest/v1/authoritative_pve_battles" +
+            $"?player_profile_id=eq.{profileId:D}" +
+            "&status=in.(active,capturing,service_interrupted)" +
+            "&select=*&order=started_at.desc&limit=1";
+        using var request = CreateServiceRequest(HttpMethod.Get, url);
+        using HttpResponseMessage response = await _http.SendAsync(request, cancellationToken);
+        await EnsureSuccess(response, "current_battle_lookup_failed", cancellationToken);
+        using JsonDocument json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        if (json.RootElement.ValueKind != JsonValueKind.Array || json.RootElement.GetArrayLength() == 0)
+            return null;
+        return ParseBattle(json.RootElement[0], profileId);
+    }
+
+    public async Task<List<CombatVitalSnapshot>> GetPartyVitalsAsync(Guid profileId, CancellationToken cancellationToken)
+    {
+        string url = $"{_options.SupabaseUrl}/rest/v1/chainlings" +
+            $"?player_profile_id=eq.{profileId:D}&is_party_member=eq.true" +
+            "&select=id,current_hp,party_slot&order=party_slot.asc";
+        using var request = CreateServiceRequest(HttpMethod.Get, url);
+        using HttpResponseMessage response = await _http.SendAsync(request, cancellationToken);
+        await EnsureSuccess(response, "party_vitals_lookup_failed", cancellationToken);
+        using JsonDocument json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        var result = new List<CombatVitalSnapshot>();
+        if (json.RootElement.ValueKind != JsonValueKind.Array)
+            return result;
+        int fallbackIndex = 0;
+        foreach (JsonElement row in json.RootElement.EnumerateArray())
+        {
+            int rosterIndex = row.TryGetProperty("party_slot", out JsonElement slot) && slot.TryGetInt32(out int parsedSlot)
+                ? parsedSlot
+                : fallbackIndex;
+            int currentHp = row.TryGetProperty("current_hp", out JsonElement hp) && hp.TryGetInt32(out int parsedHp)
+                ? Math.Max(0, parsedHp)
+                : -1;
+            result.Add(new CombatVitalSnapshot
+            {
+                EntityId = ReadString(row, "id"),
+                TeamIndex = 0,
+                RosterIndex = Math.Max(0, rosterIndex),
+                CurrentHp = currentHp,
+                CurrentAp = 0,
+                IsActive = rosterIndex >= 0 && rosterIndex < 2,
+            });
+            fallbackIndex++;
+        }
+        return result;
+    }
+
+    private static BattleSessionRecord ParseBattle(JsonElement row, Guid profileId)
+    {
+        Guid battleId = Guid.Parse(ReadString(row, "battle_id"));
+        AuthoritativeBattleState? state = JsonSerializer.Deserialize<AuthoritativeBattleState>(row.GetProperty("state_json").GetRawText(), JsonDefaults.Options);
+        AuthorityLoadoutSnapshot? loadout = JsonSerializer.Deserialize<AuthorityLoadoutSnapshot>(row.GetProperty("equipment_snapshot").GetRawText(), JsonDefaults.Options);
+        return new BattleSessionRecord
+        {
+            BattleId = battleId,
+            ProfileId = profileId,
+            StartCommandId = ReadString(row, "start_command_id"),
+            StateVersion = ReadInt(row, "state_version"),
+            Seed = checked((uint)ReadLong(row, "seed")),
+            ManifestHash = ReadString(row, "manifest_hash"),
+            ConfigHash = ReadString(row, "config_hash"),
+            EncounterId = ReadString(row, "encounter_id"),
+            RewardTier = ReadString(row, "reward_tier"),
+            RewardConfigVersion = ReadInt(row, "reward_config_version"),
+            RewardConfigHash = ReadString(row, "reward_config_hash"),
+            TerminalOutcome = ReadString(row, "terminal_outcome"),
+            TerminalReason = ReadString(row, "terminal_reason"),
+            TerminalAtUnixMilliseconds = ReadOptionalTimestampMilliseconds(row, "terminal_at"),
             Status = ReadString(row, "status"),
             ExpiresAtUnixMilliseconds = DateTimeOffset.Parse(ReadString(row, "expires_at")).ToUnixTimeMilliseconds(),
             State = state ?? new AuthoritativeBattleState(),
@@ -407,6 +584,19 @@ public sealed class SupabaseAuthorityGateway
     private static long ReadLong(JsonElement parent, string property)
     {
         return parent.TryGetProperty(property, out JsonElement value) && value.TryGetInt64(out long parsed) ? parsed : 0L;
+    }
+
+    private static long? ReadOptionalTimestampMilliseconds(JsonElement parent, string property)
+    {
+        if (!parent.TryGetProperty(property, out JsonElement value) ||
+            value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(value.ToString(), out DateTimeOffset parsed)
+            ? parsed.ToUnixTimeMilliseconds()
+            : null;
     }
 
     private static CaptureVolatilityProfile ParseDifficulty(string value)

@@ -27,6 +27,7 @@ namespace Chainbound.Combat
         void PlaySwapIn(CombatEvent evt, Combat2ChainlingView incomingView);
         void PlayPostBattle(BattleResult result);
         void PlayXpShare(BattleRewardSummary summary);
+        void PlayRamTick();
         void PlayStarUp(BattleRewardSummary summary);
         void PlayRewardApplied(BattleRewardSummary summary);
         void StopBattleMusic(float fadeSeconds = 0f);

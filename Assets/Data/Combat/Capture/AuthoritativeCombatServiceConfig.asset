@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   serviceBaseUrl: http://localhost:8080
   authoritativePveCaptureEnabled: 1
-  gameplayManifestHash: 7798c43083bce8987e3671faf46add45a4dacb4095127fe4ed755007309b6f85
+  gameplayManifestHash: c25fd14b8d2f26edada3a5110ee0f422a6c6f4ef0c13bb3f308b0e92feff0a22
   requestTimeoutSeconds: 12
   allowLocalPracticeInEditor: 1

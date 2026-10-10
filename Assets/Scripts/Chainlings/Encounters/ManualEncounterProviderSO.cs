@@ -15,6 +15,9 @@ namespace Chainbound.Combat
         [Tooltip("Stable narrative encounter ID exported for the battle service. Leave empty only for editor-only providers.")]
         [SerializeField] private string authoritativeEncounterId = "";
 
+        [Tooltip("Profile quest that must currently be available or active for the first RAM reward. Empty fails closed for narrative rewards.")]
+        [SerializeField] private string rewardEligibilityQuestId = "";
+
         [Header("Opponent Roster (1-3 Chainlings)")]
         [Tooltip("Ordered roster: index 0 = Lead, 1 = Partner, 2 = Bench.")]
         [SerializeField] private List<ManualChainlingEntry> roster = new List<ManualChainlingEntry>();
@@ -62,6 +65,7 @@ namespace Chainbound.Combat
         public EncounterFleePolicy FleePolicy => fleePolicy;
         public UnityEngine.Object BossIntroDialogueAsset => bossIntroDialogueAsset;
         public string AuthoritativeEncounterId => authoritativeEncounterId;
+        public string RewardEligibilityQuestId => rewardEligibilityQuestId;
         public bool HideCombatUI => hideCombatUI;
         public BattleIntroPresentationSO IntroPresentation => introPresentation;
         public float OpponentVisualScaleMultiplier => Mathf.Max(0.01f, opponentVisualScaleMultiplier);

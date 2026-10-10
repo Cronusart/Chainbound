@@ -25,6 +25,7 @@ namespace Chainbound.Combat
                 catalogVersion = response.catalog_version,
                 cluster = response.cluster,
                 authoritativeBalance = response.authoritative_balance,
+                authoritativeBalanceVersion = response.authoritative_balance_version,
                 ledgerStatus = response.ledger_status,
                 tenders = response.tenders ?? new List<string>(),
             };
@@ -49,12 +50,20 @@ namespace Chainbound.Combat
                 }
                 catalog.bundles.Add(mapped);
             }
+            if (long.TryParse(catalog.authoritativeBalance, out long catalogBalance))
+                ApplyBalance(catalogBalance, catalog.authoritativeBalanceVersion);
             return catalog;
         }
 
         public Task<RamPurchaseOrder> PrepareAsync(string sku, string tender)
         {
-            return PostOrder("ram_shop_prepare", JsonUtility.ToJson(new PrepareRequest { sku = sku, tender = tender }));
+            string walletAddress = GameSessionContext.Instance != null ? GameSessionContext.Instance.WalletAddress : "";
+            return PostOrder("ram_shop_prepare", JsonUtility.ToJson(new PrepareRequest
+            {
+                sku = sku,
+                tender = tender,
+                wallet_address = walletAddress,
+            }));
         }
 
         public Task<RamPurchaseOrder> ConfirmAsync(string orderId, string signature)
@@ -75,7 +84,7 @@ namespace Chainbound.Combat
         private async Task<RamPurchaseOrder> PostOrder(string functionName, string body)
         {
             OrderEnvelope response = await Post<OrderEnvelope>(functionName, body);
-            return new RamPurchaseOrder
+            var order = new RamPurchaseOrder
             {
                 orderId = response.order_id,
                 state = ParseState(response.state),
@@ -91,6 +100,7 @@ namespace Chainbound.Combat
                 creditSignature = response.credit_signature,
                 creditReceiptAddress = response.credit_receipt_address,
                 balanceAfter = response.balance_after,
+                balanceVersion = response.balance_version,
                 failureCode = response.failure_code,
                 payment = new RamPaymentSummary
                 {
@@ -107,6 +117,17 @@ namespace Chainbound.Combat
                     paymentProgram = response.payment_program,
                 },
             };
+            if (long.TryParse(order.balanceAfter, out long balanceAfter))
+                ApplyBalance(balanceAfter, order.balanceVersion);
+            return order;
+        }
+
+        private static void ApplyBalance(long balance, long balanceVersion)
+        {
+            string profileId = GameSessionContext.Instance != null
+                ? GameSessionContext.Instance.PlayerProfileId
+                : "";
+            PlayerRamBalanceStore.TryApplyAuthoritative(profileId, balance, balanceVersion);
         }
 
         private async Task<T> Post<T>(string functionName, string json) where T : ResponseEnvelope
@@ -140,7 +161,7 @@ namespace Chainbound.Combat
         }
 
         [Serializable] private class ResponseEnvelope { public bool success; public string error; }
-        [Serializable] private sealed class PrepareRequest { public string sku; public string tender; }
+        [Serializable] private sealed class PrepareRequest { public string sku; public string tender; public string wallet_address; }
         [Serializable] private sealed class ConfirmRequest { public string order_id; public string signature; }
         [Serializable] private sealed class StatusRequest { public string order_id; public string signature; public string reference; }
 
@@ -152,6 +173,7 @@ namespace Chainbound.Combat
             public string catalog_version;
             public string cluster;
             public string authoritative_balance;
+            public long authoritative_balance_version;
             public string ledger_status;
             public List<BundleEnvelope> bundles;
             public List<string> tenders;
@@ -202,6 +224,7 @@ namespace Chainbound.Combat
             public string credit_signature;
             public string credit_receipt_address;
             public string balance_after;
+            public long balance_version;
             public string failure_code;
         }
     }

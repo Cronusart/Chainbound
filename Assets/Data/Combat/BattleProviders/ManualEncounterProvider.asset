@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: ManualEncounterProvider
   m_EditorClassIdentifier: 
   authoritativeEncounterId: intro_first_creature
+  rewardEligibilityQuestId: chainbound_intro
   roster:
   - speciesId: balloom
     displayName: Balloom

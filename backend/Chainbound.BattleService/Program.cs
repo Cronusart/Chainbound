@@ -12,6 +12,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 builder.Services.AddSingleton<ServiceOptions>();
 builder.Services.AddHttpClient<SupabaseAuthorityGateway>();
+builder.Services.AddHttpClient<BattleRewardClient>();
 builder.Services.AddHttpClient<SolanaTimeAuthority>();
 builder.Services.AddSingleton<SolanaTimeAuthority>(sp =>
 {
@@ -23,7 +24,9 @@ builder.Services.AddSingleton<SolanaTimeAuthority>(sp =>
 });
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SolanaTimeAuthority>());
 builder.Services.AddSingleton<ManifestCatalog>();
+builder.Services.AddSingleton<BattlePlausibilityValidator>();
 builder.Services.AddSingleton<BattleSessionManager>();
+builder.Services.AddSingleton<RequestRateLimiter>();
 
 WebApplication app = builder.Build();
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
@@ -59,17 +62,34 @@ app.Use(async (context, next) =>
     }
 });
 
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/v1"))
+    {
+        RequestRateLimiter limiter = context.RequestServices.GetRequiredService<RequestRateLimiter>();
+        string ip = ClientAddressResolver.Resolve(context);
+        if (!limiter.TryAcquireIp(ip, out int retryAfter))
+        {
+            context.Response.Headers.RetryAfter = retryAfter.ToString();
+            throw new AuthorityException("rate_limited", "Too many requests.", 429);
+        }
+    }
+    await next(context);
+});
+
 app.MapGet("/health/live", () => Results.Ok(new { ok = true }));
-app.MapGet("/health/ready", (BattleSessionManager manager, ManifestCatalog catalog, SolanaTimeAuthority time) =>
+app.MapGet("/health/ready", (BattleSessionManager manager, ManifestCatalog catalog, SolanaTimeAuthority time, BattleRewardClient rewards, ServiceOptions options) =>
 {
     bool clockFresh = time.TryGetUnixMilliseconds(out long now);
     return manager.IsReady
-        ? Results.Ok(new { ok = true, manifestHash = catalog.ManifestHash, configHash = catalog.ConfigHash, authorityUnixMilliseconds = now, finalizedSlot = time.LastFinalizedSlot })
+        ? Results.Ok(new { ok = true, manifestHash = catalog.ManifestHash, configHash = catalog.ConfigHash, rewardConfigHash = catalog.RewardConfigHash, rewardMode = options.BattleRewardMode, rewardReady = rewards.IsReady, authorityUnixMilliseconds = now, finalizedSlot = time.LastFinalizedSlot })
         : Results.Json(new
         {
             ok = false,
             code = "signal_sync_unavailable",
             manifestReady = catalog.IsReady,
+            rewardReady = rewards.IsReady,
+            rewardMode = options.BattleRewardMode,
             clockFresh,
             authorityUnixMilliseconds = now,
             finalizedSlot = time.LastFinalizedSlot,
@@ -97,6 +117,39 @@ app.MapGet("/v1/pve/battles/{id:guid}", async (
 {
     AuthenticatedProfile owner = await Authenticate(context, gateway, cancellationToken);
     return Results.Ok(await manager.ResumeAsync(owner, id, cancellationToken));
+});
+
+app.MapGet("/v1/pve/battles/{id:guid}/reward", async (
+    HttpContext context,
+    Guid id,
+    SupabaseAuthorityGateway gateway,
+    BattleSessionManager manager,
+    CancellationToken cancellationToken) =>
+{
+    AuthenticatedProfile owner = await Authenticate(context, gateway, cancellationToken);
+    return Results.Ok(await manager.GetRewardAsync(owner, id, cancellationToken));
+});
+
+app.MapGet("/v1/pve/battles/current", async (
+    HttpContext context,
+    SupabaseAuthorityGateway gateway,
+    BattleSessionManager manager,
+    CancellationToken cancellationToken) =>
+{
+    AuthenticatedProfile owner = await Authenticate(context, gateway, cancellationToken);
+    CombatSessionEnvelope? current = await manager.GetCurrentAsync(owner, cancellationToken);
+    return current == null ? Results.NoContent() : Results.Ok(current);
+});
+
+app.MapPost("/v1/pve/battles/{id:guid}/forfeit", async (
+    HttpContext context,
+    Guid id,
+    SupabaseAuthorityGateway gateway,
+    BattleSessionManager manager,
+    CancellationToken cancellationToken) =>
+{
+    AuthenticatedProfile owner = await Authenticate(context, gateway, cancellationToken);
+    return Results.Ok(await manager.ForfeitAsync(owner, id, cancellationToken));
 });
 
 app.MapPost("/v1/pve/battles/{id:guid}/commands", async (
@@ -196,7 +249,29 @@ app.Run();
 
 static async Task<AuthenticatedProfile> Authenticate(HttpContext context, SupabaseAuthorityGateway gateway, CancellationToken cancellationToken)
 {
-    return await gateway.AuthenticateAsync(context.Request.Headers.Authorization.ToString(), cancellationToken);
+    RequestRateLimiter limiter = context.RequestServices.GetRequiredService<RequestRateLimiter>();
+    string ip = ClientAddressResolver.Resolve(context);
+    if (limiter.IsAuthFailureBlocked(ip, out int authRetryAfter))
+    {
+        context.Response.Headers.RetryAfter = authRetryAfter.ToString();
+        throw new AuthorityException("auth_rate_limited", "Too many failed authentication attempts.", 429);
+    }
+    AuthenticatedProfile owner;
+    try
+    {
+        owner = await gateway.AuthenticateAsync(context.Request.Headers.Authorization.ToString(), cancellationToken);
+    }
+    catch (AuthorityException exception) when (exception.StatusCode is 401 or 403)
+    {
+        limiter.RegisterAuthFailure(ip);
+        throw;
+    }
+    if (!limiter.TryAcquireProfile(owner.ProfileId, out int profileRetryAfter))
+    {
+        context.Response.Headers.RetryAfter = profileRetryAfter.ToString();
+        throw new AuthorityException("profile_rate_limited", "Too many battle requests.", 429);
+    }
+    return owner;
 }
 
 static CaptureLoadoutSnapshot ToClientLoadout(AuthorityLoadoutSnapshot source, long now)
