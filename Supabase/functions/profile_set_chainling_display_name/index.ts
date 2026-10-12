@@ -8,8 +8,7 @@ import {
   str,
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
-
-const NAME_RE = /^[\p{L}][\p{L} '-]*$/u;
+import { isDisplayNameCharsetValid } from "../_shared/display_name_charset.ts";
 
 serve(async (req: Request) => {
   const early = requirePost(req);
@@ -19,11 +18,11 @@ serve(async (req: Request) => {
   if (!body) return jsonResponse({ success: false, error: "invalid_json" }, 400);
 
   const chainlingId = str(body.chainling_id);
-  const displayName = str(body.display_name);
+  const displayName = str(body.display_name).trim();
   if (!chainlingId) {
     return jsonResponse({ success: false, error: "chainling_id_required" }, 400);
   }
-  if (displayName.length < 1 || displayName.length > 16 || !NAME_RE.test(displayName) || displayName.includes("  ")) {
+  if (displayName.length > 16 || !isDisplayNameCharsetValid(displayName)) {
     return jsonResponse({ success: false, error: "invalid_display_name" }, 400);
   }
 

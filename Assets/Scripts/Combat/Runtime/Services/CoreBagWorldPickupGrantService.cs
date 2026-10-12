@@ -22,12 +22,22 @@ namespace Chainbound.Combat
         {
             CoreBagWorldPickupGrantService existing = FindFirstObjectByType<CoreBagWorldPickupGrantService>(FindObjectsInactive.Include);
             if (existing != null)
+            {
+                existing.EnsureInventoryReader();
                 return existing;
+            }
 
             Transform host = ResolveHost();
             CoreBagWorldPickupGrantService created = host.gameObject.AddComponent<CoreBagWorldPickupGrantService>();
             created.EnsureConfig();
+            created.EnsureInventoryReader();
             return created;
+        }
+
+        private void Awake()
+        {
+            EnsureConfig();
+            EnsureInventoryReader();
         }
 
         public async Task<WorldPickupGrantResult> GrantWorldPickupAsync(string spawnId)
@@ -82,6 +92,7 @@ namespace Chainbound.Combat
                 }
 
                 InvalidateInventoryCache();
+                PlayerProfileReadStore.ResolveOrCreate().MarkInventoryStale(profileId, wallet);
 
                 if (enableDebugLogs)
                 {
@@ -107,6 +118,14 @@ namespace Chainbound.Combat
         {
             if (supabaseConfig == null)
                 supabaseConfig = Resources.Load<SupabaseConfigSO>("SupabaseConfig");
+        }
+
+        private void EnsureInventoryReader()
+        {
+            CoreBagItemInventoryService reader = GetComponent<CoreBagItemInventoryService>();
+            if (reader == null)
+                reader = gameObject.AddComponent<CoreBagItemInventoryService>();
+            reader.Configure(supabaseConfig);
         }
 
         private static void InvalidateInventoryCache()

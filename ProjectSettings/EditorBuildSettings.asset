@@ -38,6 +38,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Academy_Interior.unity
     guid: 3abdcc9577d53544d9423ee91a850f96
+  - enabled: 1
+    path: Assets/Scenes/SocialLobby.unity
+    guid: f8a3bf2dbdd26e243a6be6a53f190325
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: e315850a770634346b2154cbce6e65f7, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -75,7 +75,21 @@ namespace Chainbound.Combat
             string functionName,
             string jsonBody)
         {
-            return await PostJsonAsync(config, functionName, jsonBody, SupabaseAuthSessionContext.AccessToken);
+            return await PostJsonAsync(config, functionName, jsonBody, SupabaseAuthSessionContext.AccessToken, 0);
+        }
+
+        public static async Task<Response> PostJsonAsync(
+            SupabaseConfigSO config,
+            string functionName,
+            string jsonBody,
+            int timeoutSeconds)
+        {
+            return await PostJsonAsync(
+                config,
+                functionName,
+                jsonBody,
+                SupabaseAuthSessionContext.AccessToken,
+                timeoutSeconds);
         }
 
         /// <summary>
@@ -88,6 +102,16 @@ namespace Chainbound.Combat
             string functionName,
             string jsonBody,
             string accessToken)
+        {
+            return await PostJsonAsync(config, functionName, jsonBody, accessToken, 0);
+        }
+
+        public static async Task<Response> PostJsonAsync(
+            SupabaseConfigSO config,
+            string functionName,
+            string jsonBody,
+            string accessToken,
+            int timeoutSeconds)
         {
             config = PlatformContext.ResolveSupabaseConfig(config);
             if (config == null)
@@ -143,7 +167,7 @@ namespace Chainbound.Combat
                 request.SetRequestHeader("Authorization", $"Bearer {bearer}");
                 request.SetRequestHeader("apikey", config.supabaseAnonKey);
 
-                request.timeout = config.requestTimeoutSeconds;
+                request.timeout = timeoutSeconds > 0 ? timeoutSeconds : config.requestTimeoutSeconds;
 
                 var op = request.SendWebRequest();
 

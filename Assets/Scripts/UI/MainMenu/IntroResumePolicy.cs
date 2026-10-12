@@ -9,6 +9,10 @@ using System;
 public static class IntroResumePolicy
 {
     public const string IntroSequenceId = "chainbound_intro_sequence";
+    public const string IntroQuestId = "chainbound_intro";
+    public const string EscapeCreatureObjectiveId = "escape_creature";
+    public const string AfterFirstCreatureCheckpointId = "intro_after_first_creature";
+    public const string LeavingRoomCheckpointId = "intro_leaving_room";
 
     public static bool HasCommittedDisplayName(string displayName)
     {
@@ -125,6 +129,30 @@ public static class IntroResumePolicy
     /// The authored resume scene wins over a scene id already stored on the
     /// checkpoint row, so a content fix applies to saves written earlier.
     /// </summary>
+    /// <summary>
+    /// A post-fight checkpoint written before <c>escape_creature</c> was recorded
+    /// did not finish the battle. Resume at the house-exit checkpoint instead.
+    /// </summary>
+    public static bool ShouldRewindUnconfirmedIntroBattle(
+        string sequenceId,
+        string checkpointId,
+        bool escapeObjectiveComplete)
+    {
+        return string.Equals(sequenceId, IntroSequenceId, StringComparison.Ordinal)
+            && string.Equals(checkpointId, AfterFirstCreatureCheckpointId, StringComparison.Ordinal)
+            && !escapeObjectiveComplete;
+    }
+
+    public static string EffectiveIntroCheckpointId(
+        string sequenceId,
+        string checkpointId,
+        bool escapeObjectiveComplete)
+    {
+        if (ShouldRewindUnconfirmedIntroBattle(sequenceId, checkpointId, escapeObjectiveComplete))
+            return LeavingRoomCheckpointId;
+        return checkpointId ?? "";
+    }
+
     public static void PreferAuthoredResumePlacement(
         string savedSceneId,
         string savedSpawnId,

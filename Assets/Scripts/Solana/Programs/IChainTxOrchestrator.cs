@@ -9,6 +9,7 @@ namespace Chainbound.Combat
         Task<TxResult> SubmitAsync(ChainTxRequest request);
         Task<TxResult> ResumeAsync(ChainTxScope scope);
         PendingTxRecord Query(ChainTxScope scope);
+        bool ForgetIfUnsubmitted(ChainTxScope scope);
 
         // Compatibility surface for callers being migrated to scoped requests.
         Task<TxResult> SubmitAsync(string idempotencyKey, byte[] transactionBytes);

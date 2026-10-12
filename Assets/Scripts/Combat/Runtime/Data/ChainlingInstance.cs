@@ -15,6 +15,9 @@ namespace Chainbound.Combat
         /// <summary>Unique instance ID for this battle.</summary>
         public string instanceId;
 
+        /// <summary>Stable backend roster/target ID used by resumable authority snapshots.</summary>
+        public string backendChainlingId;
+
         /// <summary>Reference to species definition ID.</summary>
         public string speciesId;
 

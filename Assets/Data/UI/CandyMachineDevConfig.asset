@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fed8f279c96f68f479467457e0162298, type: 3}
   m_Name: CandyMachineDevConfig
   m_EditorClassIdentifier: 
+  showDevGrantStrip: 0
   defaultRamGrant: 500
   seed: 1776
   defaultGrantMoveId: 

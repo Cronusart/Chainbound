@@ -23,4 +23,4 @@ MonoBehaviour:
   checkpointLabel: after_first_creature
   saveToState: 1
   resumeSceneId: Loomville
-  resumeSpawnId: encounter_return
+  resumeSpawnId: loomville_from_combat

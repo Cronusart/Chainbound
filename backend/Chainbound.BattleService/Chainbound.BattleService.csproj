@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>Chainbound.BattleService</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\Assets\Scripts\Combat\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Content Update="manifests\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

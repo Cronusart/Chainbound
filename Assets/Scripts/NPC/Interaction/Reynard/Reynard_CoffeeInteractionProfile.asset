@@ -15,6 +15,32 @@ MonoBehaviour:
   questDefinition: {fileID: 11400000, guid: e4f5a6b7c8d9012a3b4c5d6e7f8091a2, type: 2}
   questId: coffee_and_beer
   rules:
+  - label: "holding Toby's order \u2014 hurry"
+    lifecycleScope: 1
+    lifecycleMask: 8
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.coffee.holding_tobys_delivery
+      comparison: 2
+    - key: world.coffee.toby_delivery_accepted
+      comparison: 3
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: ed893ed108d2ad6439af5e7b5cb95cad, type: 2}
+    useDialogueCamera: 1
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
   - label: order already brewed
     lifecycleScope: 1
     lifecycleMask: 8
@@ -126,7 +152,7 @@ MonoBehaviour:
     mode: 1
     behaviorOverride: {fileID: 0}
   designerNotes: Check-in fires the Nitro Brew sequence, then sends the player after
-    Zeb. Later rules ask for the beer, brew the order, or remind Toby's parcel is
-    packed.
+    Zeb. Later rules ask for the beer, brew the order, hurry a packed parcel to Toby,
+    or remind that the parcel is already packed.
   activateQuestOnInactiveInteract: 1
   completeObjectiveOnActivate: talk_to_reynard

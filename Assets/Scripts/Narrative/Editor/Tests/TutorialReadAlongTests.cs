@@ -247,9 +247,10 @@ public sealed class TutorialReadAlongTests
         Assert.That(interact.Snippet.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.InteractA));
         Assert.That(sprint.Snippet.Body, Does.Contain("Double-tap").IgnoreCase);
         Assert.That(sprint.Snippet.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.SprintX));
+        Assert.That(sprint.Snippet.KeepsHudVisible, Is.True);
         Assert.That(jump.Snippet.Body, Does.Contain("jump").IgnoreCase);
-        Assert.That(jump.Snippet.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.None));
-        Assert.That(jump.Snippet.KeepsHudVisible, Is.False);
+        Assert.That(jump.Snippet.Emphasis, Is.EqualTo(MobileHudEmphasisTarget.JumpB));
+        Assert.That(jump.Snippet.KeepsHudVisible, Is.True);
 
         Assert.That(IndexOf(sequence, restore) + 1, Is.EqualTo(IndexOf(sequence, move)));
         Assert.That(IndexOf(sequence, move) + 1, Is.EqualTo(IndexOf(sequence, interact)));
@@ -298,7 +299,13 @@ public sealed class TutorialReadAlongTests
         Assert.That(prefab, Is.Not.Null);
         Assert.That(prefab.GetComponentInChildren<MobileHudControlEmphasis>(true), Is.Not.Null);
         Assert.That(prefab.GetComponentInChildren<AutoSprintIndicator>(true), Is.Not.Null);
-        Assert.That(CountNamed(prefab.transform, "ControlEmphasisFrame"), Is.EqualTo(4));
+        Assert.That(CountNamed(prefab.transform, "ControlEmphasisFrame"), Is.EqualTo(5));
+        MobileHudControlEmphasis emphasis = prefab.GetComponentInChildren<MobileHudControlEmphasis>(true);
+        SerializedObject emphasisSerialized = new SerializedObject(emphasis);
+        Assert.That(emphasisSerialized.FindProperty("sprintButton").objectReferenceValue, Is.Not.Null);
+        Assert.That(emphasisSerialized.FindProperty("sprintOutline").objectReferenceValue, Is.Not.Null);
+        Assert.That(emphasisSerialized.FindProperty("jumpButton").objectReferenceValue, Is.Not.Null);
+        Assert.That(emphasisSerialized.FindProperty("jumpOutline").objectReferenceValue, Is.Not.Null);
         TutorialReadAlongSnippetSO menu = AssetDatabase.LoadAssetAtPath<TutorialReadAlongSnippetSO>(
             TutorialReadAlongAuthoring.MenuSnippetPath);
         Assert.That(menu, Is.Not.Null);
@@ -341,6 +348,36 @@ public sealed class TutorialReadAlongTests
         Assert.That(
             services.GetComponentInChildren<TutorialReadAlongPresenter>(true),
             Is.Not.Null);
+    }
+
+    [Test]
+    public void Prefab_ShowKeepsAuthoredLayoutAndDimmer()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/Prefabs/UI/TutorialReadAlongPanel.prefab");
+        GameObject instance = Object.Instantiate(prefab);
+        cleanup.Add(instance);
+
+        Assert.That(FindChild(instance.transform, "ScanlineOverlay"), Is.Null);
+        Assert.That(FindChild(instance.transform, "CardFrame"), Is.Null);
+        Transform safeArea = FindChild(instance.transform, "SafeArea");
+        Assert.That(safeArea, Is.Not.Null);
+        Assert.That(safeArea.GetComponent<SafeAreaAdapter>(), Is.Null);
+
+        TutorialReadAlongSnippetSO snippet = ScriptableObject.CreateInstance<TutorialReadAlongSnippetSO>();
+        cleanup.Add(snippet);
+        NarrativeTestUtility.SetPrivateField(snippet, "snippetId", "tutorial.move");
+        NarrativeTestUtility.SetPrivateField(snippet, "body", "Use the D-pad or joystick to move around.");
+
+        TutorialReadAlongPresenter presenter = instance.GetComponent<TutorialReadAlongPresenter>();
+        Assert.That(presenter.Show(snippet), Is.True);
+        Assert.That(FindChild(instance.transform, "ScanlineOverlay"), Is.Null);
+        Assert.That(FindChild(instance.transform, "CardFrame"), Is.Null);
+        Assert.That(safeArea.GetComponent<SafeAreaAdapter>(), Is.Null);
+
+        CanvasGroup dimmer = FindChild(instance.transform, "Dismiss").GetComponent<CanvasGroup>();
+        Assert.That(dimmer.alpha, Is.EqualTo(1f).Within(0.001f));
+        Assert.That(instance.GetComponent<CanvasGroup>().alpha, Is.EqualTo(1f).Within(0.001f));
     }
 
     private static int IndexOf(SequenceAsset sequence, SequenceStep step)

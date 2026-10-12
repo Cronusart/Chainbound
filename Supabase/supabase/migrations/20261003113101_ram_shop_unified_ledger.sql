@@ -20,6 +20,7 @@ END $$;
 CREATE TABLE public.ram_shop_settings (
     singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),
     checkout_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    checkout_cluster TEXT NULL CHECK (checkout_cluster IN ('devnet', 'mainnet-beta')),
     quote_ttl_seconds INTEGER NULL CHECK (quote_ttl_seconds IS NULL OR quote_ttl_seconds > 0),
     maintenance_reason TEXT NOT NULL DEFAULT 'RAM bundles are not available yet.',
     settlement_commitment TEXT NOT NULL DEFAULT 'finalized'

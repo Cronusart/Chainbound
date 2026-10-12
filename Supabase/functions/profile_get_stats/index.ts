@@ -14,6 +14,7 @@ interface ProfileStatsRow {
   display_name?: string | null;
   progression_state?: Record<string, unknown> | null;
   ram_balance?: number | null;
+  ram_balance_version?: number | null;
 }
 
 interface LifetimeStatsRow {
@@ -62,7 +63,7 @@ serve(async (req: Request) => {
 
     const { data: profileRow, error: profileError } = await supabase
       .from("player_profiles")
-      .select("display_name, progression_state, ram_balance")
+      .select("display_name, progression_state, ram_balance, ram_balance_version")
       .eq("player_profile_id", profile.player_profile_id)
       .maybeSingle();
 
@@ -97,6 +98,7 @@ serve(async (req: Request) => {
       display_name: profileStats.display_name ?? profile.display_name ?? "",
       wallet_address: str(wallet?.wallet_public_key),
       ram_balance: ramBalance,
+      ram_balance_version: Number(profileStats.ram_balance_version ?? 0),
       progression_state: profileStats.progression_state ?? {},
       stats: {
         battles_won: stats.battles_won ?? 0,

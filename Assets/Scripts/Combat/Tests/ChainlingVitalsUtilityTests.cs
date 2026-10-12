@@ -36,6 +36,32 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void ResolveAuthoritativeCheckpointCurrentHp_Unsynced_ReturnsEffectiveMaxHp()
+        {
+            int resolved = ChainlingVitalsUtility.ResolveAuthoritativeCheckpointCurrentHp(
+                ChainlingVitalsConstants.UnsyncedCurrentHp,
+                156);
+
+            Assert.AreEqual(156, resolved);
+        }
+
+        [Test]
+        public void ResolveAuthoritativeCheckpointCurrentHp_Zero_RemainsFainted()
+        {
+            int resolved = ChainlingVitalsUtility.ResolveAuthoritativeCheckpointCurrentHp(0, 156);
+
+            Assert.AreEqual(0, resolved);
+        }
+
+        [Test]
+        public void ResolveAuthoritativeCheckpointCurrentHp_AboveMax_ClampsToEffectiveMaxHp()
+        {
+            int resolved = ChainlingVitalsUtility.ResolveAuthoritativeCheckpointCurrentHp(200, 156);
+
+            Assert.AreEqual(156, resolved);
+        }
+
+        [Test]
         public void BuildDisplay_PartialHp_ComputesFillRatio()
         {
             ChainlingSnapshot snapshot = CreateSnapshot(50);

@@ -716,15 +716,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 8
-    m_Right: 8
+    m_Left: 64
+    m_Right: 64
     m_Top: 6
     m_Bottom: 6
   m_ChildAlignment: 4
   m_Spacing: 16
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
-  m_ChildControlWidth: 1
+  m_ChildControlWidth: 0
   m_ChildControlHeight: 1
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
@@ -913,6 +913,7 @@ GameObject:
   - component: {fileID: 8410424170754900414}
   - component: {fileID: 975241949948724734}
   - component: {fileID: 2782329855383277151}
+  - component: {fileID: 5855698323007268797}
   m_Layer: 0
   m_Name: ChoiceButton
   m_TagString: Untagged
@@ -936,10 +937,10 @@ RectTransform:
   - {fileID: 3504406643397294795}
   m_Father: {fileID: 963080369877273945}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 575, y: -43}
+  m_SizeDelta: {x: 400, y: 74}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3159964579491143737
 CanvasRenderer:
@@ -1076,6 +1077,21 @@ MonoBehaviour:
   - {fileID: 1738219417, guid: 3176756e9a5395a49890f528289dd8b7, type: 3}
   shimmerFps: 12
   shimmerPauseDuration: 0.6
+--- !u!114 &5855698323007268797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6170069104367841834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cfabb0440166ab443bba8876756fdfa9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_EffectColor: {r: 0, g: 0, b: 0, a: 0.5}
+  m_EffectDistance: {x: 8, y: -8}
+  m_UseGraphicAlpha: 1
 --- !u!1 &6763806507614605150
 GameObject:
   m_ObjectHideFlags: 0

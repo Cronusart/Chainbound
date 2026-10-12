@@ -19,6 +19,11 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
     public const string InputLockReason = "TutorialReadAlong";
     public const float DefaultDismissDelayAfterRevealSeconds = 1.5f;
 
+    /// <summary>
+    /// Shortens the pause after the reveal without rewriting authored prefab values.
+    /// </summary>
+    private const float RevealReadDelayTrimSeconds = 0.5f;
+
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private Image iconImage;
     [SerializeField] private TMP_Text titleText;
@@ -38,6 +43,7 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
     private InputSystemAnyButtonGate anyButtonGate;
     private bool dismissArmed;
     private int showGeneration;
+    private Coroutine dimmerReleaseRoutine;
 
     public static TutorialReadAlongPresenter Instance
     {
@@ -75,13 +81,19 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
         EnsureRuntimeUi();
         BindCopy(snippet);
 
+        if (dimmerReleaseRoutine != null)
+        {
+            StopCoroutine(dimmerReleaseRoutine);
+            dimmerReleaseRoutine = null;
+        }
+
         IsShowing = true;
         showGeneration++;
         dismissArmed = false;
         gameObject.SetActive(true);
 
         if (panelReveal != null)
-            panelReveal.Reveal();
+            panelReveal.Reveal(keepDimmer: true);
         else if (canvasGroup != null)
         {
             canvasGroup.alpha = 1f;
@@ -102,7 +114,22 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
         if (!IsShowing)
             return;
 
-        HideImmediate();
+        IsShowing = false;
+        dismissArmed = false;
+        UnsubscribeDismiss();
+        MobileHudControlEmphasis.Instance?.Cancel();
+        ReleaseGameplayFreeze();
+
+        if (Application.isPlaying && isActiveAndEnabled && panelReveal != null)
+        {
+            panelReveal.HidePanelKeepDimmer();
+            if (dimmerReleaseRoutine != null)
+                StopCoroutine(dimmerReleaseRoutine);
+            dimmerReleaseRoutine = StartCoroutine(ReleaseDimmerIfIdle());
+            return;
+        }
+
+        HideVisual();
     }
 
     public IEnumerator WaitUntilDismissed()
@@ -113,12 +140,33 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
 
     private void HideImmediate()
     {
+        if (dimmerReleaseRoutine != null)
+        {
+            StopCoroutine(dimmerReleaseRoutine);
+            dimmerReleaseRoutine = null;
+        }
+
         IsShowing = false;
         dismissArmed = false;
         UnsubscribeDismiss();
         MobileHudControlEmphasis.Instance?.Cancel();
         ReleaseGameplayFreeze();
+        HideVisual();
+    }
 
+    private IEnumerator ReleaseDimmerIfIdle()
+    {
+        int generation = showGeneration;
+        yield return null;
+        dimmerReleaseRoutine = null;
+        if (generation != showGeneration || IsShowing)
+            yield break;
+
+        HideVisual();
+    }
+
+    private void HideVisual()
+    {
         if (panelReveal != null)
             panelReveal.HideImmediate();
         else if (canvasGroup != null)
@@ -164,7 +212,8 @@ public sealed class TutorialReadAlongPresenter : MonoBehaviour
             yield break;
 
         float elapsed = 0f;
-        while (elapsed < dismissDelayAfterRevealSeconds)
+        float readDelay = Mathf.Max(0f, dismissDelayAfterRevealSeconds - RevealReadDelayTrimSeconds);
+        while (elapsed < readDelay)
         {
             if (generation != showGeneration || !IsShowing)
                 yield break;

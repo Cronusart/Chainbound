@@ -17,7 +17,7 @@ MonoBehaviour:
   area: {fileID: 11400000, guid: 4b1504587fcce5b4c98f9744942b5dce, type: 2}
   encounterChance: -1
   cadence: 1
-  cadenceIntervalSeconds: 3
+  cadenceIntervalSeconds: 2
   inheritDifficulty: 1
   difficulty: 0
   bossIntroDialogueAsset: {fileID: 0}

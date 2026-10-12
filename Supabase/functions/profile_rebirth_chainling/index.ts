@@ -4,6 +4,7 @@ import {
   JsonMap,
   jsonResponse,
   readJsonBody,
+  readRamBalanceSnapshot,
   requirePost,
   resolveAuthenticatedProfile,
   str,
@@ -194,11 +195,13 @@ serve(async (req: Request) => {
     }
 
     const payload = (data ?? {}) as Record<string, unknown>;
+    const ramSnapshot = await readRamBalanceSnapshot(supabase, profile.player_profile_id);
     return jsonResponse({
       success: true,
       operation_id: operationId,
       player_profile_id: profile.player_profile_id,
-      ram_balance: Number(payload.ram_balance ?? 0),
+      ram_balance: ramSnapshot.balance,
+      ram_balance_version: ramSnapshot.version,
       chainling: payload.chainling ?? {},
     });
   } catch (error) {

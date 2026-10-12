@@ -5,6 +5,7 @@ import {
   JsonMap,
   jsonResponse,
   readJsonBody,
+  readRamBalanceSnapshot,
   requirePost,
   resolveAuthenticatedProfile,
   SOLANA_BASE58_RE,
@@ -63,6 +64,7 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "smoke_grant_operation_not_found" }, 404);
     }
     if (str(operation.status) === "confirmed") {
+      const ramSnapshot = await readRamBalanceSnapshot(supabase, profile.player_profile_id);
       return jsonResponse({
         success: true,
         confirmed: true,
@@ -70,7 +72,8 @@ serve(async (req: Request) => {
         signature: str(operation.signature),
         receipt_address: str(operation.receipt_address),
         amount: Number(operation.amount),
-        balance_after: Number(operation.balance_after),
+        balance_after: ramSnapshot.balance,
+        ram_balance_version: ramSnapshot.version,
       });
     }
 
@@ -107,6 +110,7 @@ serve(async (req: Request) => {
       throw settlementError;
     }
     const settled = (settlement ?? {}) as JsonMap;
+    const ramSnapshot = await readRamBalanceSnapshot(supabase, profile.player_profile_id);
 
     return jsonResponse({
       success: true,
@@ -115,7 +119,8 @@ serve(async (req: Request) => {
       signature,
       receipt_address: verified.receiptAddress,
       amount: verified.amount,
-      balance_after: Number(settled.ram_balance),
+      balance_after: ramSnapshot.balance,
+      ram_balance_version: ramSnapshot.version,
       daily_ram_earned: verified.dailyRamEarned,
     });
   } catch (error) {

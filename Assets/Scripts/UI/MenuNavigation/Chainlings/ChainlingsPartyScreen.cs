@@ -322,6 +322,8 @@ namespace SignalJam.UI.MenuNavigation
             }
             base.Show();
 
+            TryAdoptStoredRoster();
+
             if (HasUnprocessedRosterRefresh())
             {
                 rosterRefreshRequested = false;
@@ -353,8 +355,13 @@ namespace SignalJam.UI.MenuNavigation
         public override void Refresh()
         {
             EnsureBuilt();
+            TryAdoptStoredRoster();
             if (isLoading)
+            {
+                if (rosterCache != null && IsVisible)
+                    RenderParty();
                 return;
+            }
 
             bool skipHpDelta = suppressHpDeltaOnNextRefresh;
             if (skipHpDelta)
@@ -581,11 +588,8 @@ namespace SignalJam.UI.MenuNavigation
             if (rosterFetchTask != null && !rosterFetchTask.IsCompleted)
             {
                 await rosterFetchTask;
-                if (!bindWhenComplete)
-                {
-                    TryBindFetchedRoster(false);
-                    return;
-                }
+                TryBindFetchedRoster(bindWhenComplete);
+                return;
             }
 
             rosterFetchTask = FetchRosterCore(provider, bindWhenComplete);
@@ -603,7 +607,8 @@ namespace SignalJam.UI.MenuNavigation
             try
             {
                 var session = GameSessionContext.Instance;
-                rosterCache = await provider.FetchRosterAsync(
+                rosterCache = await PlayerProfileReadStore.ResolveOrCreate().RefreshRosterAsync(
+                    provider,
                     session != null ? session.PlayerProfileId : "",
                     session != null ? session.WalletAddress : "");
             }
@@ -633,6 +638,28 @@ namespace SignalJam.UI.MenuNavigation
             {
                 pendingTabEnterPresentation = false;
                 RenderUnboundPlaceholder();
+            }
+        }
+
+        private void TryAdoptStoredRoster()
+        {
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session == null)
+                return;
+
+            if (rosterCache != null &&
+                !string.IsNullOrWhiteSpace(rosterCache.playerProfileId) &&
+                !string.Equals(rosterCache.playerProfileId, session.PlayerProfileId, StringComparison.Ordinal))
+            {
+                rosterCache = null;
+            }
+
+            if (PlayerProfileReadStore.ResolveOrCreate().TryGetRoster(
+                    session.PlayerProfileId,
+                    session.WalletAddress,
+                    out PlayerRosterSnapshot stored))
+            {
+                rosterCache = stored;
             }
         }
 

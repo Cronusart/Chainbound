@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using UnityEngine;
 
 namespace Chainbound.Combat
@@ -343,7 +345,11 @@ namespace Chainbound.Combat
 
                 // After every action check for KOs and auto-swap
                 ProcessAutoSwaps(state, state.currentTurn);
-                if (CheckBattleEnd(state)) return false;
+                if (CheckBattleEnd(state))
+                {
+                    LogTurnStateDigest(state);
+                    return false;
+                }
             }
 
             // â”€â”€ End of Turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -361,8 +367,13 @@ namespace Chainbound.Combat
 
             // Auto-swap after End-of-Turn DoT KOs
             ProcessAutoSwaps(state, state.currentTurn);
-            if (CheckBattleEnd(state)) return false;
+            if (CheckBattleEnd(state))
+            {
+                LogTurnStateDigest(state);
+                return false;
+            }
 
+            LogTurnStateDigest(state);
             _log.LogMessage(CombatEventType.TurnEnd, $"=== End Turn {state.currentTurn} ===", state.currentTurn);
             return true;
         }
@@ -485,6 +496,113 @@ namespace Chainbound.Combat
                 defeated,
                 sourceMove: null,
                 exclude: defeated);
+        }
+
+        private void LogTurnStateDigest(CombatState state)
+        {
+            if (state == null || _log == null)
+                return;
+
+            string digest = BuildTurnStateDigest(state);
+            _log.Log(new CombatEvent
+            {
+                eventType = CombatEventType.TurnEnd,
+                turn = state.currentTurn,
+                message = digest,
+                metadataJson = digest,
+            });
+            Debug.Log("[PvPTurn] state " + digest);
+        }
+
+        private static string BuildTurnStateDigest(CombatState state)
+        {
+            var builder = new StringBuilder();
+            builder.Append("turn=").Append(state.currentTurn);
+            AppendTeamDigest(builder, state.team0);
+            AppendTeamDigest(builder, state.team1);
+            return builder.ToString();
+        }
+
+        private static void AppendTeamDigest(StringBuilder builder, TeamState team)
+        {
+            if (team == null)
+            {
+                builder.Append("|team=-");
+                return;
+            }
+
+            builder.Append("|team=").Append(team.teamIndex).Append(";act=");
+            if (team.activeIndices != null)
+            {
+                for (int i = 0; i < team.activeIndices.Count; i++)
+                {
+                    if (i > 0)
+                        builder.Append(',');
+                    builder.Append(team.activeIndices[i]);
+                }
+            }
+
+            if (team.chainlings == null)
+                return;
+
+            for (int i = 0; i < team.chainlings.Count; i++)
+            {
+                ChainlingInstance chainling = team.chainlings[i];
+                builder.Append(";c").Append(i).Append('=');
+                if (chainling == null)
+                {
+                    builder.Append('-');
+                    continue;
+                }
+
+                builder.Append(chainling.instanceId);
+                builder.Append(" hp=").Append(chainling.currentHP).Append('/').Append(chainling.EffectiveMaxHP);
+                builder.Append(" ap=").Append(chainling.currentAP);
+                builder.Append(" a=").Append(chainling.isAlive ? '1' : '0');
+                builder.Append(" st=")
+                    .Append(chainling.stageMeleeAtk).Append(',')
+                    .Append(chainling.stageMeleeDef).Append(',')
+                    .Append(chainling.stageRangedAtk).Append(',')
+                    .Append(chainling.stageRangedDef).Append(',')
+                    .Append(chainling.stageSpeed).Append(',')
+                    .Append(chainling.stageAccuracy).Append(',')
+                    .Append(chainling.stageEvasion).Append(',')
+                    .Append(chainling.stageCritRate);
+                builder.Append(" m=").Append(chainling.GetTotalMitigation().ToString("0.0000", CultureInfo.InvariantCulture));
+                builder.Append(" x=").Append(chainling.GetAccuracySourceMultiplier().ToString("0.0000", CultureInfo.InvariantCulture));
+                builder.Append(" fx=");
+                AppendStatusDigest(builder, chainling.statuses);
+            }
+        }
+
+        private static void AppendStatusDigest(StringBuilder builder, List<StatusInstance> statuses)
+        {
+            if (statuses == null || statuses.Count == 0)
+                return;
+
+            var ordered = new List<StatusInstance>(statuses.Count);
+            for (int i = 0; i < statuses.Count; i++)
+            {
+                if (statuses[i] != null)
+                    ordered.Add(statuses[i]);
+            }
+
+            ordered.Sort((left, right) =>
+            {
+                int id = ((int)left.statusId).CompareTo((int)right.statusId);
+                if (id != 0)
+                    return id;
+                return left.turnsRemaining.CompareTo(right.turnsRemaining);
+            });
+
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                if (i > 0)
+                    builder.Append(',');
+                builder.Append((int)ordered[i].statusId);
+                builder.Append(':').Append(ordered[i].turnsRemaining);
+                builder.Append(':').Append(ordered[i].counterValue);
+            }
         }
 
         private void LogTurnEndForensics(CombatState state, List<TurnEndStatusTickEntry> turnTicks)
@@ -1031,7 +1149,11 @@ namespace Chainbound.Combat
             _stepActionCursor = actionIndex + 1;
 
             ProcessAutoSwaps(state, state.currentTurn);
-            if (CheckBattleEnd(state)) return false;
+            if (CheckBattleEnd(state))
+            {
+                LogTurnStateDigest(state);
+                return false;
+            }
 
             return state.isActive;
         }
@@ -1054,8 +1176,13 @@ namespace Chainbound.Combat
             LogTurnEndForensics(state, turnTicks);
 
             ProcessAutoSwaps(state, state.currentTurn);
-            if (CheckBattleEnd(state)) return false;
+            if (CheckBattleEnd(state))
+            {
+                LogTurnStateDigest(state);
+                return false;
+            }
 
+            LogTurnStateDigest(state);
             _log.LogMessage(CombatEventType.TurnEnd, $"=== End Turn {state.currentTurn} ===", state.currentTurn);
             return true;
         }

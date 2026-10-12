@@ -19,7 +19,8 @@ namespace Chainbound.Combat
         IPlayerStatsProvider,
         IChainlingRebirthService,
         IMenuVisualIdentityService,
-        IChainlingsMenuTestHarness
+        IChainlingsMenuTestHarness,
+        IPlayerItemInventory
     {
         [Header("Data Sources")]
         [SerializeField] private SpeciesDatabaseSO speciesDatabase;
@@ -54,6 +55,7 @@ namespace Chainbound.Combat
         private readonly List<string> ownedCosmeticIds = new List<string>();
         private readonly Dictionary<string, string> bagAssetIdsByItemId =
             new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly HashSet<string> claimedWorldPickupSpawns = new HashSet<string>(StringComparer.Ordinal);
         private int generation;
 
         public string HarnessLabel => "Chainlings Sandbox";
@@ -293,6 +295,50 @@ namespace Chainbound.Combat
             return Task.FromResult(CloneBagInventory(bagInventory));
         }
 
+        public Task<WorldPickupGrantResult> GrantWorldPickupAsync(string spawnId)
+        {
+            EnsureGenerated();
+            string normalized = (spawnId ?? string.Empty).Trim();
+            if (!StubPlayerItemInventory.TryResolveDefaultSpawn(normalized, out string itemId, out int quantity))
+                return Task.FromResult(WorldPickupGrantResult.Failed("unknown_spawn"));
+
+            MenuInventoryItemStack stack = bagInventory.stacks.Find(candidate =>
+                candidate != null && string.Equals(candidate.itemId, itemId, StringComparison.Ordinal));
+            int remaining = stack != null ? Math.Max(0, stack.quantity) : 0;
+            if (claimedWorldPickupSpawns.Contains(normalized))
+            {
+                return Task.FromResult(WorldPickupGrantResult.Ok(
+                    itemId,
+                    quantity,
+                    remaining,
+                    alreadyClaimed: true));
+            }
+
+            if (!PlayerItemCatalogSeed.TryGet(itemId, out PlayerItemDefinition definition) || definition == null)
+                return Task.FromResult(WorldPickupGrantResult.Failed("unknown_item"));
+
+            int next = remaining + Math.Max(1, quantity);
+            if (definition.maxStack > 0)
+                next = Math.Min(definition.maxStack, next);
+            if (stack == null)
+            {
+                stack = PlayerItemCatalogSeed.CreateStack(itemId, next);
+                bagInventory.stacks.Add(stack);
+            }
+            else
+            {
+                stack.quantity = next;
+            }
+
+            bagInventory.consumableIds = FlattenStackIds(bagInventory.stacks);
+            claimedWorldPickupSpawns.Add(normalized);
+            return Task.FromResult(WorldPickupGrantResult.Ok(
+                itemId,
+                quantity,
+                next,
+                alreadyClaimed: false));
+        }
+
         public IReadOnlyDictionary<string, string> GetAssetIdsByItemId()
         {
             EnsureGenerated();
@@ -392,6 +438,7 @@ namespace Chainbound.Combat
 
         private void RegenerateInternal()
         {
+            claimedWorldPickupSpawns.Clear();
             generation++;
             var rng = new System.Random(seed + generation * 7919);
             BuildOwnedCosmeticIds();

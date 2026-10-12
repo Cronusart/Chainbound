@@ -3762,7 +3762,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8647250342879931612
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7837,6 +7837,7 @@ MonoBehaviour:
   scanlineScrollDirection: {x: 0, y: -1}
   scanlineUvSpeed: 0.05
   useUnscaledTime: 1
+  scanlinesAboveContent: 1
 --- !u!1 &5737436006178652140
 GameObject:
   m_ObjectHideFlags: 0

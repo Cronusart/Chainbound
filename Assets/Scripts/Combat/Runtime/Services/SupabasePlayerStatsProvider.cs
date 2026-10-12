@@ -35,6 +35,8 @@ namespace Chainbound.Combat
             if (string.IsNullOrWhiteSpace(profileId) && string.IsNullOrWhiteSpace(wallet))
                 return Fail("Player profile id or wallet address was empty.");
 
+            PlayerRamBalanceStore.ReadToken ramRead = PlayerRamBalanceStore.BeginProfileRead(profileId);
+
             try
             {
                 string json = JsonUtility.ToJson(new StatsRequest
@@ -90,6 +92,12 @@ namespace Chainbound.Combat
                     uniqueSpeciesCaptured = stats.unique_species_captured,
                 };
 
+                if (!PlayerRamBalanceStore.TryApplyProfileRead(ramRead, CachedStats.ramBalance, payload.ram_balance_version) &&
+                    PlayerRamBalanceStore.TryGet(profileId, out long currentRamBalance))
+                {
+                    CachedStats.ramBalance = currentRamBalance;
+                }
+
                 if (enableDebugLogs)
                     Debug.Log($"[SupabasePlayerStatsProvider] Loaded stats for profile={CachedStats.playerProfileId}.", this);
 
@@ -123,6 +131,7 @@ namespace Chainbound.Combat
             public string display_name;
             public string wallet_address;
             public long ram_balance;
+            public long ram_balance_version;
             public ProgressionPayload progression_state;
             public StatsPayload stats;
             public string[] capture_achievement_ids;

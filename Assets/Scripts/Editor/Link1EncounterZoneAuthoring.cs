@@ -77,7 +77,7 @@ public static class Link1EncounterZoneAuthoring
     private static void AuthorArea(EncounterAreaSO area, WildVariantPoolSO variantPool)
     {
         area.areaId = "link1";
-        area.encounterChance = 0.12f;
+        area.encounterChance = 0.33f;
         area.difficulty = EncounterDifficulty.Standard;
         area.minEncounterPartySize = 1;
         area.maxEncounterPartySize = 1;
@@ -102,7 +102,7 @@ public static class Link1EncounterZoneAuthoring
         zone.area = area;
         zone.encounterChance = -1f;
         zone.cadence = EncounterCadence.PerSecond;
-        zone.cadenceIntervalSeconds = 3f;
+        zone.cadenceIntervalSeconds = 2f;
         zone.inheritDifficulty = true;
         zone.difficulty = EncounterDifficulty.Standard;
         zone.bossIntroDialogueAsset = null;

@@ -28,6 +28,8 @@ namespace SignalJam.UI.MenuNavigation
 
         public static bool ShouldShow => DevCandyMachineInventory.IsDevSurfaceAllowed;
 
+        private bool GrantSurfaceEnabled => ShouldShow && (config == null || config.ShowDevGrantStrip);
+
         /// <summary>
         /// Binds the authored panel when Candy Machine opens at runtime. The prefab already
         /// serializes its controls, so only the host reference needs to be supplied here.
@@ -65,7 +67,7 @@ namespace SignalJam.UI.MenuNavigation
 
         public void RefreshForCurrentState()
         {
-            if (screen == null || !ShouldShow)
+            if (screen == null || !GrantSurfaceEnabled)
                 return;
 
             pendingRamGrantReview = null;
@@ -89,7 +91,7 @@ namespace SignalJam.UI.MenuNavigation
             if (screen == null)
                 return;
 
-            bool show = ShouldShow && screen.CanShowDevGrantPanel;
+            bool show = GrantSurfaceEnabled && screen.CanShowDevGrantPanel;
             if (show)
                 RestoreCollapsedStrip();
 
@@ -212,7 +214,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private async void InitializeOwnershipSpine()
         {
-            if (!ShouldShow)
+            if (!GrantSurfaceEnabled)
             {
                 SetStatus("Ownership bootstrap is available only in development builds.");
                 return;
@@ -336,6 +338,9 @@ namespace SignalJam.UI.MenuNavigation
 
         private async void GrantRam()
         {
+            if (!GrantSurfaceEnabled)
+                return;
+
             DevCandyMachineInventory inventory = screen != null ? screen.DevInventory : null;
             if (inventory != null)
             {
@@ -392,6 +397,9 @@ namespace SignalJam.UI.MenuNavigation
 
         private async void GrantKnown()
         {
+            if (!GrantSurfaceEnabled)
+                return;
+
             DevCandyMachineInventory inventory = screen != null ? screen.DevInventory : null;
             if (inventory != null)
             {

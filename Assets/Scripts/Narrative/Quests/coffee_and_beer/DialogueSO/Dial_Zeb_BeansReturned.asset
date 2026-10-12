@@ -16,7 +16,7 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Zeb
-    text: You actually got the bag back. I owe you for that.
+    text: You got the bag back. I can't thank you enough.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -28,8 +28,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Zeb
-    text: I would finish the run myself, but the cart is wrecked and I still have
-      to scrape up what's left of the shipment.
+    text: I'd finish the run myself, but the cart's wrecked and I've still got to
+      gather what's left of the shipment.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -41,7 +41,7 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Zeb
-    text: Take the beans to Reynard. He is the one who brews Toby's order.
+    text: Take the beans to Reynard. He's the one who brews Toby's order.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -53,8 +53,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Zeb
-    text: Across the stream, the academy is just ahead. Tell Momo I sent you. He
-      is holding the beer.
+    text: "When you find Momo, tell him I sent you. There's a cold beer waiting \u2014
+      you earned it after a fight like that."
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

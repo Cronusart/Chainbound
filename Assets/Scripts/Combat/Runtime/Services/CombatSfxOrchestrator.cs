@@ -219,6 +219,8 @@ namespace Chainbound.Combat
             Play(sound != null ? sound : (catalog != null ? catalog.SwapIn : null), ResolvePosition(incomingView), ResolveFollow(incomingView));
         }
 
+        public const float PostBattleStingFadeSeconds = 0.85f;
+
         public void PlayPostBattle(BattleResult result)
         {
             StopBattleMusic(0f);
@@ -226,14 +228,22 @@ namespace Chainbound.Combat
                 return;
 
             _playedPostBattleResult = result;
-            PlayResolved(
-                catalog != null ? catalog.ResolvePostBattle(result) : null,
-                0f,
-                null,
-                null,
-                1f,
-                CombatSfxRole.PostBattle,
-                null);
+            ICombatAudioBridge bridge = ResolveAudioBridge();
+            if (bridge == null)
+            {
+                if (enableDebugLogs)
+                    Debug.LogWarning("[CombatSfxOrchestrator] No ICombatAudioBridge found for the post-battle sting.", this);
+                return;
+            }
+
+            UnityEngine.Object sting = catalog != null ? catalog.ResolvePostBattle(result) : null;
+            LogResolved(sting, 0f, 1f, CombatSfxRole.PostBattle, null);
+            bridge.PlayPostBattleSting(sting);
+        }
+
+        public void FadeOutPostBattleSting()
+        {
+            ResolveAudioBridge()?.FadeOutPostBattleSting(PostBattleStingFadeSeconds);
         }
 
         public void StopBattleMusic(float fadeSeconds = 0f)
@@ -247,6 +257,14 @@ namespace Chainbound.Combat
                 return;
 
             Play(catalog.XpShare);
+        }
+
+        public void PlayRamTick()
+        {
+            if (catalog == null)
+                return;
+
+            Play(catalog.RamGrantTick, volumeScale: 0.62f);
         }
 
         public void PlayStarUp(BattleRewardSummary summary)

@@ -60,14 +60,22 @@ namespace Chainbound.Combat
             {
                 HttpResponse response = await SendAsync("GET", "/health/ready", null, false, cancellationToken);
                 bool ok = response.statusCode >= 200 && response.statusCode < 300;
-                SetAvailability(ok, ok ? "" : "SIGNAL SYNC UNAVAILABLE — RETRYING");
+                if (!ok)
+                {
+                    string detail = DescribeTransportFailure(response);
+                    SetAvailability(false, detail);
+                    Debug.LogWarning($"[AuthoritativeCombatSessionService] Battle service is not ready: {detail}", this);
+                }
+                else
+                {
+                    SetAvailability(true, "");
+                }
                 return ok;
             }
             catch (Exception exception)
             {
-                SetAvailability(false, "SIGNAL SYNC UNAVAILABLE — RETRYING");
-                if (enableDebugLogs)
-                    Debug.LogWarning($"[AuthoritativeCombatSessionService] Availability check failed: {exception.Message}", this);
+                SetAvailability(false, exception.Message);
+                Debug.LogWarning($"[AuthoritativeCombatSessionService] Battle service is not ready: {exception.Message}", this);
                 return false;
             }
         }
@@ -97,6 +105,30 @@ namespace Chainbound.Combat
             return ParseEnvelopeOrThrow(response);
         }
 
+        public async Task<CombatSessionEnvelope> GetCurrentEncounterAsync(
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireConfigured();
+            HttpResponse response = await SendAsync("GET", "/v1/pve/battles/current", null, true, cancellationToken);
+            if (response.statusCode == 204)
+                return null;
+            return ParseEnvelopeOrThrow(response);
+        }
+
+        public async Task<CombatSessionEnvelope> ForfeitEncounterAsync(
+            string battleId,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireConfigured();
+            HttpResponse response = await SendAsync(
+                "POST",
+                $"/v1/pve/battles/{Uri.EscapeDataString(battleId ?? "")}/forfeit",
+                "{}",
+                true,
+                cancellationToken);
+            return ParseEnvelopeOrThrow(response);
+        }
+
         public async Task<CombatSessionEnvelope> SubmitTeamCommandAsync(
             string battleId,
             CombatTeamCommand command,
@@ -110,6 +142,16 @@ namespace Chainbound.Combat
                 kind = command != null ? command.Kind : "",
                 targetId = command != null ? command.TargetId : "",
                 orbId = command != null ? command.OrbId : "",
+                actorId = command != null ? command.ActorId : "",
+                actionId = command != null ? command.ActionId : "",
+                turnNumber = command != null ? command.TurnNumber : 0,
+                stepIndex = command != null ? command.StepIndex : 0,
+                battleActive = command == null || command.BattleActive,
+                winnerTeamIndex = command != null ? command.WinnerTeamIndex : -1,
+                endReason = command != null ? command.EndReason : "",
+                vitals = command != null && command.Vitals != null
+                    ? command.Vitals.ConvertAll(ToDto).ToArray()
+                    : Array.Empty<VitalDto>(),
             };
             HttpResponse response = await SendAsync(
                 "POST",
@@ -118,6 +160,25 @@ namespace Chainbound.Combat
                 true,
                 cancellationToken);
             return ParseEnvelopeOrThrow(response);
+        }
+
+        public async Task<BattleRewardSettlement> GetBattleRewardAsync(
+            string battleId,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            RequireConfigured();
+            HttpResponse response = await SendAsync(
+                "GET",
+                $"/v1/pve/battles/{Uri.EscapeDataString(battleId ?? "")}/reward",
+                null,
+                true,
+                cancellationToken);
+            if (response.statusCode < 200 || response.statusCode >= 300)
+                throw ParseServiceException(response);
+            BattleRewardSettlementDto dto = JsonUtility.FromJson<BattleRewardSettlementDto>(response.body);
+            if (dto == null || string.IsNullOrWhiteSpace(dto.battleId) || string.IsNullOrWhiteSpace(dto.status))
+                throw new InvalidOperationException("Battle authority returned an invalid reward receipt.");
+            return dto.ToCore();
         }
 
         public async Task<ICaptureSession> OpenCaptureSessionAsync(
@@ -205,6 +266,7 @@ namespace Chainbound.Combat
                 {
                     statusCode = (int)request.responseCode,
                     body = request.downloadHandler != null ? request.downloadHandler.text : "",
+                    transportError = request.error ?? "",
                 };
                 bool ok = result.statusCode >= 200 && result.statusCode < 300;
                 if (authenticated)
@@ -233,6 +295,23 @@ namespace Chainbound.Combat
                 Message = dto.message,
                 IsResumable = dto.isResumable,
                 ExpiresAtUnixMilliseconds = dto.expiresAtUnixMilliseconds,
+                RequiresResumeChoice = dto.requiresResumeChoice,
+                RequiresWipe = dto.requiresWipe,
+                EndReason = dto.endReason,
+                Settlement = dto.settlement != null ? dto.settlement.ToCore() : null,
+            };
+        }
+
+        private static VitalDto ToDto(CombatVitalSnapshot source)
+        {
+            return new VitalDto
+            {
+                entityId = source != null ? source.EntityId : "",
+                teamIndex = source != null ? source.TeamIndex : 0,
+                rosterIndex = source != null ? source.RosterIndex : 0,
+                currentHp = source != null ? source.CurrentHp : 0,
+                currentAp = source != null ? source.CurrentAp : 0,
+                isActive = source != null && source.IsActive,
             };
         }
 
@@ -304,15 +383,35 @@ namespace Chainbound.Combat
                 AvailabilityChanged?.Invoke(isReachable, lastError);
         }
 
-        private struct HttpResponse { public int statusCode; public string body; }
+        private static string DescribeTransportFailure(HttpResponse response)
+        {
+            if (!string.IsNullOrWhiteSpace(response.transportError))
+                return response.transportError.Trim();
+            if (response.statusCode <= 0)
+                return "The battle service did not respond.";
+            return $"The battle service returned HTTP {response.statusCode}.";
+        }
+
+        private struct HttpResponse { public int statusCode; public string body; public string transportError; }
         [Serializable] private sealed class StartBattleRequestDto { public string commandId; public string zoneId; public string narrativeEncounterId; public string clientManifestHash; }
-        [Serializable] private sealed class TeamCommandDto { public string commandId; public int expectedVersion; public string kind; public string targetId; public string orbId; }
+        [Serializable] private sealed class TeamCommandDto
+        {
+            public string commandId; public int expectedVersion; public string kind; public string targetId; public string orbId;
+            public string actorId; public string actionId; public int turnNumber; public int stepIndex;
+            public bool battleActive; public int winnerTeamIndex; public string endReason; public VitalDto[] vitals;
+        }
+        [Serializable] private sealed class VitalDto
+        {
+            public string entityId; public int teamIndex; public int rosterIndex; public int currentHp; public int currentAp; public bool isActive;
+        }
         [Serializable] private sealed class EquipGearDto { public string slot; public string itemId; }
         [Serializable] private sealed class ErrorDto { public string code; public string message; public int stateVersion; }
         [Serializable] private sealed class CombatSessionEnvelopeDto
         {
             public string battleId; public int version; public string manifestHash; public string stateJson;
             public string errorCode; public string message; public bool isResumable; public long expiresAtUnixMilliseconds;
+            public bool requiresResumeChoice; public bool requiresWipe; public string endReason;
+            public BattleRewardSettlementDto settlement;
         }
         [Serializable] private sealed class CaptureLoadoutDto
         {
@@ -348,11 +447,18 @@ namespace Chainbound.Combat
         private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private readonly TaskCompletionSource<CaptureChallengeSnapshot> challengeReady = new TaskCompletionSource<CaptureChallengeSnapshot>();
         private readonly TaskCompletionSource<CaptureOutcome> completion = new TaskCompletionSource<CaptureOutcome>();
+        private readonly TaskCompletionSource<long> armedReady = new TaskCompletionSource<long>();
         private readonly SemaphoreSlim sendGate = new SemaphoreSlim(1, 1);
         private CaptureChallengeSnapshot challenge;
         private CaptureAuthoritativeState latestState;
         private Task receiveLoop;
-        private long clearSequence;
+        private long nextInputSequence;
+        private long lastSentInputSequence = -1;
+        private long lastAcknowledgedInputSequence = -1;
+        private long lastResendStopwatchTicks;
+        private int desiredHeld;
+        private int disposing;
+        private int disposed;
 
         public AuthoritativeCaptureSession(Uri uri, string accessToken, string attemptId, bool debug)
         {
@@ -377,12 +483,16 @@ namespace Chainbound.Combat
                 throw new InvalidOperationException("Capture stream attempt id did not match the requested attempt.");
         }
 
-        public async Task SetHeldAsync(bool held, long inputSequence, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task ArmAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            ObserveInputSequence(inputSequence);
-            if (socket.State != WebSocketState.Open)
+            if (challenge != null && challenge.DeadlineUnixMilliseconds > 0)
                 return;
-            string json = JsonUtility.ToJson(new InputDto { sequence = inputSequence, held = held });
+            if (completion.Task.IsCompleted)
+                return;
+            if (socket.State != WebSocketState.Open)
+                throw new InvalidOperationException("Capture stream closed before the attempt could start.");
+
+            string json = JsonUtility.ToJson(new InputDto { sequence = 0, held = false, arm = true });
             byte[] bytes = Encoding.UTF8.GetBytes(json);
             await sendGate.WaitAsync(cancellationToken);
             try
@@ -393,28 +503,52 @@ namespace Chainbound.Combat
             {
                 sendGate.Release();
             }
+
+            await Task.WhenAny(armedReady.Task, completion.Task);
+        }
+
+        public async Task SetHeldAsync(bool held, long inputSequence, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            // The session, rather than any UI surface, owns the wire sequence.
+            // Clear/focus events otherwise race controller-local counters and can
+            // leave every later hold message stale from the server's perspective.
+            _ = inputSequence;
+            Volatile.Write(ref desiredHeld, held ? 1 : 0);
+            await SendHeldAsync(held, cancellationToken);
+        }
+
+        private async Task SendHeldAsync(bool held, CancellationToken cancellationToken)
+        {
+            if (Volatile.Read(ref disposed) != 0 || socket.State != WebSocketState.Open || completion.Task.IsCompleted)
+                return;
+            long sequence = Interlocked.Increment(ref nextInputSequence);
+            Interlocked.Exchange(ref lastSentInputSequence, sequence);
+            string json = JsonUtility.ToJson(new InputDto { sequence = sequence, held = held });
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            await sendGate.WaitAsync(cancellationToken);
+            try
+            {
+                if (Volatile.Read(ref disposed) != 0 || socket.State != WebSocketState.Open || completion.Task.IsCompleted)
+                    return;
+                await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+            }
+            finally
+            {
+                sendGate.Release();
+            }
         }
 
         public void ClearHeldInput()
         {
-            _ = SetHeldAsync(false, Interlocked.Increment(ref clearSequence), CancellationToken.None);
-        }
-
-        private void ObserveInputSequence(long inputSequence)
-        {
-            long observed = Interlocked.Read(ref clearSequence);
-            while (inputSequence > observed)
-            {
-                long exchanged = Interlocked.CompareExchange(ref clearSequence, inputSequence, observed);
-                if (exchanged == observed)
-                    return;
-                observed = exchanged;
-            }
+            _ = SetHeldAsync(false, 0, CancellationToken.None);
         }
 
         public void Dispose()
         {
+            if (Interlocked.Exchange(ref disposing, 1) != 0)
+                return;
             ClearHeldInput();
+            Interlocked.Exchange(ref disposed, 1);
             lifetime.Cancel();
             socket.Dispose();
             lifetime.Dispose();
@@ -443,9 +577,17 @@ namespace Chainbound.Combat
                         CaptureChallengeSnapshot mapped = message.challenge.ToCore();
                         challengeReady.TrySetResult(mapped);
                     }
+                    else if (string.Equals(message.type, "armed", StringComparison.Ordinal))
+                    {
+                        if (challenge != null && message.deadlineUnixMilliseconds > 0)
+                            challenge.DeadlineUnixMilliseconds = message.deadlineUnixMilliseconds;
+                        armedReady.TrySetResult(message.deadlineUnixMilliseconds);
+                    }
                     else if (string.Equals(message.type, "snapshot", StringComparison.Ordinal))
                     {
                         latestState = message.state.ToCore();
+                        Interlocked.Exchange(ref lastAcknowledgedInputSequence, latestState.LastInputSequence);
+                        TryResendUnacknowledgedHeldState(latestState);
                         SnapshotReceived?.Invoke(latestState);
                     }
                     else if (string.Equals(message.type, "outcome", StringComparison.Ordinal))
@@ -472,10 +614,35 @@ namespace Chainbound.Combat
             }
         }
 
-        [Serializable] private sealed class InputDto { public long sequence; public bool held; }
+        private void TryResendUnacknowledgedHeldState(CaptureAuthoritativeState state)
+        {
+            if (state == null || completion.Task.IsCompleted || socket.State != WebSocketState.Open)
+                return;
+
+            long sent = Interlocked.Read(ref lastSentInputSequence);
+            long acknowledged = Interlocked.Read(ref lastAcknowledgedInputSequence);
+            bool held = Volatile.Read(ref desiredHeld) != 0;
+            if (sent <= acknowledged || state.IsHeld == held)
+                return;
+
+            long now = System.Diagnostics.Stopwatch.GetTimestamp();
+            long previous = Interlocked.Read(ref lastResendStopwatchTicks);
+            if (previous != 0 && (now - previous) * 1000L < System.Diagnostics.Stopwatch.Frequency / 4)
+                return;
+            Interlocked.Exchange(ref lastResendStopwatchTicks, now);
+            if (debug)
+                Debug.LogWarning($"[AuthoritativeCaptureSession] Re-sending capture input; server acknowledged {acknowledged}, latest sent {sent}, held={held}.");
+            _ = SetHeldAsync(held, 0, CancellationToken.None);
+        }
+
+        [Serializable] private sealed class InputDto { public long sequence; public bool held; public bool arm; }
         [Serializable] private sealed class StreamMessageDto
         {
-            public string type; public ChallengeDto challenge; public StateDto state; public OutcomeDto outcome;
+            public string type;
+            public long deadlineUnixMilliseconds;
+            public ChallengeDto challenge;
+            public StateDto state;
+            public OutcomeDto outcome;
         }
         [Serializable] private sealed class ChallengeDto
         {
@@ -529,11 +696,13 @@ namespace Chainbound.Combat
         {
             public string attemptId; public int version, tick, targetPositionUnits, bandPositionUnits,
                 meterBasisPoints, remainingTicks, outcome;
+            public long lastInputSequence;
             public bool isHeld, isInsideBand, spikeOccurred;
             public CaptureAuthoritativeState ToCore() => new CaptureAuthoritativeState
             {
                 AttemptId = attemptId, Version = version, Tick = tick, TargetPositionUnits = targetPositionUnits,
                 BandPositionUnits = bandPositionUnits, MeterBasisPoints = meterBasisPoints, RemainingTicks = remainingTicks,
+                LastInputSequence = lastInputSequence,
                 IsHeld = isHeld, IsInsideBand = isInsideBand, SpikeOccurred = spikeOccurred, Outcome = (CaptureOutcomeKind)outcome,
             };
         }
@@ -542,15 +711,65 @@ namespace Chainbound.Combat
             public int kind; public string attemptId, errorCode, message, grantedChainlingId, grantedEntangledTypeId;
             public bool addedToParty, battleContinues; public int finalMeterBasisPoints, elapsedTicks;
             public string[] unlockedAchievementIds;
+            public BattleRewardSettlementDto settlement;
             public CaptureOutcome ToCore() => new CaptureOutcome
             {
                 Kind = (CaptureOutcomeKind)kind, AttemptId = attemptId, ErrorCode = errorCode, Message = message,
                 GrantedChainlingId = grantedChainlingId, GrantedEntangledTypeId = grantedEntangledTypeId,
                 AddedToParty = addedToParty, BattleContinues = battleContinues,
                 FinalMeterBasisPoints = finalMeterBasisPoints, ElapsedTicks = elapsedTicks,
+                Settlement = settlement != null ? settlement.ToCore() : null,
                 UnlockedAchievementIds = unlockedAchievementIds != null
                     ? new List<string>(unlockedAchievementIds)
                     : new List<string>(),
+            };
+        }
+    }
+
+    [Serializable]
+    internal sealed class BattleRewardSettlementDto
+    {
+        public string status;
+        public string battleId;
+        public string settlementId;
+        public string terminalOutcome;
+        public long requestedRam;
+        public long appliedRam;
+        public string reason;
+        public string rewardTier;
+        public int rewardConfigVersion;
+        public string rewardConfigHash;
+        public long dailyEarned;
+        public long dailyCap;
+        public long balanceAfter;
+        public long balanceBefore;
+        public long receiptSequence;
+        public string settledAt;
+        public bool alreadyApplied;
+
+        public BattleRewardSettlement ToCore()
+        {
+            bool hasLedgerResult = string.Equals(status, BattleRewardStatus.Settled, StringComparison.Ordinal) ||
+                                   string.Equals(status, BattleRewardStatus.Zero, StringComparison.Ordinal);
+            return new BattleRewardSettlement
+            {
+                Status = status ?? BattleRewardStatus.Unavailable,
+                BattleId = battleId ?? "",
+                SettlementId = settlementId ?? "",
+                TerminalOutcome = terminalOutcome ?? "",
+                RequestedRam = requestedRam,
+                AppliedRam = appliedRam,
+                Reason = reason ?? "",
+                RewardTier = rewardTier ?? BattleRewardTier.Standard,
+                RewardConfigVersion = rewardConfigVersion,
+                RewardConfigHash = rewardConfigHash ?? "",
+                DailyEarned = hasLedgerResult ? dailyEarned : (long?)null,
+                DailyCap = hasLedgerResult ? dailyCap : (long?)null,
+                BalanceAfter = hasLedgerResult ? balanceAfter : (long?)null,
+                BalanceBefore = hasLedgerResult ? balanceBefore : (long?)null,
+                ReceiptSequence = receiptSequence,
+                SettledAt = settledAt ?? "",
+                AlreadyApplied = alreadyApplied,
             };
         }
     }

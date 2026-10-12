@@ -3,17 +3,17 @@ import * as bs58Module from "https://esm.sh/bs58@5.0.0";
 import * as naclModule from "https://esm.sh/tweetnacl@1.0.3";
 import {
   editorMockWalletAllowed,
+  ensureRamLedgerAccount,
   getProfileById,
   isApprovedBetaWallet,
   JsonMap,
   jsonResponse,
   normalizePlatform,
-  PlayerProfileRow,
   readJsonBody,
   recordLinkEvent,
   requireAuthenticatedUser,
   requirePost,
-  resolveAuthenticatedProfile,
+  resolveProfileByAuthUser,
   sessionResponse,
   sha256Hex,
   SOLANA_BASE58_RE,
@@ -35,20 +35,26 @@ serve(async (req: Request) => {
   const nonceId = str(body.nonce_id);
   const signedMessage = str(body.signed_message) || str(body.message);
   const signature = str(body.signature);
+  const mode = normalizeMode(body.mode);
 
   if (!SOLANA_BASE58_RE.test(walletPublicKey)) {
     return jsonResponse({ success: false, error: "invalid_wallet_public_key" }, 400);
   }
+  if (!mode) return jsonResponse({ success: false, error: "invalid_wallet_connect_mode" }, 400);
   if (!nonceId || !signedMessage || !signature) {
     return jsonResponse({ success: false, error: "missing_wallet_proof" }, 400);
   }
 
   const supabase = supabaseAdmin();
   const authenticated = await requireAuthenticatedUser(req);
-  const authenticatedProfile = await resolveAuthenticatedProfile(req, supabase, body, true);
+  const authenticatedProfile = authenticated ? await resolveProfileByAuthUser(supabase, authenticated.userId) : null;
   if (!authenticated || !authenticatedProfile) {
     return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
   }
+  if (
+    mode !== "resolve" && str(body.player_profile_id) &&
+    str(body.player_profile_id) !== authenticatedProfile.player_profile_id
+  ) return jsonResponse({ success: false, error: "authenticated_profile_mismatch" }, 401);
   const activePlatform = normalizePlatform(body.active_platform_build);
   const walletProvider = normalizeWalletProvider(body.wallet_provider);
   const now = new Date();
@@ -104,20 +110,6 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "beta_not_allowlisted" }, 403);
     }
 
-    // Proof is established before profile-link invariants are inspected. A
-    // profile that already has another wallet still fails closed. An unlinked
-    // profile may, however, recover the profile already owned by this proven
-    // wallet; that authority handoff is performed transactionally below.
-    const preflight = await inspectCurrentProfileWalletInvariant(
-      supabase,
-      walletPublicKey,
-      requestedProfileId,
-    );
-    if (!preflight.ok) {
-      await markChallenge(supabase, nonceId, "rejected", preflight.error);
-      return jsonResponse({ success: false, error: preflight.error }, preflight.status);
-    }
-
     const { data: consumedChallenge, error: consumeError } = await supabase
       .from("wallet_auth_challenges")
       .update({
@@ -140,181 +132,85 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "challenge_already_used" }, 409);
     }
 
-    const resolved = await resolveOrCreateProfileForWallet(
-      supabase,
-      authenticated.userId,
-      walletPublicKey,
-      walletProvider,
-      requestedProfileId,
-      activePlatform,
-    );
+    if (mode === "resolve") {
+      const { data, error } = await supabase.rpc("wallet_resolve_bound_profile_service", {
+        p_wallet_address: walletPublicKey,
+      });
+      if (error) return jsonResponse({ success: false, error: "wallet_profile_resolution_failed" }, 409);
+      const resolution = (data ?? {}) as JsonMap;
+      return jsonResponse({
+        success: true,
+        status: str(resolution.status) || "no_profile",
+        player_profile_id: str(resolution.player_profile_id) || null,
+        wallet_public_key: walletPublicKey,
+        wallet_proof_verified_at: nowIso,
+        wallet_proof_expires_at: proofExpiresAt,
+      });
+    }
 
-    if (!resolved.ok) {
-      return jsonResponse(
-        { success: false, error: resolved.error ?? "wallet_profile_resolution_failed" },
-        resolved.status ?? 400,
-      );
+    const rpcName = mode === "create" ? "wallet_create_bound_profile_service" : "wallet_bind_profile_service";
+    const rpcArgs = mode === "create"
+      ? {
+        p_auth_user_id: authenticated.userId,
+        p_current_profile_id: requestedProfileId,
+        p_wallet_address: walletPublicKey,
+        p_wallet_provider: walletProvider,
+        p_active_platform: activePlatform,
+      }
+      : {
+        p_player_profile_id: requestedProfileId,
+        p_wallet_address: walletPublicKey,
+        p_wallet_provider: walletProvider,
+      };
+    const { data: bindingData, error: bindingError } = await supabase.rpc(rpcName, rpcArgs);
+    if (bindingError) {
+      console.error("[wallet_connect_verified] binding RPC failed", bindingError.code);
+      return jsonResponse({ success: false, error: "wallet_binding_conflict" }, 409);
+    }
+    const binding = (bindingData ?? {}) as JsonMap;
+    if (binding.success !== true) {
+      const code = stableBindingError(str(binding.error));
+      return jsonResponse({ success: false, error: code }, code === "profile_not_found" ? 404 : 409);
+    }
+    const resolvedProfileId = str(binding.player_profile_id);
+    const resolvedProfile = await getProfileById(supabase, resolvedProfileId);
+    if (!resolvedProfile) return jsonResponse({ success: false, error: "profile_not_found" }, 404);
+
+    const ledgerCluster = str(Deno.env.get("CHAINBOUND_SOLANA_CLUSTER")) || str(Deno.env.get("RAM_SHOP_CLUSTER"));
+    try {
+      await ensureRamLedgerAccount(supabase, resolvedProfileId, walletPublicKey, ledgerCluster);
+    } catch (error) {
+      console.warn("[wallet_connect_verified] non-fatal ledger ensure", error instanceof Error ? error.message : error);
     }
 
     await recordLinkEvent(
       supabase,
-      resolved.profile.player_profile_id,
-      resolved.recovered ? "wallet_profile_restored" : "wallet_connect_requested",
+      resolvedProfileId,
+      mode === "create" ? "wallet_profile_created" : "wallet_connect_requested",
       walletProvider,
-      resolved.recovered ? "restored" : resolved.created ? "created" : "success",
+      mode === "create" ? "created" : "success",
       {
         wallet_public_key: walletPublicKey,
         challenge_nonce_id: nonceId,
         signature_verified: verified,
         dev_bypass: devBypass,
-        replaced_profile_id: resolved.recovered ? requestedProfileId : null,
+        connect_mode: mode,
       },
     );
 
-    const session = await sessionResponse(supabase, resolved.profile, "wallet", activePlatform, resolved.created);
+    const session = await sessionResponse(supabase, resolvedProfile, "wallet", activePlatform, mode === "create");
     return jsonResponse({
       ...session,
+      status: mode === "create" ? "profile_created" : "profile_found",
       wallet_proof_verified_at: nowIso,
       wallet_proof_expires_at: proofExpiresAt,
-      wallet_profile_restored: resolved.recovered,
+      wallet_profile_restored: false,
     });
   } catch (error) {
     console.error("[wallet_connect_verified]", error);
-    return jsonResponse({ success: false, error: "wallet_connect_verified_failed" }, 500);
+    return jsonResponse({ success: false, error: "wallet_connect_conflict" }, 409);
   }
 });
-
-async function resolveOrCreateProfileForWallet(
-  supabase: ReturnType<typeof supabaseAdmin>,
-  authUserId: string,
-  walletPublicKey: string,
-  walletProvider: string,
-  requestedProfileId: string,
-  activePlatform: string,
-): Promise<{ ok: true; profile: PlayerProfileRow; created: boolean; recovered: boolean } | { ok: false; error: string; status: number }> {
-  const invariant = await inspectCurrentProfileWalletInvariant(supabase, walletPublicKey, requestedProfileId);
-  if (!invariant.ok) return invariant;
-
-  const { data: existingWallet, error: existingError } = await supabase
-    .from("profile_wallets")
-    .select("player_profile_id")
-    .eq("wallet_public_key", walletPublicKey)
-    .eq("is_active", true)
-    .is("unlinked_at", null)
-    .maybeSingle();
-
-  if (existingError) throw existingError;
-
-  if (existingWallet?.player_profile_id) {
-    const existingProfileId = str(existingWallet.player_profile_id);
-    if (requestedProfileId && requestedProfileId !== existingProfileId) {
-      const { data: recovery, error: recoveryError } = await supabase.rpc(
-        "profile_recover_by_wallet_tx",
-        {
-          p_auth_user_id: authUserId,
-          p_current_profile_id: requestedProfileId,
-          p_wallet_public_key: walletPublicKey,
-        },
-      );
-      if (recoveryError) {
-        console.error("[wallet_connect_verified] profile recovery RPC failed", recoveryError.code);
-        return { ok: false, error: "wallet_profile_recovery_failed", status: 500 };
-      }
-
-      const recoveryPayload = (recovery ?? {}) as JsonMap;
-      if (recoveryPayload.success !== true) {
-        return {
-          ok: false,
-          error: str(recoveryPayload.error) || "wallet_profile_recovery_failed",
-          status: str(recoveryPayload.error) === "authenticated_profile_mismatch" ? 409 : 400,
-        };
-      }
-      if (str(recoveryPayload.player_profile_id) !== existingProfileId) {
-        return { ok: false, error: "wallet_profile_recovery_target_mismatch", status: 409 };
-      }
-
-      const recoveredProfile = await getProfileById(supabase, existingProfileId);
-      if (!recoveredProfile) return { ok: false, error: "profile_not_found", status: 404 };
-      await touchProfilePlatform(supabase, existingProfileId, activePlatform);
-      return { ok: true, profile: recoveredProfile as PlayerProfileRow, created: false, recovered: true };
-    }
-
-    const profile = await getProfileById(supabase, existingProfileId);
-    if (!profile) return { ok: false, error: "profile_not_found", status: 404 };
-
-    await touchProfilePlatform(supabase, existingProfileId, activePlatform);
-    return { ok: true, profile: profile as PlayerProfileRow, created: false, recovered: false };
-  }
-
-  const profile = await getProfileById(supabase, requestedProfileId);
-  if (!profile) return { ok: false, error: "profile_not_found", status: 404 };
-
-  const insertError = await insertWalletLink(supabase, requestedProfileId, walletProvider, walletPublicKey);
-  if (insertError) {
-    return {
-      ok: false,
-      error: insertError === "unique_violation" ? "wallet_link_race_conflict" : "wallet_link_insert_failed",
-      status: insertError === "unique_violation" ? 409 : 500,
-    };
-  }
-  await touchProfilePlatform(supabase, requestedProfileId, activePlatform);
-  return { ok: true, profile: profile as PlayerProfileRow, created: false, recovered: false };
-}
-
-async function inspectCurrentProfileWalletInvariant(
-  supabase: ReturnType<typeof supabaseAdmin>,
-  walletPublicKey: string,
-  requestedProfileId: string,
-): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
-  const { data: profileWallet, error: profileWalletError } = await supabase
-    .from("profile_wallets")
-    .select("wallet_public_key")
-    .eq("player_profile_id", requestedProfileId)
-    .eq("is_active", true)
-    .is("unlinked_at", null)
-    .maybeSingle();
-  if (profileWalletError) throw profileWalletError;
-
-  if (profileWallet?.wallet_public_key && str(profileWallet.wallet_public_key) !== walletPublicKey) {
-    return { ok: false, error: "profile_wallet_mismatch", status: 409 };
-  }
-
-  return { ok: true };
-}
-
-async function insertWalletLink(
-  supabase: ReturnType<typeof supabaseAdmin>,
-  playerProfileId: string,
-  walletProvider: string,
-  walletPublicKey: string,
-): Promise<"unique_violation" | "insert_failed" | null> {
-  const { error } = await supabase
-    .from("profile_wallets")
-    .insert({
-      player_profile_id: playerProfileId,
-      wallet_provider: walletProvider,
-      wallet_public_key: walletPublicKey,
-      is_active: true,
-      metadata_json: { source: "wallet_connect_verified" },
-    });
-
-  if (!error) return null;
-  if (error.code === "23505") return "unique_violation";
-  console.error("[wallet_connect_verified] profile_wallet insert failed", error.code);
-  return "insert_failed";
-}
-
-async function touchProfilePlatform(
-  supabase: ReturnType<typeof supabaseAdmin>,
-  playerProfileId: string,
-  activePlatform: string,
-): Promise<void> {
-  const { error } = await supabase
-    .from("player_profiles")
-    .update({ last_platform_seen: activePlatform })
-    .eq("player_profile_id", playerProfileId);
-  if (error) throw error;
-}
 
 async function markChallenge(
   supabase: ReturnType<typeof supabaseAdmin>,
@@ -335,6 +231,23 @@ type SignatureVerificationResult = {
   verified: boolean;
   error: string;
 };
+
+function normalizeMode(value: unknown): "resolve" | "link" | "create" | null {
+  const mode = str(value).toLowerCase() || "link";
+  return mode === "resolve" || mode === "link" || mode === "create" ? mode : null;
+}
+
+function stableBindingError(value: string): string {
+  return [
+      "wallet_already_bound_to_profile",
+      "wallet_bound_to_other_profile",
+      "authenticated_profile_mismatch",
+      "profile_not_found",
+      "invalid_wallet_binding",
+    ].includes(value)
+    ? value
+    : "wallet_binding_conflict";
+}
 
 function verifyEd25519Signature(
   walletPublicKey: string,

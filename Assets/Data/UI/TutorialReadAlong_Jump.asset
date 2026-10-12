@@ -17,4 +17,4 @@ MonoBehaviour:
   body: Press B to jump.
   icon: {fileID: 0}
   continueHint: Press any button
-  emphasis: 0
+  emphasis: 5

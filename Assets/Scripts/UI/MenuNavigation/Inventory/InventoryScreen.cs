@@ -104,6 +104,7 @@ namespace SignalJam.UI.MenuNavigation
         private readonly List<Button> actionButtons = new List<Button>(3);
         private readonly List<CanvasGroup> sectionGroups = new List<CanvasGroup>(3);
         private InventorySnapshot snapshot;
+        private string snapshotIdentityKey = string.Empty;
         private string equippedCaptureHeadItemId = string.Empty;
         private string equippedCaptureBodyItemId = string.Empty;
         private string selectedCategory = PlayerItemCategoryKeys.Field;
@@ -113,6 +114,7 @@ namespace SignalJam.UI.MenuNavigation
         private MenuInputContextController activeInputContext;
         private MonoBehaviour cachedSfxPlayerBehaviour;
         private bool busy;
+        private Task reloadTask;
         private bool buttonsWired;
         private bool sectionChromeWired;
         private bool pendingTabEnterPresentation;
@@ -159,12 +161,19 @@ namespace SignalJam.UI.MenuNavigation
 
         public override void Show()
         {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
+            PlayerRamBalanceStore.BalanceChanged += HandleRamBalanceChanged;
             EnsureBuilt();
             WireRuntimeHandlers();
             categoryRail?.SetCategory(selectedCategory, false);
             // Enter already confirmed into the category carousel (skip CategorySection arming click).
             EnterCategoryEditing(animate: false);
             base.Show();
+
+            EnsureServices();
+            TryAdoptStoredInventory();
+            if (snapshot != null)
+                Render();
 
             if (pendingTabEnterPresentation)
             {
@@ -181,6 +190,7 @@ namespace SignalJam.UI.MenuNavigation
 
         public override void Hide()
         {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
             StopRowPresentationRoutine();
             UnwireRuntimeHandlers();
             if (activeInputContext != null)
@@ -188,6 +198,23 @@ namespace SignalJam.UI.MenuNavigation
             activeInputContext = null;
             motionController?.ResetRowAnimation(rowDisplays);
             base.Hide();
+        }
+
+        private void OnDestroy()
+        {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
+        }
+
+        private void HandleRamBalanceChanged(string playerProfileId, long balance)
+        {
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session == null || !string.Equals(session.PlayerProfileId, playerProfileId, StringComparison.Ordinal))
+                return;
+
+            if (snapshot != null)
+                snapshot.ramBalance = balance;
+            if (ramLabel != null)
+                ramLabel.text = $"RAM {Math.Max(0, balance)}";
         }
 
         public override void Refresh()
@@ -736,11 +763,16 @@ namespace SignalJam.UI.MenuNavigation
             }
         }
 
-        private async Task ReloadAsync()
+        private Task ReloadAsync()
         {
-            if (busy)
-                return;
+            if (reloadTask != null && !reloadTask.IsCompleted)
+                return reloadTask;
+            reloadTask = ReloadCoreAsync();
+            return reloadTask;
+        }
 
+        private async Task ReloadCoreAsync()
+        {
             busy = true;
             SetStatus("Loading inventory...");
             EnsureServices();
@@ -756,7 +788,8 @@ namespace SignalJam.UI.MenuNavigation
 
             string profileId = GameSessionContext.Instance != null ? GameSessionContext.Instance.PlayerProfileId : "";
             string wallet = GameSessionContext.Instance != null ? GameSessionContext.Instance.WalletAddress : "";
-            snapshot = await service.FetchInventoryAsync(profileId, wallet);
+            snapshot = await PlayerProfileReadStore.ResolveOrCreate().RefreshInventoryAsync(service, profileId, wallet);
+            snapshotIdentityKey = ProfileIdentityKey(profileId, wallet);
             await RefreshCaptureEquipmentFilterAsync();
             busy = false;
 
@@ -768,6 +801,33 @@ namespace SignalJam.UI.MenuNavigation
 
             SetStatus(FormatInventoryStatus(snapshot));
             Render();
+        }
+
+        private void TryAdoptStoredInventory()
+        {
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session == null)
+                return;
+
+            if (PlayerProfileReadStore.ResolveOrCreate().TryGetInventory(
+                    session.PlayerProfileId,
+                    session.WalletAddress,
+                    out InventorySnapshot stored))
+            {
+                snapshot = stored;
+                snapshotIdentityKey = ProfileIdentityKey(session.PlayerProfileId, session.WalletAddress);
+            }
+            else if (!string.Equals(snapshotIdentityKey, ProfileIdentityKey(session.PlayerProfileId, session.WalletAddress), StringComparison.Ordinal))
+            {
+                snapshot = null;
+                selectedStack = null;
+            }
+        }
+
+        private static string ProfileIdentityKey(string playerProfileId, string walletAddress)
+        {
+            string profile = (playerProfileId ?? string.Empty).Trim();
+            return profile.Length > 0 ? "profile:" + profile : "wallet:" + (walletAddress ?? string.Empty).Trim();
         }
 
         private async Task RefreshCaptureEquipmentFilterAsync()

@@ -99,7 +99,7 @@ namespace Chainbound.Combat
         public MoveDefinitionSO flagshipMove;
 
         [Header("Initial Loadout")]
-        [Tooltip("Fallback battle kit when a Chainling has no saved moves. Capture Known grants roll progressionMovePool instead.")]
+        [Tooltip("Authored starter kit for this species. Battle equips saved move ids only and does not use this list as a fallback. Capture Known grants roll progressionMovePool instead.")]
         public List<MoveDefinitionSO> initialMoves = new List<MoveDefinitionSO>();
 
         [Header("Progression Reward Pool")]

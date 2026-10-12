@@ -46,7 +46,9 @@ serve(async (req: Request) => {
   try {
     const authenticated = await requireAuthenticatedUser(req);
     const profile = await resolveAuthenticatedProfile(req, supabase, body);
-    if (!authenticated || !profile) return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
+    if (!authenticated || !profile) {
+      return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
+    }
     const playerProfileId = profile.player_profile_id;
 
     const { data: existingIdentity, error: existingError } = await supabase

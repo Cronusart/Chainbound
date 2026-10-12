@@ -89,6 +89,8 @@ namespace Chainbound.Combat
 
         private void PrepareRewardsBeforePostBattlePresentation(BattleResult result)
         {
+            if (result != null && result.casualSpineMatch)
+                return;
             if (rewardsRouterOverride is ICombatRewardPreparation preparation)
                 preparation.PrepareRewards(result);
         }

@@ -157,6 +157,34 @@ namespace Chainbound.Combat.Tests
             }
         }
 
+        [Test]
+        public void GrantWorldPickupAsync_UpdatesTheSameBagReturnedByInventoryFetch()
+        {
+            GameObject go = new GameObject("ChainlingsMenuTestHarnessInventory");
+            try
+            {
+                ChainlingsMenuTestHarness harness = go.AddComponent<ChainlingsMenuTestHarness>();
+                InventorySnapshot before = harness.FetchInventoryAsync("profile", "wallet").GetAwaiter().GetResult();
+                int beforeQuantity = before.stacks.Find(stack => stack.itemId == "signal_orb")?.quantity ?? 0;
+
+                WorldPickupGrantResult grant = harness
+                    .GrantWorldPickupAsync("world.pickup.loomville_mart.open_crate_orb")
+                    .GetAwaiter()
+                    .GetResult();
+                InventorySnapshot after = harness.FetchInventoryAsync("profile", "wallet").GetAwaiter().GetResult();
+                MenuInventoryItemStack orb = after.stacks.Find(stack => stack.itemId == "signal_orb");
+
+                Assert.IsTrue(grant.ok, grant.error);
+                Assert.IsFalse(grant.alreadyClaimed);
+                Assert.NotNull(orb);
+                Assert.AreEqual(beforeQuantity + 1, orb.quantity);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
         private static PlayerRosterEntry FindPartyEntry(ChainlingsMenuTestHarness harness, string chainlingId = null)
         {
             PlayerRosterSnapshot roster = harness.FetchRosterAsync("profile", "wallet").GetAwaiter().GetResult();

@@ -247,11 +247,20 @@ namespace Chainbound.Combat.Core
         public bool AddedToParty { get; set; }
         public bool BattleContinues { get; set; }
         public int FinalMeterBasisPoints { get; set; }
+        public BattleRewardSettlement? Settlement { get; set; }
         public int ElapsedTicks { get; set; }
         public float DurationSeconds { get; set; }
         public List<string> UnlockedAchievementIds { get; set; } = new List<string>();
 
         public bool IsFinal => Kind != CaptureOutcomeKind.None;
+        /// <summary>
+        /// The authority did not commit a terminal capture result. Presentation
+        /// must preserve the battle for rejoin/retry rather than showing a
+        /// normal escape or timeout result.
+        /// </summary>
+        public bool RequiresAuthorityRecovery =>
+            Kind == CaptureOutcomeKind.Rejected ||
+            Kind == CaptureOutcomeKind.Interrupted;
         public bool RemovesTargetFromBattle =>
             Kind == CaptureOutcomeKind.Locked ||
             Kind == CaptureOutcomeKind.Escaped;
@@ -267,6 +276,12 @@ namespace Chainbound.Combat.Core
         public int BandPositionUnits { get; set; }
         public int MeterBasisPoints { get; set; }
         public int RemainingTicks { get; set; }
+        /// <summary>
+        /// Last hold/release input sequence accepted by the capture authority.
+        /// This lets clients detect a dropped hold transition without trusting
+        /// their local prediction as terminal state.
+        /// </summary>
+        public long LastInputSequence { get; set; } = -1;
         public bool IsHeld { get; set; }
         public bool IsInsideBand { get; set; }
         public bool SpikeOccurred { get; set; }
@@ -290,7 +305,26 @@ namespace Chainbound.Combat.Core
         public string Kind { get; set; } = "";
         public string TargetId { get; set; } = "";
         public string OrbId { get; set; } = "";
+        public string ActorId { get; set; } = "";
+        public string ActionId { get; set; } = "";
+        public int TurnNumber { get; set; }
+        public int StepIndex { get; set; }
+        public bool BattleActive { get; set; } = true;
+        public int WinnerTeamIndex { get; set; } = -1;
+        public string EndReason { get; set; } = "";
+        public List<CombatVitalSnapshot> Vitals { get; set; } = new List<CombatVitalSnapshot>();
         public Dictionary<string, string> Actions { get; set; } = new Dictionary<string, string>();
+    }
+
+    [Serializable]
+    public sealed class CombatVitalSnapshot
+    {
+        public string EntityId { get; set; } = "";
+        public int TeamIndex { get; set; }
+        public int RosterIndex { get; set; }
+        public int CurrentHp { get; set; }
+        public int CurrentAp { get; set; }
+        public bool IsActive { get; set; }
     }
 
     [Serializable]
@@ -304,6 +338,10 @@ namespace Chainbound.Combat.Core
         public string Message { get; set; } = "";
         public bool IsResumable { get; set; }
         public long ExpiresAtUnixMilliseconds { get; set; }
+        public bool RequiresResumeChoice { get; set; }
+        public bool RequiresWipe { get; set; }
+        public string EndReason { get; set; } = "";
+        public BattleRewardSettlement? Settlement { get; set; }
     }
 
     public interface ICaptureSession : IDisposable
@@ -313,6 +351,7 @@ namespace Chainbound.Combat.Core
         Task<CaptureOutcome> Completion { get; }
         event Action<CaptureAuthoritativeState> SnapshotReceived;
         Task SetHeldAsync(bool held, long inputSequence, CancellationToken cancellationToken = default(CancellationToken));
+        Task ArmAsync(CancellationToken cancellationToken = default(CancellationToken));
         void ClearHeldInput();
     }
 
@@ -326,9 +365,20 @@ namespace Chainbound.Combat.Core
             string battleId,
             CancellationToken cancellationToken = default(CancellationToken));
 
+        Task<CombatSessionEnvelope> GetCurrentEncounterAsync(
+            CancellationToken cancellationToken = default(CancellationToken));
+
+        Task<CombatSessionEnvelope> ForfeitEncounterAsync(
+            string battleId,
+            CancellationToken cancellationToken = default(CancellationToken));
+
         Task<CombatSessionEnvelope> SubmitTeamCommandAsync(
             string battleId,
             CombatTeamCommand command,
+            CancellationToken cancellationToken = default(CancellationToken));
+
+        Task<BattleRewardSettlement> GetBattleRewardAsync(
+            string battleId,
             CancellationToken cancellationToken = default(CancellationToken));
 
         Task<ICaptureSession> OpenCaptureSessionAsync(

@@ -222,6 +222,7 @@ namespace Chainbound.Combat
 
             string json = JsonUtility.ToJson(new WalletConnectVerifiedRequestDto
             {
+                mode = ToBackendWalletConnectMode(request != null ? request.mode : WalletConnectMode.Link),
                 player_profile_id = request != null ? request.playerProfileId : "",
                 wallet_provider = ToBackendWalletProvider(request != null ? request.walletProviderType : WalletProviderType.None),
                 wallet_public_key = request != null ? request.walletPublicKey : "",
@@ -346,6 +347,7 @@ namespace Chainbound.Combat
                 activePlatformBuild = ToBuildPlatform(payload.active_platform_build, fallbackPlatform),
                 walletProofVerifiedAt = payload.wallet_proof_verified_at ?? "",
                 walletProofExpiresAt = proofExpiresAt,
+                walletResolutionStatus = payload.status ?? "",
                 profile = new PlayerProfileRef
                 {
                     playerProfileId = payload.player_profile_id ?? "",
@@ -428,6 +430,16 @@ namespace Chainbound.Combat
                 case WalletProviderType.SeedVault: return "seed_vault";
                 case WalletProviderType.Other: return "other";
                 default: return "none";
+            }
+        }
+
+        private static string ToBackendWalletConnectMode(WalletConnectMode mode)
+        {
+            switch (mode)
+            {
+                case WalletConnectMode.Resolve: return "resolve";
+                case WalletConnectMode.Create: return "create";
+                default: return "link";
             }
         }
 
@@ -553,6 +565,7 @@ namespace Chainbound.Combat
             public string active_platform_build;
             public string wallet_proof_verified_at;
             public string wallet_proof_expires_at;
+            public string status;
         }
 
         [Serializable]
@@ -574,7 +587,7 @@ namespace Chainbound.Combat
         [Serializable] private class AccountLinkWalletDto { public string player_profile_id; public string wallet_provider; public string wallet_public_key; public string signed_message; public string signature; public bool explicit_consent; public string active_platform_build; }
         [Serializable] private class AccountUnlinkWalletDto { public string player_profile_id; public string wallet_public_key; public bool explicit_consent; }
         [Serializable] private class WalletAuthChallengeRequestDto { public string player_profile_id; public string wallet_provider; public string wallet_public_key; public string active_platform_build; public string client_version; public string device_id; public string cluster; }
-        [Serializable] private class WalletConnectVerifiedRequestDto { public string player_profile_id; public string wallet_provider; public string wallet_public_key; public string nonce_id; public string signed_message; public string signature; public string active_platform_build; public string client_version; public string device_id; }
+        [Serializable] private class WalletConnectVerifiedRequestDto { public string mode; public string player_profile_id; public string wallet_provider; public string wallet_public_key; public string nonce_id; public string signed_message; public string signature; public string active_platform_build; public string client_version; public string device_id; }
 
         [Serializable]
         private class WalletAuthChallengeResponseDto

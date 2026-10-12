@@ -5,10 +5,12 @@ import {
   jsonResponse,
   readJsonBody,
   recordLinkEvent,
+  requireBoundWallet,
   requirePost,
   resolveAuthenticatedProfile,
   str,
   supabaseAdmin,
+  WalletBindingError,
 } from "../_shared/account_helpers.ts";
 
 serve(async (req: Request) => {
@@ -33,6 +35,7 @@ serve(async (req: Request) => {
     const profile = await resolveAuthenticatedProfile(req, supabase, body);
     if (!profile) return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
     const playerProfileId = profile.player_profile_id;
+    await requireBoundWallet(supabase, playerProfileId, walletPublicKey);
 
     const { error } = await supabase
       .from("profile_wallets")
@@ -54,6 +57,9 @@ serve(async (req: Request) => {
       message: "Wallet unlinked.",
     });
   } catch (error) {
+    if (error instanceof WalletBindingError) {
+      return jsonResponse({ success: false, error: error.code }, error.httpStatus);
+    }
     console.error("[account_unlink_wallet]", error);
     return jsonResponse({ success: false, error: "account_unlink_wallet_failed" }, 500);
   }

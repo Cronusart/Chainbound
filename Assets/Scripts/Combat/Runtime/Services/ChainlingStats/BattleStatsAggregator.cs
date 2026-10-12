@@ -117,6 +117,14 @@ namespace Chainbound.Combat
             }
         }
 
+        /// <summary>
+        /// Casual forensic digest. The client BattleId is not an input.
+        /// </summary>
+        public static string ComputePvpForensicHash(string matchId, string eventHash)
+        {
+            return BalanceConfigHashUtility.HashUtf8((matchId ?? string.Empty) + "|" + (eventHash ?? string.Empty));
+        }
+
         private static void MergeRewards(
             BattleResult result,
             BattleRewardSummary rewardSummary,

@@ -30,7 +30,9 @@ public static class WorldPickupGrantServicesAuthoring
         {
             Transform host = ResolveGrantHost(root.transform, report);
             CoreBagWorldPickupGrantService grant = EnsureComponent<CoreBagWorldPickupGrantService>(host, report);
+            CoreBagItemInventoryService reader = EnsureComponent<CoreBagItemInventoryService>(host, report);
             WireGrantConfig(grant, report);
+            WireReaderConfig(reader, report);
             EnsureObtainPresenter(root.transform, report);
 
             EditorUtility.SetDirty(host.gameObject);
@@ -150,6 +152,41 @@ public static class WorldPickupGrantServicesAuthoring
         prop.objectReferenceValue = config;
         so.ApplyModifiedPropertiesWithoutUndo();
         report.Add($"CoreBagWorldPickupGrantService.supabaseConfig -> {config.name}");
+    }
+
+    private static void WireReaderConfig(CoreBagItemInventoryService reader, List<string> report)
+    {
+        if (reader == null)
+            return;
+
+        string[] guids = AssetDatabase.FindAssets("t:SupabaseConfigSO");
+        SupabaseConfigSO config = null;
+        if (guids != null && guids.Length > 0)
+            config = AssetDatabase.LoadAssetAtPath<SupabaseConfigSO>(AssetDatabase.GUIDToAssetPath(guids[0]));
+
+        var so = new SerializedObject(reader);
+        SerializedProperty prop = so.FindProperty("supabaseConfig");
+        if (prop == null)
+        {
+            report.Add("CoreBagItemInventoryService.supabaseConfig: field not found");
+            return;
+        }
+
+        if (prop.objectReferenceValue != null)
+        {
+            report.Add($"CoreBagItemInventoryService.supabaseConfig: already assigned ({prop.objectReferenceValue.name})");
+            return;
+        }
+
+        if (config == null)
+        {
+            report.Add("CoreBagItemInventoryService.supabaseConfig: no SupabaseConfigSO found");
+            return;
+        }
+
+        prop.objectReferenceValue = config;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        report.Add($"CoreBagItemInventoryService.supabaseConfig -> {config.name}");
     }
 }
 #endif

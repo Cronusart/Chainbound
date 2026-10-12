@@ -95,6 +95,24 @@ public sealed class SpriteCinematicPlayer : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
+    public bool IsCoinNameMirrorActive =>
+        coinNameMirrorEnabled &&
+        coinNameOverlayInstance != null &&
+        coinNameOverlayInstance.gameObject.activeInHierarchy;
+
+    /// <summary>
+    /// Brings the held monitor name field back after a refused name.
+    /// The overlay stays the input surface for every following attempt.
+    /// </summary>
+    public void ResumeCoinNameMirror()
+    {
+        if (coinNameOverlayInstance == null)
+            return;
+
+        coinNameMirrorEnabled = true;
+        coinNameOverlayInstance.Show();
+    }
+
     /// <summary>Updates the diegetic coin-name field overlay while a last frame is held for name entry.</summary>
     public void SetCoinNameMirrorText(string text)
     {

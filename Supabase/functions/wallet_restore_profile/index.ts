@@ -35,13 +35,16 @@ serve(async (req: Request) => {
   const nonceId = str(body.nonce_id);
   const message = str(body.signed_message);
   const signature = str(body.signature);
-  if (!SOLANA_BASE58_RE.test(walletPublicKey) || !nonceId || !message || !signature)
+  if (!SOLANA_BASE58_RE.test(walletPublicKey) || !nonceId || !message || !signature) {
     return jsonResponse({ success: false, error: "missing_wallet_proof" }, 400);
+  }
 
   const supabase = supabaseAdmin();
   const authenticated = await requireAuthenticatedUser(req);
   const current = await resolveAuthenticatedProfile(req, supabase, body, true);
-  if (!authenticated || !current) return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
+  if (!authenticated || !current) {
+    return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
+  }
 
   try {
     const { data: challenge, error: challengeError } = await supabase
@@ -50,14 +53,18 @@ serve(async (req: Request) => {
       .eq("nonce_id", nonceId)
       .maybeSingle();
     if (challengeError) throw challengeError;
-    if (!challenge || str(challenge.verification_status) !== "issued" || challenge.consumed_at)
+    if (!challenge || str(challenge.verification_status) !== "issued" || challenge.consumed_at) {
       return jsonResponse({ success: false, error: "challenge_not_available" }, 409);
-    if (str(challenge.player_profile_id) !== current.player_profile_id ||
-        str(challenge.wallet_public_key) !== walletPublicKey ||
-        str(challenge.message) !== message ||
-        str(challenge.message_hash) !== await sha256Hex(message) ||
-        new Date(str(challenge.expires_at)).getTime() < Date.now())
+    }
+    if (
+      str(challenge.player_profile_id) !== current.player_profile_id ||
+      str(challenge.wallet_public_key) !== walletPublicKey ||
+      str(challenge.message) !== message ||
+      str(challenge.message_hash) !== await sha256Hex(message) ||
+      new Date(str(challenge.expires_at)).getTime() < Date.now()
+    ) {
       return jsonResponse({ success: false, error: "challenge_mismatch_or_expired" }, 401);
+    }
 
     const verified = verifySignature(walletPublicKey, message, signature);
     const devBypass = editorMockWalletAllowed() && isEditorMockSignature(signature);
@@ -72,7 +79,9 @@ serve(async (req: Request) => {
     const proofTtlSeconds = positiveInt(Deno.env.get("CHAINBOUND_WALLET_PROOF_TTL_SECONDS"), DEFAULT_PROOF_TTL_SECONDS);
     const proofExpiresAt = new Date(now.getTime() + proofTtlSeconds * 1000).toISOString();
     const { data: consumedChallenge, error: consumeError } = await supabase.from("wallet_auth_challenges").update({
-      consumed_at: nowIso, verification_status: "consumed", verification_error: null,
+      consumed_at: nowIso,
+      verification_status: "consumed",
+      verification_error: null,
       metadata_json: { source: "wallet_restore_profile", signature_verified: verified, dev_bypass: devBypass },
     })
       .eq("nonce_id", nonceId)
@@ -122,9 +131,17 @@ serve(async (req: Request) => {
       .single();
     if (targetError) throw targetError;
 
-    await recordLinkEvent(supabase, targetProfileId, "wallet_profile_restored", str(challenge.wallet_provider), "success", {
-      replaced_profile_id: current.player_profile_id, wallet_public_key: walletPublicKey,
-    });
+    await recordLinkEvent(
+      supabase,
+      targetProfileId,
+      "wallet_profile_restored",
+      str(challenge.wallet_provider),
+      "success",
+      {
+        replaced_profile_id: current.player_profile_id,
+        wallet_public_key: walletPublicKey,
+      },
+    );
     return jsonResponse({
       ...await sessionResponse(supabase, target, "wallet", normalizePlatform(body.active_platform_build)),
       wallet_proof_verified_at: nowIso,
@@ -139,22 +156,39 @@ serve(async (req: Request) => {
 
 function verifySignature(wallet: string, message: string, signatureText: string): boolean {
   try {
-    const moduleShape = bs58Module as unknown as { decode?: (value: string) => Uint8Array; default?: { decode?: (value: string) => Uint8Array } };
+    const moduleShape = bs58Module as unknown as {
+      decode?: (value: string) => Uint8Array;
+      default?: { decode?: (value: string) => Uint8Array };
+    };
     const decode = moduleShape.decode ?? moduleShape.default?.decode;
     const publicKey = decode?.(wallet);
     let signature: Uint8Array;
-    try { signature = Uint8Array.from(atob(signatureText), (character) => character.charCodeAt(0)); }
-    catch { signature = decode?.(signatureText) ?? new Uint8Array(); }
-    const naclShape = naclModule as unknown as { sign?: { detached?: { verify?: (m: Uint8Array, s: Uint8Array, p: Uint8Array) => boolean } }; default?: { sign?: { detached?: { verify?: (m: Uint8Array, s: Uint8Array, p: Uint8Array) => boolean } } } };
+    try {
+      signature = Uint8Array.from(atob(signatureText), (character) => character.charCodeAt(0));
+    } catch {
+      signature = decode?.(signatureText) ?? new Uint8Array();
+    }
+    const naclShape = naclModule as unknown as {
+      sign?: { detached?: { verify?: (m: Uint8Array, s: Uint8Array, p: Uint8Array) => boolean } };
+      default?: { sign?: { detached?: { verify?: (m: Uint8Array, s: Uint8Array, p: Uint8Array) => boolean } } };
+    };
     const verify = naclShape.sign?.detached?.verify ?? naclShape.default?.sign?.detached?.verify;
-    return !!publicKey && publicKey.length === 32 && signature.length === 64 && !!verify && verify(new TextEncoder().encode(message), signature, publicKey);
-  } catch { return false; }
+    return !!publicKey && publicKey.length === 32 && signature.length === 64 && !!verify &&
+      verify(new TextEncoder().encode(message), signature, publicKey);
+  } catch {
+    return false;
+  }
 }
 
 function isEditorMockSignature(value: string): boolean {
   if (value.startsWith(EDITOR_MOCK_SIGNATURE_PREFIX)) return true;
-  try { return new TextDecoder().decode(Uint8Array.from(atob(value), (character) => character.charCodeAt(0))).startsWith(EDITOR_MOCK_SIGNATURE_PREFIX); }
-  catch { return false; }
+  try {
+    return new TextDecoder().decode(Uint8Array.from(atob(value), (character) => character.charCodeAt(0))).startsWith(
+      EDITOR_MOCK_SIGNATURE_PREFIX,
+    );
+  } catch {
+    return false;
+  }
 }
 
 function positiveInt(value: unknown, fallback: number): number {

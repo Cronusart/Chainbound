@@ -1,14 +1,17 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import {
+  ensureRamLedgerAccount,
   getActiveWallet,
   JsonMap,
   jsonResponse,
   readJsonBody,
+  requireBoundWallet,
   requirePost,
   resolveAuthenticatedProfile,
   SOLANA_BASE58_RE,
   str,
   supabaseAdmin,
+  WalletBindingError,
 } from "../_shared/account_helpers.ts";
 import {
   authoritySecretBytes,
@@ -53,6 +56,7 @@ serve(async (req: Request) => {
   if (!profile) return jsonResponse({ success: false, error: "authenticated_profile_not_found" }, 401);
 
   try {
+    await requireBoundWallet(supabase, profile.player_profile_id, walletAddress);
     const activeWallet = await getActiveWallet(supabase, profile.player_profile_id);
     if (!activeWallet || str(activeWallet.wallet_public_key) !== walletAddress) {
       return jsonResponse({ success: false, error: "wallet_not_linked_to_profile" }, 403);
@@ -62,6 +66,7 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "mainnet_smoke_wallet_not_allowed" }, 403);
     }
     await ensureOwnershipRpcCluster(config);
+    await ensureRamLedgerAccount(supabase, profile.player_profile_id, walletAddress, config.cluster);
     const now = new Date().toISOString();
 
     // Expiry is not proof that a wallet never submitted. Keep the intent open
@@ -312,6 +317,9 @@ serve(async (req: Request) => {
       },
     });
   } catch (error) {
+    if (error instanceof WalletBindingError) {
+      return jsonResponse({ success: false, error: error.code }, error.httpStatus);
+    }
     if (error instanceof OwnershipConfigurationError) return jsonResponse({ success: false, error: error.code }, 503);
     const message = error instanceof Error ? error.message : "unknown_error";
     if (message === "insufficient_ram") {

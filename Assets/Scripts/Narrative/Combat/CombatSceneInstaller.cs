@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Chainbound.Combat;
+using Chainbound.Combat.Core;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.SceneManagement;
@@ -93,6 +94,9 @@ namespace SignalJam.Narrative.Combat
                     return;
                 }
 
+                if (TryBootstrapCasualPvp())
+                    return;
+
                 EncounterSelection encounterSelection = ResolveEncounterSelection();
                 if (encounterSelection.provider == null)
                 {
@@ -127,6 +131,38 @@ namespace SignalJam.Narrative.Combat
             {
                 Fail($"Bootstrap exception: {ex.Message}");
             }
+        }
+
+        private bool TryBootstrapCasualPvp()
+        {
+            if (!CasualPvpLaunchContext.HasPending || battleController == null)
+                return false;
+
+            CasualPvpLaunchPayload payload = CasualPvpLaunchContext.Current;
+            if (payload == null || payload.PartyA == null || payload.PartyB == null)
+            {
+                CasualPvpLaunchContext.Clear();
+                Fail("Casual match was missing locked parties.");
+                return true;
+            }
+
+            CasualPvpLaunchContext.Consume();
+
+            battleController.BeginCasualPvp(payload);
+            if (payload.Ruleset != null)
+                battleController.SetRulesetOverride(payload.Ruleset);
+            battleController.SetFleePolicyOverride(EncounterFleePolicy.Locked);
+            battleController.SetPlayerPartyProviderOverride(new SnapshotPartyProvider(payload.PartyA));
+            battleController.SetEncounterProviderOverride(
+                new SnapshotEncounterProvider(PvpPartyMapper.ToEncounter(payload.PartyB, payload.Seed)));
+            if (battleController.GetComponent<CasualPvpBattleBootstrap>() == null)
+                battleController.gameObject.AddComponent<CasualPvpBattleBootstrap>();
+            IsReady = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (logDiagnostics)
+                Debug.Log($"[PvPMatch] Combat scene armed for match {payload.MatchId} seat={payload.Seat}.");
+#endif
+            return true;
         }
 
         private void ResolveReferences()
@@ -168,57 +204,93 @@ namespace SignalJam.Narrative.Combat
 
         private EncounterSelection ResolveEncounterSelection()
         {
+            string battleSceneName = gameObject.scene.IsValid()
+                ? gameObject.scene.name
+                : SceneManager.GetActiveScene().name;
             bool hasGameplayLaunchTicket = TryConsumeGameplayLaunchTicket(
+                battleSceneName,
                 out EncounterTransitionBridge.EncounterLaunchSource requiredSource);
 
-            if (AllowsSource(
+            bool shouldUseAuthoritativeEncounter = !hasGameplayLaunchTicket ||
+                requiredSource == EncounterTransitionBridge.EncounterLaunchSource.Zone ||
+                requiredSource == EncounterTransitionBridge.EncounterLaunchSource.AuthoritativeResume;
+            if (shouldUseAuthoritativeEncounter &&
+                AuthoritativeBattleLaunchContext.HasSession &&
+                AuthoritativeBattleLaunchContext.Current.IsResumable &&
+                AuthoritativeBattleLaunchContext.TryReadState(out AuthoritativeClientBattleState authoritativeState))
+            {
+                if (requiredSource != EncounterTransitionBridge.EncounterLaunchSource.Narrative)
+                    NarrativeCombatLaunchBridge.ClearPendingPayload();
+                var authoritativeProvider = new AuthoritativeBattleEncounterProvider(authoritativeState);
+                return new EncounterSelection
+                {
+                    provider = authoritativeProvider,
+                    providerObject = null,
+                    isBoss = (AuthoritativeBattleKind)authoritativeState.battleKind == AuthoritativeBattleKind.Boss,
+                    introPresentation = defaultWildIntroPresentation,
+                    usePureManualPartyProvider = false,
+                    description = $"Authority:{AuthoritativeBattleLaunchContext.Current.BattleId}",
+                };
+            }
+
+            if (!AllowsSource(
                     hasGameplayLaunchTicket,
                     requiredSource,
                     EncounterTransitionBridge.EncounterLaunchSource.Narrative))
             {
-                NarrativeCombatLaunchBridge narrativeBridge = NarrativeCombatLaunchBridge.FindExisting();
-                if (narrativeBridge != null && narrativeBridge.TryPeek(out NarrativeCombatLaunchContext narrativeContext))
+                NarrativeCombatLaunchBridge.ClearPendingPayload();
+            }
+            else if (NarrativeCombatLaunchBridge.TryPeekPending(out NarrativeCombatLaunchContext narrativeContext))
+            {
+                ManualEncounterProviderSO manualProvider = narrativeContext.Provider;
+                if (manualProvider != null)
                 {
-                    ManualEncounterProviderSO manualProvider = narrativeContext.Provider;
-                    if (manualProvider != null)
-                    {
+                    NarrativeCombatLaunchBridge narrativeBridge = NarrativeCombatLaunchBridge.FindExisting();
+                    if (narrativeBridge != null)
                         narrativeBridge.ConsumePending();
+                    else
+                        NarrativeCombatLaunchBridge.ClearPendingPayload();
 
-                        ManualPartyProviderSO partyOverride =
-                            narrativeContext.PlayerPartyOverrideOrFallback;
+                    ManualPartyProviderSO partyOverride =
+                        narrativeContext.PlayerPartyOverrideOrFallback;
 
-                        bool usePureManualParty = narrativeContext.DisableSupabasePartyResolution;
+                    bool usePureManualParty = narrativeContext.DisableSupabasePartyResolution;
 
-                        if (usePureManualParty && partyOverride == null)
-                        {
-                            Debug.LogWarning(
-                                "[CombatSceneInstaller] Narrative launch disabled Supabase party resolution without assigning a scripted player party override.");
-                        }
-
-                        return new EncounterSelection
-                        {
-                            provider = manualProvider,
-                            providerObject = manualProvider,
-                            fleePolicyOverride = narrativeContext.FleePolicyOverride,
-                            isBoss = manualProvider.Difficulty == EncounterDifficulty.Boss,
-                            bossIntroAsset = manualProvider.BossIntroDialogueAsset,
-                            introPresentation = manualProvider.IntroPresentation,
-                            playerPartyOverride = partyOverride,
-                            disableSupabasePartyResolution = narrativeContext.DisableSupabasePartyResolution,
-                            disableOnChainLoadoutResolution = narrativeContext.DisableOnChainLoadoutResolution,
-                            armIntroAutoEscaper = narrativeContext.ArmIntroAutoEscaper,
-                            usePureManualPartyProvider = usePureManualParty,
-                            description = string.IsNullOrWhiteSpace(narrativeContext.EncounterId)
-                                ? $"Narrative:{manualProvider.name}"
-                                : $"Narrative:{narrativeContext.EncounterId}",
-                        };
+                    if (usePureManualParty && partyOverride == null)
+                    {
+                        Debug.LogWarning(
+                            "[CombatSceneInstaller] Narrative launch disabled Supabase party resolution without assigning a scripted player party override.");
                     }
 
-                    Debug.LogWarning(
-                        "[CombatSceneInstaller] NarrativeCombatLaunchBridge had pending context without a valid encounter provider. Discarding stale context.");
+                    if (logDiagnostics && narrativeBridge == null)
+                    {
+                        Debug.Log(
+                            "[CombatSceneInstaller] Recovered narrative launch payload after the bridge object was destroyed.");
+                    }
 
-                    narrativeBridge.ConsumePending();
+                    return new EncounterSelection
+                    {
+                        provider = manualProvider,
+                        providerObject = manualProvider,
+                        fleePolicyOverride = narrativeContext.FleePolicyOverride,
+                        isBoss = manualProvider.Difficulty == EncounterDifficulty.Boss,
+                        bossIntroAsset = manualProvider.BossIntroDialogueAsset,
+                        introPresentation = manualProvider.IntroPresentation,
+                        playerPartyOverride = partyOverride,
+                        disableSupabasePartyResolution = narrativeContext.DisableSupabasePartyResolution,
+                        disableOnChainLoadoutResolution = narrativeContext.DisableOnChainLoadoutResolution,
+                        armIntroAutoEscaper = narrativeContext.ArmIntroAutoEscaper,
+                        usePureManualPartyProvider = usePureManualParty,
+                        description = string.IsNullOrWhiteSpace(narrativeContext.EncounterId)
+                            ? $"Narrative:{manualProvider.name}"
+                            : $"Narrative:{narrativeContext.EncounterId}",
+                    };
                 }
+
+                Debug.LogWarning(
+                    "[CombatSceneInstaller] NarrativeCombatLaunchBridge had pending context without a valid encounter provider. Discarding stale context.");
+
+                NarrativeCombatLaunchBridge.ClearPendingPayload();
             }
 
             if (AllowsSource(
@@ -265,7 +337,7 @@ namespace SignalJam.Narrative.Combat
             {
                 Debug.LogError(
                     $"[CombatSceneInstaller] Gameplay encounter launch reached scene " +
-                    $"'{SceneManager.GetActiveScene().name}' without its required " +
+                    $"'{battleSceneName}' without its required " +
                     $"'{requiredSource}' payload. Combat-test providers were intentionally not used.",
                     this);
                 return default;
@@ -304,16 +376,22 @@ namespace SignalJam.Narrative.Combat
         }
 
         private static bool TryConsumeGameplayLaunchTicket(
+            string battleSceneName,
             out EncounterTransitionBridge.EncounterLaunchSource launchSource)
         {
             launchSource = EncounterTransitionBridge.EncounterLaunchSource.Unspecified;
 
-            EncounterTransitionBridge transitionBridge =
-                FindFirstObjectByType<EncounterTransitionBridge>(FindObjectsInactive.Include);
+            // The persistent bridge owns the ticket. FindFirst can hit an inactive
+            // scene duplicate whose ticket is empty and discard the real launch.
+            EncounterTransitionBridge transitionBridge = EncounterTransitionBridge.Instance;
+            if (transitionBridge == null)
+            {
+                transitionBridge = FindFirstObjectByType<EncounterTransitionBridge>(FindObjectsInactive.Include);
+            }
 
             return transitionBridge != null &&
                    transitionBridge.TryConsumeBattleSceneLaunchTicket(
-                       SceneManager.GetActiveScene().name,
+                       battleSceneName,
                        out launchSource);
         }
 

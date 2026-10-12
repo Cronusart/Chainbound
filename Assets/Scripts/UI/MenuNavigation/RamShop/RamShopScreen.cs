@@ -14,6 +14,7 @@ namespace SignalJam.UI.MenuNavigation
     {
         public const string RamShopScreenId = "ram_shop";
         private const int MaxStatusPolls = 20;
+        private const string LastOpenOrderKey = "RamShop.LastOpenOrder.v1";
 
         [Header("Services")]
         [SerializeField] private SupabaseConfigSO supabaseConfig;
@@ -52,6 +53,16 @@ namespace SignalJam.UI.MenuNavigation
         private int refreshVersion;
         private bool busy;
         private bool buttonsWired;
+        private bool resumingOrder;
+
+        [Serializable]
+        private sealed class LastOpenOrder
+        {
+            public string orderId;
+            public string cluster;
+            public string wallet;
+            public string reference;
+        }
 
         public bool HasEmbeddedLayout =>
             confirmSheet != null && GetComponentsInChildren<RamBundleCardPresenter>(true).Length == 3;
@@ -157,7 +168,13 @@ namespace SignalJam.UI.MenuNavigation
 
         public void ConfirmPurchase()
         {
-            if (!busy && selectedOrder != null) _ = SubmitAndSettleAsync(selectedOrder);
+            if (busy || selectedOrder == null) return;
+            if (IsQuoteExpired(selectedOrder))
+            {
+                _ = RefreshExpiredQuoteAsync();
+                return;
+            }
+            _ = SubmitAndSettleAsync(selectedOrder);
         }
 
         private async Task RefreshAsync(int version)
@@ -182,10 +199,12 @@ namespace SignalJam.UI.MenuNavigation
                     ShowUnavailable(string.IsNullOrWhiteSpace(loaded.maintenanceReason)
                         ? "RAM bundles are not available yet."
                         : loaded.maintenanceReason);
+                    await ResumeLastOpenOrderAsync(version);
                     return;
                 }
                 if (unavailableLabel != null) unavailableLabel.gameObject.SetActive(false);
                 SetStatus("Choose SOL. The Seeker wallet signs the payment.");
+                await ResumeLastOpenOrderAsync(version);
             }
             catch (Exception ex)
             {
@@ -255,7 +274,7 @@ namespace SignalJam.UI.MenuNavigation
                 SetStatus("Transaction recovery service is unavailable.");
                 return;
             }
-            if (!wallet.SupportsSignAndSend)
+            if (RequiresDeviceSignAndSend && !wallet.SupportsSignAndSend)
             {
                 SetStatus("Open this shop on a Seeker and approve the payment in the wallet.");
                 return;
@@ -268,12 +287,13 @@ namespace SignalJam.UI.MenuNavigation
                 var request = new ChainTxRequest(
                     new ChainTxScope(order.payment.cluster, wallet.PublicKey, null, order.orderId),
                     order.transactionBytes,
-                    true);
+                    RequiresDeviceSignAndSend);
                 order.payment.simulation = await transactions.SimulateAsync(request);
                 if (!order.payment.simulation.success) throw new InvalidOperationException(order.payment.simulation.errorMessage);
                 selectedBundle = bundle;
                 selectedOrder = order;
                 restoreSelection = source;
+                SaveLastOpenOrder(order);
                 BindConfirmation(order);
                 SetConfirmationVisible(true);
             }
@@ -296,13 +316,17 @@ namespace SignalJam.UI.MenuNavigation
                 var request = new ChainTxRequest(
                     new ChainTxScope(order.payment.cluster, order.payment.feePayer, null, order.orderId),
                     order.transactionBytes,
-                    true);
+                    RequiresDeviceSignAndSend);
                 TxResult result = await transactions.SubmitAsync(request);
                 order.payment.simulation = result.simulation ?? order.payment.simulation;
                 if (result.status == TxStatus.Rejected)
                 {
-                    SetStatus("Payment was rejected in the wallet.");
+                    transactions.ForgetIfUnsubmitted(request.scope);
+                    ClearLastOpenOrder();
+                    selectedOrder = null;
+                    SetStatus("Payment was rejected in the wallet. Choose the bundle again for a fresh quote.");
                     PendingIndicatorCall("ShowFailure");
+                    CloseConfirmation();
                     return;
                 }
 
@@ -313,9 +337,9 @@ namespace SignalJam.UI.MenuNavigation
                         ? await shop.ConfirmAsync(order.orderId, result.txSignature)
                         : await shop.GetStatusAsync(order.orderId, null, order.payment.reference);
                 }
-                catch (RamShopServiceException ex) when (ex.ErrorCode == "payment_not_finalized")
+                catch (RamShopServiceException ex)
                 {
-                    SetStatus("Payment is on devnet. Waiting for it to finalize.");
+                    SetStatus(ReadableError(ex) + " Recovery will keep checking Devnet.");
                     settled = order;
                 }
                 selectedOrder = settled;
@@ -328,6 +352,14 @@ namespace SignalJam.UI.MenuNavigation
                     if (balanceLabel != null) balanceLabel.text = $"RAM {settled.balanceAfter}";
                     SetStatus($"{settled.ramAmount} RAM settled. Receipt verified.");
                     PendingIndicatorCall("ShowSuccess");
+                    ClearLastOpenOrder();
+                    CloseConfirmation();
+                }
+                else if (IsTerminal(settled.state))
+                {
+                    SetStatus(TerminalOrderMessage(settled));
+                    PendingIndicatorCall("ShowFailure");
+                    ClearLastOpenOrder();
                     CloseConfirmation();
                 }
                 else
@@ -349,22 +381,172 @@ namespace SignalJam.UI.MenuNavigation
         private async Task<RamPurchaseOrder> PollStatusAsync(RamPurchaseOrder order)
         {
             RamPurchaseOrder current = order;
-            for (int attempt = 0; attempt < MaxStatusPolls && current.state != RamPurchaseState.Settled; attempt++)
+            for (int attempt = 0; attempt < MaxStatusPolls && !IsTerminal(current.state); attempt++)
             {
                 await Task.Delay(2000);
                 try
                 {
                     current = await shop.GetStatusAsync(current.orderId, current.paymentSignature, current.payment.reference);
                 }
-                catch (RamShopServiceException ex) when (ex.ErrorCode == "payment_not_finalized")
+                catch (Exception ex)
                 {
+                    SetStatus(ReadableError(ex) + " Retrying automatically.");
                     continue;
                 }
-                if (current.state == RamPurchaseState.Rejected || current.state == RamPurchaseState.Failed ||
-                    current.state == RamPurchaseState.ExpiredUnpaid || current.state == RamPurchaseState.ManualReview)
+                if (IsTerminal(current.state))
                     break;
             }
             return current;
+        }
+
+        private async Task RefreshExpiredQuoteAsync()
+        {
+            RamPurchaseOrder expired = selectedOrder;
+            RamBundle bundle = selectedBundle;
+            Button source = restoreSelection;
+            if (expired != null && transactions != null && expired.payment != null)
+            {
+                transactions.ForgetIfUnsubmitted(new ChainTxScope(
+                    expired.payment.cluster,
+                    expired.payment.feePayer,
+                    null,
+                    expired.orderId));
+            }
+            selectedOrder = null;
+            ClearLastOpenOrder();
+            SetConfirmationVisible(false);
+            SetStatus("That Devnet quote expired. Requesting a fresh one.");
+            if (bundle != null) await BeginQuoteAsync(bundle, source);
+        }
+
+        private async Task ResumeLastOpenOrderAsync(int version)
+        {
+            if (resumingOrder || shop == null || transactions == null || wallet == null || !wallet.IsConnected)
+                return;
+            LastOpenOrder saved = LoadLastOpenOrder();
+            if (saved == null || string.IsNullOrWhiteSpace(saved.orderId)) return;
+            if (!string.Equals(saved.wallet, wallet.PublicKey, StringComparison.Ordinal) ||
+                (catalog != null && !string.IsNullOrWhiteSpace(catalog.cluster) &&
+                 !string.Equals(saved.cluster, catalog.cluster, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            resumingOrder = true;
+            try
+            {
+                var scope = new ChainTxScope(saved.cluster, saved.wallet, null, saved.orderId);
+                PendingTxRecord pending = transactions.Query(scope);
+                RamPurchaseOrder current = await shop.GetStatusAsync(saved.orderId, pending?.signature, saved.reference);
+                if (version != refreshVersion) return;
+                if (current.state == RamPurchaseState.Quoted && pending == null)
+                {
+                    ClearLastOpenOrder();
+                    return;
+                }
+                SetStatus("Resuming the previous Devnet RAM payment.");
+                current = await PollStatusAsync(current);
+                if (version != refreshVersion) return;
+                selectedOrder = current;
+                if (current.state == RamPurchaseState.Settled)
+                {
+                    if (balanceLabel != null) balanceLabel.text = $"RAM {current.balanceAfter}";
+                    SetStatus($"{current.ramAmount} RAM settled. Receipt verified.");
+                    PendingIndicatorCall("ShowSuccess");
+                    ClearLastOpenOrder();
+                }
+                else if (IsTerminal(current.state))
+                {
+                    SetStatus(TerminalOrderMessage(current));
+                    PendingIndicatorCall("ShowFailure");
+                    ClearLastOpenOrder();
+                }
+                else
+                {
+                    SetStatus("The Devnet payment is still pending. Recovery remains active.");
+                }
+            }
+            catch (Exception ex)
+            {
+                if (version == refreshVersion) SetStatus(ReadableError(ex) + " Recovery remains active.");
+            }
+            finally
+            {
+                resumingOrder = false;
+            }
+        }
+
+        private void SaveLastOpenOrder(RamPurchaseOrder order)
+        {
+            if (order?.payment == null) return;
+            PlayerPrefs.SetString(LastOpenOrderKey, JsonUtility.ToJson(new LastOpenOrder
+            {
+                orderId = order.orderId,
+                cluster = order.payment.cluster,
+                wallet = order.payment.feePayer,
+                reference = order.payment.reference,
+            }));
+            PlayerPrefs.Save();
+        }
+
+        private static LastOpenOrder LoadLastOpenOrder()
+        {
+            if (!PlayerPrefs.HasKey(LastOpenOrderKey)) return null;
+            try
+            {
+                return JsonUtility.FromJson<LastOpenOrder>(PlayerPrefs.GetString(LastOpenOrderKey));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void ClearLastOpenOrder()
+        {
+            PlayerPrefs.DeleteKey(LastOpenOrderKey);
+            PlayerPrefs.Save();
+        }
+
+        private static bool IsQuoteExpired(RamPurchaseOrder order)
+        {
+            return order == null || !DateTime.TryParse(
+                order.quoteExpiresAt,
+                null,
+                System.Globalization.DateTimeStyles.RoundtripKind,
+                out DateTime expiresAt) || expiresAt.ToUniversalTime() <= DateTime.UtcNow;
+        }
+
+        private static bool IsTerminal(RamPurchaseState state)
+        {
+            return state == RamPurchaseState.Settled || state == RamPurchaseState.Rejected ||
+                   state == RamPurchaseState.Failed || state == RamPurchaseState.ExpiredUnpaid ||
+                   state == RamPurchaseState.ManualReview;
+        }
+
+        private static string TerminalOrderMessage(RamPurchaseOrder order)
+        {
+            switch (order.state)
+            {
+                case RamPurchaseState.ExpiredUnpaid:
+                    return "That quote expired without a verified payment. Choose the bundle again.";
+                case RamPurchaseState.ManualReview:
+                    return "The payment details did not match the quote. No RAM was credited; support review is required.";
+                case RamPurchaseState.Rejected:
+                    return "Payment was rejected in the wallet.";
+                default:
+                    return "The payment did not complete. No RAM was credited.";
+            }
+        }
+
+        private static bool RequiresDeviceSignAndSend
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return false;
+#else
+                return true;
+#endif
+            }
         }
 
         private void BindConfirmation(RamPurchaseOrder order)
@@ -456,8 +638,32 @@ namespace SignalJam.UI.MenuNavigation
                     return "Profile RAM and on-chain RAM do not match yet.";
                 case "ram_ledger_audit_pending":
                     return "Checking this wallet against the devnet profile.";
+                case "payment_not_finalized":
+                    return "Payment was sent and is waiting for Devnet finality.";
+                case "solana_rpc_unavailable":
+                case "solana_rpc_error":
+                case "ram_shop_request_failed":
+                    return "Devnet is taking longer than expected to respond.";
+                case "catalog_not_configured":
+                case "checkout_disabled":
+                    return "RAM checkout is temporarily unavailable.";
+                case "quote_expired_unpaid":
+                case "order_not_confirmable":
+                    return "That quote expired. Choose the bundle again for a fresh quote.";
+                case "ram_shop_devnet_only":
+                case "order_cluster_mismatch":
+                case "catalog_cluster_mismatch":
+                    return "Switch the connected wallet to Devnet and try again.";
+                case "payment_execution_failed":
+                    return "The Devnet payment failed. No RAM was credited.";
+                case "order_not_found":
+                    return "The saved RAM order could not be found. Choose a bundle to start again.";
                 default:
-                    return reason ?? string.Empty;
+                    return string.IsNullOrWhiteSpace(reason)
+                        ? "RAM checkout could not complete. Please retry."
+                        : reason.Contains("_")
+                            ? "RAM checkout could not complete. Please retry."
+                            : reason;
             }
         }
 
@@ -555,7 +761,13 @@ namespace SignalJam.UI.MenuNavigation
 
         private void HandleWalletChanged(string _) => Refresh();
         private void HandleWalletDisconnected() => Refresh();
-        private static string ReadableError(Exception error) => error is RamShopServiceException service ? service.ErrorCode : error.Message;
+        private static string ReadableError(Exception error)
+        {
+            if (error is RamShopServiceException service) return ShopperMessage(service.ErrorCode);
+            return string.IsNullOrWhiteSpace(error?.Message)
+                ? "RAM checkout could not complete. Please retry."
+                : error.Message;
+        }
 
         private void PendingIndicatorCall(string method, object value = null)
         {

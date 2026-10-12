@@ -33,6 +33,9 @@ The edge functions expect server-side secrets from environment variables:
 - `CHAINBOUND_OWNERSHIP_STAMP_RAM_COST`
 - `CHAINBOUND_OWNERSHIP_BIND_RAM_COST`
 - `CHAINBOUND_OWNERSHIP_TICKET_TTL_SECONDS`
+- `BATTLE_REWARD_MODE` (optional outer restriction: `off`, `shadow`, or `grant`; unset/`grant` passes through to the database authority)
+- `BATTLE_REWARD_SERVICE_SECRET` (shared only with the hosted BattleService)
+- `BATTLE_REWARD_DEVNET_PROFILE_ALLOWLIST` (optional outer restriction; when set, a JSON array of exact profile UUIDs)
 
 Mainnet additionally requires:
 
@@ -51,3 +54,8 @@ Use `.env.example` at the repo root as the public-safe reference. Do not place r
 - Gameplay ownership is profile-native. Wallets are optional linked identities;
   they never own roster, inventory, economy, or narrative state. The pre-release
   `players` table and wallet-only Edge Functions were retired in the 20260824 cutover.
+
+Battle-earned RAM is also profile-native and Postgres-canonical. The private
+`battle_reward_settle` function accepts only a service-authenticated `battle_id`;
+the database derives the configured amount, enforces the UTC earn cap, and writes
+the balance, positive-value ledger operation, and domain receipt atomically.

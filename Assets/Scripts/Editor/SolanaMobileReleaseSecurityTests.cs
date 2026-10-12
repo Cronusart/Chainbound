@@ -29,7 +29,7 @@ public sealed class SolanaMobileReleaseSecurityTests
     private const string WalletConnectPath = "supabase/functions/wallet_connect_verified/index.ts";
     private const string AccountSessionPath = "Assets/Scripts/Combat/Runtime/Accounts/AccountSessionService.cs";
     private const string WalletMigrationPath = "supabase/migrations/20260924061959_single_active_profile_wallet.sql";
-    private const string WalletRecoveryMigrationPath = "supabase/migrations/20260925010000_wallet_profile_recovery.sql";
+    private const string WalletHardeningMigrationPath = "supabase/migrations/20261009143000_ram_v2_pre_rollout_hardening.sql";
     private const string WalletRestorePath = "supabase/functions/wallet_restore_profile/index.ts";
     private const string GameServicesPrefabPath = "Assets/Prefabs/GameServices/GameServices.prefab";
     private const string WalletPromptPrefabPath = "Assets/Prefabs/UI/WalletConnectionPrompt.prefab";
@@ -211,7 +211,7 @@ public sealed class SolanaMobileReleaseSecurityTests
     }
 
     [Test]
-    public void WalletDatabase_EnforcesOneActiveWalletPerProfileAndPerWallet()
+    public void WalletDatabase_EnforcesPermanentOneToOneBindingAndOneActiveSessionLink()
     {
         string migration = File.ReadAllText(WalletMigrationPath);
         StringAssert.Contains("ux_profile_wallets_active_profile", migration);
@@ -219,27 +219,31 @@ public sealed class SolanaMobileReleaseSecurityTests
         StringAssert.Contains("WHERE is_active = true", migration);
         StringAssert.Contains("AND unlinked_at IS NULL", migration);
 
-        string function = File.ReadAllText(WalletConnectPath);
-        StringAssert.Contains("profile_wallet_mismatch", function);
-        StringAssert.Contains("wallet_link_race_conflict", function);
+        string hardening = File.ReadAllText(WalletHardeningMigrationPath);
+        StringAssert.Contains("bound_wallet_address", hardening);
+        StringAssert.Contains("player_profiles_bound_wallet_address_key", hardening);
+        StringAssert.Contains("wallet_binding_is_permanent", hardening);
+        StringAssert.Contains("wallet_already_bound_to_profile", hardening);
+        StringAssert.Contains("wallet_bound_to_other_profile", hardening);
     }
 
     [Test]
-    public void VerifiedConnect_RecoversExistingWalletProfileThroughServiceRoleTransaction()
+    public void VerifiedConnect_UsesReadOnlyResolveAndServiceRolePermanentBindingTransactions()
     {
         string function = File.ReadAllText(WalletConnectPath);
-        string migration = File.ReadAllText(WalletRecoveryMigrationPath);
+        string migration = File.ReadAllText(WalletHardeningMigrationPath);
 
-        StringAssert.Contains("profile_recover_by_wallet_tx", function);
-        StringAssert.Contains("wallet_profile_restored", function);
-        StringAssert.DoesNotContain("wallet_linked_to_different_profile", function);
+        StringAssert.Contains("wallet_resolve_bound_profile_service", function);
+        StringAssert.Contains("wallet_bind_profile_service", function);
+        StringAssert.Contains("wallet_create_bound_profile_service", function);
+        StringAssert.Contains("mode === \"resolve\"", function);
+        StringAssert.DoesNotContain("profile_recover_by_wallet_tx", function);
         StringAssert.Contains("pg_advisory_xact_lock", migration);
-        StringAssert.Contains("verified_wallet_profile_recovery", migration);
         StringAssert.Contains(
-            "REVOKE ALL ON FUNCTION public.profile_recover_by_wallet_tx(TEXT, UUID, TEXT) FROM anon, authenticated",
+            "REVOKE ALL ON FUNCTION public.wallet_resolve_bound_profile_service(TEXT) FROM PUBLIC, anon, authenticated",
             migration);
         StringAssert.Contains(
-            "GRANT EXECUTE ON FUNCTION public.profile_recover_by_wallet_tx(TEXT, UUID, TEXT) TO service_role",
+            "GRANT EXECUTE ON FUNCTION public.wallet_create_bound_profile_service(TEXT, UUID, TEXT, TEXT, TEXT) TO service_role",
             migration);
     }
 

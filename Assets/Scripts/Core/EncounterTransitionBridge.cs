@@ -26,6 +26,7 @@ public class EncounterTransitionBridge : MonoBehaviour
         Narrative = 1,
         Zone = 2,
         ManualEncounter = 3,
+        AuthoritativeResume = 4,
     }
 
     [Serializable]
@@ -45,6 +46,7 @@ public class EncounterTransitionBridge : MonoBehaviour
         public EncounterLaunchSource launchSource = EncounterLaunchSource.Unspecified;
         public string authoritativeZoneId = "";
         public string authoritativeNarrativeEncounterId = "";
+        public bool skipAuthoritativeSession;
         public Action onReadyToLoad;
     }
 
@@ -141,6 +143,12 @@ public class EncounterTransitionBridge : MonoBehaviour
         return true;
     }
 
+    public void ArmBattleSceneLaunchTicket(string battleSceneName, EncounterLaunchSource launchSource)
+    {
+        pendingBattleSceneLaunchTicket = battleSceneName?.Trim() ?? string.Empty;
+        pendingBattleSceneLaunchSource = launchSource;
+    }
+
     private void Awake()
     {
         if (instance != null && instance != this)
@@ -218,6 +226,7 @@ public class EncounterTransitionBridge : MonoBehaviour
         PlayerMovement3D playerMovement = null;
         PlayerAnimationController3D_Mesh playerAnimationController = null;
         EncounterTransitionGlitchOverlay glitchOverlay = null;
+        EncounterLeadInCue encounterCue = null;
         bool startedExternalAnimationLock = false;
 
         try
@@ -274,6 +283,10 @@ public class EncounterTransitionBridge : MonoBehaviour
                     startedExternalAnimationLock = true;
                 }
 
+                encounterCue = EncounterLeadInCue.FindOnPlayer(playerRoot);
+                if (encounterCue != null)
+                    encounterCue.Show();
+
                 glitchOverlay = ResolveGlitchOverlay();
                 if (glitchOverlay != null)
                 {
@@ -288,6 +301,9 @@ public class EncounterTransitionBridge : MonoBehaviour
 
             if (!CanStartSceneLoad(request))
                 yield break;
+
+            if (request.launchSource != EncounterLaunchSource.Narrative)
+                SignalJam.Narrative.Combat.NarrativeCombatLaunchBridge.ClearPendingPayload();
 
             request.onReadyToLoad?.Invoke();
 
@@ -313,6 +329,9 @@ public class EncounterTransitionBridge : MonoBehaviour
 
             if (startedExternalAnimationLock && playerAnimationController != null)
                 playerAnimationController.EndExternalAnimationLock();
+
+            if (encounterCue != null)
+                encounterCue.HideImmediate();
 
             if (playerMovement != null)
                 playerMovement.SetFrozen(false, preservePhysics: false);
@@ -342,6 +361,14 @@ public class EncounterTransitionBridge : MonoBehaviour
 
     private IEnumerator EnsureAuthoritativeBattleSession(EncounterTransitionRequest request, Action<bool> completed)
     {
+        if (request.skipAuthoritativeSession)
+        {
+            AuthoritativeBattleLaunchContext.Clear();
+            SetAuthorityGateMessage(string.Empty);
+            completed?.Invoke(true);
+            yield break;
+        }
+
         AuthoritativeCombatSessionService service = FindFirstObjectByType<AuthoritativeCombatSessionService>(FindObjectsInactive.Include);
         if (service == null && SolanaServiceBridge.Instance != null)
             service = SolanaServiceBridge.Instance.CombatSessionService as AuthoritativeCombatSessionService;
@@ -354,12 +381,22 @@ public class EncounterTransitionBridge : MonoBehaviour
             yield break;
         }
 
-        SetAuthorityGateMessage("SIGNAL SYNC UNAVAILABLE — RETRYING");
         Task<bool> availability = service.RefreshAvailabilityAsync();
         while (!availability.IsCompleted)
             yield return null;
         if (availability.IsFaulted || availability.IsCanceled || !availability.Result)
         {
+            Exception availabilityError = availability.Exception != null ? availability.Exception.GetBaseException() : null;
+            string detail = availabilityError != null ? availabilityError.Message : service.LastAuthorityError;
+            if (BeginLocalPractice(service, null))
+            {
+                completed?.Invoke(true);
+                yield break;
+            }
+
+            SetAuthorityGateMessage("SIGNAL SYNC UNAVAILABLE — RETRYING");
+            if (!string.IsNullOrWhiteSpace(detail))
+                Debug.LogWarning($"[EncounterTransitionBridge] Battle service is not ready: {detail}", this);
             completed?.Invoke(false);
             yield break;
         }
@@ -376,16 +413,90 @@ public class EncounterTransitionBridge : MonoBehaviour
         if (start.IsFaulted || start.IsCanceled || start.Result == null)
         {
             Exception error = start.Exception != null ? start.Exception.GetBaseException() : null;
-            SetAuthorityGateMessage(error != null && error is AuthoritativeCombatServiceException authorityError && authorityError.Code == "upgrade_required"
+            string failureCode = error is AuthoritativeCombatServiceException authorityError ? authorityError.Code : null;
+            if (error != null)
+                Debug.LogWarning($"[EncounterTransitionBridge] Authoritative battle start failed: {error.Message}", this);
+            if (BeginLocalPractice(service, failureCode))
+            {
+                completed?.Invoke(true);
+                yield break;
+            }
+
+            SetAuthorityGateMessage(string.Equals(failureCode, "upgrade_required", StringComparison.Ordinal)
                 ? "GAME DATA UPDATE REQUIRED"
                 : "SIGNAL SYNC UNAVAILABLE — RETRYING");
             completed?.Invoke(false);
             yield break;
         }
 
-        AuthoritativeBattleLaunchContext.Publish(start.Result);
+        if (start.Result.RequiresResumeChoice || start.Result.RequiresWipe)
+        {
+            PendingBattleResumeCoordinator coordinator = PendingBattleResumeCoordinator.Instance;
+            if (coordinator == null)
+            {
+                Debug.LogError("[EncounterTransitionBridge] Pending battle prompt is unavailable; refusing to choose for the player.", this);
+                completed?.Invoke(false);
+                yield break;
+            }
+
+            Task<PendingBattleResumeResult> decision = coordinator.ResolveEnvelopeAsync(start.Result);
+            while (!decision.IsCompleted)
+                yield return null;
+            if (decision.IsFaulted || decision.IsCanceled)
+            {
+                Debug.LogWarning("[EncounterTransitionBridge] Pending battle decision did not complete.", this);
+                completed?.Invoke(false);
+                yield break;
+            }
+
+            if (decision.Result.Outcome == PendingBattleResumeOutcome.Wipe)
+            {
+                PendingBattleRouteUtility.RequestWipe(request.transitionStyle, "Encounter.PendingBattleWipe");
+                completed?.Invoke(false);
+                yield break;
+            }
+            if (decision.Result.Outcome != PendingBattleResumeOutcome.Rejoin)
+            {
+                completed?.Invoke(false);
+                yield break;
+            }
+            request.launchSource = EncounterLaunchSource.AuthoritativeResume;
+        }
+        else
+        {
+            AuthoritativeBattleLaunchContext.Publish(start.Result);
+        }
         SetAuthorityGateMessage(string.Empty);
         completed?.Invoke(true);
+    }
+
+    /// <summary>
+    /// Editor and test runs may start the existing local encounter when the battle
+    /// service does not answer. A manifest mismatch still refuses the battle.
+    /// </summary>
+    public static bool ShouldUseLocalPracticeBattle(bool allowsLocalPractice, string failureCode)
+    {
+        if (!allowsLocalPractice)
+            return false;
+        if (string.Equals(failureCode, "upgrade_required", StringComparison.Ordinal))
+            return false;
+#if UNITY_EDITOR || UNITY_INCLUDE_TESTS
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    private bool BeginLocalPractice(AuthoritativeCombatSessionService service, string failureCode)
+    {
+        bool allowsLocalPractice = service == null || service.AllowsLocalPractice;
+        if (!ShouldUseLocalPracticeBattle(allowsLocalPractice, failureCode))
+            return false;
+
+        AuthoritativeBattleLaunchContext.Clear();
+        SetAuthorityGateMessage(string.Empty);
+        Debug.LogWarning("[EncounterTransitionBridge] Battle service did not answer. Starting the local encounter.");
+        return true;
     }
 
     private void SetAuthorityGateMessage(string message)

@@ -42,6 +42,30 @@ namespace Chainbound.Combat.Tests
             Assert.AreEqual("nonce-1", gateway.VerifiedRequest.nonceId);
             Assert.AreEqual(gateway.ChallengeMessage, gateway.VerifiedRequest.signedMessage);
             Assert.AreEqual(Convert.ToBase64String(wallet.Signature), gateway.VerifiedRequest.signature);
+            Assert.AreEqual(WalletConnectMode.Link, gateway.VerifiedRequest.mode);
+        }
+
+        [Test]
+        public async Task MainMenuResolve_NoProfileDoesNotReplaceLoadedSessionOrBind()
+        {
+            root = new GameObject("WalletResolutionNoProfileTests");
+            AccountSessionService service = root.AddComponent<AccountSessionService>();
+            FakeWalletProvider wallet = root.AddComponent<FakeWalletProvider>();
+            FakeProfileGateway gateway = root.AddComponent<FakeProfileGateway>();
+            gateway.VerifiedResolutionStatus = "no_profile";
+            gateway.VerifiedProfileId = "";
+            service.Configure(accountWalletProvider: wallet, gateway: gateway);
+            PlayerAccountSession guest = PlayerAccountSession.FromGuest("guest-profile", BuildPlatform.Editor);
+            service.SetSession(guest);
+
+            PlayerAccountSession resolution = await service.ConnectWalletAndResolveSessionAsync(
+                "wallet-resolution-test",
+                WalletConnectMode.Resolve);
+
+            Assert.IsFalse(resolution.fetchError, resolution.errorMessage);
+            Assert.AreEqual("no_profile", resolution.walletResolutionStatus);
+            Assert.AreEqual(WalletConnectMode.Resolve, gateway.VerifiedRequest.mode);
+            Assert.AreSame(guest, service.CurrentSession, "Read-only resolution must not replace or bind the loaded profile.");
         }
 
         [Test]
@@ -206,6 +230,7 @@ namespace Chainbound.Combat.Tests
             public const string StaticChallengeMessage = "Chainbound wallet login\nNonce: test";
             public string ChallengeMessage => StaticChallengeMessage;
             public string VerifiedProfileId { get; set; } = "profile-1";
+            public string VerifiedResolutionStatus { get; set; } = "profile_found";
             public bool LegacyLinkEndpointCalled { get; private set; }
             public AccountWalletAuthChallengeRequest ChallengeRequest { get; private set; }
             public AccountWalletVerifiedConnectRequest VerifiedRequest { get; private set; }
@@ -231,6 +256,9 @@ namespace Chainbound.Combat.Tests
                 session.accountLinkState = AccountLinkState.Linked;
                 session.walletProofVerifiedAt = DateTime.UtcNow.ToString("O");
                 session.walletProofExpiresAt = DateTime.UtcNow.AddMinutes(15).ToString("O");
+                session.walletResolutionStatus = request.mode == WalletConnectMode.Resolve
+                    ? VerifiedResolutionStatus
+                    : request.mode == WalletConnectMode.Create ? "profile_created" : "profile_found";
                 session.walletIdentity = new WalletIdentityRef
                 {
                     isActive = true,

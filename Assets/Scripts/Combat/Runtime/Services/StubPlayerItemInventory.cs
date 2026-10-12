@@ -9,7 +9,7 @@ namespace Chainbound.Combat
     /// Editor / sandbox world-pickup grant. Records spawn ids in memory and never
     /// writes SQL. Seeded with Link 1 / Jungle backpacks and Mart leftover crates.
     /// </summary>
-    public sealed class StubPlayerItemInventory : MonoBehaviour, IPlayerItemInventory
+    public sealed class StubPlayerItemInventory : MonoBehaviour, IPlayerItemInventory, IInventoryService
     {
         private readonly HashSet<string> claimedSpawns = new HashSet<string>(StringComparer.Ordinal);
         private readonly Dictionary<string, SpawnReward> spawnCatalog =
@@ -47,6 +47,27 @@ namespace Chainbound.Combat
                 itemId = item,
                 quantity = Mathf.Max(1, quantity),
             };
+        }
+
+        public static bool TryResolveDefaultSpawn(string spawnId, out string itemId, out int quantity)
+        {
+            switch ((spawnId ?? string.Empty).Trim())
+            {
+                case "world.pickup.link1.backpack_01":
+                case "world.pickup.jungle.backpack_01":
+                case "world.pickup.loomville_mart.open_crate_patch":
+                    itemId = "chainling_patch";
+                    quantity = 1;
+                    return true;
+                case "world.pickup.loomville_mart.open_crate_orb":
+                    itemId = "signal_orb";
+                    quantity = 1;
+                    return true;
+                default:
+                    itemId = string.Empty;
+                    quantity = 0;
+                    return false;
+            }
         }
 
         public Task<WorldPickupGrantResult> GrantWorldPickupAsync(string spawnId)
@@ -87,6 +108,34 @@ namespace Chainbound.Combat
                 reward.quantity,
                 next,
                 alreadyClaimed: false));
+        }
+
+        public Task<InventorySnapshot> FetchInventoryAsync(string playerProfileId, string walletAddress)
+        {
+            SeedDefaultSpawns();
+            var snapshot = new InventorySnapshot
+            {
+                connectivity = MenuConnectivityState.Ready,
+                ramBalance = 0,
+                stacks = new List<MenuInventoryItemStack>(),
+                consumableIds = new List<string>(),
+                cosmeticAssetIds = new List<string>(),
+                walletPublicKey = (walletAddress ?? string.Empty).Trim(),
+                cluster = "editor",
+                lastError = string.Empty,
+            };
+
+            foreach (KeyValuePair<string, int> pair in stacks)
+            {
+                if (pair.Value <= 0)
+                    continue;
+
+                snapshot.stacks.Add(PlayerItemCatalogSeed.CreateStack(pair.Key, pair.Value));
+                for (int i = 0; i < pair.Value; i++)
+                    snapshot.consumableIds.Add(pair.Key);
+            }
+
+            return Task.FromResult(snapshot);
         }
 
         private void SeedDefaultSpawns()

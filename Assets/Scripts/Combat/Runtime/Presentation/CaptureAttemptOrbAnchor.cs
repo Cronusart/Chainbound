@@ -56,6 +56,12 @@ namespace Chainbound.Combat
                 beamParticles = go.AddComponent<ParticleSystem>();
             }
 
+            // Unity cannot change a playing system's duration. A beam can be
+            // replayed before its previous particles expire, so reset it before
+            // applying the next presentation configuration.
+            if (beamParticles.isPlaying)
+                beamParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
             ParticleSystem.MainModule main = beamParticles.main;
             main.loop = true;
             main.duration = 0.6f;
@@ -101,7 +107,6 @@ namespace Chainbound.Combat
             Vector3 delta = worldTarget - origin;
             if (delta.sqrMagnitude > 0.001f)
                 beam.transform.rotation = Quaternion.LookRotation(delta.normalized, Vector3.up);
-            beam.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             beam.Play(true);
         }
 

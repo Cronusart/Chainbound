@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b8700e866f11944f836c258d6049e3a, type: 3}
+  m_Name: prof_charker_academy_profile
+  m_EditorClassIdentifier: 
+  questDefinition: {fileID: 0}
+  questId: ambient_npc_prof_charker
+  rules: []
+  inactiveDialogue: {fileID: 11400000, guid: 1c2f60e05b064f542ba024ddca2f9900, type: 2}
+  inactiveTriggerId: 
+  inactiveNpcBehavior:
+    mode: 1
+    behaviorOverride: {fileID: 0}
+  activeFallbackDialogue: {fileID: 11400000, guid: 1c2f60e05b064f542ba024ddca2f9900, type: 2}
+  activeFallbackTriggerId: 
+  activeFallbackNpcBehavior:
+    mode: 1
+    behaviorOverride: {fileID: 0}
+  designerNotes: Default Academy line while the bindery basement is flooded. A later
+    bindery quest can add a profile rule without replacing this NPC.
+  activateQuestOnInactiveInteract: 0
+  completeObjectiveOnActivate: 

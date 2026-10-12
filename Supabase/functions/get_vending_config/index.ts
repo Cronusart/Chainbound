@@ -1,14 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import {
-  JsonMap,
-  jsonResponse,
-  readJsonBody,
-  requirePost,
-} from "../_shared/account_helpers.ts";
-import {
-  VENDING_CONFIG,
-  hashVendingConfig,
-} from "../_shared/vending_config.ts";
+import { JsonMap, jsonResponse, readJsonBody, requirePost } from "../_shared/account_helpers.ts";
+import { hashVendingConfig, VENDING_CONFIG } from "../_shared/vending_config.ts";
 
 /**
  * Returns the authoritative vending lever board for clients.

@@ -12,6 +12,7 @@ import {
   str,
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
+import { isDisplayNameCharsetValid } from "../_shared/display_name_charset.ts";
 import {
   isPlayerDisplayNameLengthValid,
   isPlayerDisplayNameUniqueViolation,
@@ -27,7 +28,7 @@ serve(async (req: Request) => {
   if (!body) return jsonResponse({ success: false, error: "invalid_json" }, 400);
 
   const displayName = normalizePlayerDisplayName(str(body.display_name));
-  if (!isPlayerDisplayNameLengthValid(displayName)) {
+  if (!isPlayerDisplayNameLengthValid(displayName) || !isDisplayNameCharsetValid(displayName)) {
     return jsonResponse({ success: false, error: "invalid_display_name" }, 400);
   }
 

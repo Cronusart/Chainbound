@@ -25,8 +25,8 @@ serve(async (req: Request) => {
     const progression = { ...(profile.progression_state ?? {}) } as JsonMap;
     // This checkpoint is intentionally monotonic: a completed/skipped intro
     // should never regress because of a stale client retry.
-    progression.intro_cinematic_complete =
-      bool(progression.intro_cinematic_complete) || bool(body.intro_cinematic_complete);
+    progression.intro_cinematic_complete = bool(progression.intro_cinematic_complete) ||
+      bool(body.intro_cinematic_complete);
     const { data: updated, error } = await supabase
       .from("player_profiles")
       .update({ progression_state: progression })

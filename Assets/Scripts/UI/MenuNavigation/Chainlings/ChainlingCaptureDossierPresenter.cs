@@ -51,8 +51,9 @@ namespace SignalJam.UI.MenuNavigation
 
                 if (useLocal)
                 {
-                    // Practice / pre-grant reveal: show the rolled target without touching
-                    // the backend. The cached roster only informs the storage count line.
+                    // Practice / pre-grant reveal: show the captured chainling on the local
+                    // snapshot. That snapshot carries the one equipped move, not the wild
+                    // fight kit. The cached roster only informs the storage count line.
                     roster = provider is SupabasePlayerRosterProvider cached ? cached.CachedRoster : null;
                     captured = new PlayerRosterEntry
                     {
@@ -68,7 +69,10 @@ namespace SignalJam.UI.MenuNavigation
                     for (int attempt = 0; attempt < Mathf.Max(1, hydrateAttempts); attempt++)
                     {
                         roster = provider != null
-                            ? await provider.FetchRosterAsync(request.playerProfileId, wallet)
+                            ? await PlayerProfileReadStore.ResolveOrCreate().RefreshRosterAsync(
+                                provider,
+                                request.playerProfileId,
+                                wallet)
                             : null;
                         captured = FindByBackendId(roster, request.chainlingId);
                         if (captured != null)

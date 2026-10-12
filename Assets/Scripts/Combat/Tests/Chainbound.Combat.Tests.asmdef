@@ -2,6 +2,8 @@
     "name": "Chainbound.Combat.Tests",
     "rootNamespace": "Chainbound.Combat.Tests",
     "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
         "Chainbound.Combat.Core",
         "Chainbound.Combat.Runtime",
         "SignalJam.AudioData",
@@ -10,7 +12,9 @@
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
@@ -20,9 +24,6 @@
     "autoReferenced": false,
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
-    ],
-    "optionalUnityReferences": [
-        "TestAssemblies"
     ],
     "versionDefines": [],
     "noEngineReferences": false

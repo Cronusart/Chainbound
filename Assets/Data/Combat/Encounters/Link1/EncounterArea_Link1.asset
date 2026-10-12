@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: EncounterArea_Link1
   m_EditorClassIdentifier: 
   areaId: link1
-  encounterChance: 0.12
+  encounterChance: 0.33
   difficulty: 0
   minEncounterPartySize: 1
   maxEncounterPartySize: 1

@@ -25,6 +25,7 @@ public class Step_CommitPlayerName : SequenceStep
         string playerName = ResolvePlayerName(context);
         if (string.IsNullOrWhiteSpace(playerName))
         {
+            yield return ZoomOutNameField();
             onComplete?.Invoke(StepOutcome.Failed("Player name was empty."));
             yield break;
         }
@@ -35,6 +36,7 @@ public class Step_CommitPlayerName : SequenceStep
         bool useOfflineCommit = sessionContext != null && sessionContext.IsOfflineSession;
         if (!useOfflineCommit && string.IsNullOrWhiteSpace(playerProfileId) && string.IsNullOrWhiteSpace(walletAddress))
         {
+            yield return ZoomOutNameField();
             onComplete?.Invoke(StepOutcome.Failed("GameSessionContext player profile id and wallet were empty."));
             yield break;
         }
@@ -42,11 +44,14 @@ public class Step_CommitPlayerName : SequenceStep
         IPlayerNameService service = ResolveService();
         if (service == null)
         {
+            yield return ZoomOutNameField();
             onComplete?.Invoke(StepOutcome.Failed("IPlayerNameService could not be resolved."));
             yield break;
         }
 
-        while (true)
+        StepOutcome outcome = default;
+        bool finished = false;
+        while (!finished)
         {
             Task<PlayerNameCommitResult> commitTask = service.CommitDisplayNameAsync(walletAddress, playerName, supabaseConfig);
             while (!commitTask.IsCompleted)
@@ -54,8 +59,9 @@ public class Step_CommitPlayerName : SequenceStep
 
             if (commitTask.IsFaulted)
             {
-                onComplete?.Invoke(StepOutcome.Failed(commitTask.Exception?.GetBaseException().Message ?? "Unknown commit failure."));
-                yield break;
+                outcome = StepOutcome.Failed(commitTask.Exception?.GetBaseException().Message ?? "Unknown commit failure.");
+                finished = true;
+                break;
             }
 
             PlayerNameCommitResult result = commitTask.Result;
@@ -68,14 +74,16 @@ public class Step_CommitPlayerName : SequenceStep
                 if (enableDebugLogs)
                     Debug.Log($"[Step_CommitPlayerName] Display name committed: {confirmedName}");
 
-                onComplete?.Invoke(StepOutcome.Success());
-                yield break;
+                outcome = StepOutcome.Success();
+                finished = true;
+                break;
             }
 
             if (!PlayerNameCommitFlow.ShouldRePrompt(result))
             {
-                onComplete?.Invoke(StepOutcome.Failed(result.ErrorMessage));
-                yield break;
+                outcome = StepOutcome.Failed(result.ErrorMessage);
+                finished = true;
+                break;
             }
 
             if (enableDebugLogs)
@@ -96,14 +104,20 @@ public class Step_CommitPlayerName : SequenceStep
 
             if (!promptFinished || string.IsNullOrWhiteSpace(replacement))
             {
-                onComplete?.Invoke(StepOutcome.Failed(PlayerNameCommitFlow.NameTakenMessage));
-                yield break;
+                outcome = StepOutcome.Failed(PlayerNameCommitFlow.NameTakenMessage);
+                finished = true;
+                break;
             }
 
             playerName = replacement.Trim();
             context.PlayerName = playerName;
             GameSessionContext.Instance?.SetDisplayName(playerName);
         }
+
+        yield return ZoomOutNameField();
+        onComplete?.Invoke(finished
+            ? outcome
+            : StepOutcome.Failed("Player name was not confirmed."));
     }
 
     private static IEnumerator PromptReplacementName(string message, System.Action<string> onName)
@@ -115,7 +129,7 @@ public class Step_CommitPlayerName : SequenceStep
             yield break;
         }
 
-        nameInputUI.SetEntryCopy("Dog's Name", message);
+        nameInputUI.SetEntryCopy("Dog's Name", message, warning: true);
         if (!nameInputUI.gameObject.activeSelf)
             nameInputUI.gameObject.SetActive(true);
 
@@ -137,6 +151,17 @@ public class Step_CommitPlayerName : SequenceStep
         nameInputUI.OnNameConfirmed -= HandleConfirmed;
         nameInputUI.Hide();
         onName?.Invoke(playerName);
+    }
+
+    private static IEnumerator ZoomOutNameField()
+    {
+        SpriteCinematicPlayer cinematicPlayer = SpriteCinematicPlayer.Instance;
+        if (cinematicPlayer == null)
+            yield break;
+
+        var zoomOutTask = cinematicPlayer.AnimateNameHandoffZoomOut();
+        while (!zoomOutTask.IsCompleted)
+            yield return null;
     }
 
     /// <summary>

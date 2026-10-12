@@ -50,6 +50,11 @@ namespace Chainbound.Combat
             }
         }
 
+        public Task ArmAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.CompletedTask;
+        }
+
         public Task SetHeldAsync(bool value, long inputSequence, CancellationToken cancellationToken = default(CancellationToken))
         {
             lock (gate)

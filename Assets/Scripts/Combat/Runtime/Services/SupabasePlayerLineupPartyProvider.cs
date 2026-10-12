@@ -10,7 +10,7 @@ namespace Chainbound.Combat
     /// Fails closed: no fallback roster; callers should abort combat bootstrap when <see cref="IsReady"/> is false or party is empty.
     /// Profile-equipped loadouts are returned with the party. On-chain resolution may still enrich Stamped ownership when wired.
     /// </summary>
-    public class SupabasePlayerLineupPartyProvider : MonoBehaviour, IPlayerPartyProvider
+    public class SupabasePlayerLineupPartyProvider : MonoBehaviour, IPlayerPartyProvider, IPlayerLoadoutRefresh
     {
         [Header("Supabase")]
         [SerializeField] private SupabaseConfigSO supabaseConfig;
@@ -125,8 +125,6 @@ namespace Chainbound.Combat
                     return FailStrict($"{functionName} returned no usable party entries.");
                 }
 
-                WarnIfEmptyMoveIds(_cached);
-
                 if (enableDebugLogs)
                 {
                     Debug.Log(
@@ -152,6 +150,22 @@ namespace Chainbound.Combat
             return _cached;
         }
 
+        public async Task<PartySnapshot> RefreshPartyAsync()
+        {
+            PartySnapshot previous = _cached;
+            bool wasReady = IsReady;
+            string wallet = !string.IsNullOrWhiteSpace(WalletAddress)
+                ? WalletAddress
+                : (GameSessionContext.Instance != null ? GameSessionContext.Instance.WalletAddress : "");
+            PartySnapshot refreshed = await FetchAndCacheAsync(wallet);
+            if (refreshed != null)
+                return refreshed;
+
+            _cached = previous;
+            IsReady = wasReady && previous != null && previous.Count > 0;
+            return null;
+        }
+
         private PartySnapshot FailStrict(string reason)
         {
             LastError = reason;
@@ -162,25 +176,6 @@ namespace Chainbound.Combat
                 Debug.LogWarning($"[SupabasePlayerLineupPartyProvider] {reason}");
 
             return null;
-        }
-
-        private static void WarnIfEmptyMoveIds(PartySnapshot party)
-        {
-            if (party?.chainlings == null)
-                return;
-
-            for (int i = 0; i < party.chainlings.Count; i++)
-            {
-                ChainlingSnapshot c = party.chainlings[i];
-                if (c == null)
-                    continue;
-                if (c.moveIds != null && c.moveIds.Count > 0)
-                    continue;
-
-                Debug.LogWarning(
-                    $"[SupabasePlayerLineupPartyProvider] Party slot {i} '{c.speciesId}' has empty moveIds. " +
-                    "Loadout bootstrap may still be pending — species defaults will be used in battle.");
-            }
         }
 
         private static ChainlingVisualIdentity ResolveVisualIdentity(GetPlayerPartyEntry entry)

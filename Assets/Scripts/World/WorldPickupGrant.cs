@@ -332,6 +332,12 @@ public sealed class WorldPickupGrant : MonoBehaviour
         if (inventoryServiceBehaviour is IPlayerItemInventory overrideInventory)
             return overrideInventory;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || UNITY_INCLUDE_TESTS
+        ChainlingsMenuTestHarness harness = FindFirstObjectByType<ChainlingsMenuTestHarness>(FindObjectsInactive.Include);
+        if (harness != null)
+            return harness;
+#endif
+
         CoreBagWorldPickupGrantService core = FindFirstObjectByType<CoreBagWorldPickupGrantService>(FindObjectsInactive.Include);
         if (core != null)
             return core;

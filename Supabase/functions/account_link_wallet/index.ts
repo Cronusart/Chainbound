@@ -1,8 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import {
-  jsonResponse,
-  requirePost,
-} from "../_shared/account_helpers.ts";
+import { jsonResponse, requirePost } from "../_shared/account_helpers.ts";
 
 /**
  * Retired fail-closed endpoint.

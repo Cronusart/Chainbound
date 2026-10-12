@@ -91,7 +91,7 @@ public static class LoomvilleEncounterZoneAuthoring
     private static void AuthorArea(EncounterAreaSO area, WildVariantPoolSO variantPool)
     {
         area.areaId = "loomville";
-        area.encounterChance = 0.12f;
+        area.encounterChance = 0.44f;
         area.difficulty = EncounterDifficulty.Standard;
         area.minEncounterPartySize = 1;
         area.maxEncounterPartySize = 1;
@@ -116,7 +116,7 @@ public static class LoomvilleEncounterZoneAuthoring
         zone.area = area;
         zone.encounterChance = -1f;
         zone.cadence = EncounterCadence.PerSecond;
-        zone.cadenceIntervalSeconds = 3f;
+        zone.cadenceIntervalSeconds = 1.75f;
         zone.inheritDifficulty = true;
         zone.difficulty = EncounterDifficulty.Standard;
         zone.bossIntroDialogueAsset = null;

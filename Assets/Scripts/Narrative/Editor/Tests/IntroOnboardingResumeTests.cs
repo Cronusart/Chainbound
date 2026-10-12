@@ -1,5 +1,8 @@
+using Chainbound.Combat;
 using NUnit.Framework;
+using TMPro;
 using UnityEditor;
+using UnityEngine;
 
 public sealed class IntroOnboardingResumeTests
 {
@@ -195,6 +198,7 @@ public sealed class IntroOnboardingResumeTests
 
         int nameCommit = -1;
         int encounter = -1;
+        int escapeObjective = -1;
         int afterBattleCheckpoint = -1;
         int afterBattleLabel = -1;
         int starterCommit = -1;
@@ -215,6 +219,15 @@ public sealed class IntroOnboardingResumeTests
             if (step is Step_StartEncounter)
                 encounter = i;
 
+            if (step != null && step.name == "intro_setquestobjective_escapeencounter")
+                escapeObjective = i;
+
+            if (step is Step_SetCheckpoint leaving && leaving.CheckpointId == "intro_leaving_room")
+            {
+                Assert.That(leaving.ResumeSceneId, Is.EqualTo("Loomville"));
+                Assert.That(leaving.ResumeSpawnId, Is.EqualTo("loomville_from_bedroom"));
+            }
+
             if (step is Step_CommitStarterChainling)
                 starterCommit = i;
 
@@ -233,7 +246,7 @@ public sealed class IntroOnboardingResumeTests
                     afterBattleCheckpoint = i;
                     Assert.That(checkpoint.CheckpointLabel, Is.EqualTo("after_first_creature"));
                     Assert.That(checkpoint.ResumeSceneId, Is.EqualTo("Loomville"));
-                    Assert.That(checkpoint.ResumeSpawnId, Is.EqualTo("encounter_return"));
+                    Assert.That(checkpoint.ResumeSpawnId, Is.EqualTo("loomville_from_combat"));
                 }
 
                 if (checkpoint.CheckpointId == "intro_before_choose_starter")
@@ -261,7 +274,8 @@ public sealed class IntroOnboardingResumeTests
 
         Assert.That(nameCommit, Is.GreaterThanOrEqualTo(0));
         Assert.That(encounter, Is.GreaterThan(nameCommit));
-        Assert.That(afterBattleCheckpoint, Is.GreaterThan(encounter));
+        Assert.That(escapeObjective, Is.GreaterThan(encounter));
+        Assert.That(afterBattleCheckpoint, Is.GreaterThan(escapeObjective));
         Assert.That(afterBattleLabel, Is.GreaterThan(afterBattleCheckpoint));
         Assert.That(starterCommit, Is.GreaterThan(afterBattleLabel));
         Assert.That(starterCommittedLabel, Is.GreaterThan(starterCommit));
@@ -269,5 +283,103 @@ public sealed class IntroOnboardingResumeTests
         Assert.That(afterStarter, Is.GreaterThan(starterCommittedLabel));
         Assert.That(toby, Is.GreaterThan(afterBattleLabel));
         Assert.That(toby, Is.LessThan(beforeStarter));
+    }
+
+    [Test]
+    public void TakenNamePrompt_UsesRedAndRestoresTheAuthoredColor()
+    {
+        GameObject root = new GameObject("KeyboardPromptColor");
+        try
+        {
+            OnScreenKeyboardUI keyboard = root.AddComponent<OnScreenKeyboardUI>();
+            GameObject promptObject = new GameObject("PromptText");
+            promptObject.transform.SetParent(root.transform, false);
+            TextMeshProUGUI prompt = promptObject.AddComponent<TextMeshProUGUI>();
+            Color authored = new Color(0.82f, 0.87f, 0.91f, 1f);
+            prompt.color = authored;
+            NarrativeTestUtility.SetPrivateField(keyboard, "promptText", prompt);
+
+            keyboard.Refresh(
+                new KeyboardSessionOptions
+                {
+                    Prompt = PlayerNameCommitFlow.NameTakenMessage,
+                    PromptColor = NameInputUI.TakenNamePromptColor,
+                },
+                shiftEnabled: true,
+                currentText: string.Empty,
+                canSubmit: false);
+
+            Assert.That(prompt.text, Is.EqualTo(PlayerNameCommitFlow.NameTakenMessage));
+            Assert.That(prompt.color.r, Is.EqualTo(NameInputUI.TakenNamePromptColor.r).Within(0.001f));
+            Assert.That(prompt.color.g, Is.EqualTo(NameInputUI.TakenNamePromptColor.g).Within(0.001f));
+            Assert.That(prompt.color.b, Is.EqualTo(NameInputUI.TakenNamePromptColor.b).Within(0.001f));
+
+            keyboard.Refresh(
+                new KeyboardSessionOptions { Prompt = "What is your dog's name?" },
+                shiftEnabled: true,
+                currentText: string.Empty,
+                canSubmit: false);
+
+            Assert.That(prompt.color.r, Is.EqualTo(authored.r).Within(0.001f));
+            Assert.That(prompt.color.g, Is.EqualTo(authored.g).Within(0.001f));
+            Assert.That(prompt.color.b, Is.EqualTo(authored.b).Within(0.001f));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void NameEntryCopy_WarningDoesNotStickToTheNextPrompt()
+    {
+        GameObject root = new GameObject("NameEntryCopy");
+        try
+        {
+            NameInputUI nameInput = root.AddComponent<NameInputUI>();
+            nameInput.SetEntryCopy("Dog's Name", PlayerNameCommitFlow.NameTakenMessage, warning: true);
+            nameInput.UseDefaultEntryCopy();
+
+            Assert.That(
+                NarrativeTestUtility.GetPrivateField<string>(nameInput, "keyboardPrompt"),
+                Is.Not.EqualTo(PlayerNameCommitFlow.NameTakenMessage));
+            Assert.That(
+                NarrativeTestUtility.GetPrivateField<bool>(nameInput, "entryCopyIsWarning"),
+                Is.False);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void UnconfirmedIntroBattle_RewindsToTheHouseExit()
+    {
+        Assert.That(IntroResumePolicy.ShouldRewindUnconfirmedIntroBattle(
+            IntroResumePolicy.IntroSequenceId,
+            IntroResumePolicy.AfterFirstCreatureCheckpointId,
+            escapeObjectiveComplete: false), Is.True);
+        Assert.That(IntroResumePolicy.EffectiveIntroCheckpointId(
+            IntroResumePolicy.IntroSequenceId,
+            IntroResumePolicy.AfterFirstCreatureCheckpointId,
+            escapeObjectiveComplete: false), Is.EqualTo(IntroResumePolicy.LeavingRoomCheckpointId));
+    }
+
+    [Test]
+    public void ConfirmedIntroBattle_KeepsTheGrassyCheckpoint()
+    {
+        Assert.That(IntroResumePolicy.ShouldRewindUnconfirmedIntroBattle(
+            IntroResumePolicy.IntroSequenceId,
+            IntroResumePolicy.AfterFirstCreatureCheckpointId,
+            escapeObjectiveComplete: true), Is.False);
+        Assert.That(IntroResumePolicy.EffectiveIntroCheckpointId(
+            IntroResumePolicy.IntroSequenceId,
+            IntroResumePolicy.AfterFirstCreatureCheckpointId,
+            escapeObjectiveComplete: true), Is.EqualTo(IntroResumePolicy.AfterFirstCreatureCheckpointId));
+        Assert.That(IntroResumePolicy.ShouldRewindUnconfirmedIntroBattle(
+            "some_other_sequence",
+            IntroResumePolicy.AfterFirstCreatureCheckpointId,
+            escapeObjectiveComplete: false), Is.False);
     }
 }

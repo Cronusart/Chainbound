@@ -272,6 +272,16 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void InterruptedOrRejectedCapture_RequiresAuthorityRecovery()
+        {
+            Assert.IsTrue(new CaptureOutcome { Kind = CaptureOutcomeKind.Interrupted }.RequiresAuthorityRecovery);
+            Assert.IsTrue(new CaptureOutcome { Kind = CaptureOutcomeKind.Rejected }.RequiresAuthorityRecovery);
+            Assert.IsFalse(new CaptureOutcome { Kind = CaptureOutcomeKind.Locked }.RequiresAuthorityRecovery);
+            Assert.IsFalse(new CaptureOutcome { Kind = CaptureOutcomeKind.Escaped }.RequiresAuthorityRecovery);
+            Assert.IsFalse(new CaptureOutcome { Kind = CaptureOutcomeKind.TimedOut }.RequiresAuthorityRecovery);
+        }
+
+        [Test]
         public void FullBandReachesLockWithoutSecondaryProbabilityRoll()
         {
             var parameters = new CaptureSimulationParameters
@@ -422,6 +432,20 @@ namespace Chainbound.Combat.Tests
                 equipment,
                 CaptureEffectVector.None,
                 CaptureBalanceData.CreateDefault());
+        }
+
+        [TestCase(false, false, false)]
+        [TestCase(false, true, false)]
+        [TestCase(true, false, false)]
+        [TestCase(true, true, true)]
+        public void CaptureSessionMode_RequiresRolloutAndBoundSession(
+            bool rolloutEnabled,
+            bool hasBoundSession,
+            bool expectedAuthoritative)
+        {
+            Assert.AreEqual(
+                expectedAuthoritative,
+                CaptureCommandCoordinatorUGUI.ShouldUseAuthoritativeSession(rolloutEnabled, hasBoundSession));
         }
 
         private static CaptureChallengeSnapshot ResolveWithOrb(CaptureTargetContext target, CaptureOrbProfile orb)

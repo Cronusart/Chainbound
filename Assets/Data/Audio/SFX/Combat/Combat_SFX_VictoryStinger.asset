@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Combat_SFX_VictoryStinger
   m_EditorClassIdentifier: 
   id: combat_victory_stinger
-  clips: []
+  clips:
+  - {fileID: 8300000, guid: b6b231f26db686042a733f295a56b828, type: 3}
   outputBus: 0
   loop: 0
   volumeMin: 1
@@ -21,7 +22,7 @@ MonoBehaviour:
   pitchMin: 1
   pitchMax: 1
   is3D: 0
-  spatialBlend: 1
+  spatialBlend: 0
   minDistance: 1
   maxDistance: 500
   polyphonyKey: 

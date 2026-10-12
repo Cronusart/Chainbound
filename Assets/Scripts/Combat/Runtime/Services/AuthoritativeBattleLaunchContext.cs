@@ -61,12 +61,19 @@ namespace Chainbound.Combat
     public sealed class AuthoritativeClientBattleState
     {
         public string phase;
+        public uint seed;
         public int turnNumber;
+        public bool hasActionCheckpoint;
+        public int battleKind;
+        public int capturePolicy;
+        public bool encounterCaptureEnabled;
+        public string zoneId;
         public int captureScannerRating;
         public int captureLowHpThresholdBasisPoints;
         public List<AuthoritativeClientBattleTarget> targets = new List<AuthoritativeClientBattleTarget>();
         public AuthoritativeClientCaptureChallenge captureChallenge;
         public string endReason;
+        public List<AuthoritativeClientBattleVital> vitals = new List<AuthoritativeClientBattleVital>();
     }
 
     [Serializable]
@@ -81,6 +88,26 @@ namespace Chainbound.Combat
         public bool isRemoved;
         public bool captureEnabled;
         public bool isEntangled;
+        public string visualVariantId;
+        public string mutationId;
+        public string entangledTypeId;
+        public string difficultyId;
+        public string knownMoveId;
+        public int[] rawIvs;
+        public int stars;
+        public int level;
+        public bool mutated;
+    }
+
+    [Serializable]
+    public sealed class AuthoritativeClientBattleVital
+    {
+        public string entityId;
+        public int teamIndex;
+        public int rosterIndex;
+        public int currentHp;
+        public int currentAp;
+        public bool isActive;
     }
 
     [Serializable]

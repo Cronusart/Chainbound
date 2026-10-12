@@ -11,6 +11,7 @@ namespace SignalJam.UI.MobileControls
         InteractA = 2,
         SprintX = 3,
         MenuY = 4,
+        JumpB = 5,
     }
 
     /// <summary>
@@ -30,6 +31,8 @@ namespace SignalJam.UI.MobileControls
         [SerializeField] private Image sprintOutline;
         [SerializeField] private RectTransform menuButton;
         [SerializeField] private Image menuOutline;
+        [SerializeField] private RectTransform jumpButton;
+        [SerializeField] private Image jumpOutline;
         [SerializeField] private float pulseScale = 1.08f;
         [SerializeField, Min(0.01f)] private float pulseHalfSeconds = 0.18f;
         [SerializeField, Min(1)] private int pulseCount = DefaultPulseCount;
@@ -127,6 +130,7 @@ namespace SignalJam.UI.MobileControls
             SetOutlineActive(interactOutline, false);
             SetOutlineActive(sprintOutline, false);
             SetOutlineActive(menuOutline, false);
+            SetOutlineActive(jumpOutline, false);
         }
 
         private static void SetOutlineActive(Image outline, bool active)
@@ -154,6 +158,10 @@ namespace SignalJam.UI.MobileControls
                 case MobileHudEmphasisTarget.MenuY:
                     control = menuButton;
                     outline = menuOutline;
+                    return true;
+                case MobileHudEmphasisTarget.JumpB:
+                    control = jumpButton;
+                    outline = jumpOutline;
                     return true;
                 default:
                     control = null;

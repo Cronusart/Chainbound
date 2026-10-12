@@ -24,7 +24,7 @@ serve(async (req: Request) => {
 
     const { data: profileRow } = await supabase
       .from("player_profiles")
-      .select("ram_balance")
+      .select("ram_balance, ram_balance_version")
       .eq("player_profile_id", profile.player_profile_id)
       .maybeSingle();
 
@@ -35,19 +35,13 @@ serve(async (req: Request) => {
       Number(profileRow?.ram_balance) || 0,
     );
 
-    if (!payload.ok) {
-      return jsonResponse(
-        { success: false, error: payload.error ?? "item_inventory_failed" },
-        payload.status ?? 400,
-      );
-    }
-
     return jsonResponse({
       success: true,
       player_profile_id: profile.player_profile_id,
       wallet_public_key: payload.wallet_public_key,
       cluster: payload.cluster,
       ram_balance: payload.ram_balance,
+      ram_balance_version: Number(profileRow?.ram_balance_version) || 0,
       stacks: payload.stacks,
     });
   } catch (error) {

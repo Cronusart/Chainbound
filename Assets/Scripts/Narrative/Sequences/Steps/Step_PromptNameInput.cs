@@ -45,6 +45,8 @@ public class Step_PromptNameInput : SequenceStep
         if (!nameInputUI.gameObject.activeSelf)
             nameInputUI.gameObject.SetActive(true);
 
+        nameInputUI.UseDefaultEntryCopy();
+
         string playerName = null;
 
         void HandleConfirmed(string name) => playerName = name;
@@ -76,14 +78,8 @@ public class Step_PromptNameInput : SequenceStep
         nameInputUI.OnNameConfirmed -= HandleConfirmed;
         nameInputUI.Hide();
 
-        // Zoom the held monitor frame back to rest before post-name sprite shots continue.
-        SpriteCinematicPlayer cinematicPlayer = SpriteCinematicPlayer.Instance;
-        if (cinematicPlayer != null)
-        {
-            var zoomOutTask = cinematicPlayer.AnimateNameHandoffZoomOut();
-            while (!zoomOutTask.IsCompleted)
-                yield return null;
-        }
+        // The monitor name field stays zoomed until Step_CommitPlayerName accepts
+        // the name. A taken name reopens this same field instead of closing it.
 
         if (destroyAfterUse && nameInputUI != null)
         {

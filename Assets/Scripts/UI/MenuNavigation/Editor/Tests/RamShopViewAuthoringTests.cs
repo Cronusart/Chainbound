@@ -16,8 +16,8 @@ namespace SignalJam.UI.MenuNavigation.Editor.Tests
             {
                 PlayerMenuController controller = root.GetComponent<PlayerMenuController>();
                 Assert.NotNull(controller);
-                Assert.AreEqual(6, controller.GetTabDefinitions().Length);
-                Assert.AreEqual(6, controller.GetTabScreenCount());
+                Assert.AreEqual(7, controller.GetTabDefinitions().Length);
+                Assert.AreEqual(7, controller.GetTabScreenCount());
                 Assert.IsTrue(controller.GetTabDefinitions().Any(definition => definition != null && definition.TabId == "ram_shop"));
 
                 RamShopScreen shop = root.GetComponentsInChildren<RamShopScreen>(true).Single();

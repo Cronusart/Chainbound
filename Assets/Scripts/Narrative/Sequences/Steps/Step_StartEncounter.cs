@@ -66,8 +66,15 @@ public class Step_StartEncounter : SequenceStep
             Debug.Log($"[Step_StartEncounter] Starting encounter: {encounterId}");
         }
         
-        // Start encounter and wait for completion
-        yield return encounterService.StartEncounter(encounterId, config);
+        // SequenceRunner forwards each yield to Unity and does not walk a nested
+        // enumerator itself. Pump the encounter here so scene activation cannot
+        // dispose it before the battle installer reads the launch payload.
+        IEnumerator encounter = encounterService.StartEncounter(encounterId, config);
+        if (encounter != null)
+        {
+            while (encounter.MoveNext())
+                yield return encounter.Current;
+        }
         
         // Store outcome
         EncounterOutcome outcome = encounterService.LastOutcome;
@@ -77,7 +84,14 @@ public class Step_StartEncounter : SequenceStep
         {
             Debug.Log($"[Step_StartEncounter] Encounter complete: {encounterId} -> {outcome}");
         }
-        
+
+        if (outcome == EncounterOutcome.BootstrapFailed)
+        {
+            onComplete?.Invoke(StepOutcome.Failed(
+                $"Encounter '{encounterId}' failed to start ({outcome})."));
+            yield break;
+        }
+
         onComplete?.Invoke(StepOutcome.Success());
     }
     

@@ -15,7 +15,7 @@ MonoBehaviour:
   questDefinition: {fileID: 11400000, guid: e4f5a6b7c8d9012a3b4c5d6e7f8091a2, type: 2}
   questId: 
   rules:
-  - label: "delivery ready \u2014 stall"
+  - label: "delivery ready \u2014 handoff"
     lifecycleScope: 1
     lifecycleMask: 8
     objectiveId: 
@@ -27,15 +27,17 @@ MonoBehaviour:
     worldFlagPredicates:
     - key: world.coffee.holding_tobys_delivery
       comparison: 2
+    - key: world.coffee.toby_delivery_accepted
+      comparison: 3
     counterPredicates: []
     timeOfDay:
       allowedSegments: 0
       useNormalizedTimeRange: 0
       minNormalizedTime: 0
       maxNormalizedTime: 0
-    dialogue: {fileID: 11400000, guid: d75db05ec5de89e469c606565cf70a13, type: 2}
+    dialogue: {fileID: 11400000, guid: 0ab48387d34f88941adc0abcf8918b01, type: 2}
     useDialogueCamera: 1
-    triggerId: 
+    triggerId: trigger_coffee_toby_handoff
     npcBehavior:
       mode: 1
       behaviorOverride: {fileID: 0}
@@ -75,7 +77,7 @@ MonoBehaviour:
   activeFallbackNpcBehavior:
     mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: Beans before the brew get a sarcastic redirect. Toby's packed delivery
-    stalls until the next cinematic pass. Otherwise he nags.
+  designerNotes: Beans before the brew get a sarcastic redirect. A packed delivery
+    plays the handoff and completes the quest. Otherwise he nags.
   activateQuestOnInactiveInteract: 0
   completeObjectiveOnActivate: 

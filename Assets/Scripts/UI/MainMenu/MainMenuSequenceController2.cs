@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Chainbound.Combat;
 using SignalJam.UI.MenuNavigation;
@@ -1462,6 +1463,14 @@ public class MainMenuSequenceController2 : MonoBehaviour
             orchestrator.ConnectWalletAndResolveSession(session =>
             {
                 onWalletConnected?.Invoke();
+                if (session != null &&
+                    string.Equals(session.walletResolutionStatus, "no_profile", StringComparison.Ordinal))
+                {
+                    AppLifecycleService.Instance?.EndWalletSigning();
+                    StartCoroutine(PromptToCreateWalletProfile(orchestrator));
+                    return;
+                }
+
                 OnAccountSessionResolved(session);
             }, OnAccountFlowFailed);
             return;
@@ -1478,6 +1487,53 @@ public class MainMenuSequenceController2 : MonoBehaviour
         SetConnectButtonsInteractable(false);
 
         walletService.Connect(OnWalletConnectResult);
+    }
+
+    private IEnumerator PromptToCreateWalletProfile(MainMenuFlowOrchestrator orchestrator)
+    {
+        WalletConnectionPromptService prompt = ResolveWalletPromptService();
+        if (prompt == null)
+        {
+            OnAccountFlowFailed("Wallet access prompt is unavailable.");
+            yield break;
+        }
+
+        var task = prompt.ShowAccessAsync(new WalletAccessPromptModel
+        {
+            title = "No Save Found",
+            body = "No save found for this wallet. Start a new game?",
+            primaryLabel = "Start New Game",
+            primaryChoice = WalletAccessPromptChoice.Connect,
+            secondaryLabel = "Back",
+            secondaryChoice = WalletAccessPromptChoice.Cancel,
+            showTertiary = false,
+        });
+        while (!task.IsCompleted)
+            yield return null;
+
+        if (task.IsFaulted)
+        {
+            OnAccountFlowFailed(task.Exception?.GetBaseException().Message ?? "Wallet profile prompt failed.");
+            yield break;
+        }
+
+        if (task.Result != WalletAccessPromptChoice.Connect)
+        {
+            _accountFlowInFlight = false;
+            _profileServiceError = "";
+            ApplyProfileActionLayout();
+            yield break;
+        }
+
+        AppLifecycleService.Instance?.BeginWalletSigning();
+        orchestrator.CreateWalletProfileAndBeginNewGame(session =>
+        {
+            _accountFlowInFlight = false;
+            AppLifecycleService.Instance?.EndWalletSigning();
+            _startingNewGame = true;
+            CacheResolvedSession(session);
+            StartCoroutine(PlayRouteCoroutine());
+        }, OnAccountFlowFailed);
     }
 
     private void OnWalletConnectResult(MainMenuWalletConnectResult result)
@@ -2017,6 +2073,9 @@ public class MainMenuSequenceController2 : MonoBehaviour
 
         // Stamp the cross-scene context before any scene load / intro sequence.
         PopulateGameSessionContext();
+        // Start shared menu profile reads now that the canonical identity is available.
+        // This intentionally does not delay narrative hydration or the scene handoff.
+        _ = PlayerProfileReadStore.ResolveOrCreate().HydrateCurrentProfileAsync();
 
         // Narrative state must be hydrated before scenes, guards, routers, or
         // interactables can observe quest state for this profile.
@@ -2031,6 +2090,45 @@ public class MainMenuSequenceController2 : MonoBehaviour
             Debug.LogError($"[MainMenuSequenceController2] Narrative profile hydration failed: {hydrationTask.Exception}");
             RestorePlayRouteAfterFailure("Narrative profile hydration failed.");
             yield break;
+        }
+
+        PendingBattleResumeCoordinator pendingBattleCoordinator = PendingBattleResumeCoordinator.Instance;
+        if (pendingBattleCoordinator != null)
+        {
+            var pendingBattleTask = pendingBattleCoordinator.ResolveCurrentAsync();
+            while (!pendingBattleTask.IsCompleted)
+                yield return null;
+
+            if (pendingBattleTask.IsFaulted || pendingBattleTask.IsCanceled)
+            {
+                Debug.LogWarning("[MainMenuSequenceController2] Battle check did not finish. Continuing without a resume.");
+            }
+            else if (pendingBattleTask.Result.Outcome == PendingBattleResumeOutcome.Rejoin ||
+                pendingBattleTask.Result.Outcome == PendingBattleResumeOutcome.Wipe)
+            {
+                yield return FadeOutMenuMusicBeforeSceneHandoff();
+                bool pendingRouteAccepted = pendingBattleTask.Result.Outcome == PendingBattleResumeOutcome.Rejoin
+                    ? PendingBattleRouteUtility.RequestRejoin(transitionStyle, "MainMenu.PendingBattleResume")
+                    : PendingBattleRouteUtility.RequestWipe(transitionStyle, "MainMenu.PendingBattleWipe");
+                if (!pendingRouteAccepted)
+                    RestorePlayRouteAfterFailure("The destination scene could not be loaded.");
+                yield break;
+            }
+            else if (!PendingBattleRouteUtility.ShouldContinueAfterProbe(pendingBattleTask.Result))
+            {
+                string detail = pendingBattleTask.Result.Message;
+                RestorePlayRouteAfterFailure(string.IsNullOrWhiteSpace(detail)
+                    ? "Signal sync is unavailable."
+                    : detail);
+                yield break;
+            }
+            else if (pendingBattleTask.Result.Outcome == PendingBattleResumeOutcome.Failed)
+            {
+                Debug.LogWarning(
+                    "[MainMenuSequenceController2] Battle service did not answer (" +
+                    pendingBattleTask.Result.Message +
+                    "). Continuing.");
+            }
         }
 
         // The durable quest row is authoritative over a stale compatibility

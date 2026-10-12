@@ -1,0 +1,11 @@
+# The battle-service image needs only its own project and the shared,
+# Unity-free combat core linked by the service project file.
+*
+!backend/
+!backend/Chainbound.BattleService/
+!backend/Chainbound.BattleService/**
+!Assets/
+!Assets/Scripts/
+!Assets/Scripts/Combat/
+!Assets/Scripts/Combat/Core/
+!Assets/Scripts/Combat/Core/**

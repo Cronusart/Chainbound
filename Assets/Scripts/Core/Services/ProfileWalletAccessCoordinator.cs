@@ -150,7 +150,10 @@ public sealed class ProfileWalletAccessCoordinator : MonoBehaviour, IProfileWall
                 return WalletAccessResult.From(WalletAccessResultKind.Cancelled, error, service.CurrentSession);
 
             bool wrongWallet = error.Contains("wallet_mismatch_for_profile", StringComparison.OrdinalIgnoreCase) ||
-                               error.Contains("profile_wallet_mismatch", StringComparison.OrdinalIgnoreCase);
+                               error.Contains("profile_wallet_mismatch", StringComparison.OrdinalIgnoreCase) ||
+                               error.Contains("wallet_profile_mismatch", StringComparison.OrdinalIgnoreCase) ||
+                               error.Contains("wallet_already_bound_to_profile", StringComparison.OrdinalIgnoreCase) ||
+                               error.Contains("wallet_bound_to_other_profile", StringComparison.OrdinalIgnoreCase);
             choice = await ShowPromptAsync(presenter, BuildRetryPrompt(service.CurrentSession, error, wrongWallet));
             if (choice != WalletAccessPromptChoice.Retry && choice != WalletAccessPromptChoice.Connect)
             {

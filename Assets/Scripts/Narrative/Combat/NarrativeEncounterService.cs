@@ -115,6 +115,9 @@ namespace SignalJam.Narrative.Combat
             Action<BattleResult> handleBattleEnded = null;
             Action<string> handleBattleStartFailed = null;
             bool launchBridgePublished = false;
+            // Scene activation can dispose this enumerator before the battle
+            // scene's Awake. Keep the payload until that installer has observed it.
+            bool retainPayloadForInstaller = false;
 
             try
             {
@@ -157,11 +160,13 @@ namespace SignalJam.Narrative.Combat
                     skipSaveReturnContext = skipSaveReturnContext,
                     launchSource = EncounterTransitionBridge.EncounterLaunchSource.Narrative,
                     authoritativeNarrativeEncounterId = encounterId,
+                    skipAuthoritativeSession = launchContext.DisableSupabasePartyResolution,
                     onReadyToLoad = () =>
                     {
                         launchBridge = NarrativeCombatLaunchBridge.GetOrCreate(transform);
                         launchBridge.Publish(launchContext);
                         launchBridgePublished = true;
+                        retainPayloadForInstaller = true;
 
                         if (enableDebugLogs)
                         {
@@ -174,6 +179,7 @@ namespace SignalJam.Narrative.Combat
 
                 if (!transitionBridge.LastTransitionIssuedLoad)
                 {
+                    retainPayloadForInstaller = false;
                     Debug.LogError("[NarrativeEncounterService] Encounter transition did not start battle scene load.");
                     yield break;
                 }
@@ -198,9 +204,12 @@ namespace SignalJam.Narrative.Combat
 
                 if (!string.Equals(SceneManager.GetActiveScene().name, targetScene, StringComparison.Ordinal))
                 {
+                    retainPayloadForInstaller = false;
                     Debug.LogError($"[NarrativeEncounterService] Timed out waiting for battle scene '{targetScene}' to load.");
                     yield break;
                 }
+
+                retainPayloadForInstaller = false;
 
                 float controllerDeadline = Time.realtimeSinceStartup + Mathf.Max(0.5f, resolvedBattleControllerTimeout);
                 while (Time.realtimeSinceStartup < controllerDeadline)
@@ -237,7 +246,7 @@ namespace SignalJam.Narrative.Combat
                                 $"[NarrativeEncounterService] Combat bootstrap failed: {sceneBootstrap.FailureReason}");
                         }
 
-                        CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished);
+                        CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished, clearPayload: true);
                         yield return AbortEncounterAndReturnOverworld(
                             solanaBridge,
                             resolvedWaitForReturn,
@@ -251,7 +260,7 @@ namespace SignalJam.Narrative.Combat
                         if (enableDebugLogs)
                             Debug.LogError("[NarrativeEncounterService] Timed out waiting for combat bootstrap readiness.");
 
-                        CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished);
+                        CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished, clearPayload: true);
                         yield return AbortEncounterAndReturnOverworld(
                             solanaBridge,
                             resolvedWaitForReturn,
@@ -300,7 +309,7 @@ namespace SignalJam.Narrative.Combat
                     battleController.OnBattleStartFailed -= handleBattleStartFailed;
                     battleController.OnBattleEnded -= handleBattleEnded;
 
-                    CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished);
+                    CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished, clearPayload: true);
                     yield return AbortEncounterAndReturnOverworld(
                         solanaBridge,
                         resolvedWaitForReturn,
@@ -316,7 +325,7 @@ namespace SignalJam.Narrative.Combat
                 battleController.OnBattleEnded -= handleBattleEnded;
 
                 yield return WaitForPostBattlePresentation();
-                CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished);
+                CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished, clearPayload: true);
 
                 if (resolvedWaitForReturn)
                 {
@@ -360,7 +369,7 @@ namespace SignalJam.Narrative.Combat
                         battleController.OnBattleStartFailed -= handleBattleStartFailed;
                 }
 
-                CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished);
+                CleanupLaunchBridge(ref launchBridge, ref launchBridgePublished, clearPayload: !retainPayloadForInstaller);
             }
         }
 
@@ -664,19 +673,24 @@ namespace SignalJam.Narrative.Combat
 
         private static void CleanupLaunchBridge(
             ref NarrativeCombatLaunchBridge launchBridge,
-            ref bool launchBridgePublished)
+            ref bool launchBridgePublished,
+            bool clearPayload)
         {
-            if (!launchBridgePublished)
+            if (!launchBridgePublished && !NarrativeCombatLaunchBridge.HasPending)
                 return;
+
+            if (clearPayload)
+                NarrativeCombatLaunchBridge.ClearPendingPayload();
 
             if (launchBridge == null)
                 launchBridge = NarrativeCombatLaunchBridge.FindExisting();
 
             if (launchBridge != null)
-                launchBridge.Clear();
+                launchBridge.ReleaseObject();
 
             launchBridge = null;
-            launchBridgePublished = false;
+            if (clearPayload || !NarrativeCombatLaunchBridge.HasPending)
+                launchBridgePublished = false;
         }
     }
 }

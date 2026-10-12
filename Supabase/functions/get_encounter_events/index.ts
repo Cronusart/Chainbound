@@ -1,11 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import {
-  JsonMap,
-  jsonResponse,
-  readJsonBody,
-  requirePost,
-  supabaseAdmin,
-} from "../_shared/account_helpers.ts";
+import { JsonMap, jsonResponse, readJsonBody, requirePost, supabaseAdmin } from "../_shared/account_helpers.ts";
 
 // Read-only live-ops feed for SupabaseEncounterEventsProvider.
 // See Docs/Specs/Combat/ENCOUNTER_EVENTS_SUPABASE.md
@@ -77,9 +71,7 @@ function normalizeOps(value: unknown): JsonMap[] {
 }
 
 function normalizePayload(value: unknown): JsonMap {
-  const src = (value !== null && typeof value === "object" && !Array.isArray(value))
-    ? value as JsonMap
-    : {};
+  const src = (value !== null && typeof value === "object" && !Array.isArray(value)) ? value as JsonMap : {};
 
   return {
     modifier_id: text(src.modifier_id),

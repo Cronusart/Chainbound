@@ -71,7 +71,8 @@ namespace Chainbound.Combat
             TypeIconPaletteSO typeIcons,
             CompactStarRatingArtSO starArt,
             CycleIconPaletteSO cyclePalette,
-            ProgressionConfigSO progression)
+            ProgressionConfigSO progression,
+            bool preserveAuthoredPose = false)
         {
             string displayName = !string.IsNullOrWhiteSpace(reward?.displayName)
                 ? reward.displayName
@@ -153,7 +154,10 @@ namespace Chainbound.Combat
             SetBarFill(xpFill, _xpFromFill);
             SetXpLabel(_xpFromEarned, _xpFromSize);
             SetFolioChance(0, false, false);
-            PrepareHidden();
+            if (preserveAuthoredPose)
+                transform.localScale = Vector3.one;
+            else
+                PrepareHidden();
         }
 
         public int StarUpCount => _starUpCount;

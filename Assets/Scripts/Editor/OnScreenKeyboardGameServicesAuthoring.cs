@@ -6,7 +6,7 @@ namespace Chainbound.Editor
 {
     /// <summary>
     /// Repairs <see cref="OnScreenKeyboardUI"/> key rows inside <c>GameServices.prefab</c> when
-    /// Row1–Row4 were cleared: persists 34 <see cref="VirtualKeyButton"/> children so you can assign
+    /// the symbol row or Row1–Row4 were cleared: persists 46 <see cref="VirtualKeyButton"/> children so you can assign
     /// custom sprites and Button sprite-swap states in the Inspector (runtime rebuild is skipped).
     /// </summary>
     public static class OnScreenKeyboardGameServicesAuthoring
@@ -46,7 +46,7 @@ namespace Chainbound.Editor
                 AssetDatabase.SaveAssets();
 
                 Debug.Log(
-                    "[OnScreenKeyboardGameServicesAuthoring] Rebuilt and saved 34 keyboard keys in " +
+                    "[OnScreenKeyboardGameServicesAuthoring] Rebuilt and saved 46 keyboard keys in " +
                     GameServicesPrefabPath +
                     ". Label TMP on the style source key (Label Style Source Key Name, default Q) was reapplied to all keys; " +
                     "assign Default Key Sprite and per-key Button sprite states as needed.");

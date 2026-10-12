@@ -5,6 +5,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Chainbound.Combat.Core;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -21,9 +23,11 @@ namespace Chainbound.Combat.Editor
         private const string BalancePath = CaptureRoot + "/CaptureBalanceConfig.asset";
         private const string PresentationPath = CaptureRoot + "/CapturePresentationConfig.asset";
         private const string AuthorityPath = CaptureRoot + "/AuthoritativeCombatServiceConfig.asset";
+        private const string RewardsConfigPath = "Assets/Data/Combat/Config/PostBattleRewardsConfig_Default.asset";
         private const string ExportRoot = "backend/Chainbound.BattleService/manifests";
         private const string GameplayPath = ExportRoot + "/gameplay-manifest.json";
         private const string CapturePath = ExportRoot + "/capture-balance.json";
+        private const string RewardsPath = ExportRoot + "/battle-rewards.json";
 
         [InitializeOnLoadMethod]
         private static void EnsureLeverBoardsAfterImport()
@@ -49,7 +53,8 @@ namespace Chainbound.Combat.Editor
                 File.ReadAllText(GameplayPath).Contains("\"encounters\": []");
             bool capturePlaceholder = !File.Exists(CapturePath) ||
                 File.ReadAllText(CapturePath).Contains("\"configHash\": \"\"");
-            if (manifestPlaceholder || capturePlaceholder)
+            bool rewardsMissing = !File.Exists(RewardsPath);
+            if (manifestPlaceholder || capturePlaceholder || rewardsMissing)
             {
                 try
                 {
@@ -107,6 +112,9 @@ namespace Chainbound.Combat.Editor
             CaptureBalanceConfigSO balance = AssetDatabase.LoadAssetAtPath<CaptureBalanceConfigSO>(BalancePath);
             if (balance == null)
                 throw new InvalidOperationException("Capture balance board could not be created.");
+            PostBattleRewardsConfigSO rewards = AssetDatabase.LoadAssetAtPath<PostBattleRewardsConfigSO>(RewardsConfigPath);
+            if (rewards == null)
+                throw new InvalidOperationException($"Post-battle rewards board is missing at {RewardsConfigPath}.");
 
             GameplayManifestDto gameplay = BuildGameplayManifest();
             if (gameplay.encounters.Count == 0)
@@ -114,10 +122,14 @@ namespace Chainbound.Combat.Editor
 
             Directory.CreateDirectory(ExportRoot);
             WriteUtf8(GameplayPath, JsonUtility.ToJson(gameplay, true) + "\n");
-            string manifestHash = HashBytes(File.ReadAllBytes(GameplayPath));
+            string manifestHash = HashCanonicalJson(File.ReadAllText(GameplayPath, Encoding.UTF8));
 
             CaptureBalanceManifestDto capture = BuildCaptureManifest(balance);
             WriteUtf8(CapturePath, JsonUtility.ToJson(capture, true) + "\n");
+
+            BattleRewardsManifestDto rewardManifest = BuildRewardsManifest(rewards);
+            WriteUtf8(RewardsPath, JsonUtility.ToJson(rewardManifest, true) + "\n");
+            string rewardsHash = HashCanonicalJson(File.ReadAllText(RewardsPath, Encoding.UTF8));
 
             string[] authorityAssets = AssetDatabase.FindAssets("t:AuthoritativeCombatServiceConfigSO");
             for (int i = 0; i < authorityAssets.Length; i++)
@@ -130,7 +142,7 @@ namespace Chainbound.Combat.Editor
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"[AuthoritativeGameplayManifestExporter] Exported {gameplay.encounters.Count} encounters; manifest={manifestHash}; capture={capture.configHash}.");
+            Debug.Log($"[AuthoritativeGameplayManifestExporter] Exported {gameplay.encounters.Count} encounters; manifest={manifestHash}; capture={capture.configHash}; rewards={rewardsHash}.");
         }
 
         private static GameplayManifestDto BuildGameplayManifest()
@@ -189,6 +201,7 @@ namespace Chainbound.Combat.Editor
             {
                 encounterId = $"zone:{zone.zoneId}:{entry.speciesId}", zoneId = zone.zoneId,
                 battleKind = boss ? (int)AuthoritativeBattleKind.Boss : (int)AuthoritativeBattleKind.Wild,
+                rewardTier = ResolveRewardTier(difficulty),
                 captureEnabled = !boss, capturePolicy = (int)EncounterCapturePolicy.UseEncounterDefault,
                 weight = Mathf.Max(1, entry.weight), targets = new List<ManifestTargetDto> { target },
             };
@@ -201,7 +214,8 @@ namespace Chainbound.Combat.Editor
             {
                 encounterId = provider.AuthoritativeEncounterId.Trim(), zoneId = "",
                 battleKind = (int)source.authoritativeBattleKind, captureEnabled = source.captureEnabled,
-                capturePolicy = (int)source.capturePolicy, weight = 1,
+                capturePolicy = (int)source.capturePolicy, rewardTier = ResolveRewardTier(source.difficulty), weight = 1,
+                rewardEligibilityQuestId = provider.RewardEligibilityQuestId?.Trim() ?? "",
             };
             for (int i = 0; i < source.chainlings.Count; i++)
             {
@@ -268,6 +282,34 @@ namespace Chainbound.Combat.Editor
             string[] types = { "node", "gas", "block", "encrypted", "burned", "frozen", "forked", "mined", "staked", "compressed", "bot", "glitched", "shard" };
             for (int i = 0; i < types.Length; i++) dto.entangledTypes.Add(new WeightedTypeDto { typeId = types[i], weight = 1 });
             return dto;
+        }
+
+        private static BattleRewardsManifestDto BuildRewardsManifest(PostBattleRewardsConfigSO source)
+        {
+            return new BattleRewardsManifestDto
+            {
+                schemaVersion = 1,
+                configVersion = Mathf.Max(1, source.configVersion),
+                rewards = new BattleRewardValuesDto
+                {
+                    standard = Mathf.Max(0, source.ramStandard),
+                    elite = Mathf.Max(0, source.ramElite),
+                    boss = Mathf.Max(0, source.ramBoss),
+                },
+            };
+        }
+
+        private static string ResolveRewardTier(EncounterDifficulty difficulty)
+        {
+            switch (difficulty)
+            {
+                case EncounterDifficulty.Elite:
+                    return BattleRewardTier.Elite;
+                case EncounterDifficulty.Boss:
+                    return BattleRewardTier.Boss;
+                default:
+                    return BattleRewardTier.Standard;
+            }
         }
 
         private static SpeciesDto ToSpecies(SpeciesDefinitionSO value) => new SpeciesDto
@@ -366,7 +408,27 @@ namespace Chainbound.Combat.Editor
         }
 
         private static void WriteUtf8(string path, string value) => File.WriteAllText(path, value, new UTF8Encoding(false));
-        private static string HashBytes(byte[] bytes) => BitConverter.ToString(SHA256.Create().ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
+        private static string HashCanonicalJson(string json)
+        {
+            JToken parsed = JToken.Parse(json);
+            string canonical = Canonicalize(parsed).ToString(Formatting.None);
+            return BitConverter.ToString(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(canonical)))
+                .Replace("-", "").ToLowerInvariant();
+        }
+
+        private static JToken Canonicalize(JToken token)
+        {
+            if (token is JObject sourceObject)
+            {
+                var result = new JObject();
+                foreach (JProperty property in sourceObject.Properties().OrderBy(x => x.Name, StringComparer.Ordinal))
+                    result.Add(property.Name, Canonicalize(property.Value));
+                return result;
+            }
+            if (token is JArray sourceArray)
+                return new JArray(sourceArray.Select(Canonicalize));
+            return token.DeepClone();
+        }
         private static int ReadArray(int[] values, int index) => values != null && index >= 0 && index < values.Length ? values[index] : 0;
         private static int[] CopyArray(int[] source) { var result = new int[6]; if (source != null) Array.Copy(source, result, Math.Min(6, source.Length)); return result; }
         private static string FirstMove(List<string> moves) => moves != null && moves.Count > 0 && !string.IsNullOrWhiteSpace(moves[0]) ? moves[0] : "baseline_jab";
@@ -377,8 +439,10 @@ namespace Chainbound.Combat.Editor
         [Serializable] private sealed class MoveStatusDto { public string statusId; public int duration; public int chanceBasisPoints; }
         [Serializable] private sealed class StatusDto { public string statusId; public string displayName; public int statusClass; public int origin; public int defaultDuration; public int counterThreshold; public bool preventsAction; public int endOfTurnDamageBasisPoints; public int endOfTurnApChange; }
         [Serializable] private sealed class RulesetDto { public string rulesetId; public string displayName; public int configVersion; public List<int> allowedTypes = new List<int>(); public List<string> requiredMoveIds = new List<string>(); public List<string> bannedMoveIds = new List<string>(); }
-        [Serializable] private sealed class ManifestEncounterDto { public string encounterId; public string zoneId; public int battleKind; public bool captureEnabled; public int capturePolicy; public int weight = 1; public List<ManifestTargetDto> targets = new List<ManifestTargetDto>(); }
+        [Serializable] private sealed class ManifestEncounterDto { public string encounterId; public string zoneId; public int battleKind; public string rewardTier = BattleRewardTier.Standard; public string rewardEligibilityQuestId = ""; public bool captureEnabled; public int capturePolicy; public int weight = 1; public List<ManifestTargetDto> targets = new List<ManifestTargetDto>(); }
         [Serializable] private sealed class ManifestTargetDto { public string targetId; public string speciesId; public string displayName; public string visualVariantId = "base"; public string mutationId = "none"; public bool mutated; public bool entangled; public string entangledTypeId = "none"; public string difficultyId = "standard"; public int currentHp = 1; public int maxHp = 1; public int legacyBaseCaptureRate = 45; public int captureProfile = 1; public int stars; public int level = 1; public int[] ivs = new int[6]; public string knownMoveId = "baseline_jab"; public bool startsActive = true; }
+        [Serializable] private sealed class BattleRewardsManifestDto { public int schemaVersion = 1; public int configVersion = 1; public BattleRewardValuesDto rewards = new BattleRewardValuesDto(); }
+        [Serializable] private sealed class BattleRewardValuesDto { public int standard; public int elite; public int boss; }
         [Serializable] private sealed class CaptureBalanceManifestDto { public int configVersion; public string configHash; public BalanceDto balance = new BalanceDto(); public List<WeightedTypeDto> entangledTypes = new List<WeightedTypeDto>(); }
         [Serializable] private sealed class WeightedTypeDto { public string typeId; public int weight; }
         [Serializable] private sealed class MotionProfileDto { public string profileId; public int difficulty; public int motionMultiplierBasisPoints; public int timerMultiplierBasisPoints; public int spikeChanceMultiplierBasisPoints; }

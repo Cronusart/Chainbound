@@ -162,6 +162,7 @@ namespace Chainbound.Combat
     {
         public MenuConnectivityState connectivity = MenuConnectivityState.Unknown;
         public long ramBalance;
+        public long ramBalanceVersion;
         /// <summary>Legacy flat id list; prefer <see cref="stacks"/>.</summary>
         public List<string> consumableIds = new List<string>();
         /// <summary>Legacy cosmetic asset pubkeys; prefer provenance on Style / Core cosmetic services.</summary>

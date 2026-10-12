@@ -61,7 +61,21 @@ namespace SignalJam.Narrative.Combat
     {
         private static NarrativeCombatLaunchBridge _instance;
 
+        // The payload is static so CombatSceneInstaller can still read it if this
+        // object is destroyed while the battle scene activates. Scene unload can
+        // dispose the launch coroutine before the destination's Awake.
+        private static NarrativeCombatLaunchContext _pendingPayload;
+
         private NarrativeCombatLaunchContext _pendingContext;
+
+        public static bool HasPending => _pendingPayload != null;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            _instance = null;
+            _pendingPayload = null;
+        }
 
         private void Awake()
         {
@@ -96,17 +110,17 @@ namespace SignalJam.Narrative.Combat
                 ? GameServicesContainer.Instance
                 : FindObjectOfType<GameServicesContainer>(true);
 
-            if (servicesContainer != null)
-            {
-                bridgeObject.transform.SetParent(servicesContainer.transform, false);
-            }
-            else if (fallbackParent != null)
-            {
-                bridgeObject.transform.SetParent(fallbackParent, false);
-            }
+            Transform parent = servicesContainer != null ? servicesContainer.transform : null;
+            if (parent == null && fallbackParent != null && IsPersistent(fallbackParent.gameObject))
+                parent = fallbackParent;
+
+            if (parent != null)
+                bridgeObject.transform.SetParent(parent, false);
 
             NarrativeCombatLaunchBridge created = bridgeObject.AddComponent<NarrativeCombatLaunchBridge>();
-            if (servicesContainer == null)
+            // DontDestroyOnLoad is ignored on children. A scene-parented bridge is
+            // destroyed with the overworld before the battle scene can read it.
+            if (created.transform.parent == null)
                 DontDestroyOnLoad(bridgeObject);
 
             return created;
@@ -115,12 +129,25 @@ namespace SignalJam.Narrative.Combat
         public void Publish(NarrativeCombatLaunchContext context)
         {
             _pendingContext = context;
+            _pendingPayload = context;
+        }
+
+        public static bool TryPeekPending(out NarrativeCombatLaunchContext context)
+        {
+            context = _pendingPayload;
+            return context != null;
+        }
+
+        public static void ClearPendingPayload()
+        {
+            _pendingPayload = null;
         }
 
         public bool TryConsume(out NarrativeCombatLaunchContext context)
         {
-            context = _pendingContext;
+            context = _pendingContext ?? _pendingPayload;
             _pendingContext = null;
+            _pendingPayload = null;
             return context != null;
         }
 
@@ -129,7 +156,7 @@ namespace SignalJam.Narrative.Combat
         /// </summary>
         public bool TryPeek(out NarrativeCombatLaunchContext context)
         {
-            context = _pendingContext;
+            context = _pendingContext ?? _pendingPayload;
             return context != null;
         }
 
@@ -139,12 +166,31 @@ namespace SignalJam.Narrative.Combat
         public void ConsumePending()
         {
             _pendingContext = null;
+            _pendingPayload = null;
+        }
+
+        private static bool IsPersistent(GameObject candidate)
+        {
+            return candidate != null && candidate.scene.name == "DontDestroyOnLoad";
+        }
+
+        /// <summary>
+        /// Drops the bridge object. The static payload stays until
+        /// <see cref="ConsumePending"/> or <see cref="ClearPendingPayload"/>.
+        /// </summary>
+        public void ReleaseObject()
+        {
+            _pendingContext = null;
+            if (Application.isPlaying)
+                Destroy(gameObject);
+            else
+                DestroyImmediate(gameObject);
         }
 
         public void Clear()
         {
-            _pendingContext = null;
-            Destroy(gameObject);
+            ClearPendingPayload();
+            ReleaseObject();
         }
     }
 }

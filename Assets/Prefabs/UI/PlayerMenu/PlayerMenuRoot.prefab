@@ -2063,6 +2063,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 18b2f90321c3ff14ab17f694a0b481f2, type: 2}
   - {fileID: 11400000, guid: 322992162ec190a4b983e332cc98491a, type: 2}
   - {fileID: 11400000, guid: a0514e1ee558ec841a2e6e3b71b1ade4, type: 2}
+  - {fileID: 11400000, guid: 1f6a0c83d5e24b79a8c2e4d7091b5a30, type: 2}
   tabScreens:
   - {fileID: 4836939377542060833}
   - {fileID: 3930928896277640817}
@@ -2070,6 +2071,7 @@ MonoBehaviour:
   - {fileID: 1524433740935075620}
   - {fileID: 0}
   - {fileID: 7774493295863755841}
+  - {fileID: 0}
   defaultTabId: chainlings
   defaultTabIndex: 0
   chainlingsMenuViews: {fileID: 11400000, guid: dd99b00484cae344ea5f5e4606fa45bd, type: 2}

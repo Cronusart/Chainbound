@@ -20,12 +20,14 @@ namespace Chainbound.Combat
         [SerializeField] private CapturePresentationConfigSO capturePresentationConfig;
         [SerializeField] private ModifierBalanceOverlaySO modifierOverlay;
         [SerializeField] private BattleIntroCopyConfigSO battleIntroCopyConfig;
+        [SerializeField] private MatchmakingConfigSO matchmakingConfig;
 
         private CombatRulesetSO _activeRulesetOverride;
         private ModifierBalanceOverlaySO _activeOverlayOverride;
         private VendingConfigSO _activeVendingOverride;
         private ChainlingRecoveryConfigSO _activeChainlingRecoveryOverride;
         private CaptureBalanceConfigSO _activeCaptureBalanceOverride;
+        private MatchmakingConfigSO _activeMatchmakingOverride;
 
         public CombatRulesetSO DefaultRuleset => defaultRuleset;
         public CombatResolverConfigSO DefaultResolverConfig => defaultResolverConfig;
@@ -40,6 +42,8 @@ namespace Chainbound.Combat
         public ModifierBalanceOverlaySO ModifierOverlay =>
             _activeOverlayOverride != null ? _activeOverlayOverride : modifierOverlay;
         public BattleIntroCopyConfigSO BattleIntroCopyConfig => battleIntroCopyConfig;
+        public MatchmakingConfigSO MatchmakingConfig =>
+            _activeMatchmakingOverride != null ? _activeMatchmakingOverride : matchmakingConfig;
 
         public CombatRulesetSO ActiveRuleset =>
             _activeRulesetOverride != null
@@ -66,7 +70,8 @@ namespace Chainbound.Combat
             ModifierBalanceOverlaySO overlay = null,
             BattleIntroCopyConfigSO introCopy = null,
             CaptureBalanceConfigSO captureBalance = null,
-            CapturePresentationConfigSO capturePresentation = null)
+            CapturePresentationConfigSO capturePresentation = null,
+            MatchmakingConfigSO matchmaking = null)
         {
             if (ruleset != null)
                 defaultRuleset = ruleset;
@@ -88,6 +93,18 @@ namespace Chainbound.Combat
                 modifierOverlay = overlay;
             if (introCopy != null)
                 battleIntroCopyConfig = introCopy;
+            if (matchmaking != null)
+                matchmakingConfig = matchmaking;
+        }
+
+        public void SetMatchmakingOverride(MatchmakingConfigSO config)
+        {
+            _activeMatchmakingOverride = config;
+        }
+
+        public void ClearMatchmakingOverride()
+        {
+            _activeMatchmakingOverride = null;
         }
 
         public void SetActiveRulesetOverride(CombatRulesetSO ruleset)
@@ -242,6 +259,16 @@ namespace Chainbound.Combat
                 if (active != null)
                     return active.ModifierOverlay;
                 return null;
+            }
+        }
+
+        public static MatchmakingConfigSO Matchmaking
+        {
+            get
+            {
+                if (active != null && active.MatchmakingConfig != null)
+                    return active.MatchmakingConfig;
+                return MatchmakingConfigSO.CreateRuntimeDefault();
             }
         }
 

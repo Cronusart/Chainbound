@@ -85,9 +85,7 @@ function normalizeLines(value: unknown): ItemDeltaLine[] | null {
     if (!entry || typeof entry !== "object") return null;
     const row = entry as JsonMap;
     const itemId = str(row.item_id);
-    const quantity = typeof row.quantity === "number"
-      ? Math.trunc(row.quantity)
-      : Number(str(row.quantity));
+    const quantity = typeof row.quantity === "number" ? Math.trunc(row.quantity) : Number(str(row.quantity));
     if (!itemId || !Number.isFinite(quantity) || quantity <= 0) return null;
     lines.push({ item_id: itemId, quantity });
   }

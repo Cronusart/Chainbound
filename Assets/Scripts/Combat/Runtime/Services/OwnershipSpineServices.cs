@@ -81,6 +81,7 @@ namespace Chainbound.Combat
         public string signature;
         public string error;
         public long ramBalance;
+        public long ramBalanceVersion;
         public StampedMoveRecord verifiedAsset;
     }
 
@@ -103,12 +104,14 @@ namespace Chainbound.Combat
         public KnownMoveRecord known;
         public int ramCost;
         public long ramBalance;
+        public long ramBalanceVersion;
     }
 
     [Serializable]
     public sealed class OwnershipSpineSnapshot
     {
         public long ramBalance;
+        public long ramBalanceVersion;
         public int stampRamCost;
         public List<KnownMoveRecord> known = new List<KnownMoveRecord>();
         public List<StampedMoveRecord> stamped = new List<StampedMoveRecord>();
@@ -229,7 +232,7 @@ namespace Chainbound.Combat
             KnownMoveRecord result = rolled?.known;
             if (!IsValidKnown(result))
                 throw new InvalidOperationException("Authority returned an invalid Known record.");
-            RamBalance = Math.Max(0L, rolled.ramBalance);
+            ApplyAuthoritativeBalance(rolled.ramBalance, rolled.ramBalanceVersion);
             UpsertKnown(result);
             await RefreshAsync();
             for (int i = 0; i < known.Count; i++)
@@ -376,7 +379,7 @@ namespace Chainbound.Combat
                     submitted.verifiedAsset.assetAddress,
                     StringComparison.Ordinal));
                 stamped.Add(submitted.verifiedAsset);
-                RamBalance = Math.Max(0L, submitted.ramBalance);
+                ApplyAuthoritativeBalance(submitted.ramBalance, submitted.ramBalanceVersion);
                 PendingStamp = null;
                 return submitted;
             }
@@ -438,7 +441,7 @@ namespace Chainbound.Combat
 
         private void ApplySnapshot(OwnershipSpineSnapshot snapshot)
         {
-            RamBalance = Math.Max(0L, snapshot.ramBalance);
+            ApplyAuthoritativeBalance(snapshot.ramBalance, snapshot.ramBalanceVersion);
             StampRamCost = snapshot.stampRamCost > 0
                 ? snapshot.stampRamCost
                 : DefaultFirstStampRamCost;
@@ -450,6 +453,17 @@ namespace Chainbound.Combat
                     if (IsValidKnown(snapshot.known[i])) UpsertKnown(snapshot.known[i]);
             }
             ReplaceStamped(snapshot.stamped);
+        }
+
+        private void ApplyAuthoritativeBalance(long balance, long balanceVersion)
+        {
+            string profileId = GameSessionContext.Instance != null
+                ? GameSessionContext.Instance.PlayerProfileId
+                : "";
+            PlayerRamBalanceStore.TryApplyAuthoritative(profileId, balance, balanceVersion);
+            RamBalance = PlayerRamBalanceStore.TryGet(profileId, out long current)
+                ? current
+                : Math.Max(0L, balance);
         }
 
         private void EnsureSufficientRamForStamp()

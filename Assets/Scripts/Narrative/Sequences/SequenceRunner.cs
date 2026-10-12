@@ -37,6 +37,7 @@ public class SequenceRunner : MonoBehaviour
     [SerializeField] private bool enableDebugLogs = false;
     [Tooltip("When true, NarrativeDebugOverlay (if present) can mirror this runner.")]
     [SerializeField] private bool showDebugUI = false;
+    private bool loggedIntroBattleRewind;
 
     private readonly SequenceExecution mainExecution = new SequenceExecution();
     private readonly Dictionary<string, SequenceExecution> childExecutions = new Dictionary<string, SequenceExecution>(StringComparer.Ordinal);
@@ -891,7 +892,8 @@ public class SequenceRunner : MonoBehaviour
         spawnId = state.spawnId ?? "";
         resumeLabel = choice.ResumeLabel ?? "";
 
-        Step_SetCheckpoint authored = FindCheckpointStep(sequence, state.checkpointId);
+        string checkpointId = ResolveResumeCheckpointId(sequence, state, out _);
+        Step_SetCheckpoint authored = FindCheckpointStep(sequence, checkpointId);
         if ((authored == null || string.IsNullOrWhiteSpace(authored.ResumeSceneId)) &&
             !string.IsNullOrWhiteSpace(resumeLabel))
         {
@@ -937,9 +939,10 @@ public class SequenceRunner : MonoBehaviour
         if (flags == null)
             return;
 
-        Step_SetCheckpoint authored = FindCheckpointStep(sequence, state.checkpointId);
+        string checkpointId = ResolveResumeCheckpointId(sequence, state, out bool rewound);
+        Step_SetCheckpoint authored = FindCheckpointStep(sequence, checkpointId);
         List<(string key, bool value)> resolved = WorldPresenceResumePolicy.Resolve(
-            state.CopyRailFlagSnapshot(),
+            rewound ? null : state.CopyRailFlagSnapshot(),
             authored != null ? authored.ResumeProfileWorldFlags : null);
         flags.RestoreRailSnapshot(resolved);
     }
@@ -1069,6 +1072,42 @@ public class SequenceRunner : MonoBehaviour
         OnPersistentStateChanged?.Invoke(record);
     }
 
+    private string ResolveResumeCheckpointId(SequenceAsset sequence, SequenceState state, out bool rewound)
+    {
+        string checkpointId = state != null ? state.checkpointId ?? "" : "";
+        rewound = sequence != null && state != null &&
+            IntroResumePolicy.ShouldRewindUnconfirmedIntroBattle(
+                sequence.SequenceId,
+                checkpointId,
+                IsIntroEscapeObjectiveComplete());
+        if (!rewound)
+            return checkpointId;
+
+        if (!loggedIntroBattleRewind)
+        {
+            loggedIntroBattleRewind = true;
+            Debug.LogWarning(
+                "[SequenceRunner] Intro checkpoint intro_after_first_creature has no completed escape_creature objective. Resuming at intro_leaving_room.");
+        }
+
+        return IntroResumePolicy.LeavingRoomCheckpointId;
+    }
+
+    private static bool IsIntroEscapeObjectiveComplete()
+    {
+        QuestService quests = QuestService.Instance;
+        if (quests == null || !quests.IsHydrated)
+            return true;
+
+        QuestState quest = quests.GetQuestState(IntroResumePolicy.IntroQuestId);
+        if (quest == null || quest.objectives == null)
+            return false;
+        if (!quest.objectives.TryGetValue(IntroResumePolicy.EscapeCreatureObjectiveId, out QuestObjective objective) ||
+            objective == null)
+            return false;
+        return objective.IsComplete;
+    }
+
     private int ResolveResumeIndex(SequenceAsset sequence, SequenceState state, out string recoveryReason)
     {
         IntroCheckpointResume choice = BuildResumeChoice(sequence, state);
@@ -1083,24 +1122,26 @@ public class SequenceRunner : MonoBehaviour
             return IntroResumePolicy.Choose("", false, -1, "", "", false, -1, "", false, -1);
         }
 
+        string checkpointId = ResolveResumeCheckpointId(sequence, state, out bool rewound);
+        string checkpointLabel = rewound ? "" : (state.checkpointLabel ?? "");
         bool checkpointFound = TryResolveCheckpointId(
             sequence,
-            state.checkpointId,
+            checkpointId,
             out int checkpointIndex,
             out string authoredLabel);
         int labelIndex = -1;
-        bool labelFound = !string.IsNullOrWhiteSpace(state.checkpointLabel) &&
-            mainExecution.LabelIndex.TryGetValue(state.checkpointLabel, out labelIndex);
+        bool labelFound = !string.IsNullOrWhiteSpace(checkpointLabel) &&
+            mainExecution.LabelIndex.TryGetValue(checkpointLabel, out labelIndex);
         int safeIndex = -1;
         bool safeFound = !string.IsNullOrWhiteSpace(sequence.SafeResumeLabel) &&
             mainExecution.LabelIndex.TryGetValue(sequence.SafeResumeLabel, out safeIndex);
 
         IntroCheckpointResume choice = IntroResumePolicy.Choose(
-            state.checkpointId,
+            checkpointId,
             checkpointFound,
             checkpointIndex,
             authoredLabel,
-            state.checkpointLabel,
+            checkpointLabel,
             labelFound,
             labelIndex,
             sequence.SafeResumeLabel,

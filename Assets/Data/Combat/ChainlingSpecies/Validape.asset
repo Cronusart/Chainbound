@@ -36,7 +36,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 48bc36ea910de11498e6ee165a662632, type: 2}
   flagshipMove: {fileID: 11400000, guid: 3d3ef18886f407040bc30e525abd4ab9, type: 2}
   initialMoves:
-  - {fileID: 11400000, guid: 104017aa41792f240bc50bdf8a9e310a, type: 2}
+  - {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
   progressionMovePool:
   - move: {fileID: 11400000, guid: fba942bbe71d8184a8c75e4bf92c2347, type: 2}
     weight: 23

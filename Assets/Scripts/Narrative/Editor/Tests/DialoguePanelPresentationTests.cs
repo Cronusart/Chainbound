@@ -101,6 +101,57 @@ public sealed class DialoguePanelPresentationTests
         Assert.That(serializedView.FindProperty("choiceRow").objectReferenceValue, Is.SameAs(choices.gameObject));
         Assert.That(serializedView.FindProperty("choiceButtonTemplate").objectReferenceValue, Is.SameAs(template));
         Assert.That(serializedView.FindProperty("choicePlateHeight").floatValue, Is.EqualTo(600f));
+        Assert.That(templateRect.sizeDelta.x, Is.GreaterThan(1f));
+        Assert.That(layoutElement.preferredWidth, Is.EqualTo(templateRect.sizeDelta.x));
+    }
+
+    [Test]
+    public void SharedDialoguePanel_ChoiceButtonsKeepAuthoredWidthWhenShown()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CombatNarrationPrefabPath);
+        Assert.That(prefab, Is.Not.Null);
+        Button template = FindDeep(prefab.transform, "ChoiceButton")?.GetComponent<Button>();
+        Assert.That(template, Is.Not.Null);
+        float authoredWidth = ((RectTransform)template.transform).sizeDelta.x;
+        Assert.That(authoredWidth, Is.GreaterThan(1f));
+
+        var canvasObject = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas));
+        GameObject instance = PrefabUtility.InstantiatePrefab(prefab, canvasObject.transform) as GameObject;
+        try
+        {
+            DialogueBoxView view = instance.GetComponent<DialogueBoxView>();
+            Assert.That(view, Is.Not.Null);
+            RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
+            canvasRect.anchorMin = new Vector2(0.5f, 0.5f);
+            canvasRect.anchorMax = new Vector2(0.5f, 0.5f);
+            canvasRect.sizeDelta = new Vector2(1920f, 1080f);
+            view.ShowChoices(new[] { "Yes", "No" }, _ => { });
+            LayoutRebuilder.ForceRebuildLayoutImmediate(instance.GetComponent<RectTransform>());
+
+            Button[] shown = instance.GetComponentsInChildren<Button>(true);
+            int liveChoices = 0;
+            for (int i = 0; i < shown.Length; i++)
+            {
+                if (shown[i] == null || !shown[i].gameObject.activeInHierarchy)
+                    continue;
+                if (shown[i].name != "ChoiceButton")
+                    continue;
+                liveChoices++;
+                RectTransform rect = shown[i].transform as RectTransform;
+                LayoutElement layout = shown[i].GetComponent<LayoutElement>();
+                Assert.That(rect, Is.Not.Null);
+                Assert.That(rect.sizeDelta.x, Is.EqualTo(authoredWidth));
+                Assert.That(rect.rect.width, Is.EqualTo(authoredWidth));
+                Assert.That(layout, Is.Not.Null);
+                Assert.That(layout.preferredWidth, Is.EqualTo(authoredWidth));
+            }
+
+            Assert.That(liveChoices, Is.EqualTo(2));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(canvasObject);
+        }
     }
 
     private static Transform FindDeep(Transform root, string objectName)
