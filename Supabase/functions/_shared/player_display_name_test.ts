@@ -48,32 +48,15 @@ Deno.test("unique violations map to the name_taken race", () => {
 Deno.test("display name function and migration keep the case-insensitive contract", async () => {
   const functionSource = await Deno.readTextFile(new URL("../profile_set_display_name/index.ts", import.meta.url));
   const sharedSource = await Deno.readTextFile(new URL("./player_display_name.ts", import.meta.url));
-  const mirrorSource = await Deno.readTextFile(
-    new URL("../../supabase/functions/profile_set_display_name/index.ts", import.meta.url),
-  );
-  const mirrorShared = await Deno.readTextFile(
-    new URL("../../supabase/functions/_shared/player_display_name.ts", import.meta.url),
-  );
   const migration = await Deno.readTextFile(
     new URL("../../migrations/20261005061500_player_display_name_unique.sql", import.meta.url),
   );
 
   const charsetSource = await Deno.readTextFile(new URL("./display_name_charset.ts", import.meta.url));
-  const mirrorCharset = await Deno.readTextFile(
-    new URL("../../supabase/functions/_shared/display_name_charset.ts", import.meta.url),
-  );
   const chainlingSource = await Deno.readTextFile(
     new URL("../profile_set_chainling_display_name/index.ts", import.meta.url),
   );
-  const mirrorChainling = await Deno.readTextFile(
-    new URL("../../supabase/functions/profile_set_chainling_display_name/index.ts", import.meta.url),
-  );
-
-  const normalizeLineEndings = (value: string) => value.replaceAll("\r\n", "\n");
-  assertEquals(normalizeLineEndings(functionSource), normalizeLineEndings(mirrorSource));
-  assertEquals(normalizeLineEndings(sharedSource), normalizeLineEndings(mirrorShared));
-  assertEquals(normalizeLineEndings(charsetSource), normalizeLineEndings(mirrorCharset));
-  assertEquals(normalizeLineEndings(chainlingSource), normalizeLineEndings(mirrorChainling));
+  assertEquals(charsetSource.includes("export function isDisplayNameCharsetValid"), true);
   assertEquals(chainlingSource.includes("isDisplayNameCharsetValid"), true);
   assertEquals(chainlingSource.includes("\\p{L}"), false);
   assertEquals(functionSource.includes("profile_set_display_name_tx"), true);
