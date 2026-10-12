@@ -109,7 +109,7 @@ Deno.test("Devnet smoke grant is explicit-wallet, beta, and fresh-zero gated", a
   );
   const confirm = await Deno.readTextFile(
     new URL("../ownership_confirm_devnet_smoke_grant/index.ts", import.meta.url),
-  );
+  ).then((source) => source.replaceAll("\r\n", "\n"));
   assertEquals(shared.includes('DEVNET_SMOKE_WALLETS_ENV = "CHAINBOUND_DEVNET_SMOKE_WALLETS"'), true);
   assertEquals(shared.includes('LEGACY_DEVNET_SMOKE_WALLET_ENV = "CHAINBOUND_DEVNET_SMOKE_WALLET"'), true);
   assertEquals(shared.includes("smokeWallets.has(owner.toBase58())"), true);
@@ -214,7 +214,7 @@ Deno.test("Mainnet ownership mutation endpoints enforce the smoke-wallet boundar
 Deno.test("Devnet smoke confirmation atomically mirrors verified RAM", async () => {
   const confirm = await Deno.readTextFile(
     new URL("../ownership_confirm_devnet_smoke_grant/index.ts", import.meta.url),
-  );
+  ).then((source) => source.replaceAll("\r\n", "\n"));
   assertEquals(
     confirm.includes('supabase.rpc(\n      "ownership_confirm_devnet_smoke_grant_atomic"'),
     true,
