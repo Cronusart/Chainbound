@@ -110,7 +110,7 @@ namespace Chainbound.Combat
                 out int rebirthCount);
 
             int maxMoveSlots = MoveLoadoutSlotRules.ResolveMaxMoveSlots(rebirthCount);
-            List<string> eligibilityMoveIds = ResolveEligibilityMoveIds(speciesDef, snapshot, moveDB, maxMoveSlots);
+            List<string> eligibilityMoveIds = ResolveEligibilityMoveIds(snapshot, moveDB, maxMoveSlots);
             if (ruleset != null &&
                 !ruleset.IsChainlingEligible(
                     speciesDef.primaryType,
@@ -180,7 +180,7 @@ namespace Chainbound.Combat
                 return null;
 
             int maxMoveSlots = MoveLoadoutSlotRules.ResolveMaxMoveSlots(rebirthCount);
-            List<MoveDefinitionSO> equipped = ResolveEquippedMoves(speciesDef, snapshot, moveDB, maxMoveSlots);
+            List<MoveDefinitionSO> equipped = ResolveEquippedMoves(snapshot, moveDB, maxMoveSlots);
             ChainlingInstance instance = CombatFactory.CreateChainling(
                 speciesDef,
                 stars,
@@ -226,13 +226,128 @@ namespace Chainbound.Combat
             instance.displayHP = currentHp;
         }
 
+        /// <summary>
+        /// The first roster entry that has a species but no move id the move database can resolve.
+        /// Missing species stay on the existing skip path and are not reported here.
+        /// </summary>
+        public static ChainlingSnapshot FindFirstWithoutResolvableMove(
+            IList<ChainlingSnapshot> snapshots,
+            SpeciesDatabaseSO speciesDB,
+            MoveDatabaseSO moveDB)
+        {
+            if (snapshots == null)
+                return null;
+
+            int count = Math.Min(snapshots.Count, CombatConstants.ROSTER_SIZE);
+            for (int i = 0; i < count; i++)
+            {
+                ChainlingSnapshot snapshot = snapshots[i];
+                if (snapshot == null || string.IsNullOrWhiteSpace(snapshot.speciesId))
+                    continue;
+                if (speciesDB == null || speciesDB.GetById(snapshot.speciesId) == null)
+                    continue;
+                if (!HasResolvableMove(snapshot, moveDB))
+                    return snapshot;
+            }
+
+            return null;
+        }
+
+        public static bool HasResolvableMove(ChainlingSnapshot snapshot, MoveDatabaseSO moveDB)
+        {
+            if (snapshot == null)
+                return false;
+
+            ChainlingProgressionUtility.ResolveSnapshotProgression(
+                snapshot.stars,
+                snapshot.rebirthCount,
+                snapshot.level,
+                out _,
+                out int rebirthCount);
+            int maxMoveSlots = MoveLoadoutSlotRules.ResolveMaxMoveSlots(rebirthCount);
+            return ResolveEquippedMoves(snapshot, moveDB, maxMoveSlots).Count > 0;
+        }
+
+        public static string DescribeChainling(ChainlingSnapshot snapshot)
+        {
+            if (snapshot != null && !string.IsNullOrWhiteSpace(snapshot.displayName))
+                return snapshot.displayName.Trim();
+            if (snapshot != null && !string.IsNullOrWhiteSpace(snapshot.speciesId))
+                return snapshot.speciesId.Trim();
+            return "Chainling";
+        }
+
+        /// <summary>
+        /// Copies saved move and modifier ids onto roster rows that currently have no resolvable move.
+        /// Rows that already resolve a move keep their loadout.
+        /// </summary>
+        public static void ApplyRefreshedLoadouts(
+            IList<ChainlingSnapshot> current,
+            PartySnapshot refreshed,
+            SpeciesDatabaseSO speciesDB,
+            MoveDatabaseSO moveDB)
+        {
+            if (current == null || refreshed?.chainlings == null)
+                return;
+
+            int count = Math.Min(current.Count, CombatConstants.ROSTER_SIZE);
+            for (int i = 0; i < count; i++)
+            {
+                ChainlingSnapshot target = current[i];
+                if (target == null || HasResolvableMove(target, moveDB))
+                    continue;
+                if (speciesDB != null &&
+                    !string.IsNullOrWhiteSpace(target.speciesId) &&
+                    speciesDB.GetById(target.speciesId) == null)
+                    continue;
+
+                ChainlingSnapshot source = FindRefreshedRow(refreshed, target, i);
+                if (source == null)
+                    continue;
+
+                target.moveIds = CopyIds(source.moveIds);
+                target.modifier1SectionIds = CopyIds(source.modifier1SectionIds);
+                target.modifier2SectionIds = CopyIds(source.modifier2SectionIds);
+            }
+        }
+
+        private static ChainlingSnapshot FindRefreshedRow(
+            PartySnapshot refreshed,
+            ChainlingSnapshot original,
+            int index)
+        {
+            if (refreshed?.chainlings == null || original == null)
+                return null;
+
+            if (!string.IsNullOrWhiteSpace(original.backendChainlingId))
+            {
+                for (int i = 0; i < refreshed.chainlings.Count; i++)
+                {
+                    ChainlingSnapshot candidate = refreshed.chainlings[i];
+                    if (candidate != null &&
+                        string.Equals(candidate.backendChainlingId, original.backendChainlingId, StringComparison.Ordinal))
+                        return candidate;
+                }
+
+                return null;
+            }
+
+            if (index >= 0 && index < refreshed.chainlings.Count)
+                return refreshed.chainlings[index];
+            return null;
+        }
+
+        private static List<string> CopyIds(List<string> source)
+        {
+            return source != null ? new List<string>(source) : new List<string>();
+        }
+
         private static List<string> ResolveEligibilityMoveIds(
-            SpeciesDefinitionSO speciesDef,
             ChainlingSnapshot snapshot,
             MoveDatabaseSO moveDB,
             int maxMoveSlots)
         {
-            List<MoveDefinitionSO> equipped = ResolveEquippedMoves(speciesDef, snapshot, moveDB, maxMoveSlots);
+            List<MoveDefinitionSO> equipped = ResolveEquippedMoves(snapshot, moveDB, maxMoveSlots);
             var ids = new List<string>(equipped.Count);
             for (int i = 0; i < equipped.Count; i++)
             {
@@ -244,47 +359,23 @@ namespace Chainbound.Combat
         }
 
         private static List<MoveDefinitionSO> ResolveEquippedMoves(
-            SpeciesDefinitionSO speciesDef,
             ChainlingSnapshot snapshot,
             MoveDatabaseSO moveDB,
             int maxMoveSlots)
         {
             int capacity = Math.Max(0, maxMoveSlots);
             var equipped = new List<MoveDefinitionSO>(capacity);
+            if (snapshot?.moveIds == null || moveDB == null)
+                return equipped;
 
-            if (snapshot?.moveIds != null && snapshot.moveIds.Count > 0 && moveDB != null)
+            for (int i = 0; i < snapshot.moveIds.Count && equipped.Count < capacity; i++)
             {
-                for (int i = 0; i < snapshot.moveIds.Count && equipped.Count < capacity; i++)
-                {
-                    string moveId = snapshot.moveIds[i];
-                    if (string.IsNullOrWhiteSpace(moveId))
-                        continue;
+                string moveId = snapshot.moveIds[i];
+                if (string.IsNullOrWhiteSpace(moveId))
+                    continue;
 
-                    MoveDefinitionSO def = moveDB.GetById(moveId);
-                    AddUniqueMove(equipped, def);
-                }
-            }
-
-            if (equipped.Count == 0)
-            {
-                if (speciesDef.initialMoves != null)
-                {
-                    for (int i = 0; i < speciesDef.initialMoves.Count && equipped.Count < capacity; i++)
-                        AddUniqueMove(equipped, speciesDef.initialMoves[i]);
-                }
-
-                // Legacy species without an authored initial loadout retain the old pool fallback.
-                if (equipped.Count == 0 && speciesDef.exclusiveMoves != null)
-                {
-                    for (int i = 0; i < speciesDef.exclusiveMoves.Count && equipped.Count < capacity; i++)
-                        AddUniqueMove(equipped, speciesDef.exclusiveMoves[i]);
-                }
-
-                if (equipped.Count == 0 && speciesDef.learnableMoves != null)
-                {
-                    for (int i = 0; i < speciesDef.learnableMoves.Count && equipped.Count < capacity; i++)
-                        AddUniqueMove(equipped, speciesDef.learnableMoves[i]);
-                }
+                MoveDefinitionSO def = moveDB.GetById(moveId);
+                AddUniqueMove(equipped, def);
             }
 
             return equipped;

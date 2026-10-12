@@ -112,7 +112,7 @@ public sealed class ItemObtainPanelReveal : MonoBehaviour
             contentGroups = DiscoverContentGroups();
     }
 
-    public void Reveal(bool immediate = false)
+    public void Reveal(bool immediate = false, bool keepDimmer = false)
     {
         AutoConfigure();
         KillTweens();
@@ -138,7 +138,10 @@ public sealed class ItemObtainPanelReveal : MonoBehaviour
 
         panelRoot.gameObject.SetActive(true);
         panelRoot.localScale = new Vector3(0.001f, 0.001f, 1f);
-        SetGroupState(dimmerGroup, 0f, false, true);
+        if (keepDimmer)
+            SetGroupState(dimmerGroup, 1f, true, true);
+        else
+            SetGroupState(dimmerGroup, 0f, false, true);
         SetGroupState(titleGroup, 0f, false, false);
         SetContentState(0f, false, false);
 
@@ -153,7 +156,7 @@ public sealed class ItemObtainPanelReveal : MonoBehaviour
             panelRoot.DOScaleY(1f, Mathf.Max(0.01f, expandYDuration))
                 .SetEase(Ease.OutBack, Mathf.Max(0f, expandYOvershoot)));
 
-        if (dimmerGroup != null)
+        if (!keepDimmer && dimmerGroup != null)
         {
             revealSequence.Append(
                 dimmerGroup.DOFade(1f, Mathf.Max(0f, dimmerFadeDuration))
@@ -201,6 +204,33 @@ public sealed class ItemObtainPanelReveal : MonoBehaviour
             revealSequence = null;
         });
         revealSequence.Play();
+    }
+
+    /// <summary>
+    /// Hides the card while leaving the dimmer and root group visible.
+    /// Used when another tutorial card is about to replace this one.
+    /// </summary>
+    public void HidePanelKeepDimmer()
+    {
+        AutoConfigure();
+        KillTweens();
+
+        if (rootGroup != null)
+        {
+            rootGroup.alpha = 1f;
+            rootGroup.interactable = true;
+            rootGroup.blocksRaycasts = true;
+        }
+
+        if (panelRoot != null)
+        {
+            panelRoot.localScale = Vector3.one;
+            panelRoot.gameObject.SetActive(false);
+        }
+
+        SetGroupState(dimmerGroup, 1f, true, true);
+        SetGroupState(titleGroup, 1f, false, false);
+        SetContentState(1f, true, true);
     }
 
     public void HideImmediate()

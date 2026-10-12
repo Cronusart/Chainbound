@@ -12,9 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f988bc0d55107749a911c0375bba164, type: 3}
   m_Name: Dial_ProfessorNameStarter
   m_EditorClassIdentifier: 
+  speakerNpcId: 
+  playerFacingPolicy: 0
   lines:
   - speakerName: Prof Toby
-    text: "There we go. A fresh little slop pet, straight from the signal soup."
+    text: There we go. Fresh little slop pet that you can train along the way
     typeSpeed: 55
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -26,7 +28,7 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Prof Toby
-    text: "Want to give your new Chainling a name?"
+    text: Care to give it a name?
     typeSpeed: 55
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -39,8 +41,10 @@ MonoBehaviour:
     choices:
     - label: Yes
       value: yes
+      endDialogue: 0
     - label: No
       value: no
+      endDialogue: 0
   autoAdvance: 0
   autoAdvanceDelay: 2
   allowSkip: 1

@@ -36,7 +36,7 @@ namespace Chainbound.Combat
         [Header("Visual Identity")]
         public ChainlingVisualIdentity visualIdentity = ChainlingVisualIdentity.CreateDefault();
 
-        [Tooltip("Move definition IDs to equip. If empty, species defaults are used.")]
+        [Tooltip("Move definition IDs to equip. Battle uses these ids only.")]
         public List<string> moveIds = new List<string>();
 
         [Tooltip("Optional modifier_1 section IDs aligned to moveIds (e.g. '6.4-a').")]

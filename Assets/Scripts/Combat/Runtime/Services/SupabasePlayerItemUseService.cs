@@ -111,6 +111,7 @@ namespace Chainbound.Combat
                 }
 
                 InvalidateInventoryCache();
+                PlayerProfileReadStore.ResolveOrCreate().PublishInventory(profileId, wallet, inventory);
 
                 if (enableDebugLogs)
                 {

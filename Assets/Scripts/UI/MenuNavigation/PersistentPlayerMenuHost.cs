@@ -1,4 +1,5 @@
 using System;
+using Chainbound.Combat;
 using SignalJam.UI.MobileControls;
 using UnityEngine;
 using UnityEngine.Events;
@@ -208,6 +209,9 @@ namespace SignalJam.UI.MenuNavigation
 
         private void WarmChainlingPresentation()
         {
+            // Profile reads are shared service work. Keep this host's existing warm path
+            // visual-only from the prefab's perspective; no authored UI is rebuilt here.
+            _ = PlayerProfileReadStore.ResolveOrCreate().HydrateCurrentProfileAsync();
             if (playerMenuInstance != null)
                 playerMenuInstance.WarmChainlingPresentation();
         }

@@ -34,6 +34,21 @@ namespace Chainbound.Combat
         private DateTime cacheExpiresAtUtc;
         private IWalletService boundWallet;
 
+        public static CoreBagItemInventoryService EnsureInstance()
+        {
+            CoreBagItemInventoryService existing = FindFirstObjectByType<CoreBagItemInventoryService>(FindObjectsInactive.Include);
+            if (existing != null)
+            {
+                existing.EnsureConfig();
+                return existing;
+            }
+
+            Transform host = ResolveHost();
+            CoreBagItemInventoryService created = host.gameObject.AddComponent<CoreBagItemInventoryService>();
+            created.EnsureConfig();
+            return created;
+        }
+
         public void Configure(SupabaseConfigSO config)
         {
             supabaseConfig = config;
@@ -42,8 +57,26 @@ namespace Chainbound.Combat
         private void OnEnable() => TryBindWalletEvents();
         private void OnDisable() => UnbindWalletEvents();
 
+        private void EnsureConfig()
+        {
+            if (supabaseConfig == null)
+                supabaseConfig = Resources.Load<SupabaseConfigSO>("SupabaseConfig");
+        }
+
+        private static Transform ResolveHost()
+        {
+            if (GameSessionContext.Instance != null)
+                return GameSessionContext.Instance.transform;
+
+            GameObject go = new GameObject("CoreBagItemInventoryService");
+            if (Application.isPlaying)
+                DontDestroyOnLoad(go);
+            return go.transform;
+        }
+
         public async Task<InventorySnapshot> FetchInventoryAsync(string playerProfileId, string walletAddress)
         {
+            EnsureConfig();
             TryBindWalletEvents();
 
             string profileId = FirstNonEmpty(playerProfileId, GameSessionContext.Instance != null ? GameSessionContext.Instance.PlayerProfileId : "");
@@ -54,11 +87,15 @@ namespace Chainbound.Combat
                 string.Equals(cacheKey, key, StringComparison.Ordinal) &&
                 DateTime.UtcNow < cacheExpiresAtUtc)
             {
+                if (PlayerRamBalanceStore.TryGet(profileId, out long cachedRamBalance))
+                    cachedSnapshot.ramBalance = cachedRamBalance;
                 return CloneSnapshot(cachedSnapshot);
             }
 
-            ClearItemInventoryCache();
+            // Keep the last known-good snapshot available while a stale read is in flight.
+            // PlayerProfileReadStore owns cross-consumer freshness; this adapter owns only raw transport caching.
             cacheKey = key;
+            PlayerRamBalanceStore.ReadToken ramRead = PlayerRamBalanceStore.BeginProfileRead(profileId);
 
             if (supabaseConfig == null)
             {
@@ -95,6 +132,12 @@ namespace Chainbound.Combat
                 {
                     LogWarning(snapshot.lastError);
                     return snapshot;
+                }
+
+                if (!PlayerRamBalanceStore.TryApplyProfileRead(ramRead, snapshot.ramBalance, snapshot.ramBalanceVersion) &&
+                    PlayerRamBalanceStore.TryGet(profileId, out long currentRamBalance))
+                {
+                    snapshot.ramBalance = currentRamBalance;
                 }
 
                 for (int i = 0; i < snapshot.stacks.Count; i++)
@@ -141,6 +184,12 @@ namespace Chainbound.Combat
             cacheExpiresAtUtc = DateTime.MinValue;
         }
 
+        /// <summary>Forces the next read to revalidate without discarding the last good snapshot.</summary>
+        public void MarkItemInventoryCacheStale()
+        {
+            cacheExpiresAtUtc = DateTime.MinValue;
+        }
+
         /// <summary>
         /// Parses <c>profile_get_item_inventory</c> JSON. Guest bags may omit
         /// <c>wallet_public_key</c>; profile stacks still populate.
@@ -175,6 +224,7 @@ namespace Chainbound.Combat
             {
                 connectivity = MenuConnectivityState.Ready,
                 ramBalance = payload.ram_balance,
+                ramBalanceVersion = payload.ram_balance_version,
                 cluster = FirstNonEmpty(payload.cluster, "devnet"),
                 walletPublicKey = FirstNonEmpty(payload.wallet_public_key, walletFallback),
                 stacks = new List<MenuInventoryItemStack>(),
@@ -294,6 +344,7 @@ namespace Chainbound.Combat
             {
                 connectivity = source.connectivity,
                 ramBalance = source.ramBalance,
+                ramBalanceVersion = source.ramBalanceVersion,
                 cluster = source.cluster,
                 walletPublicKey = source.walletPublicKey,
                 lastError = source.lastError ?? "",
@@ -365,6 +416,7 @@ namespace Chainbound.Combat
             public string wallet_public_key;
             public string cluster;
             public long ram_balance;
+            public long ram_balance_version;
             public ItemStackPayload[] stacks = Array.Empty<ItemStackPayload>();
         }
 

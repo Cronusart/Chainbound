@@ -80,7 +80,7 @@ public static class TutorialReadAlongAuthoring
             "tutorial.jump",
             "Jump",
             "Press B to jump.",
-            MobileHudEmphasisTarget.None,
+            MobileHudEmphasisTarget.JumpB,
             report);
         AuthorSnippet(
             MenuSnippetPath,
@@ -424,14 +424,16 @@ public static class TutorialReadAlongAuthoring
             Transform interactButton = FindDeep(root.transform, "ButtonA");
             Transform sprintButton = FindDeep(root.transform, "ButtonX");
             Transform menuButton = FindDeep(root.transform, "ButtonY");
+            Transform jumpButton = FindDeep(root.transform, "ButtonB");
             Transform hudRoot = FindDeep(root.transform, "HudRoot");
-            if (movePad == null || interactButton == null || sprintButton == null || menuButton == null || hudRoot == null)
-                throw new InvalidOperationException("MobileServices is missing MovementPad, ButtonA, ButtonX, ButtonY, or HudRoot.");
+            if (movePad == null || interactButton == null || sprintButton == null || menuButton == null || jumpButton == null || hudRoot == null)
+                throw new InvalidOperationException("MobileServices is missing MovementPad, ButtonA, ButtonB, ButtonX, ButtonY, or HudRoot.");
 
             Image moveOutline = EnsureEmphasisOutline(movePad);
             Image interactOutline = EnsureEmphasisOutline(interactButton);
             Image sprintOutline = EnsureEmphasisOutline(sprintButton);
             Image menuOutline = EnsureEmphasisOutline(menuButton);
+            Image jumpOutline = EnsureEmphasisOutline(jumpButton);
 
             MobileHudControlEmphasis emphasis = hudRoot.GetComponent<MobileHudControlEmphasis>();
             if (emphasis == null)
@@ -446,6 +448,8 @@ public static class TutorialReadAlongAuthoring
             emphasisSerialized.FindProperty("sprintOutline").objectReferenceValue = sprintOutline;
             emphasisSerialized.FindProperty("menuButton").objectReferenceValue = menuButton as RectTransform;
             emphasisSerialized.FindProperty("menuOutline").objectReferenceValue = menuOutline;
+            emphasisSerialized.FindProperty("jumpButton").objectReferenceValue = jumpButton as RectTransform;
+            emphasisSerialized.FindProperty("jumpOutline").objectReferenceValue = jumpOutline;
             emphasisSerialized.FindProperty("pulseCount").intValue = MobileHudControlEmphasis.DefaultPulseCount;
             emphasisSerialized.ApplyModifiedPropertiesWithoutUndo();
 

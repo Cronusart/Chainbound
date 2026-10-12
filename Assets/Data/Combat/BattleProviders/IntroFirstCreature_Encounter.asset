@@ -12,12 +12,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05915b6a98db78844a2e9132309af117, type: 3}
   m_Name: IntroFirstCreature_Encounter
   m_EditorClassIdentifier: 
+  authoritativeEncounterId: intro_first_creature
+  rewardEligibilityQuestId: chainbound_intro
   roster:
   - speciesId: kreechank
     displayName: Kreechank
     stars: 3
     rebirthCount: 0
+    masteryXp: 0
     evolutionStage: 1
+    visualIdentity:
+      visualVariantId: base
+      auraId: none
+      hudCardVariantId: default
+      partyColumnVariantId: default
+      swapInFxId: default
+      swapOutFxId: default
+      koFxId: none
+      victoryPoseId: default
+      idleStyleId: none
+      idleFlourishId: none
+      meleeAttackStyleId: none
+      rangedAttackStyleId: none
+      hitReactionStyleId: none
+      attackerKoStyleId: none
     moveIds:
     - baseline_jab
     - automation_burst
@@ -29,11 +47,26 @@ MonoBehaviour:
     ivRangedAtk: 0
     ivRangedDef: 0
     ivSpeed: 0
+    pickMaxHP: 0
+    pickMeleeAtk: 0
+    pickMeleeDef: 0
+    pickRangedAtk: 0
+    pickRangedDef: 0
+    pickSpeed: 0
+    isMutated: 0
+    mutationId: none
+    isEntangled: 0
+    entangledType: 0
+    currentHp: -1
   teamName: Wild
   aiPersonality: 1
   difficulty: 0
   bossIntroDialogueAsset: {fileID: 11400000, guid: adbec72238171a9439a94797d4eaf796, type: 2}
+  fleePolicy: 0
+  capturePolicy: 2
   hideCombatUI: 1
   uiPresentationMode: 0
+  opponentVisualScaleMultiplier: 1
   introPresentation: {fileID: 11400000, guid: 6406ca81fad167f47b66145a17b25436, type: 2}
   skipManualTurnAfterIntro: 1
+  victoryKnownGrants: []

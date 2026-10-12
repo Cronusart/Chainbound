@@ -153,6 +153,8 @@ namespace Chainbound.Combat
         private string _casualForfeitState;
         private bool _battleFinalized;
         private IPlayerPartyProvider _runtimePlayerPartyProvider;
+        private bool _loadoutRefreshInFlight;
+        private Coroutine _loadoutRefreshCoroutine;
         private IEncounterProvider _runtimeEncounterProvider;
         private CombatRulesetSO _runtimeRulesetOverride;
         private EncounterFleePolicy _runtimeFleePolicyOverride = EncounterFleePolicy.UseDifficultyDefault;
@@ -410,6 +412,12 @@ namespace Chainbound.Combat
                 return;
             }
 
+            if (_loadoutRefreshInFlight)
+            {
+                Debug.LogWarning("[CombatBattleController] Loadout refresh is already in progress.");
+                return;
+            }
+
             if (presenter == null)
                 presenter = FindObjectOfType<Combat2BattlefieldPresenter>(true);
 
@@ -451,6 +459,24 @@ namespace Chainbound.Combat
                 const string msg = "Encounter is empty. Cannot start battle.";
                 Debug.LogError("[CombatBattleController] " + msg);
                 OnBattleStartFailed?.Invoke(msg);
+                return;
+            }
+
+            if (BlockOrRefreshLoadouts(playerParty, encounter, battleSeed, authoritativeState))
+                return;
+
+            BeginPreparedBattle(playerParty, encounter, battleSeed, authoritativeState);
+        }
+
+        private void BeginPreparedBattle(
+            PartySnapshot playerParty,
+            EncounterSnapshot encounter,
+            int battleSeed,
+            AuthoritativeClientBattleState authoritativeState)
+        {
+            if (_resolver == null)
+            {
+                FailStart("Battle setup was cleared before the loadout refresh finished.");
                 return;
             }
 
@@ -544,6 +570,111 @@ namespace Chainbound.Combat
         }
 
         /// <summary>
+        /// Returns true when the battle must not start yet. An encounter with no explicit
+        /// moves fails immediately. A player loadout is read once more before the same failure.
+        /// </summary>
+        private bool BlockOrRefreshLoadouts(
+            PartySnapshot playerParty,
+            EncounterSnapshot encounter,
+            int battleSeed,
+            AuthoritativeClientBattleState authoritativeState)
+        {
+            ChainlingSnapshot encounterGap = RosterSlotUtility.FindFirstWithoutResolvableMove(
+                encounter != null ? encounter.chainlings : null,
+                speciesDatabase,
+                moveDatabase);
+            if (encounterGap != null)
+            {
+                FailStart($"{RosterSlotUtility.DescribeChainling(encounterGap)} has no encounter moves. Cannot start battle.");
+                return true;
+            }
+
+            ChainlingSnapshot playerGap = RosterSlotUtility.FindFirstWithoutResolvableMove(
+                playerParty != null ? playerParty.chainlings : null,
+                speciesDatabase,
+                moveDatabase);
+            if (playerGap == null)
+                return false;
+
+            IPlayerLoadoutRefresh refresh = ResolveLoadoutRefresh();
+            if (refresh != null)
+            {
+                _loadoutRefreshInFlight = true;
+                _loadoutRefreshCoroutine = StartCoroutine(RefreshLoadoutThenStart(
+                    refresh,
+                    playerParty,
+                    encounter,
+                    battleSeed,
+                    authoritativeState));
+                return true;
+            }
+
+            FailStart($"{RosterSlotUtility.DescribeChainling(playerGap)} has no equipped moves. Cannot start battle.");
+            return true;
+        }
+
+        private IEnumerator RefreshLoadoutThenStart(
+            IPlayerLoadoutRefresh refresh,
+            PartySnapshot playerParty,
+            EncounterSnapshot encounter,
+            int battleSeed,
+            AuthoritativeClientBattleState authoritativeState)
+        {
+            Task<PartySnapshot> task = refresh != null ? refresh.RefreshPartyAsync() : null;
+            while (task != null && !task.IsCompleted)
+                yield return null;
+
+            _loadoutRefreshInFlight = false;
+            _loadoutRefreshCoroutine = null;
+
+            if (_battleStarted)
+                yield break;
+
+            if (task != null && task.Status == TaskStatus.RanToCompletion && task.Result != null && playerParty != null)
+            {
+                RosterSlotUtility.ApplyRefreshedLoadouts(
+                    playerParty.chainlings,
+                    task.Result,
+                    speciesDatabase,
+                    moveDatabase);
+            }
+            else if (task != null && task.IsFaulted)
+            {
+                Exception exception = task.Exception != null ? task.Exception.GetBaseException() : null;
+                Debug.LogWarning(
+                    "[CombatBattleController] Loadout refresh failed: " +
+                    (exception != null ? exception.Message : "unknown error"));
+            }
+
+            ChainlingSnapshot playerGap = RosterSlotUtility.FindFirstWithoutResolvableMove(
+                playerParty != null ? playerParty.chainlings : null,
+                speciesDatabase,
+                moveDatabase);
+            if (playerGap != null)
+            {
+                FailStart($"{RosterSlotUtility.DescribeChainling(playerGap)} has no equipped moves. Cannot start battle.");
+                yield break;
+            }
+
+            BeginPreparedBattle(playerParty, encounter, battleSeed, authoritativeState);
+        }
+
+        private IPlayerLoadoutRefresh ResolveLoadoutRefresh()
+        {
+            if (_runtimePlayerPartyProvider is IPlayerLoadoutRefresh runtime)
+                return runtime;
+            if (playerPartyProviderOverride is IPlayerLoadoutRefresh assigned)
+                return assigned;
+            return null;
+        }
+
+        private void FailStart(string message)
+        {
+            Debug.LogError("[CombatBattleController] " + message);
+            OnBattleStartFailed?.Invoke(message);
+        }
+
+        /// <summary>
         /// Execute a single turn. Use when autoRunTurns is false.
         /// </summary>
         public void ExecuteNextTurn()
@@ -563,7 +694,66 @@ namespace Chainbound.Combat
                 return;
             }
 
+            if (TryResumeAuthoritativeCaptureAttempt())
+                return;
+
             _battleCoroutine = StartCoroutine(ExecuteTurnCoroutine());
+        }
+
+        private bool TryResumeAuthoritativeCaptureAttempt()
+        {
+            if (_casualPvp != null ||
+                !AuthoritativeBattleLaunchContext.TryReadState(out AuthoritativeClientBattleState serverState) ||
+                !string.Equals(serverState.phase, "capturing", StringComparison.Ordinal) ||
+                serverState.captureChallenge == null ||
+                string.IsNullOrWhiteSpace(serverState.captureChallenge.attemptId))
+            {
+                return false;
+            }
+
+            CaptureCommandCoordinatorUGUI coordinator = ResolveCaptureCoordinator();
+            if (coordinator == null)
+            {
+                BlockOnAuthorityFailure("The active capture attempt could not be reopened.");
+                return true;
+            }
+
+            _battleCoroutine = StartCoroutine(ResumeAuthoritativeCaptureAttempt(coordinator));
+            return true;
+        }
+
+        private IEnumerator ResumeAuthoritativeCaptureAttempt(CaptureCommandCoordinatorUGUI coordinator)
+        {
+            CaptureOutcome outcome = null;
+            string targetId = string.Empty;
+            bool completed = false;
+            yield return coordinator.ResumeAuthoritativeAttempt(
+                _state,
+                CurrentEncounter,
+                (id, result, _) =>
+                {
+                    targetId = id;
+                    outcome = result;
+                    completed = true;
+                });
+
+            if (!completed || outcome == null ||
+                outcome.Kind == CaptureOutcomeKind.Rejected ||
+                outcome.Kind == CaptureOutcomeKind.Interrupted)
+            {
+                BlockOnAuthorityFailure("The active capture attempt could not be synchronized.");
+                _battleCoroutine = null;
+                yield break;
+            }
+
+            ApplyCaptureOutcome(targetId, outcome);
+            EmitVitalsChangedIfNeeded();
+            _battleCoroutine = null;
+
+            // The capture coordinator refreshed the server envelope before invoking this
+            // callback, so normal turn execution resumes from the finalized version.
+            if (_state != null && _state.isActive && !_authorityCommitBlocked)
+                ExecuteNextTurn();
         }
 
         /// <summary>
@@ -778,6 +968,14 @@ namespace Chainbound.Combat
                 StopCoroutine(_battleCoroutine);
                 _battleCoroutine = null;
             }
+
+            if (_loadoutRefreshCoroutine != null)
+            {
+                StopCoroutine(_loadoutRefreshCoroutine);
+                _loadoutRefreshCoroutine = null;
+            }
+
+            _loadoutRefreshInFlight = false;
 
             if (_fleeRoutine != null)
             {
@@ -1353,7 +1551,9 @@ namespace Chainbound.Combat
                     continue;
 
                 ChainlingInstance chainling = team.chainlings[rosterIndex];
-                chainling.currentHP = Mathf.Clamp(saved.currentHp, 0, Mathf.Max(1, chainling.EffectiveMaxHP));
+                chainling.currentHP = ChainlingVitalsUtility.ResolveAuthoritativeCheckpointCurrentHp(
+                    saved.currentHp,
+                    chainling.EffectiveMaxHP);
                 chainling.currentAP = Mathf.Max(0, saved.currentAp);
                 chainling.ClampAP();
                 chainling.isAlive = chainling.currentHP > 0;

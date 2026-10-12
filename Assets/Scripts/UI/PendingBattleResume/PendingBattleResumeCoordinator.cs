@@ -170,7 +170,10 @@ public sealed class PendingBattleResumeCoordinator : MonoBehaviour
             {
                 if (rosters[i] == null)
                     continue;
-                await rosters[i].FetchRosterAsync(session.PlayerProfileId, session.WalletAddress);
+                await PlayerProfileReadStore.ResolveOrCreate().RefreshRosterAsync(
+                    rosters[i],
+                    session.PlayerProfileId,
+                    session.WalletAddress);
                 break;
             }
 
@@ -181,8 +184,10 @@ public sealed class PendingBattleResumeCoordinator : MonoBehaviour
             {
                 if (bags[i] == null)
                     continue;
-                bags[i].ClearItemInventoryCache();
-                await bags[i].FetchInventoryAsync(session.PlayerProfileId, session.WalletAddress);
+                await PlayerProfileReadStore.ResolveOrCreate().RefreshInventoryAsync(
+                    bags[i],
+                    session.PlayerProfileId,
+                    session.WalletAddress);
                 break;
             }
         }
@@ -196,6 +201,18 @@ public sealed class PendingBattleResumeCoordinator : MonoBehaviour
 public static class PendingBattleRouteUtility
 {
     public const string BattleScene = "Combat2_TestHarness";
+
+    /// <summary>
+    /// True when the current-battle probe found nothing, including when the service
+    /// never answered. A failure that already has a session still stops the route.
+    /// </summary>
+    public static bool ShouldContinueAfterProbe(PendingBattleResumeResult result)
+    {
+        if (result.Outcome == PendingBattleResumeOutcome.None)
+            return true;
+
+        return result.Outcome == PendingBattleResumeOutcome.Failed && result.Session == null;
+    }
 
     public static bool RequestRejoin(TransitionStyle style, string sourceId)
     {

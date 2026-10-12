@@ -23,6 +23,22 @@ public sealed class PendingBattleResumeTests
         Assert.NotNull(presenter);
         Assert.NotNull(coordinator);
 
+        Canvas canvas = prefab.GetComponent<Canvas>();
+        Assert.NotNull(canvas);
+        Assert.AreEqual(RenderMode.ScreenSpaceOverlay, canvas.renderMode);
+        CanvasScaler scaler = prefab.GetComponent<CanvasScaler>();
+        Assert.NotNull(scaler);
+        Assert.AreEqual(CanvasScaler.ScaleMode.ScaleWithScreenSize, scaler.uiScaleMode);
+
+        CanvasGroup canvasGroup = prefab.GetComponent<CanvasGroup>();
+        Assert.NotNull(canvasGroup);
+        Assert.AreEqual(0f, canvasGroup.alpha);
+        Assert.IsFalse(canvasGroup.interactable);
+        Assert.IsFalse(canvasGroup.blocksRaycasts);
+        Image dimmer = prefab.GetComponent<Image>();
+        Assert.NotNull(dimmer);
+        Assert.IsFalse(dimmer.enabled);
+
         var coordinatorSerialized = new SerializedObject(coordinator);
         Assert.AreSame(
             presenter,
@@ -38,6 +54,23 @@ public sealed class PendingBattleResumeTests
         RectTransform safeArea = serialized.FindProperty("safeAreaRoot").objectReferenceValue as RectTransform;
         Assert.NotNull(safeArea);
         Assert.AreEqual("DeviceSafeArea", safeArea.name);
+
+        GameObject instance = Object.Instantiate(prefab);
+        try
+        {
+            PendingBattleResumePresenter live =
+                instance.GetComponent<PendingBattleResumePresenter>();
+            Assert.NotNull(live);
+            Assert.IsFalse(live.IsOpen);
+            CanvasGroup liveGroup = instance.GetComponent<CanvasGroup>();
+            Assert.AreEqual(0f, liveGroup.alpha);
+            Assert.IsFalse(liveGroup.blocksRaycasts);
+            Assert.IsFalse(instance.GetComponent<Image>().enabled);
+        }
+        finally
+        {
+            Object.DestroyImmediate(instance);
+        }
 
         EnsurePromptScanline();
         GameObject authored = AssetDatabase.LoadAssetAtPath<GameObject>(PromptPath);
@@ -138,5 +171,32 @@ public sealed class PendingBattleResumeTests
         Assert.AreEqual(1, encounter.chainlings.Count);
         Assert.AreEqual("enemy-7", encounter.chainlings[0].backendChainlingId);
         Assert.AreEqual(17, encounter.chainlings[0].currentHp);
+    }
+
+    [Test]
+    public void UnansweredBattleProbeContinuesWhileAKnownSessionStillStops()
+    {
+        Assert.IsTrue(PendingBattleRouteUtility.ShouldContinueAfterProbe(
+            new PendingBattleResumeResult(PendingBattleResumeOutcome.None)));
+        Assert.IsTrue(PendingBattleRouteUtility.ShouldContinueAfterProbe(
+            new PendingBattleResumeResult(PendingBattleResumeOutcome.Failed, message: "SIGNAL SYNC UNAVAILABLE — RETRYING")));
+        Assert.IsFalse(PendingBattleRouteUtility.ShouldContinueAfterProbe(
+            new PendingBattleResumeResult(
+                PendingBattleResumeOutcome.Failed,
+                new Chainbound.Combat.Core.CombatSessionEnvelope(),
+                "Pending battle prompt closed before a choice was made.")));
+        Assert.IsFalse(PendingBattleRouteUtility.ShouldContinueAfterProbe(
+            new PendingBattleResumeResult(PendingBattleResumeOutcome.Rejoin)));
+        Assert.IsFalse(PendingBattleRouteUtility.ShouldContinueAfterProbe(
+            new PendingBattleResumeResult(PendingBattleResumeOutcome.Wipe)));
+    }
+
+    [Test]
+    public void EditorStartsALocalEncounterWhenTheBattleServiceDoesNotAnswer()
+    {
+        Assert.IsTrue(EncounterTransitionBridge.ShouldUseLocalPracticeBattle(true, null));
+        Assert.IsTrue(EncounterTransitionBridge.ShouldUseLocalPracticeBattle(true, "authority_request_failed"));
+        Assert.IsFalse(EncounterTransitionBridge.ShouldUseLocalPracticeBattle(false, null));
+        Assert.IsFalse(EncounterTransitionBridge.ShouldUseLocalPracticeBattle(true, "upgrade_required"));
     }
 }

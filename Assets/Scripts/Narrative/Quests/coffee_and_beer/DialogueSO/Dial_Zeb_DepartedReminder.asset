@@ -16,8 +16,8 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Zeb
-    text: "Take that bean bag to Reynard. And tell Momo I sent you \u2014 he has
-      the beer."
+    text: "Reynard's waiting on those beans. When you see Momo, tell him I sent you
+      \u2014 there's a cold beer waiting after that fight."
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

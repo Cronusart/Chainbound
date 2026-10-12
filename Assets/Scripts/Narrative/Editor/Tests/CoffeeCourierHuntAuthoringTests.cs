@@ -386,18 +386,91 @@ public sealed class CoffeeCourierHuntAuthoringTests
         Assert.That(zeb.Rules[2].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.CofiPlayerLostFlag));
         Assert.That(zeb.Rules[2].dialogue.GetLine(1).text, Does.Contain("party").IgnoreCase);
 
-        Assert.That(reynard.Rules[0].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardBrewedFlag));
-        Assert.That(reynard.Rules[1].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardBrewTriggerId));
-        Assert.That(reynard.Rules[2].dialogue.GetLine(0).text, Does.Contain("piping hot").IgnoreCase.Or.Contain("beer"));
+        Assert.That(reynard.Rules[0].label, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardHurryRuleLabel));
+        Assert.That(reynard.Rules[0].triggerId, Is.Empty);
+        Assert.That(reynard.Rules[0].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.HoldingTobysDeliveryFlag));
+        Assert.That(reynard.Rules[0].dialogue.GetLine(0).text, Does.Contain("cold").IgnoreCase);
+        Assert.That(reynard.Rules[1].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardBrewedFlag));
+        Assert.That(reynard.Rules[2].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.ReynardBrewTriggerId));
+        Assert.That(reynard.Rules[3].dialogue.GetLine(0).text, Does.Contain("piping hot").IgnoreCase.Or.Contain("beer"));
 
+        Assert.That(toby.Rules[0].label, Is.EqualTo("delivery ready — handoff"));
+        Assert.That(toby.Rules[0].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.TobyHandoffTriggerId));
         Assert.That(toby.Rules[0].worldFlagPredicates[0].key, Is.EqualTo(CoffeeCourierHuntAuthoring.HoldingTobysDeliveryFlag));
-        Assert.That(toby.Rules[0].dialogue.GetLine(0).text, Does.Contain("doorway"));
+        Assert.That(toby.Rules[0].worldFlagPredicates[1].key, Is.EqualTo(CoffeeCourierHuntAuthoring.TobyDeliveryAcceptedFlag));
+        Assert.That(toby.Rules[0].dialogue.GetLine(0).text, Does.Contain("Give it here"));
         Assert.That(toby.Rules[1].dialogue.GetLine(0).text, Does.Contain("gnaw"));
 
         Assert.That(momo.Rules[0].label, Is.EqualTo(CoffeeCourierHuntAuthoring.MomoBeerRuleLabel));
         Assert.That(momo.Rules[0].triggerId, Is.EqualTo(CoffeeCourierHuntAuthoring.MomoBeerTriggerId));
         Assert.That(momo.Rules[0].dialogue.GetLine(0).text, Does.Contain("cold beer").IgnoreCase);
         Assert.That(momo.Rules.Count, Is.GreaterThan(1));
+    }
+
+    [Test]
+    public void TobyHandoff_ConsumesTheParcelAndCompletesTheQuest()
+    {
+        SequenceAsset handoff = AssetDatabase.LoadAssetAtPath<SequenceAsset>(
+            "Assets/Scripts/Narrative/Quests/coffee_and_beer/Sequence/coffee_toby_handoff_sequence.asset");
+        SequenceCatalogSO catalog = AssetDatabase.LoadAssetAtPath<SequenceCatalogSO>(
+            "Assets/Resources/Narrative/SequenceCatalog.asset");
+        Assert.That(handoff, Is.Not.Null);
+        Assert.That(catalog, Is.Not.Null);
+        Assert.That(catalog.Sequences, Does.Contain(handoff));
+        Assert.That(handoff.SequenceId, Is.EqualTo(CoffeeCourierHuntAuthoring.TobyHandoffSequenceId));
+        Assert.That(handoff.AutoStartWhenNoSequenceRunning, Is.True);
+        Assert.That(handoff.AutoStartQuestId, Is.EqualTo(CoffeeCourierHuntAuthoring.CoffeeQuestId));
+        Assert.That(handoff.AutoStartRequiredWorldFlagKey, Is.EqualTo(CoffeeCourierHuntAuthoring.HoldingTobysDeliveryFlag));
+        Assert.That(handoff.AutoStartSkipWorldFlagKey, Is.EqualTo(CoffeeCourierHuntAuthoring.TobyDeliveryAcceptedFlag));
+
+        bool consumesDelivery = false;
+        bool completesDeliveryObjective = false;
+        bool clearsHoldingFlag = false;
+        bool marksAccepted = false;
+        for (int i = 0; i < handoff.StepCount; i++)
+        {
+            SequenceStep step = handoff.GetStep(i);
+            Assert.That(step, Is.Not.InstanceOf<Step_QueueSequence>());
+            if (step is Step_ApplyProfileItemDelta delta)
+            {
+                SerializedObject serialized = new SerializedObject(delta);
+                Assert.That(serialized.FindProperty("idempotencyKey").stringValue,
+                    Is.EqualTo(CoffeeCourierHuntAuthoring.TobyHandoffIdempotencyKey));
+                Assert.That(serialized.FindProperty("grants").arraySize, Is.EqualTo(0));
+                SerializedProperty consumes = serialized.FindProperty("consumes");
+                Assert.That(consumes.arraySize, Is.EqualTo(1));
+                Assert.That(consumes.GetArrayElementAtIndex(0).FindPropertyRelative("itemId").stringValue,
+                    Is.EqualTo(CoffeeCourierHuntAuthoring.TobysDeliveryItemId));
+                consumesDelivery = true;
+            }
+            else if (step is Step_SetQuestObjectiveProgress objective)
+            {
+                SerializedObject serialized = new SerializedObject(objective);
+                Assert.That(serialized.FindProperty("objectiveId").stringValue,
+                    Is.EqualTo(CoffeeCourierHuntAuthoring.DeliverToTobyObjective));
+                Assert.That(serialized.FindProperty("completeObjective").boolValue, Is.True);
+                Assert.That(serialized.FindProperty("autoCompleteQuest").boolValue, Is.False);
+                completesDeliveryObjective = true;
+            }
+            else if (step is Step_SetProfileWorldFlag flag)
+            {
+                SerializedObject serialized = new SerializedObject(flag);
+                string key = serialized.FindProperty("flagKey").stringValue;
+                bool value = serialized.FindProperty("flagValue").boolValue;
+                if (key == CoffeeCourierHuntAuthoring.HoldingTobysDeliveryFlag && !value)
+                    clearsHoldingFlag = true;
+                if (key == CoffeeCourierHuntAuthoring.TobyDeliveryAcceptedFlag && value)
+                    marksAccepted = true;
+            }
+        }
+
+        Assert.That(consumesDelivery, Is.True);
+        Assert.That(completesDeliveryObjective, Is.True);
+        Assert.That(clearsHoldingFlag, Is.True);
+        Assert.That(marksAccepted, Is.True);
+
+        QuestDefinitionSO quest = AssetDatabase.LoadAssetAtPath<QuestDefinitionSO>(QuestPath);
+        Assert.That(quest.AutoCompleteWhenObjectivesComplete, Is.True);
     }
 
     [Test]

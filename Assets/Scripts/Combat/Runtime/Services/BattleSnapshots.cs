@@ -73,7 +73,7 @@ namespace Chainbound.Combat
         public long archivedAtUnix;
 
         /// <summary>
-        /// Move definition IDs to equip. If empty, species defaults are used.
+        /// Move definition IDs to equip. Battle uses these ids only. An empty list equips nothing.
         /// </summary>
         public List<string> moveIds;
 

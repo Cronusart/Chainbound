@@ -294,6 +294,7 @@ namespace Chainbound.Combat
             if (_outcome.ShowRewardsPage)
                 yield return RunPage(FlowPage.Rewards);
 
+            ResolveCombatSfx()?.FadeOutPostBattleSting();
             KillTweens();
             _bannerAnimating = false;
             if (_overlay != null)
@@ -762,7 +763,8 @@ namespace Chainbound.Combat
                 _outcome.DidCapture,
                 _outcome.Kind,
                 BattleOutcomePresentation.ResolveCapturedDisplayName(_result),
-                _rewardSummary);
+                _rewardSummary,
+                _result != null ? _result.authoritativeRamSettlement : null);
         }
 
         private string BuildDefeatCopy()
@@ -779,7 +781,8 @@ namespace Chainbound.Combat
             bool didCapture,
             BattleOutcomeKind kind,
             string capturedDisplayName,
-            BattleRewardSummary summary)
+            BattleRewardSummary summary,
+            BattleRewardSettlement settlement = null)
         {
             if (didCapture)
             {
@@ -794,7 +797,10 @@ namespace Chainbound.Combat
                     : "No XP rewards available for this battle.";
             }
 
-            return "XP fills live. RAM rewards apply automatically. Confirm saves XP and returns you to the overworld.";
+            if (settlement != null && string.Equals(settlement.Status, BattleRewardStatus.Settled, StringComparison.Ordinal) && settlement.AppliedRam > 0)
+                return "XP fills live. RAM was granted automatically. Confirm saves XP and returns you to the overworld.";
+
+            return "XP fills live. Confirm saves XP and returns you to the overworld.";
         }
 
         public static string FormatDefeatCopy(int recoveryCount, int recoveryPercent)

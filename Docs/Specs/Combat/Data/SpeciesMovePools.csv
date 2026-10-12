@@ -2,9 +2,9 @@ SpeciesId,LearnableMoves,ExclusiveMoves,FlagshipMove,InitialMoves,OffTypeMoves
 # Progression pools are 4-5 moves. FlagshipMove is the signature and must sit in LearnableMoves or ExclusiveMoves.
 # Import gives the signature weight 8, and weight 24 at 5 stars. Every other pool move gets weight 23.
 # OffTypeMoves equip even when the move type does not match. Empty means no theme exception.
-validape,hub_heal|coordinated_shot|ap_router,hammer_sync|pack_rally,hammer_sync,coordinated_shot,
-gilarime,frost_shot|ice_wall|cold_snap,cryo_ray|gecko_guard,cryo_ray,frost_shot,
-kitsauto,multi_thread_shot|automated_pressure|debuff_script,fox_feint|blade_flurry,fox_feint,multi_thread_shot,
+validape,hub_heal|coordinated_shot|ap_router,hammer_sync|pack_rally,hammer_sync,baseline_striker,
+gilarime,frost_shot|ice_wall|cold_snap,cryo_ray|gecko_guard,cryo_ray,baseline_shot,
+kitsauto,multi_thread_shot|automated_pressure|debuff_script,fox_feint|blade_flurry,fox_feint,baseline_jab,
 kreechank,data_scramble|chaos_strike|bug_payoff|defense_corrupt|unstable_code,,data_scramble,chaos_strike,
 cinislug,ember_wall|scorch_shot|ash_guard|deflation_mark|baseline_shot,,ember_wall,scorch_shot,
 rattlestake,compound_guard|stake_heal|ap_reserve|yield_cycle|hibernate,,compound_guard,stake_heal,hibernate

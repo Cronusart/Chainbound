@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -66,6 +68,60 @@ public sealed class StarterSelectionUiPrefabTests
         Assert.That(nameRect.anchorMax, Is.EqualTo(titleRect.anchorMax));
         Assert.That(nameInputTransform.gameObject.activeSelf, Is.False,
             "The field is revealed only after the player chooses Yes in the dialogue.");
+    }
+
+    [Test]
+    public void ShowStarterNameInput_KeepsAuthoredPoseAndUsesUpperCase()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        Assert.That(prefab, Is.Not.Null);
+        GameObject instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+        Assert.That(instance, Is.Not.Null);
+
+        try
+        {
+            StarterSelectionUI ui = instance.GetComponent<StarterSelectionUI>();
+            Assert.That(ui, Is.Not.Null);
+            RectTransform nameRect = ui.StarterNameInputField.transform as RectTransform;
+            Assert.That(nameRect, Is.Not.Null);
+            Vector2 authoredPosition = nameRect.anchoredPosition;
+            Vector2 authoredSize = nameRect.sizeDelta;
+            Vector2 authoredAnchorMin = nameRect.anchorMin;
+            Vector2 authoredAnchorMax = nameRect.anchorMax;
+
+            SetPrivateField(ui, "isShowing", true);
+            FieldInfo modeField = typeof(StarterSelectionUI).GetField(
+                "presentationMode",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(modeField, Is.Not.Null);
+            SetPrivateField(ui, "presentationMode", Enum.Parse(modeField.FieldType, "Naming"));
+
+            Assert.That(ui.ShowStarterNameInput(), Is.True);
+
+            Assert.That(nameRect.anchoredPosition, Is.EqualTo(authoredPosition));
+            Assert.That(nameRect.sizeDelta, Is.EqualTo(authoredSize));
+            Assert.That(nameRect.anchorMin, Is.EqualTo(authoredAnchorMin));
+            Assert.That(nameRect.anchorMax, Is.EqualTo(authoredAnchorMax));
+
+            TextMeshProUGUI label = ui.StarterNameInputField.textComponent as TextMeshProUGUI;
+            TextMeshProUGUI placeholder = ui.StarterNameInputField.placeholder as TextMeshProUGUI;
+            Assert.That(label, Is.Not.Null);
+            Assert.That(placeholder, Is.Not.Null);
+            Assert.That(label.fontStyle, Is.EqualTo(label.fontStyle | FontStyles.UpperCase));
+            Assert.That(placeholder.fontStyle, Is.EqualTo(placeholder.fontStyle | FontStyles.UpperCase));
+            Assert.That(label.fontStyle & FontStyles.LowerCase, Is.EqualTo(FontStyles.Normal));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(instance);
+        }
+    }
+
+    private static void SetPrivateField(object target, string fieldName, object value)
+    {
+        FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(field, Is.Not.Null, fieldName);
+        field.SetValue(target, value);
     }
 
     [Test]

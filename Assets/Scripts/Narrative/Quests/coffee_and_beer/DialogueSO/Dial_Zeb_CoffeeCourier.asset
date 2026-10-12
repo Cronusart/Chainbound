@@ -16,7 +16,7 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Zeb
-    text: You're Reynard's runner? Finally. I had the shipment.
+    text: Oh, you're Reynard's runner. I'm glad you found me. I had the shipment.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -28,7 +28,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Zeb
-    text: Then Cofi Lootwak hit the trail and ran off with the whole load.
+    text: Cofi Lootwak jumped me on the trail and took the whole load. He's over
+      in those bushes.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -40,8 +41,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Zeb
-    text: I am not going back in there. You want Toby's coffee, you face that beast
-      yourself.
+    text: I'd walk back in with you, but I'm still a little shaky. If you go after
+      Toby's coffee, please be careful.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

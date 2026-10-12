@@ -29,7 +29,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Reynard
-    text: He wants it piping hot. Fetch the beer first.
+    text: He wants it piping hot. Fetch the beer first. I'd try the academy in the
+      jungle. Those apes are always up to something fun
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

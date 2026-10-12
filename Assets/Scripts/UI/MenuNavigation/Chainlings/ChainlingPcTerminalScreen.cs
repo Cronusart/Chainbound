@@ -294,7 +294,10 @@ namespace SignalJam.UI.MenuNavigation
                 return;
             }
 
-            roster = await provider.FetchRosterAsync(session.PlayerProfileId, session.WalletAddress);
+            roster = await PlayerProfileReadStore.ResolveOrCreate().RefreshRosterAsync(
+                provider,
+                session.PlayerProfileId,
+                session.WalletAddress);
             if (root != null && !root.gameObject.activeSelf && !closing)
             {
                 root.gameObject.SetActive(true);

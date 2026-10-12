@@ -457,6 +457,7 @@ namespace Chainbound.Combat
             _preparedRewards = null;
 
             _playerMap?.Enable();
+            ResolveCombatSfxOrchestrator()?.FadeOutPostBattleSting();
 
             ReturnToOverworld(completedResult);
 

@@ -16,7 +16,8 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Reynard
-    text: Beans and a cold beer. That is the order. Give them here.
+    text: Hey! glad to see you made it back. I could smell those beans coming along
+      the way. Many thanks
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -28,8 +29,33 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Reynard
-    text: Two blacks, still hot, and the beer packed with them. This is Toby's delivery.
-      Get it to him before it cools.
+    text: I see you got him a cold beer too. Classic. Let me get those beans brewing
+      here...
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: reynard
+      targetTag: 
+    choices: []
+  - speakerName: Reynard
+    text: ...
+    typeSpeed: 75
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 0}
+    portraitTint: {r: 0, g: 0, b: 0, a: 0}
+    camera:
+      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      targetSource: 3
+      npcId: 
+      targetTag: 
+    choices: []
+  - speakerName: Reynard
+    text: All set! That's Toby's order. Get it to him before it cools, and thanks
+      again! You can visit again anytime
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

@@ -15,7 +15,7 @@ MonoBehaviour:
   speakerNpcId: reynard
   playerFacingPolicy: 0
   lines:
-  - speakerName: Reynard
+  - speakerName: 
     text: Hold up. Toby's coffee order isn't going to fetch itself.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
@@ -27,7 +27,7 @@ MonoBehaviour:
       npcId: reynard
       targetTag: 
     choices: []
-  - speakerName: Reynard
+  - speakerName: 
     text: Check in with Reynard at the cart before you leave town.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}

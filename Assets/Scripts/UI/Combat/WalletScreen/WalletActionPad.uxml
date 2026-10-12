@@ -20,9 +20,9 @@
                 <ui:VisualElement class="selector" />
                 <ui:Label text="!!!" class="action-label" style="-unity-font-definition: url(&quot;project://database/Assets/Sprites/UI/PixeloidSans.otf?fileID=12800000&amp;guid=f6f1115896f7a7746b0b13414d78c400&amp;type=3#PixeloidSans&quot;); width: 26px; -unity-text-align: middle-center;" />
             </ui:VisualElement>
-            <ui:VisualElement name="Action_Mint" class="action action--mint" style="opacity: 1; background-color: rgba(95, 118, 101, 0); width: 76px;">
-                <ui:VisualElement class="selector" style="opacity: 1; -unity-text-align: upper-center;" />
-                <ui:Label text="CAPTURE" class="action-label" style="-unity-font-definition: url(&quot;project://database/Assets/Sprites/UI/PixeloidSans.otf?fileID=12800000&amp;guid=f6f1115896f7a7746b0b13414d78c400&amp;type=3#PixeloidSans&quot;); background-color: rgba(0, 0, 0, 0); -unity-text-align: middle-center; width: 68px;" />
+            <ui:VisualElement name="Action_Mint" class="action action--mint" style="opacity: 1; background-color: rgba(95, 118, 101, 0); width: 108px; -unity-text-align: upper-center;">
+                <ui:VisualElement class="selector" style="opacity: 1; -unity-text-align: upper-center; transform-origin: center;" />
+                <ui:Label text="CAPTURE" class="action-label" style="-unity-font-definition: url(&quot;project://database/Assets/Sprites/UI/PixeloidSans.otf?fileID=12800000&amp;guid=f6f1115896f7a7746b0b13414d78c400&amp;type=3#PixeloidSans&quot;); background-color: rgba(0, 0, 0, 0); -unity-text-align: middle-center; width: 95px;" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

@@ -17,7 +17,7 @@ MonoBehaviour:
   lines:
   - speakerName: Reynard
     text: It's in your bag. Drink it when your legs need it, not before the walk
-      even starts.
+      even starts
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -29,7 +29,7 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Reynard
-    text: Be careful out there. Good luck, runner. Bring my beans home.
+    text: Be careful out there. Good luck, runner.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

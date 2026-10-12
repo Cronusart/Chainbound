@@ -69,7 +69,6 @@ namespace Chainbound.Combat.Tests
             species.baseRangedAtk = 12;
             species.baseRangedDef = 12;
             species.baseSpeed = 12;
-            species.initialMoves = new List<MoveDefinitionSO> { move };
             move.moveId = "baseline_jab";
             move.displayName = "Quick Jab";
             move.category = MoveCategory.DamagingMelee;

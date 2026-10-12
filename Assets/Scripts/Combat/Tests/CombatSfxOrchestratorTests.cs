@@ -576,6 +576,19 @@ namespace Chainbound.Combat.Tests
             {
             }
 
+            public void PlayPostBattleSting(Object soundEvent, float volumeScale = 1f)
+            {
+                if (soundEvent == null)
+                    return;
+
+                Sounds.Add(soundEvent);
+                VolumeScales.Add(volumeScale);
+            }
+
+            public void FadeOutPostBattleSting(float fadeSeconds)
+            {
+            }
+
             public void Clear()
             {
                 Sounds.Clear();

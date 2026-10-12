@@ -43,7 +43,13 @@ namespace SignalJam.UI.MenuNavigation
 
         private void OnEnable()
         {
+            PlayerRamBalanceStore.BalanceChanged += HandleRamBalanceChanged;
             RefreshOverview();
+        }
+
+        private void OnDisable()
+        {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
         }
 
         private void Update()
@@ -67,6 +73,9 @@ namespace SignalJam.UI.MenuNavigation
             RefreshTabPreview();
             RefreshLocation();
             RefreshTime();
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session != null && PlayerRamBalanceStore.TryGet(session.PlayerProfileId, out long cachedRam))
+                SetRam(cachedRam);
             _ = RefreshStatsAsync(++statsRequestVersion);
         }
 
@@ -172,8 +181,22 @@ namespace SignalJam.UI.MenuNavigation
                 ramLabel.text = $"RAM {Math.Max(0, value):N0}";
         }
 
+        private void HandleRamBalanceChanged(string playerProfileId, long balance)
+        {
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session != null && string.Equals(session.PlayerProfileId, playerProfileId, StringComparison.Ordinal))
+                SetRam(balance);
+        }
+
         private void SetRamUnavailable()
         {
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session != null && PlayerRamBalanceStore.TryGet(session.PlayerProfileId, out long cachedRam))
+            {
+                SetRam(cachedRam);
+                return;
+            }
+
             if (ramLabel != null)
                 ramLabel.text = ramUnavailableText;
         }

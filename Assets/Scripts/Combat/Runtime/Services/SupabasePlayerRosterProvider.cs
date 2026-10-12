@@ -24,7 +24,6 @@ namespace Chainbound.Combat
         public async Task<PlayerRosterSnapshot> FetchRosterAsync(string playerProfileId, string walletAddress)
         {
             LastError = "";
-            CachedRoster = null;
 
             if (supabaseConfig == null)
                 return Fail("SupabaseConfigSO was not assigned.");

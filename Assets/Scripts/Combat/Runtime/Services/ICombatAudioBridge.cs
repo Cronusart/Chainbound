@@ -23,5 +23,14 @@ namespace Chainbound.Combat
 
         /// <summary>Hard-cuts the scene soundtrack. Used at post-battle sting start.</summary>
         void StopSceneMusic(float fadeSeconds = 0f);
+
+        /// <summary>
+        /// Plays the post-battle outcome sting and keeps its handle so the return
+        /// to the overworld can fade it out.
+        /// </summary>
+        void PlayPostBattleSting(UnityEngine.Object soundEvent, float volumeScale = 1f);
+
+        /// <summary>Fades the active post-battle sting. Later calls are ignored.</summary>
+        void FadeOutPostBattleSting(float fadeSeconds);
     }
 }

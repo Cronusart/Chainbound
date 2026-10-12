@@ -1,3 +1,4 @@
+using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEditor;
@@ -71,6 +72,46 @@ public sealed class ItemObtainPanelPrefabTests
         Assert.That(prompt.transform.parent.name, Is.EqualTo("Details"));
     }
 
+    [Test]
+    public void GameServices_DoesNotOverrideObtainTitleAndPromptToInkColor()
+    {
+        GameObject source = LoadPrefab();
+        TMP_Text sourceTitle = FindChild(source.transform, "Title").GetComponent<TMP_Text>();
+        TMP_Text sourcePrompt = FindChild(source.transform, "Prompt").GetComponent<TMP_Text>();
+
+        GameObject services = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/Prefabs/GameServices/GameServices.prefab");
+        Assert.That(services, Is.Not.Null);
+        ItemObtainPresenter presenter = services.GetComponentInChildren<ItemObtainPresenter>(true);
+        Assert.That(presenter, Is.Not.Null);
+
+        TMP_Text title = FindChild(presenter.transform, "Title").GetComponent<TMP_Text>();
+        TMP_Text prompt = FindChild(presenter.transform, "Prompt").GetComponent<TMP_Text>();
+        Color ink = new Color(0.18039216f, 0.13333334f, 0.18431373f, 1f);
+
+        Assert.That(ColorsMatch(title.color, sourceTitle.color), Is.True, "Title");
+        Assert.That(ColorsMatch(prompt.color, sourcePrompt.color), Is.True, "Prompt");
+        Assert.That(ColorsMatch(title.color, ink), Is.False, "Title should not use Player Menu ink.");
+        Assert.That(ColorsMatch(prompt.color, ink), Is.False, "Prompt should not use Player Menu ink.");
+    }
+
+    [Test]
+    public void TextAssignment_KeepsAuthoredVertexColorWhenFontColorIsStale()
+    {
+        GameObject instance = Object.Instantiate(LoadPrefab());
+        try
+        {
+            TMP_Text title = FindChild(instance.transform, "Title").GetComponent<TMP_Text>();
+            TMP_Text prompt = FindChild(instance.transform, "Prompt").GetComponent<TMP_Text>();
+            AssertAssignmentKeepsVertexColor(title, "You've found a <color=#FF8844>patch</color>!");
+            AssertAssignmentKeepsVertexColor(prompt, "A field repair patch.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(instance);
+        }
+    }
+
     private static GameObject LoadPrefab()
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
@@ -100,6 +141,23 @@ public sealed class ItemObtainPanelPrefabTests
             ColorsMatch(fontColor, vertexColor),
             Is.True,
             $"{label} m_fontColor {fontColor} should match m_fontColor32 {vertexColor} so TMP mesh rebuilds keep the authored color.");
+    }
+
+    private static void AssertAssignmentKeepsVertexColor(TMP_Text label, string value)
+    {
+        SerializedObject serialized = new SerializedObject(label);
+        Color authored = serialized.FindProperty("m_fontColor32").colorValue;
+        serialized.FindProperty("m_fontColor").colorValue = Color.white;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        MethodInfo method = typeof(ItemObtainPresenter).GetMethod(
+            "SetTextPreserveColor",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.That(method, Is.Not.Null);
+        method.Invoke(null, new object[] { label, value });
+
+        Assert.That(ColorsMatch(label.color, authored), Is.True, label.name);
+        Assert.That(label.text, Is.EqualTo(value));
     }
 
     private static bool ColorsMatch(Color a, Color b)

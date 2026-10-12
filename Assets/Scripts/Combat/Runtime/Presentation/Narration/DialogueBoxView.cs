@@ -87,6 +87,7 @@ namespace Chainbound.Combat
         private GameObject _choiceRow;
         private Button _choiceButtonTemplate;
         private readonly List<Button> _choiceButtons = new List<Button>();
+        private float _authoredChoiceButtonWidth;
         private Action<int> _onChoicePicked;
         private bool _isWaitingForChoice;
         private RectTransform _choicePlateRect;
@@ -435,6 +436,7 @@ namespace Chainbound.Combat
 
             WireChoiceNavigation();
             _choiceRow.SetActive(_choiceButtons.Count > 0);
+            PreserveAuthoredChoiceButtonWidths();
             if (_choiceRow != null)
                 _choiceRow.transform.SetAsLastSibling();
             if (_choiceButtons.Count > 0)
@@ -888,6 +890,8 @@ namespace Chainbound.Combat
 
             if (_choiceButtonTemplate == null && _choiceRow != null)
                 _choiceButtonTemplate = _choiceRow.GetComponentInChildren<Button>(true);
+
+            CaptureAuthoredChoiceButtonWidth();
         }
 
         private void EnsureChoiceRow()
@@ -938,8 +942,76 @@ namespace Chainbound.Combat
                 button = CreateChoiceButton(_choiceRow.transform, label);
             }
 
+            ApplyAuthoredChoiceButtonWidth(button);
             ApplyChoiceLabel(button, label);
             return button;
+        }
+
+        private void CaptureAuthoredChoiceButtonWidth()
+        {
+            if (_authoredChoiceButtonWidth > 1f || _choiceButtonTemplate == null)
+                return;
+
+            RectTransform rect = _choiceButtonTemplate.transform as RectTransform;
+            LayoutElement layout = _choiceButtonTemplate.GetComponent<LayoutElement>();
+            if (rect != null &&
+                Mathf.Approximately(rect.anchorMin.x, rect.anchorMax.x) &&
+                rect.sizeDelta.x > 1f)
+            {
+                _authoredChoiceButtonWidth = rect.sizeDelta.x;
+                return;
+            }
+
+            if (layout != null && layout.preferredWidth > 1f)
+                _authoredChoiceButtonWidth = layout.preferredWidth;
+            else if (layout != null && layout.minWidth > 1f)
+                _authoredChoiceButtonWidth = layout.minWidth;
+        }
+
+        private void PreserveAuthoredChoiceButtonWidths()
+        {
+            if (_authoredChoiceButtonWidth <= 1f)
+                return;
+
+            if (_choiceRow != null)
+            {
+                HorizontalLayoutGroup layout = _choiceRow.GetComponent<HorizontalLayoutGroup>();
+                if (layout != null)
+                    layout.childControlWidth = false;
+            }
+
+            ApplyAuthoredChoiceButtonWidths();
+            RectTransform rowRect = _choiceRow != null ? _choiceRow.transform as RectTransform : null;
+            if (rowRect != null && _choiceRow.activeInHierarchy)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rowRect);
+            ApplyAuthoredChoiceButtonWidths();
+        }
+
+        private void ApplyAuthoredChoiceButtonWidths()
+        {
+            for (int i = 0; i < _choiceButtons.Count; i++)
+                ApplyAuthoredChoiceButtonWidth(_choiceButtons[i]);
+        }
+
+        private void ApplyAuthoredChoiceButtonWidth(Button button)
+        {
+            if (button == null || _authoredChoiceButtonWidth <= 1f)
+                return;
+
+            RectTransform rect = button.transform as RectTransform;
+            if (rect != null)
+            {
+                Vector2 size = rect.sizeDelta;
+                size.x = _authoredChoiceButtonWidth;
+                rect.sizeDelta = size;
+            }
+
+            LayoutElement layout = button.GetComponent<LayoutElement>();
+            if (layout == null)
+                layout = button.gameObject.AddComponent<LayoutElement>();
+            layout.preferredWidth = _authoredChoiceButtonWidth;
+            if (layout.minWidth <= 0f)
+                layout.minWidth = _authoredChoiceButtonWidth;
         }
 
         private void WireChoiceNavigation()

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Chainbound.Combat;
 using SignalJam.UI.Audio;
 using SignalJam.UI.MenuNavigation;
@@ -511,9 +512,14 @@ public sealed class ItemObtainPresenter : MonoBehaviour, IItemObtainPresenter
         return null;
     }
 
+    private static readonly FieldInfo FontColor32Field =
+        typeof(TMP_Text).GetField("m_fontColor32", BindingFlags.Instance | BindingFlags.NonPublic);
+
     /// <summary>
     /// Writes copy without replacing the prefab vertex color. Category tint lives
-    /// only in the title's item-name rich-text span.
+    /// only in the title's item-name rich-text span. TMP rebuilds vertices from
+    /// <c>m_fontColor</c>, which can lag the color shown in the prefab, so the
+    /// authored vertex color is copied across before the text is assigned.
     /// </summary>
     private static void SetTextPreserveColor(TMP_Text label, string value)
     {
@@ -521,9 +527,13 @@ public sealed class ItemObtainPresenter : MonoBehaviour, IItemObtainPresenter
             return;
 
         Color authored = label.color;
-        label.text = value ?? "";
+        if (FontColor32Field != null && FontColor32Field.GetValue(label) is Color32 vertex)
+            authored = vertex;
+
         if (label.color != authored)
             label.color = authored;
+
+        label.text = value ?? "";
     }
 
     private static TMP_Text CreateLabel(Transform parent, string name, Vector2 anchoredPos, Vector2 size, int fontSize, FontStyles style)

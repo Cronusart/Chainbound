@@ -235,6 +235,14 @@ namespace Chainbound.Combat.Tests
             public void StopSceneMusic(float fadeSeconds = 0f)
             {
             }
+
+            public void PlayPostBattleSting(Object soundEvent, float volumeScale = 1f)
+            {
+            }
+
+            public void FadeOutPostBattleSting(float fadeSeconds)
+            {
+            }
         }
     }
 

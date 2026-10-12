@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05915b6a98db78844a2e9132309af117, type: 3}
   m_Name: ManualEncounterProvider
   m_EditorClassIdentifier: 
-  authoritativeEncounterId: intro_first_creature
-  rewardEligibilityQuestId: chainbound_intro
+  authoritativeEncounterId: 
+  rewardEligibilityQuestId: 
   roster:
   - speciesId: balloom
     displayName: Balloom
@@ -73,6 +73,7 @@ MonoBehaviour:
   capturePolicy: 2
   hideCombatUI: 0
   uiPresentationMode: 0
+  opponentVisualScaleMultiplier: 1
   introPresentation: {fileID: 11400000, guid: 6406ca81fad167f47b66145a17b25436, type: 2}
   skipManualTurnAfterIntro: 0
   victoryKnownGrants: []

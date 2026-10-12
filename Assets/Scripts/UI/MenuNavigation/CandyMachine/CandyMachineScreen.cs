@@ -217,6 +217,7 @@ namespace SignalJam.UI.MenuNavigation
         public bool CanShowDevGrantPanel =>
             PlatformContext.ResolveAllowDevelopmentTools()
             && DevCandyMachineInventory.IsDevSurfaceAllowed
+            && (devConfig == null || devConfig.ShowDevGrantStrip)
             && (devInventory != null || ownershipService != null);
 
         public long DisplayRamBalance => ownershipService != null

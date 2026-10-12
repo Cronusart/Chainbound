@@ -39,6 +39,11 @@ public class StarterPreviewVisual : MonoBehaviour
     private CombatVisualProfileSO activeProfile;
     private Sprite activeFallbackSprite;
 
+    /// <summary>
+    /// True once the glitch-in and swap-in have finished and idle playback has started.
+    /// </summary>
+    public bool HasSettledReveal { get; private set; }
+
     private static readonly int GlitchIntensityId = Shader.PropertyToID("_GlitchIntensity");
     private static readonly int DissolveThresholdId = Shader.PropertyToID("_DissolveThreshold");
     private static readonly int MaterialColorId = Shader.PropertyToID("_Color");
@@ -61,9 +66,13 @@ public class StarterPreviewVisual : MonoBehaviour
         Clear();
         activeProfile = profile;
         activeFallbackSprite = fallbackSprite;
+        HasSettledReveal = false;
 
         if (previewImage == null || visualRoot == null)
+        {
+            HasSettledReveal = true;
             return;
+        }
 
         playbackRoutine = StartCoroutine(PlayRoutine(profile, fallbackSprite));
     }
@@ -112,6 +121,7 @@ public class StarterPreviewVisual : MonoBehaviour
             frameAnimator.Stop();
 
         StopSignalGlitch();
+        HasSettledReveal = false;
 
         if (previewImage != null)
         {
@@ -231,6 +241,8 @@ public class StarterPreviewVisual : MonoBehaviour
             if (frameAnimator != null)
                 frameAnimator.Stop();
         }
+
+        HasSettledReveal = true;
 
         if (enableDebugLogs)
             Debug.Log($"[StarterPreviewVisual] Playing preview for '{profile?.speciesId ?? fallback?.name ?? "unknown"}'.");

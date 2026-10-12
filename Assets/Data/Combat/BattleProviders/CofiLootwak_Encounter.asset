@@ -58,7 +58,7 @@ MonoBehaviour:
     isEntangled: 0
     entangledType: 0
     currentHp: -1
-  teamName: Cofi Lootwak
+  teamName: Boss
   aiPersonality: 3
   difficulty: 2
   bossIntroDialogueAsset: {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1301, type: 2}

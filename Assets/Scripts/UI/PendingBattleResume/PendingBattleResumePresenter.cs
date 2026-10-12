@@ -17,16 +17,21 @@ public sealed class PendingBattleResumePresenter : MonoBehaviour
     [SerializeField] private TextMeshProUGUI statusText;
     [SerializeField] private Button primaryButton;
     [SerializeField] private Button secondaryButton;
+    [SerializeField] private CanvasGroup canvasGroup;
 
     private TaskCompletionSource<PendingBattleResumeChoice> completion;
     private Rect lastSafeArea;
 
-    public bool IsOpen => root != null && root.activeInHierarchy;
+    public bool IsOpen => canvasGroup != null
+        ? canvasGroup.alpha > 0.01f && canvasGroup.blocksRaycasts
+        : root != null && root.activeInHierarchy;
 
     private void Awake()
     {
         if (root == null)
             root = gameObject;
+        if (canvasGroup == null)
+            canvasGroup = GetComponent<CanvasGroup>();
         Hide();
     }
 
@@ -99,7 +104,7 @@ public sealed class PendingBattleResumePresenter : MonoBehaviour
             secondaryButton.navigation = secondaryNavigation;
         }
 
-        root.SetActive(true);
+        SetVisible(true);
         ApplySafeArea(force: true);
         EventSystem.current?.SetSelectedGameObject(primaryButton.gameObject);
         return completion.Task;
@@ -128,8 +133,26 @@ public sealed class PendingBattleResumePresenter : MonoBehaviour
 
     private void Hide()
     {
-        if (root != null)
-            root.SetActive(false);
+        SetVisible(false);
+    }
+
+    private void SetVisible(bool visible)
+    {
+        if (canvasGroup == null)
+            canvasGroup = GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = visible ? 1f : 0f;
+            canvasGroup.interactable = visible;
+            canvasGroup.blocksRaycasts = visible;
+        }
+
+        Image dimmer = GetComponent<Image>();
+        if (dimmer != null)
+            dimmer.enabled = visible;
+
+        if (root != null && root != gameObject)
+            root.SetActive(visible);
     }
 
     private void ApplySafeArea(bool force = false)

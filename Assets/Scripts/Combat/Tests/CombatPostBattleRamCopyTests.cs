@@ -65,6 +65,25 @@ namespace Chainbound.Combat.Tests
             StringAssert.DoesNotContain("grants RAM", copy);
             StringAssert.Contains("overworld", copy);
             StringAssert.DoesNotContain("client-resolved", copy);
+            StringAssert.DoesNotContain("RAM rewards apply automatically", copy);
+        }
+
+        [Test]
+        public void FormatRewardsIntro_SettledRam_ReportsOnlyTheAppliedGrant()
+        {
+            var summary = new BattleRewardSummary
+            {
+                chainlingRewards = { new ChainlingXpReward { xpEarned = 20 } },
+            };
+
+            string copy = CombatPostBattleReportController.FormatRewardsIntro(
+                false,
+                BattleOutcomeKind.Victory,
+                string.Empty,
+                summary,
+                Settled(5, 5, 5, 100));
+
+            StringAssert.Contains("RAM was granted automatically", copy);
         }
 
         [Test]

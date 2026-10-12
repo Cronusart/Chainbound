@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 namespace Chainbound.Combat
 {
     /// <summary>
@@ -13,5 +15,14 @@ namespace Chainbound.Combat
         /// Contains 1-3 chainlings with species, level, and loadout info.
         /// </summary>
         PartySnapshot GetCurrentParty();
+    }
+
+    /// <summary>
+    /// Optional party source that can read saved loadouts again before a battle starts.
+    /// Manual and test providers leave this unimplemented.
+    /// </summary>
+    public interface IPlayerLoadoutRefresh
+    {
+        Task<PartySnapshot> RefreshPartyAsync();
     }
 }

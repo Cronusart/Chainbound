@@ -160,6 +160,7 @@ namespace SignalJam.Narrative.Combat
                     skipSaveReturnContext = skipSaveReturnContext,
                     launchSource = EncounterTransitionBridge.EncounterLaunchSource.Narrative,
                     authoritativeNarrativeEncounterId = encounterId,
+                    skipAuthoritativeSession = launchContext.DisableSupabasePartyResolution,
                     onReadyToLoad = () =>
                     {
                         launchBridge = NarrativeCombatLaunchBridge.GetOrCreate(transform);

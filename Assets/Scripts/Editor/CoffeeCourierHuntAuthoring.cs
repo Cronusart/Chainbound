@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Chainbound.Combat;
 using SignalJam.UI.MobileControls;
 using UnityEditor;
 using UnityEditor.Events;
@@ -30,12 +31,14 @@ public static class CoffeeCourierHuntAuthoring
     public const string ColdBeerGrantedFlag = "world.coffee.cold_beer_granted";
     public const string ReynardBrewedFlag = "world.coffee.reynard_brewed";
     public const string HoldingTobysDeliveryFlag = "world.coffee.holding_tobys_delivery";
+    public const string TobyDeliveryAcceptedFlag = "world.coffee.toby_delivery_accepted";
     public const string ZebTriggerId = "trigger_coffee_zeb_talked";
     public const string ZebReturnTriggerId = "trigger_coffee_zeb_return";
     public const string ZebCofiRetryTriggerId = "trigger_coffee_zeb_cofi_retry";
     public const string ZebRetryAdviceRuleLabel = "lost to cofi — advise and reopen";
     public const string MomoBeerTriggerId = "trigger_coffee_momo_beer";
     public const string ReynardBrewTriggerId = "trigger_coffee_reynard_brew";
+    public const string TobyHandoffTriggerId = "trigger_coffee_toby_handoff";
     public const string ReynardCheckInTriggerId = "trigger_coffee_reynard_checkin";
     public const string CheckInSequenceId = "coffee_reynard_checkin_sequence";
     public const string CheckInTrackId = "reynard_checkin";
@@ -48,6 +51,7 @@ public static class CoffeeCourierHuntAuthoring
     public const string ZebReturnSequenceId = "coffee_zeb_return_sequence";
     public const string MomoBeerSequenceId = "coffee_momo_beer_sequence";
     public const string ReynardBrewSequenceId = "coffee_reynard_brew_sequence";
+    public const string TobyHandoffSequenceId = "coffee_toby_handoff_sequence";
     public const string MomoBeerRuleLabel = "zeb sent cold beer";
     public const string CoffeeBeansItemId = "coffee_beans";
     public const string ColdBeerItemId = "cold_beer";
@@ -55,6 +59,8 @@ public static class CoffeeCourierHuntAuthoring
     public const string CoffeeBeansIdempotencyKey = "quest:coffee_and_beer:coffee_beans";
     public const string ColdBeerIdempotencyKey = "quest:coffee_and_beer:cold_beer";
     public const string ReynardBrewIdempotencyKey = "quest:coffee_and_beer:reynard_brew";
+    public const string TobyHandoffIdempotencyKey = "quest:coffee_and_beer:toby_handoff";
+    public const string ReynardHurryRuleLabel = "holding Toby's order — hurry";
     public const string EncounterId = "coffee_cofi_lootwak";
     public const string ZebNpcId = "zeb";
     public const string CofiTriggerObjectName = "Trigger_CofiLootwak";
@@ -88,29 +94,29 @@ public static class CoffeeCourierHuntAuthoring
 
     public static readonly string[] ZebCourierLines =
     {
-        "You're Reynard's runner? Finally. I had the shipment.",
-        "Then Cofi Lootwak hit the trail and ran off with the whole load.",
-        "I am not going back in there. You want Toby's coffee, you face that beast yourself.",
+        "Oh, you're Reynard's runner. I'm glad you found me. I had the shipment.",
+        "Cofi Lootwak jumped me on the trail and took the whole load. He's over in those bushes.",
+        "I'd walk back in with you, but I'm still a little shaky. If you go after Toby's coffee, please be careful.",
     };
 
     public static readonly string[] ZebReturnLines =
     {
-        "You actually got the bag back. I owe you for that.",
-        "I would finish the run myself, but the cart is wrecked and I still have to scrape up what's left of the shipment.",
-        "Take the beans to Reynard. He is the one who brews Toby's order.",
-        "Across the stream, the academy is just ahead. Tell Momo I sent you. He is holding the beer.",
+        "You got the bag back. I can't thank you enough.",
+        "I'd finish the run myself, but the cart's wrecked and I've still got to gather what's left of the shipment.",
+        "Take the beans to Reynard. He's the one who brews Toby's order.",
+        "When you find Momo, tell him I sent you. There's a cold beer waiting — you earned it after a fight like that.",
     };
 
     public static readonly string[] ZebRetryAdviceLines =
     {
-        "Cofi sent you back to the sanctuary. One Chainling was never going to hold that trail.",
-        "Level your Chainlings up, and don't walk in alone. Bring a party.",
-        "When you're ready, I'll open the trail again.",
+        "You made it back. I'm glad you're alright. Cofi is a lot to face alone.",
+        "Give your Chainlings a little time, and bring a party with you next time.",
+        "Whenever you feel ready, I'll open the trail again. Take your time.",
     };
 
     public static readonly string[] ZebDepartedReminderLines =
     {
-        "Take that bean bag to Reynard. And tell Momo I sent you — he has the beer.",
+        "Reynard's waiting on those beans. When you see Momo, tell him I sent you — there's a cold beer waiting after that fight.",
     };
 
     public static readonly string[] MomoBeerLines =
@@ -130,9 +136,27 @@ public static class CoffeeCourierHuntAuthoring
         "Two blacks, still hot, and the beer packed with them. This is Toby's delivery. Get it to him before it cools.",
     };
 
+    public static readonly string[] ReynardHurryLines =
+    {
+        "That parcel is still hot. Toby does not like it when his coffee goes cold.",
+        "Hurry it to the lab.",
+    };
+
     public static readonly string[] ReynardBrewedReminderLines =
     {
         "That parcel is Toby's. I am not brewing it twice.",
+    };
+
+    public static readonly string[] TobyHandoffLines =
+    {
+        "There it is. Two blacks, still hot, and the beer that kept them honest. Give it here.",
+        "You did good, pup. Sit a second. The coffee can wait. The chain won't, but the coffee can.",
+        "I accelerate it. That's the job. I don't steer it. I'm not even sure it has a direction.",
+        "Bridges, forks, layers, backdoors. This world is bigger than the lab. Bigger than both of us.",
+        "What I can actually read is the paperwork. Chainling DNA. The metadata under the fur.",
+        "Catch them, write them down, and bring me the blank pages. Every species in Loom.",
+        "One of those pages is a trip to the incinerator. Not this one. Leave the furnace alone until I say the page is ready.",
+        "And thank you for the order.",
     };
 
     public static readonly string[] TobyBeansLines =
@@ -236,6 +260,10 @@ public static class CoffeeCourierHuntAuthoring
             DialogueFolder + "/Dial_Reynard_BrewOrder.asset");
         AuthorDialogue(reynardBrew, chatter, shot, "Reynard", "reynard", ReynardBrewLines);
 
+        DialogueSequenceSO reynardHurry = EnsureAsset<DialogueSequenceSO>(
+            DialogueFolder + "/Dial_Reynard_HurryOrder.asset");
+        AuthorDialogue(reynardHurry, chatter, shot, "Reynard", "reynard", ReynardHurryLines);
+
         DialogueSequenceSO reynardBrewed = EnsureAsset<DialogueSequenceSO>(
             DialogueFolder + "/Dial_Reynard_OrderPacked.asset");
         AuthorDialogue(reynardBrewed, chatter, shot, "Reynard", "reynard", ReynardBrewedReminderLines);
@@ -244,16 +272,16 @@ public static class CoffeeCourierHuntAuthoring
             DialogueFolder + "/Dial_Professor_BeansTooEarly.asset");
         AuthorDialogue(tobyBeans, chatter, shot, "Prof Toby", "prof_toby", TobyBeansLines);
 
-        DialogueSequenceSO tobyStall = EnsureAsset<DialogueSequenceSO>(
-            DialogueFolder + "/Dial_Professor_DeliveryStall.asset");
-        AuthorDialogue(tobyStall, chatter, shot, "Prof Toby", "prof_toby", TobyDeliveryStallLines);
+        DialogueSequenceSO tobyHandoff = EnsureAsset<DialogueSequenceSO>(
+            DialogueFolder + "/Dial_Professor_DeliveryHandoff.asset");
+        AuthorDialogue(tobyHandoff, chatter, shot, "Prof Toby", "prof_toby", TobyHandoffLines);
 
         DialogueSequenceSO cofiIntro = EnsureAsset<DialogueSequenceSO>(
             DialogueFolder + "/Dial_CofiLootwak_BossIntro.asset");
         AuthorCombatBossIntroDialogue(cofiIntro, chatter);
 
-        AuthorReynardCoffeeProfile(coffeeQuest, reynardReminder, reynardNeedBeer, reynardBrew, reynardBrewed);
-        AuthorTobyActiveProfile(coffeeQuest, tobyThirsty, tobyBeans, tobyStall);
+        AuthorReynardCoffeeProfile(coffeeQuest, reynardReminder, reynardNeedBeer, reynardBrew, reynardHurry, reynardBrewed);
+        AuthorTobyActiveProfile(coffeeQuest, tobyThirsty, tobyBeans, tobyHandoff);
         AuthorTobyRouter();
         AuthorZebProfile(coffeeQuest, zebTalk, zebReturn, zebReminder, zebRetry);
         AuthorMomoBeerRule(momoBeer);
@@ -270,10 +298,19 @@ public static class CoffeeCourierHuntAuthoring
         AuthorZebReturnSequence(zebReturnSequence, momoBeerSequence);
         AuthorMomoBeerSequence(momoBeerSequence, coffeeQuest, reynardBrewSequence);
         AuthorReynardBrewSequence(reynardBrewSequence);
+        SequenceAsset tobyHandoffSequence = EnsureAsset<SequenceAsset>(
+            SequenceFolder + "/coffee_toby_handoff_sequence.asset");
+        AuthorTobyHandoffSequence(tobyHandoffSequence, coffeeQuest);
         SequenceAsset checkInSequence = EnsureAsset<SequenceAsset>(
             SequenceFolder + "/coffee_reynard_checkin_sequence.asset");
         AuthorReynardCheckInSequence(checkInSequence, reynardCheckIn, reynardCheckInClose);
-        AuthorCatalog(zebSequence, cofiSequence, zebReturnSequence, momoBeerSequence, reynardBrewSequence);
+        AuthorCatalog(
+            zebSequence,
+            cofiSequence,
+            zebReturnSequence,
+            momoBeerSequence,
+            reynardBrewSequence,
+            tobyHandoffSequence);
         CoffeeMartGateAuthoring.EnsureReynardCheckInTrack(checkInSequence);
         AuthorZebPrefab(zebTalk);
         AuthorEncounterRegistry(encounter);
@@ -373,6 +410,7 @@ public static class CoffeeCourierHuntAuthoring
         DialogueSequenceSO reminder,
         DialogueSequenceSO needBeer,
         DialogueSequenceSO brew,
+        DialogueSequenceSO hurry,
         DialogueSequenceSO brewed)
     {
         QuestInteractionProfileSO profile = AssetDatabase.LoadAssetAtPath<QuestInteractionProfileSO>(ReynardCoffeePath);
@@ -382,18 +420,30 @@ public static class CoffeeCourierHuntAuthoring
         var serialized = new SerializedObject(profile);
         serialized.FindProperty("questDefinition").objectReferenceValue = coffeeQuest;
         SerializedProperty rules = serialized.FindProperty("rules");
-        rules.arraySize = 4;
+        rules.arraySize = 5;
         ConfigureRule(
             rules.GetArrayElementAtIndex(0),
+            ReynardHurryRuleLabel,
+            NarrativeQuestLifecycleMask.Active,
+            "",
+            QuestInteractionObjectiveComparison.None,
+            hurry,
+            "");
+        SetWorldFlags(
+            rules.GetArrayElementAtIndex(0),
+            (HoldingTobysDeliveryFlag, QuestInteractionMemoryFlagComparison.IsTrue),
+            (TobyDeliveryAcceptedFlag, QuestInteractionMemoryFlagComparison.IsFalse));
+        ConfigureRule(
+            rules.GetArrayElementAtIndex(1),
             "order already brewed",
             NarrativeQuestLifecycleMask.Active,
             "",
             QuestInteractionObjectiveComparison.None,
             brewed,
             "");
-        SetWorldFlags(rules.GetArrayElementAtIndex(0), (ReynardBrewedFlag, QuestInteractionMemoryFlagComparison.IsTrue));
+        SetWorldFlags(rules.GetArrayElementAtIndex(1), (ReynardBrewedFlag, QuestInteractionMemoryFlagComparison.IsTrue));
         ConfigureRule(
-            rules.GetArrayElementAtIndex(1),
+            rules.GetArrayElementAtIndex(2),
             "beans and beer — brew",
             NarrativeQuestLifecycleMask.Active,
             "",
@@ -401,12 +451,12 @@ public static class CoffeeCourierHuntAuthoring
             brew,
             ReynardBrewTriggerId);
         SetWorldFlags(
-            rules.GetArrayElementAtIndex(1),
+            rules.GetArrayElementAtIndex(2),
             (HoldingCoffeeBeansFlag, QuestInteractionMemoryFlagComparison.IsTrue),
             (HoldingColdBeerFlag, QuestInteractionMemoryFlagComparison.IsTrue),
             (ReynardBrewedFlag, QuestInteractionMemoryFlagComparison.IsFalse));
         ConfigureRule(
-            rules.GetArrayElementAtIndex(2),
+            rules.GetArrayElementAtIndex(3),
             "beans without beer",
             NarrativeQuestLifecycleMask.Active,
             "",
@@ -414,11 +464,11 @@ public static class CoffeeCourierHuntAuthoring
             needBeer,
             "");
         SetWorldFlags(
-            rules.GetArrayElementAtIndex(2),
+            rules.GetArrayElementAtIndex(3),
             (HoldingCoffeeBeansFlag, QuestInteractionMemoryFlagComparison.IsTrue),
             (HoldingColdBeerFlag, QuestInteractionMemoryFlagComparison.IsFalse));
         ConfigureRule(
-            rules.GetArrayElementAtIndex(3),
+            rules.GetArrayElementAtIndex(4),
             "after check-in — find Zeb",
             NarrativeQuestLifecycleMask.Active,
             TalkToReynardObjective,
@@ -431,7 +481,7 @@ public static class CoffeeCourierHuntAuthoring
         serialized.FindProperty("completeObjectiveOnActivate").stringValue = TalkToReynardObjective;
         serialized.FindProperty("activeFallbackDialogue").objectReferenceValue = reminder;
         serialized.FindProperty("designerNotes").stringValue =
-            "Check-in fires the Nitro Brew sequence, then sends the player after Zeb. Later rules ask for the beer, brew the order, or remind Toby's parcel is packed.";
+            "Check-in fires the Nitro Brew sequence, then sends the player after Zeb. Later rules ask for the beer, brew the order, hurry a packed parcel to Toby, or remind that the parcel is already packed.";
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(profile);
     }
@@ -440,7 +490,7 @@ public static class CoffeeCourierHuntAuthoring
         QuestDefinitionSO coffeeQuest,
         DialogueSequenceSO thirsty,
         DialogueSequenceSO beans,
-        DialogueSequenceSO stall)
+        DialogueSequenceSO handoff)
     {
         QuestInteractionProfileSO profile = EnsureAsset<QuestInteractionProfileSO>(TobyActivePath);
         var serialized = new SerializedObject(profile);
@@ -450,13 +500,16 @@ public static class CoffeeCourierHuntAuthoring
         rules.arraySize = 2;
         ConfigureRule(
             rules.GetArrayElementAtIndex(0),
-            "delivery ready — stall",
+            "delivery ready — handoff",
             NarrativeQuestLifecycleMask.Active,
             "",
             QuestInteractionObjectiveComparison.None,
-            stall,
-            "");
-        SetWorldFlags(rules.GetArrayElementAtIndex(0), (HoldingTobysDeliveryFlag, QuestInteractionMemoryFlagComparison.IsTrue));
+            handoff,
+            TobyHandoffTriggerId);
+        SetWorldFlags(
+            rules.GetArrayElementAtIndex(0),
+            (HoldingTobysDeliveryFlag, QuestInteractionMemoryFlagComparison.IsTrue),
+            (TobyDeliveryAcceptedFlag, QuestInteractionMemoryFlagComparison.IsFalse));
         ConfigureRule(
             rules.GetArrayElementAtIndex(1),
             "beans before Reynard brews",
@@ -472,7 +525,7 @@ public static class CoffeeCourierHuntAuthoring
         serialized.FindProperty("inactiveDialogue").objectReferenceValue = thirsty;
         serialized.FindProperty("activeFallbackDialogue").objectReferenceValue = thirsty;
         serialized.FindProperty("designerNotes").stringValue =
-            "Beans before the brew get a sarcastic redirect. Toby's packed delivery stalls until the next cinematic pass. Otherwise he nags.";
+            "Beans before the brew get a sarcastic redirect. A packed delivery plays the handoff and completes the quest. Otherwise he nags.";
         serialized.FindProperty("activateQuestOnInactiveInteract").boolValue = false;
         serialized.FindProperty("completeObjectiveOnActivate").stringValue = "";
         SetNpcBehavior(serialized.FindProperty("inactiveNpcBehavior"));
@@ -631,7 +684,7 @@ public static class CoffeeCourierHuntAuthoring
         ScriptableObject encounter = AssetDatabase.LoadAssetAtPath<ScriptableObject>(EncounterPath);
         var serialized = new SerializedObject(encounter);
         serialized.FindProperty("authoritativeEncounterId").stringValue = EncounterId;
-        serialized.FindProperty("teamName").stringValue = "Cofi Lootwak";
+        serialized.FindProperty("teamName").stringValue = "Boss";
         SerializedProperty difficulty = serialized.FindProperty("difficulty");
         if (difficulty != null)
             difficulty.enumValueIndex = 2;
@@ -915,6 +968,37 @@ public static class CoffeeCourierHuntAuthoring
             ReynardBrewedFlag);
     }
 
+    private static void AuthorTobyHandoffSequence(SequenceAsset sequence, QuestDefinitionSO coffeeQuest)
+    {
+        var steps = new List<SequenceStep>
+        {
+            Label("coffee_toby_idle", "coffee_toby_label_idle"),
+            Checkpoint("coffee_toby_idle", "coffee_toby_checkpoint", "Jungle", "sanctuary_jungle_trailhead"),
+            UnlockInput("coffee_toby_unlock"),
+            Label("coffee_toby_wait", "coffee_toby_label_wait"),
+            WaitForTrigger(TobyHandoffTriggerId, "coffee_toby_wait", saveReturn: false),
+            Label("coffee_toby_grant", "coffee_toby_label_grant"),
+            ItemDelta(TobyHandoffIdempotencyKey, "", TobysDeliveryItemId, "", "coffee_toby_handoff_delta"),
+            IfEquals("lastItemDeltaOk", "true", "coffee_toby_granted", "coffee_toby_retry", "coffee_toby_if_handoff", "coffee_toby_handoff_condition"),
+            Label("coffee_toby_granted", "coffee_toby_label_granted"),
+            WorldFlag(HoldingTobysDeliveryFlag, "coffee_toby_clear_delivery", false),
+            WorldFlag(TobyDeliveryAcceptedFlag, "coffee_toby_accepted_flag", true),
+            Objective(coffeeQuest, DeliverToTobyObjective, "coffee_toby_objective"),
+            Jump("coffee_toby_end", "coffee_toby_jump_end"),
+            Label("coffee_toby_retry", "coffee_toby_label_retry"),
+            ResetTrigger(TobyHandoffTriggerId, "coffee_toby_reset"),
+            Jump("coffee_toby_wait", "coffee_toby_jump_wait"),
+            Label("coffee_toby_end", "coffee_toby_label_end"),
+        };
+        WriteAutoStart(
+            sequence,
+            TobyHandoffSequenceId,
+            "coffee_toby_idle",
+            steps,
+            HoldingTobysDeliveryFlag,
+            TobyDeliveryAcceptedFlag);
+    }
+
     private static void WriteAutoStart(
         SequenceAsset sequence,
         string sequenceId,
@@ -1068,6 +1152,9 @@ public static class CoffeeCourierHuntAuthoring
             SerializedProperty entry = registry.GetArrayElementAtIndex(existing);
             entry.FindPropertyRelative("encounterId").stringValue = EncounterId;
             entry.FindPropertyRelative("encounterProvider").objectReferenceValue = encounter;
+            SerializedProperty battleLoad = entry.FindPropertyRelative("battleLoad");
+            if (battleLoad != null)
+                battleLoad.FindPropertyRelative("battleSpawnId").stringValue = CombatStageIds.Jungle;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.SaveAsPrefabAsset(root, GameServicesPath);
         }

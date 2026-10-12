@@ -33,7 +33,8 @@ MonoBehaviour:
   victoryStinger: {fileID: 11400000, guid: 3c8e1f2a9b4d4e6f8a0c1d2e3f4a5b6c, type: 2}
   defeatStinger: {fileID: 11400000, guid: 4d9f2a3b0c5e4f708b1d2e3f4a5b6c7d, type: 2}
   captureStinger: {fileID: 11400000, guid: 5e0a3b4c1d6f50819c2e3f4a5b6c7d8e, type: 2}
-  xpShare: {fileID: 0}
+  xpShare: {fileID: 11400000, guid: a5459adffbca29814e094b004a8ff948, type: 2}
+  ramGrantTick: {fileID: 11400000, guid: 406a3ff8c715347448372a9378a7696f, type: 2}
   starUp: {fileID: 11400000, guid: 73d675397d409ab41994d4a73c9b5d84, type: 2}
   rewardConfirm: {fileID: 0}
   statusSfxEntries: []

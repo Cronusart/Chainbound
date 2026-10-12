@@ -16,8 +16,8 @@ MonoBehaviour:
   playerFacingPolicy: 0
   lines:
   - speakerName: Reynard
-    text: Toby sent you? Ha! That dog runs on coffee and bad decisions, and he is
-      fresh out of both.
+    text: Toby sent you? Ha! That old dog runs on coffee and beer, and he is fresh
+      out of both.
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -30,7 +30,7 @@ MonoBehaviour:
     choices: []
   - speakerName: Reynard
     text: Zeb, my courier, went for the beans and never came back. Probably stuck
-      on the trail, arguing with a root.
+      on the trail, and may need help
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -43,7 +43,7 @@ MonoBehaviour:
     choices: []
   - speakerName: Reynard
     text: Follow the path out of Loomville and keep going until the jungle closes
-      over the road. Watch for Zeb.
+      over the road. Watch for Zeb and his cart
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}
@@ -55,9 +55,8 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Reynard
-    text: The trail has been mean. Things out there like a slow runner. Take this
-      Nitro Brew. It'll get you to him faster, and if something gives chase, you
-      can outrun it.
+    text: The trail has been unusually mean lately.. must be that part of the cycle...
+      Take this Nitro Brew! It'll get you to him faster
     typeSpeed: 75
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 0}

@@ -38,6 +38,15 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void BossOpponent_UsesBossPrefixInsteadOfRepeatingTheName()
+        {
+            var team = new TeamState(1, "Boss");
+            var chainling = new ChainlingInstance { displayName = "Cofi Lootwak" };
+
+            Assert.AreEqual("Boss Cofi Lootwak", CombatNarrationNaming.FormatChainlingName(team, chainling));
+        }
+
+        [Test]
         public void PvpOpponentNamedPlayer_UsesEnemyPrefix()
         {
             var team = new TeamState(1, "Player");

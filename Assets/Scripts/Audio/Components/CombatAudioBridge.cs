@@ -12,6 +12,7 @@ public sealed class CombatAudioBridge : MonoBehaviour, ICombatAudioBridge
     [SerializeField] private bool enableDebugLogs;
 
     private readonly Dictionary<int, AudioHandle> _activeLoops = new Dictionary<int, AudioHandle>();
+    private AudioHandle _postBattleSting;
     private readonly Dictionary<int, MusicDuckToken> _activeDucks = new Dictionary<int, MusicDuckToken>();
     private int _nextLoopId = 1;
     private int _nextDuckId = 1;
@@ -121,6 +122,27 @@ public sealed class CombatAudioBridge : MonoBehaviour, ICombatAudioBridge
                 conductor.Stop(fadeSeconds);
         }
 
+    public void PlayPostBattleSting(UnityEngine.Object soundEvent, float volumeScale = 1f)
+    {
+        if (soundEvent == null)
+            return;
+
+        FadeOutPostBattleSting(0f);
+        if (TryPlay(soundEvent, null, null, volumeScale, out AudioHandle handle))
+            _postBattleSting = handle;
+    }
+
+    public void FadeOutPostBattleSting(float fadeSeconds)
+    {
+        if (!_postBattleSting.IsValid)
+            return;
+
+        AudioHandle handle = _postBattleSting;
+        _postBattleSting = default;
+        if (AudioService.Instance != null)
+            AudioService.Instance.Stop(handle, Mathf.Max(0f, fadeSeconds));
+    }
+
     private void OnDisable()
     {
         StopAllLoops();
@@ -129,6 +151,7 @@ public sealed class CombatAudioBridge : MonoBehaviour, ICombatAudioBridge
 
     private void OnDestroy()
     {
+        FadeOutPostBattleSting(CombatSfxOrchestrator.PostBattleStingFadeSeconds);
         StopAllLoops();
         ReleaseAllDucks();
     }

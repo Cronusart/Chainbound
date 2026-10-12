@@ -120,7 +120,7 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
-        public void RosterSlotUtility_EmptySnapshotUsesOnlyAuthoredInitialLoadout()
+        public void RosterSlotUtility_EmptySnapshotEquipsNothing()
         {
             SpeciesDatabaseSO speciesDb = CreateSpeciesDb("starter", baseMaxHp: 100);
             SpeciesDefinitionSO species = speciesDb.GetById("starter");
@@ -141,6 +141,7 @@ namespace Chainbound.Combat.Tests
                     new ChainlingSnapshot
                     {
                         speciesId = "starter",
+                        displayName = "Nyx",
                         moveIds = new List<string>(),
                         ivs = new[] { 0, 0, 0, 0, 0, 0 },
                     },
@@ -156,8 +157,100 @@ namespace Chainbound.Combat.Tests
                 rng: new CombatRng(7));
 
             Assert.AreEqual(1, team.chainlings.Count);
+            Assert.AreEqual(0, team.chainlings[0].moves.Count);
+            Assert.IsFalse(RosterSlotUtility.HasResolvableMove(party.chainlings[0], moveDb));
+            Assert.AreSame(party.chainlings[0], RosterSlotUtility.FindFirstWithoutResolvableMove(party.chainlings, speciesDb, moveDb));
+        }
+
+        [Test]
+        public void RosterSlotUtility_UnknownIdKeepsTheMoveThatResolves()
+        {
+            SpeciesDatabaseSO speciesDb = CreateSpeciesDb("starter", baseMaxHp: 100);
+            MoveDefinitionSO baseline = CreateMove("baseline_striker", 40);
+            MoveDatabaseSO moveDb = CreateAsset<MoveDatabaseSO>();
+            moveDb.moves = new List<MoveDefinitionSO> { baseline };
+            moveDb.BuildLookup();
+
+            var party = new PartySnapshot
+            {
+                chainlings = new List<ChainlingSnapshot>
+                {
+                    new ChainlingSnapshot
+                    {
+                        speciesId = "starter",
+                        moveIds = new List<string> { " ", "missing_move", "baseline_striker" },
+                        ivs = new[] { 0, 0, 0, 0, 0, 0 },
+                    },
+                },
+            };
+
+            TeamState team = RosterSlotUtility.BuildTeamFromParty(
+                0,
+                party,
+                speciesDb,
+                moveDb,
+                battleSeed: 7,
+                rng: new CombatRng(7));
+
             Assert.AreEqual(1, team.chainlings[0].moves.Count);
             Assert.AreEqual("baseline_striker", team.chainlings[0].moves[0].definitionId);
+            Assert.IsNull(RosterSlotUtility.FindFirstWithoutResolvableMove(party.chainlings, speciesDb, moveDb));
+        }
+
+        [Test]
+        public void RosterSlotUtility_RefreshCopiesLoadoutOnlyOntoTheEmptyRow()
+        {
+            SpeciesDatabaseSO speciesDb = CreateSpeciesDb("starter", baseMaxHp: 100);
+            MoveDefinitionSO baseline = CreateMove("baseline_striker", 40);
+            MoveDefinitionSO jab = CreateMove("baseline_jab", 20);
+            MoveDatabaseSO moveDb = CreateAsset<MoveDatabaseSO>();
+            moveDb.moves = new List<MoveDefinitionSO> { baseline, jab };
+            moveDb.BuildLookup();
+
+            var kept = new ChainlingSnapshot
+            {
+                speciesId = "starter",
+                backendChainlingId = "kept",
+                moveIds = new List<string> { "baseline_striker" },
+                modifier1SectionIds = new List<string> { "kept-mod" },
+            };
+            var empty = new ChainlingSnapshot
+            {
+                speciesId = "starter",
+                backendChainlingId = "empty",
+                displayName = "Nyx",
+                moveIds = new List<string> { "missing_move" },
+            };
+            var current = new List<ChainlingSnapshot> { kept, empty };
+            var refreshed = new PartySnapshot
+            {
+                chainlings = new List<ChainlingSnapshot>
+                {
+                    new ChainlingSnapshot
+                    {
+                        speciesId = "starter",
+                        backendChainlingId = "empty",
+                        moveIds = new List<string> { "baseline_jab" },
+                        modifier1SectionIds = new List<string> { "saved-mod" },
+                        modifier2SectionIds = new List<string> { "saved-mod-2" },
+                    },
+                    new ChainlingSnapshot
+                    {
+                        speciesId = "starter",
+                        backendChainlingId = "kept",
+                        moveIds = new List<string> { "baseline_jab" },
+                        modifier1SectionIds = new List<string> { "replaced-mod" },
+                    },
+                },
+            };
+
+            RosterSlotUtility.ApplyRefreshedLoadouts(current, refreshed, speciesDb, moveDb);
+
+            CollectionAssert.AreEqual(new[] { "baseline_striker" }, kept.moveIds);
+            CollectionAssert.AreEqual(new[] { "kept-mod" }, kept.modifier1SectionIds);
+            CollectionAssert.AreEqual(new[] { "baseline_jab" }, empty.moveIds);
+            CollectionAssert.AreEqual(new[] { "saved-mod" }, empty.modifier1SectionIds);
+            CollectionAssert.AreEqual(new[] { "saved-mod-2" }, empty.modifier2SectionIds);
         }
 
         [Test]

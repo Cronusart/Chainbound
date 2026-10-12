@@ -39,6 +39,11 @@ namespace Chainbound.Combat.Tests
                 Assert.That(orb.itemId, Is.EqualTo("signal_orb"));
                 Assert.That(orb.alreadyClaimed, Is.False);
                 Assert.That(orb.remainingQuantity, Is.EqualTo(1));
+
+                InventorySnapshot snapshot = await stub.FetchInventoryAsync("editor-profile", "editor-wallet");
+                MenuInventoryItemStack orbStack = snapshot.stacks.Find(stack => stack.itemId == "signal_orb");
+                Assert.That(orbStack, Is.Not.Null);
+                Assert.That(orbStack.quantity, Is.EqualTo(1));
             }
             finally
             {

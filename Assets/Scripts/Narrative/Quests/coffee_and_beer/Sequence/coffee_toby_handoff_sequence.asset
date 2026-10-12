@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: coffee_toby_handoff_sequence
+  m_EditorClassIdentifier: 
+  sequenceId: coffee_toby_handoff_sequence
+  startCheckpointId: coffee_toby_idle
+  safeResumeLabel: coffee_toby_idle
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 1
+  autoStartQuestId: coffee_and_beer
+  autoStartLifecycleMask: 8
+  autoStartSkipWorldFlagKey: world.coffee.toby_delivery_accepted
+  autoStartRequiredWorldFlagKey: world.coffee.holding_tobys_delivery
+  steps:
+  - {fileID: 11400000, guid: 18dab0807d1b23d4d80ac4e3d7d4a54a, type: 2}
+  - {fileID: 11400000, guid: 593539e2c52c8e54694d72cf89b5ab18, type: 2}
+  - {fileID: 11400000, guid: 1278b653d687cd24a85193b25f4cb0f4, type: 2}
+  - {fileID: 11400000, guid: fb68b4a59fa874f43bed7278aef00a99, type: 2}
+  - {fileID: 11400000, guid: 03fb428e39565f74fa9635ff2eeceaa1, type: 2}
+  - {fileID: 11400000, guid: c01a66950cae7294db90864b6a3bc7a9, type: 2}
+  - {fileID: 11400000, guid: c4f03fe1d0b6f064db942bdfae362bc7, type: 2}
+  - {fileID: 11400000, guid: 94ecd8e44950d3241b19a4ebf539f966, type: 2}
+  - {fileID: 11400000, guid: b9c7045878a51a1469a41efe0ae4dfc0, type: 2}
+  - {fileID: 11400000, guid: d2871bfa8efea5948bfb61953ed955d0, type: 2}
+  - {fileID: 11400000, guid: 4447937f19168c04782d4f4f74abc439, type: 2}
+  - {fileID: 11400000, guid: ebcf4bfc45e9c5e4f85a7920dc655d03, type: 2}
+  - {fileID: 11400000, guid: 2a133faff61ac314da8653eb575eba56, type: 2}
+  - {fileID: 11400000, guid: b573455610832ec428a4cb3b692df3b2, type: 2}
+  - {fileID: 11400000, guid: 1c4534d543bb05648ab3ae8fd50a0296, type: 2}
+  - {fileID: 11400000, guid: 25acc7aa2b76e2d459802fe5350e7975, type: 2}
+  - {fileID: 11400000, guid: 8aeab9d347d08fd43a1980fdd922dbdb, type: 2}
