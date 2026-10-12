@@ -127,7 +127,7 @@ function b64url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
-function b64urlDecode(text: string): Uint8Array {
+function b64urlDecode(text: string): Uint8Array<ArrayBuffer> {
   const padded = text + "=".repeat((4 - (text.length % 4)) % 4);
   const binary = atob(padded.replaceAll("-", "+").replaceAll("_", "/"));
   const bytes = new Uint8Array(binary.length);
