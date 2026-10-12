@@ -5,8 +5,7 @@
 // rowCount=104
 
 export const EXPECTED_MODIFIER_POOL_ROW_COUNT = 104 as const;
-export const EXPECTED_MODIFIER_POOL_HASH =
-  "6cea5ce56944a88486cafbb568a628b5aa5664c3db652a79cd90016427aaa4b4" as const;
+export const EXPECTED_MODIFIER_POOL_HASH = "6cea5ce56944a88486cafbb568a628b5aa5664c3db652a79cd90016427aaa4b4" as const;
 
 export const MODIFIER_POOL = [
   "2.1-a",
@@ -134,7 +133,11 @@ export const MODIFIER_EFFECT_BOUNDS = {
   "3.1-b": { min: 10, max: 15, effect: "10-15% chance to refund 1 AP" },
   "3.1-c": { min: 15, max: 20, effect: "15-20% chance to refund 1 AP" },
   "3.2-a": { min: 8, max: 12, effect: "8-12% chance to repeat this move (no AP cost)" },
-  "3.2-b": { min: 15, max: 20, effect: "15-20% chance to auto-use random Common/Uncommon typeless move at end of turn" },
+  "3.2-b": {
+    min: 15,
+    max: 20,
+    effect: "15-20% chance to auto-use random Common/Uncommon typeless move at end of turn",
+  },
   "3.2-c": { min: 12, max: 15, effect: "12-15% chance to auto-use random equipped move at end of turn" },
   "4.1-a": { min: 1, max: 1, effect: "+1 guaranteed extra hit (MULTI moves only)" },
   "4.2-a": { min: 50, max: 50, effect: "Hit bounces to 1 adjacent target at -50% power (single-target DMG only)" },
@@ -147,7 +150,11 @@ export const MODIFIER_EFFECT_BOUNDS = {
   "5.2-d": { min: 0, max: 0, effect: "Damage scales inversely with Atk (higher Atk = lower damage)" },
   "6.1-a": { min: 12, max: 16, effect: "Heal 12-16% of damage dealt" },
   "6.1-b": { min: 15, max: 25, effect: "15-25% chance to drain 1 AP on hit" },
-  "6.1-c": { min: 15, max: 25, effect: "15-25% chance: target's next move deals -10% power. Holds through next turn if they already acted." },
+  "6.1-c": {
+    min: 15,
+    max: 25,
+    effect: "15-25% chance: target's next move deals -10% power. Holds through next turn if they already acted.",
+  },
   "6.1-d": { min: 5, max: 8, effect: "Heal 5-8% of damage dealt as HP" },
   "6.1-e": { min: 8, max: 12, effect: "Heal 8-12% of damage dealt as HP" },
   "6.1-f": { min: 16, max: 20, effect: "Heal 16-20% of damage dealt as HP" },

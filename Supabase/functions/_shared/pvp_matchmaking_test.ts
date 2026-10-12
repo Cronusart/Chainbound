@@ -1,7 +1,7 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
-  MATCHMAKING_CONFIG,
   hashMatchmakingConfig,
+  MATCHMAKING_CONFIG,
   matchmakingCanonical,
   rejectEnqueue,
   versionsCompatible,
@@ -9,11 +9,11 @@ import {
 import {
   applyDeadlineMisses,
   pairingCompatible,
+  type PairingIdentity,
   partyLockError,
   settleHashes,
   settleResultWindow,
   validateTurnActions,
-  type PairingIdentity,
 } from "./pvp_rules.ts";
 
 Deno.test("matchmaking config hash is stable sha256 of the canonical lever string", async () => {
@@ -82,7 +82,11 @@ Deno.test("turn validation checks the acting chainling, AP, and swaps", () => {
   assertEquals(validateTurnActions("a", party, [{ actionType: 0, moveIndex: 1, teamIndex: 0 }]), "move_illegal");
   assertEquals(validateTurnActions("a", party, [{ actionType: 0, moveIndex: 0 }]), "seat_mismatch");
   assertEquals(
-    validateTurnActions("a", [{ moveIds: ["not_a_move"], moveApCosts: [1] }], [{ actionType: 0, moveIndex: 0, teamIndex: 0 }]),
+    validateTurnActions("a", [{ moveIds: ["not_a_move"], moveApCosts: [1] }], [{
+      actionType: 0,
+      moveIndex: 0,
+      teamIndex: 0,
+    }]),
     "move_unknown",
   );
   assertEquals(validateTurnActions("a", party, [{ actionType: 3, teamIndex: 0 }]), "action_type");
@@ -181,7 +185,9 @@ Deno.test("missed turns forfeit the absent seat and cancel when both miss", () =
 });
 
 Deno.test("migration keeps pvp tables service-role only and pairs with skip locked", async () => {
-  const source = await Deno.readTextFile(new URL("../../migrations/20261007233709_pvp_battle_spine.sql", import.meta.url));
+  const source = await Deno.readTextFile(
+    new URL("../../migrations/20261007233709_pvp_battle_spine.sql", import.meta.url),
+  );
   assertEquals(source.includes("CREATE TABLE IF NOT EXISTS public.matchmaking_queue"), true);
   assertEquals(source.includes("CREATE TABLE IF NOT EXISTS public.pvp_matches"), true);
   assertEquals(source.includes("CREATE TABLE IF NOT EXISTS public.pvp_match_turns"), true);
@@ -205,14 +211,18 @@ Deno.test("migration keeps pvp tables service-role only and pairs with skip lock
   assertEquals(hardening.includes("FOR UPDATE SKIP LOCKED"), true);
   assertEquals(hardening.includes("idx_pvp_matches_player_a_created"), true);
   assertEquals(hardening.includes("state = 'disputed'"), true);
-  assertEquals(hardening.includes("REVOKE ALL ON FUNCTION public.pvp_matchmaker_service() FROM PUBLIC, anon, authenticated"), true);
+  assertEquals(
+    hardening.includes("REVOKE ALL ON FUNCTION public.pvp_matchmaker_service() FROM PUBLIC, anon, authenticated"),
+    true,
+  );
 
   let snapshotFix = false;
   for await (const entry of Deno.readDir(new URL("../../migrations/", import.meta.url))) {
     if (!entry.name.endsWith(".sql")) continue;
     const text = await Deno.readTextFile(new URL(`../../migrations/${entry.name}`, import.meta.url));
-    if (text.includes("pending_actions_json") && text.includes("v_queue.enqueued_at > v_match.created_at"))
+    if (text.includes("pending_actions_json") && text.includes("v_queue.enqueued_at > v_match.created_at")) {
       snapshotFix = true;
+    }
   }
   assertEquals(snapshotFix, true);
 });

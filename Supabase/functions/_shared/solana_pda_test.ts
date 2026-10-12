@@ -1,10 +1,5 @@
 import { assertEquals, assertThrows } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import {
-  derivePlayerProfilePda,
-  findProgramAddress,
-  isOnCurve,
-  decodePublicKeyBytes,
-} from "./solana_pda.ts";
+import { decodePublicKeyBytes, derivePlayerProfilePda, findProgramAddress, isOnCurve } from "./solana_pda.ts";
 
 Deno.test("findProgramAddress matches Solana web3.js talking-squirrels vector", () => {
   const programId = decodePublicKeyBytes("BPFLoaderUpgradeab1e11111111111111111111111");
@@ -37,10 +32,26 @@ const CHAINBOUND_GAME_PROGRAM_ID = "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ
 // Wallets: the system program id and Keypair.fromSeed(new Uint8Array(32).fill(n)) for n = 1, 5, 6, 39.
 const PLAYER_PROFILE_KNOWN_ANSWERS: { wallet: string; pda: string; bump: number }[] = [
   { wallet: "11111111111111111111111111111111", pda: "FsXfXMuRBCffAWjjCoJ9pijCBRnmaQRLdk7qU6HCkLCa", bump: 253 },
-  { wallet: "AKnL4NNf3DGWZJS6cPknBuEGnVsV4A4m5tgebLHaRSZ9", pda: "AGv2ixDKvttZTzXv7HZHUeDfXheV1fvikHW5CrgQgvUs", bump: 255 },
-  { wallet: "8SFqwqnq4whPhs8icwHA2hQg3hUoN1qrCLK1SBx3WKwe", pda: "Biqv785JaMGeMgtZzxoGwvEM9cWBxcHHoqdc8wu2MVWq", bump: 254 },
-  { wallet: "AKkzLhjhyFtM9j7WAhbaqYpFe49cXeJBg2kzLRC2PnNa", pda: "Bimq7v3LTWUQLNUHFJGeHmjzAN8fAkNpnBhG9db3tS2V", bump: 252 },
-  { wallet: "H37sgaQuqcbs5GAP3WkurghsnPuMkFYcs2BSR6By2B2E", pda: "2BHamqUksKXG1sHHuF2yVPrKksvaS9cgzQErSBT5WAC2", bump: 251 },
+  {
+    wallet: "AKnL4NNf3DGWZJS6cPknBuEGnVsV4A4m5tgebLHaRSZ9",
+    pda: "AGv2ixDKvttZTzXv7HZHUeDfXheV1fvikHW5CrgQgvUs",
+    bump: 255,
+  },
+  {
+    wallet: "8SFqwqnq4whPhs8icwHA2hQg3hUoN1qrCLK1SBx3WKwe",
+    pda: "Biqv785JaMGeMgtZzxoGwvEM9cWBxcHHoqdc8wu2MVWq",
+    bump: 254,
+  },
+  {
+    wallet: "AKkzLhjhyFtM9j7WAhbaqYpFe49cXeJBg2kzLRC2PnNa",
+    pda: "Bimq7v3LTWUQLNUHFJGeHmjzAN8fAkNpnBhG9db3tS2V",
+    bump: 252,
+  },
+  {
+    wallet: "H37sgaQuqcbs5GAP3WkurghsnPuMkFYcs2BSR6By2B2E",
+    pda: "2BHamqUksKXG1sHHuF2yVPrKksvaS9cgzQErSBT5WAC2",
+    bump: 251,
+  },
 ];
 
 Deno.test("derivePlayerProfilePda matches web3.js known answers for the Chainbound game program", () => {

@@ -1,7 +1,9 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 Deno.test("hub migration gates enqueue and keeps tables service-role only", async () => {
-  const source = await Deno.readTextFile(new URL("../../migrations/20261008073633_hub_presence_foundations.sql", import.meta.url));
+  const source = await Deno.readTextFile(
+    new URL("../../migrations/20261008073633_hub_presence_foundations.sql", import.meta.url),
+  );
   assertEquals(source.includes("CREATE TABLE IF NOT EXISTS public.hub_identities"), true);
   assertEquals(source.includes("ENABLE ROW LEVEL SECURITY"), true);
   assertEquals(source.includes("REVOKE ALL ON TABLE public.hub_identities FROM PUBLIC, anon, authenticated"), true);
@@ -27,5 +29,10 @@ Deno.test("hub h0.1 migration locks defaults and hard-gates dev exemption", asyn
   assertEquals(found.includes("identity_in_use"), true);
   assertEquals(found.includes("SET search_path = ''"), true);
   assertEquals(found.includes("GRANT EXECUTE ON FUNCTION public.hub_enqueue_allowed(uuid) TO service_role"), true);
-  assertEquals(found.includes("REVOKE ALL ON FUNCTION public.hub_link_identity_service(uuid, uuid, text) FROM PUBLIC, anon, authenticated"), true);
+  assertEquals(
+    found.includes(
+      "REVOKE ALL ON FUNCTION public.hub_link_identity_service(uuid, uuid, text) FROM PUBLIC, anon, authenticated",
+    ),
+    true,
+  );
 });

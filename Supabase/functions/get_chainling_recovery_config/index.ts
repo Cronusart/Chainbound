@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { JsonMap, jsonResponse, readJsonBody, requirePost } from "../_shared/account_helpers.ts";
-import {
-  CHAINLING_RECOVERY_CONFIG,
-  hashChainlingRecoveryConfig,
-} from "../_shared/chainling_recovery_config.ts";
+import { CHAINLING_RECOVERY_CONFIG, hashChainlingRecoveryConfig } from "../_shared/chainling_recovery_config.ts";
 
 /** Returns the passive-recovery board used by the server resolver. */
 serve(async (req: Request) => {

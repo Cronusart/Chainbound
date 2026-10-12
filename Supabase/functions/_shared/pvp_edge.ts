@@ -9,11 +9,7 @@ import {
   str,
   supabaseAdmin,
 } from "./account_helpers.ts";
-import {
-  MATCHMAKING_CONFIG,
-  hashMatchmakingConfig,
-  rejectEnqueue,
-} from "./matchmaking_config.ts";
+import { hashMatchmakingConfig, MATCHMAKING_CONFIG, rejectEnqueue } from "./matchmaking_config.ts";
 import { loadLockedParty, prepareLockedParty, profileHasActiveWallet, PvpPartyWire } from "./pvp_party.ts";
 import { partyLockError, TurnAction, validateTurnActions } from "./pvp_rules.ts";
 
@@ -239,10 +235,14 @@ function whitelistAction(value: unknown): TurnAction {
 function priorActionsForSeat(turnsJson: string, seat: string, turnIndex: number): TurnAction[][] {
   if (!turnsJson) return [];
   try {
-    const parsed = JSON.parse(turnsJson) as { turns?: Array<{ turn_index?: number; seat?: string; actions?: unknown[] }> };
+    const parsed = JSON.parse(turnsJson) as {
+      turns?: Array<{ turn_index?: number; seat?: string; actions?: unknown[] }>;
+    };
     const turns = Array.isArray(parsed?.turns) ? parsed.turns : [];
     return turns
-      .filter((turn) => turn && turn.seat === seat && typeof turn.turn_index === "number" && turn.turn_index < turnIndex)
+      .filter((turn) =>
+        turn && turn.seat === seat && typeof turn.turn_index === "number" && turn.turn_index < turnIndex
+      )
       .sort((left, right) => (left.turn_index ?? 0) - (right.turn_index ?? 0))
       .map((turn) => (Array.isArray(turn.actions) ? turn.actions.map(whitelistAction) : []));
   } catch {

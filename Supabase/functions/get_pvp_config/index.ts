@@ -1,13 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import {
-  jsonResponse,
-  readJsonBody,
-  requirePost,
-} from "../_shared/account_helpers.ts";
-import {
-  MATCHMAKING_CONFIG,
-  hashMatchmakingConfig,
-} from "../_shared/matchmaking_config.ts";
+import { jsonResponse, readJsonBody, requirePost } from "../_shared/account_helpers.ts";
+import { hashMatchmakingConfig, MATCHMAKING_CONFIG } from "../_shared/matchmaking_config.ts";
 
 serve(async (req: Request) => {
   const early = requirePost(req);
