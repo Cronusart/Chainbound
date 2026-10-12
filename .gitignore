@@ -137,3 +137,8 @@ Signal%20Jam/
 # .NET build outputs (regenerable)
 **/bin/
 **/obj/
+
+# Supabase CLI link state and mis-expanded local keystore folders
+**/supabase/.temp/
+%USERPROFILE%*
+
