@@ -7,9 +7,15 @@ namespace Chainbound.Combat.Tests
         [TestCase("Validape", true)]
         [TestCase("O'Byte", true)]
         [TestCase("Signal-Fox", true)]
+        [TestCase("Nyx_2", true)]
+        [TestCase("A.B", true)]
+        [TestCase("A__B", true)]
         [TestCase("A", false)]
         [TestCase("Two  Spaces", false)]
-        [TestCase("Bad_Name", false)]
+        [TestCase("Bad_Name", true)]
+        [TestCase("<size>", false)]
+        [TestCase("Nyx.", false)]
+        [TestCase("Abcdefghijklm", false)]
         [TestCase("ThirteenCharsX", false)]
         public void ValidatesCanonicalNameRules(string value, bool expected)
         {
@@ -20,8 +26,11 @@ namespace Chainbound.Combat.Tests
         public void InvalidOrSkippedNameUsesSpeciesFallback()
         {
             Assert.That(
-                ChainlingDisplayNameRules.ResolveOrFallback("bad_name", "Validape"),
+                ChainlingDisplayNameRules.ResolveOrFallback("Nyx.", "Validape"),
                 Is.EqualTo("Validape"));
+            Assert.That(
+                ChainlingDisplayNameRules.ResolveOrFallback("Nyx_2", "Validape"),
+                Is.EqualTo("Nyx_2"));
             Assert.That(
                 ChainlingDisplayNameRules.ResolveOrFallback("", "Validape"),
                 Is.EqualTo("Validape"));
@@ -32,7 +41,7 @@ namespace Chainbound.Combat.Tests
         {
             Assert.That(
                 ChainlingDisplayNameRules.Sanitize("  Sig_nal   Fox! "),
-                Is.EqualTo("Signal Fox"));
+                Is.EqualTo("Sig_nal Fox"));
         }
     }
 }

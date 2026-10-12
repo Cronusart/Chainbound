@@ -62,6 +62,12 @@ public class NameInputUI : MonoBehaviour
     private bool collarSuppressed;
     private MobileHudToken mobileHudSuppressionToken;
     private bool hasMobileHudSuppressionToken;
+    private bool entryCopyIsWarning;
+    private string defaultKeyboardTitle;
+    private string defaultKeyboardPrompt;
+    private bool capturedDefaultCopy;
+
+    public static readonly Color TakenNamePromptColor = new Color(232f / 255f, 59f / 255f, 59f / 255f, 1f);
 
     private void Awake()
     {
@@ -99,12 +105,25 @@ public class NameInputUI : MonoBehaviour
     /// Replaces the keyboard title and prompt for the next Show call.
     /// Used when a committed name is already taken.
     /// </summary>
-    public void SetEntryCopy(string title, string prompt)
+    public void SetEntryCopy(string title, string prompt, bool warning = false)
     {
+        CaptureDefaultCopy();
         if (!string.IsNullOrWhiteSpace(title))
             keyboardTitle = title;
         if (prompt != null)
             keyboardPrompt = prompt;
+        entryCopyIsWarning = warning;
+    }
+
+    /// <summary>
+    /// Restores the prefab title and prompt after a refused-name retry.
+    /// </summary>
+    public void UseDefaultEntryCopy()
+    {
+        CaptureDefaultCopy();
+        keyboardTitle = defaultKeyboardTitle;
+        keyboardPrompt = defaultKeyboardPrompt;
+        entryCopyIsWarning = false;
     }
 
     public bool Show()
@@ -124,8 +143,12 @@ public class NameInputUI : MonoBehaviour
         isShowing = true;
         SetPanelVisible(true);
         SetCollarVisible(false);
+        if (entryCopyIsWarning)
+            SpriteCinematicPlayer.Instance?.ResumeCoinNameMirror();
         ResetInputField();
         RefreshNamePreview();
+        if (entryCopyIsWarning)
+            SpriteCinematicPlayer.Instance?.SetCoinNameMirrorText(string.Empty);
 
         if (ShouldUseSharedKeyboard())
         {
@@ -138,6 +161,9 @@ public class NameInputUI : MonoBehaviour
                 ReleaseMobileHudSuppression();
                 return false;
             }
+
+            if (entryCopyIsWarning)
+                onScreenKeyboardService.NotifySubmissionRejected();
         }
         else
         {
@@ -252,52 +278,18 @@ public class NameInputUI : MonoBehaviour
 
     private bool ValidateName(string candidate)
     {
-        if (string.IsNullOrWhiteSpace(candidate))
+        if (!ChainlingDisplayNameRules.IsValid(candidate))
             return false;
 
         string trimmed = candidate.Trim();
-        if (trimmed.Length < minNameLength || trimmed.Length > maxNameLength)
-            return false;
-
-        for (int i = 0; i < trimmed.Length; i++)
-        {
-            if (!IsAllowedNameCharacter(trimmed[i]))
-                return false;
-        }
-
-        // No leading/trailing spaces (already trimmed) and no consecutive spaces.
-        if (trimmed.Contains("  "))
-            return false;
-
-        return true;
-    }
-
-    private static bool IsAllowedNameCharacter(char character)
-    {
-        return char.IsLetter(character) || character == ' ' || character == '\'' || character == '-';
+        int minimum = Mathf.Max(minNameLength, ChainlingDisplayNameRules.MinimumLength);
+        int maximum = Mathf.Min(maxNameLength, ChainlingDisplayNameRules.MaximumLength);
+        return trimmed.Length >= minimum && trimmed.Length <= maximum;
     }
 
     private static string SanitizeNameInput(string value)
     {
-        if (string.IsNullOrEmpty(value))
-            return string.Empty;
-
-        var builder = new System.Text.StringBuilder(value.Length);
-        char previous = '\0';
-        for (int i = 0; i < value.Length; i++)
-        {
-            char c = value[i];
-            if (!IsAllowedNameCharacter(c))
-                continue;
-
-            if (c == ' ' && (builder.Length == 0 || previous == ' '))
-                continue;
-
-            builder.Append(c);
-            previous = c;
-        }
-
-        return builder.ToString();
+        return ChainlingDisplayNameRules.FilterLiveInput(value);
     }
 
     private void RefreshNamePreview()
@@ -405,8 +397,8 @@ public class NameInputUI : MonoBehaviour
             return;
 
         bool useSharedKeyboard = ShouldUseSharedKeyboard();
-        nameInputField.characterLimit = maxNameLength;
-        nameInputField.contentType = TMP_InputField.ContentType.Name;
+        nameInputField.characterLimit = Mathf.Min(maxNameLength, ChainlingDisplayNameRules.MaximumLength);
+        nameInputField.contentType = TMP_InputField.ContentType.Standard;
         nameInputField.lineType = TMP_InputField.LineType.SingleLine;
         nameInputField.readOnly = useSharedKeyboard;
         nameInputField.shouldActivateOnSelect = !useSharedKeyboard;
@@ -437,22 +429,44 @@ public class NameInputUI : MonoBehaviour
         if (onScreenKeyboardService == null)
             return false;
 
+        bool mirrorActive = SpriteCinematicPlayer.Instance != null &&
+                            SpriteCinematicPlayer.Instance.IsCoinNameMirrorActive;
         return onScreenKeyboardService.BeginSession(
             nameInputField,
             new KeyboardSessionOptions
             {
                 Title = string.IsNullOrWhiteSpace(keyboardTitle) ? "Dog's Name" : keyboardTitle,
                 Prompt = string.IsNullOrWhiteSpace(keyboardPrompt) ? "What is your dog's name?" : keyboardPrompt,
+                PromptColor = entryCopyIsWarning ? TakenNamePromptColor : (Color?)null,
                 SubmitLabel = "Confirm",
                 EmptyDisplayText = "...",
-                ShowLivePreviewStrip = false,
-                MaxLength = maxNameLength,
+                ShowLivePreviewStrip = !mirrorActive,
+                MaxLength = Mathf.Min(maxNameLength, ChainlingDisplayNameRules.MaximumLength),
                 StartShifted = true,
                 CharacterPolicy = KeyboardCharacterPolicy.NameEntry,
                 SubmitValidator = ValidateName,
                 OnSubmitted = _ => ConfirmName(),
                 OnCancelled = HandleKeyboardSessionCancelled,
+                OnTextChanged = PublishLiveName,
             });
+    }
+
+    private void CaptureDefaultCopy()
+    {
+        if (capturedDefaultCopy)
+            return;
+
+        defaultKeyboardTitle = keyboardTitle;
+        defaultKeyboardPrompt = keyboardPrompt;
+        capturedDefaultCopy = true;
+    }
+
+    private void PublishLiveName(string value)
+    {
+        string sanitized = SanitizeNameInput(value);
+        if (tagPanel != null)
+            tagPanel.SetDisplayName(sanitized);
+        SpriteCinematicPlayer.Instance?.SetCoinNameMirrorText(sanitized);
     }
 
     private void HandleKeyboardSessionCancelled()

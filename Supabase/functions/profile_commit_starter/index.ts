@@ -8,6 +8,7 @@ import {
   str,
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
+import { isDisplayNameCharsetValid } from "../_shared/display_name_charset.ts";
 
 interface CommitStarterResult extends JsonMap {
   success: boolean;
@@ -27,9 +28,12 @@ serve(async (req: Request) => {
   if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
 
   const starterSpeciesId = str(body.starter_species_id);
-  const displayName = str(body.display_name);
+  const displayName = str(body.display_name).trim();
   if (!starterSpeciesId) {
     return jsonResponse({ success: false, error: "starter_species_id is required" }, 400);
+  }
+  if (displayName.length > 0 && (displayName.length > 16 || !isDisplayNameCharsetValid(displayName))) {
+    return jsonResponse({ success: false, error: "invalid_display_name" }, 400);
   }
 
   const supabase = supabaseAdmin();

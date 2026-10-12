@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Chainbound.Combat;
 using DG.Tweening;
+using SignalJam.UI.MenuNavigation;
 using SignalJam.UI.MenuNavigation.PartyTab;
 using SignalJam.UI.MobileControls;
 using TMPro;
@@ -17,7 +18,7 @@ using UnityEngine.UI;
 /// Shows one world-selected starter at a time with confirm/back actions.
 /// Falls back to building its own runtime UGUI hierarchy when references are empty.
 /// </summary>
-public class StarterSelectionUI : MonoBehaviour
+public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresenter
 {
     private const string PanelLockReason = "StarterSelection";
     private const float RuntimeTypeIconSize = 64f;
@@ -76,6 +77,14 @@ public class StarterSelectionUI : MonoBehaviour
     [SerializeField] private float mobileNavigationInitialDelay = 0.28f;
     [SerializeField] private float mobileNavigationRepeatRate = 0.12f;
 
+    [Header("Capture portrait")]
+    [Tooltip("Played once as the captured-species portrait opens. Combat music ducks until this one-shot ends.")]
+    [SerializeField] private SoundEventSO victoryChime;
+    [SerializeField, Range(0f, 1f)] private float portraitDuckMultiplier = 0.05f;
+    [SerializeField, Min(0f)] private float portraitDuckAttackSeconds = 0.08f;
+    [SerializeField, Min(0f)] private float portraitDuckReleaseSeconds = 0.35f;
+    [SerializeField, Min(0f)] private float portraitDismissDelaySeconds = 1f;
+
     [Header("Debug")]
     [SerializeField] private bool enableDebugLogs = false;
 
@@ -106,6 +115,24 @@ public class StarterSelectionUI : MonoBehaviour
     private Vector2 visualFrameAnchoredPosition;
     private Vector2 visualFrameSizeDelta;
     private Vector2 visualFramePivot;
+    private bool portraitReveal;
+    private CombatVisualProfileSO portraitProfile;
+    private Sprite portraitFallback;
+    private MusicDuckToken activePortraitDuck;
+    private Coroutine portraitDuckRoutine;
+    private bool speciesNamePoseCaptured;
+    private Transform speciesNameParent;
+    private int speciesNameSiblingIndex;
+    private Vector2 speciesNameAnchorMin;
+    private Vector2 speciesNameAnchorMax;
+    private Vector2 speciesNameAnchoredPosition;
+    private Vector2 speciesNameSizeDelta;
+    private Vector2 speciesNamePivot;
+    private TextAlignmentOptions speciesNameAlignment;
+    private bool starterNameInputResolved;
+    private bool starterNameInputUsesAuthoredPose;
+    private bool starterNameTextAuthored;
+    private bool starterNamePlaceholderAuthored;
 
     public StarterPreviewVisual PreviewVisual => previewVisual;
     public TMP_InputField StarterNameInputField => starterNameInputField;
@@ -137,9 +164,71 @@ public class StarterSelectionUI : MonoBehaviour
     private void OnDestroy()
     {
         StopPanelPresentation();
+        ReleasePortraitDuck();
         UnbindUiEvents();
         UnsubscribeMobileHudInput();
         ReleasePanelLocks();
+    }
+
+    /// <summary>
+    /// Opens the confirmed-starter portrait (image and species name, no detail cards)
+    /// for a chainling that just left the combat slot. The chime starts with the
+    /// panel. Any button closes it once the open and glitch have finished, plus a
+    /// short hold.
+    /// </summary>
+    public IEnumerator Present(CaptureSuccessPortraitRequest request)
+    {
+        if (request == null)
+            yield break;
+
+        EnsureUi();
+        if (isShowing)
+            HideSelection();
+
+        portraitReveal = true;
+        portraitProfile = request.visualProfile;
+        portraitFallback = request.fallbackSprite;
+        currentOption = null;
+        isShowing = true;
+        presentationMode = PresentationMode.Naming;
+        panelInputArmed = false;
+
+        string speciesName = string.IsNullOrWhiteSpace(request.speciesDisplayName)
+            ? "Chainling"
+            : request.speciesDisplayName.Trim();
+        PreparePortraitChrome(speciesName);
+        SetVisible(true);
+        AcquirePanelLocks();
+        BeginPortraitChime();
+        BeginPanelPresentation();
+
+        float elapsed = 0f;
+        const float openGuardSeconds = 12f;
+        while (elapsed < openGuardSeconds &&
+               (panelOpeningRoutine != null || (previewVisual != null && !previewVisual.HasSettledReveal)))
+        {
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (portraitDismissDelaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(portraitDismissDelaySeconds);
+
+        bool pressed = false;
+        InputSystemAnyButtonGate gate = new InputSystemAnyButtonGate();
+        try
+        {
+            gate.Arm(() => pressed = true);
+            while (!pressed && isShowing)
+                yield return null;
+        }
+        finally
+        {
+            gate.Dispose();
+        }
+
+        if (isShowing)
+            yield return DismissSelectionAnimated();
     }
 
     public void ShowSelection(List<StarterOption> options)
@@ -896,6 +985,8 @@ public class StarterSelectionUI : MonoBehaviour
         StopPanelPresentation();
         PrepareDimOverlayReveal();
         PreparePanelContentReveal();
+        if (portraitReveal && speciesNameText != null)
+            speciesNameText.maxVisibleCharacters = int.MaxValue;
 
         if (selectionPanel == null || !isShowing)
             return;
@@ -977,14 +1068,23 @@ public class StarterSelectionUI : MonoBehaviour
             group.blocksRaycasts = true;
         }
 
-        yield return RevealTitle();
+        if (!portraitReveal)
+            yield return RevealTitle();
 
         if (!isShowing)
             yield break;
 
         StartPreviewVisualPlayback();
-        StartTypewriter();
-        QueueDefaultSelection();
+        if (portraitReveal)
+        {
+            if (speciesNameText != null)
+                speciesNameText.maxVisibleCharacters = int.MaxValue;
+        }
+        else
+        {
+            StartTypewriter();
+            QueueDefaultSelection();
+        }
         panelOpeningRoutine = null;
     }
 
@@ -1177,7 +1277,17 @@ public class StarterSelectionUI : MonoBehaviour
 
     private void StartPreviewVisualPlayback()
     {
-        if (!isShowing || currentOption == null)
+        if (!isShowing)
+            return;
+
+        if (portraitReveal)
+        {
+            if (previewVisual != null)
+                previewVisual.Play(portraitProfile, portraitFallback);
+            return;
+        }
+
+        if (currentOption == null)
             return;
 
         previewVisual?.Play(currentOption.VisualProfile, currentOption.Icon);
@@ -1427,6 +1537,146 @@ public class StarterSelectionUI : MonoBehaviour
         }
     }
 
+    private void PreparePortraitChrome(string speciesName)
+    {
+        ResolveDetailsPanel();
+        CacheVisualFramePose();
+        if (visualFrameRect != null)
+        {
+            visualFrameRect.DOKill();
+            visualFrameRect.anchorMin = new Vector2(0.5f, 0.5f);
+            visualFrameRect.anchorMax = new Vector2(0.5f, 0.5f);
+            visualFrameRect.pivot = new Vector2(0.5f, 0.5f);
+            float nameBlock = 108f;
+            visualFrameRect.anchoredPosition = new Vector2(0f, -nameBlock * 0.5f);
+        }
+
+        PlaceSpeciesNameAbovePortrait(speciesName);
+        SetPanelTitleVisible(false);
+        if (detailsPanel != null)
+            detailsPanel.SetActive(false);
+        if (confirmButton != null)
+            confirmButton.gameObject.SetActive(false);
+        if (backButton != null)
+            backButton.gameObject.SetActive(false);
+        HideStarterNameInput();
+    }
+
+    private void PlaceSpeciesNameAbovePortrait(string speciesName)
+    {
+        if (speciesNameText == null)
+            return;
+
+        RectTransform nameRect = speciesNameText.rectTransform;
+        if (!speciesNamePoseCaptured)
+        {
+            speciesNameParent = nameRect.parent;
+            speciesNameSiblingIndex = nameRect.GetSiblingIndex();
+            speciesNameAnchorMin = nameRect.anchorMin;
+            speciesNameAnchorMax = nameRect.anchorMax;
+            speciesNameAnchoredPosition = nameRect.anchoredPosition;
+            speciesNameSizeDelta = nameRect.sizeDelta;
+            speciesNamePivot = nameRect.pivot;
+            speciesNameAlignment = speciesNameText.alignment;
+            speciesNamePoseCaptured = true;
+        }
+
+        Transform host = visualFrameRect != null ? visualFrameRect.parent : ResolvePreviewContainer();
+        if (host != null)
+            nameRect.SetParent(host, false);
+
+        nameRect.anchorMin = new Vector2(0.5f, 0.5f);
+        nameRect.anchorMax = new Vector2(0.5f, 0.5f);
+        nameRect.pivot = new Vector2(0.5f, 0f);
+        float top = 16f;
+        float width = 640f;
+        if (visualFrameRect != null)
+        {
+            top = visualFrameRect.anchoredPosition.y + (visualFrameRect.sizeDelta.y * 0.5f) + 16f;
+            width = Mathf.Max(640f, visualFrameRect.sizeDelta.x);
+        }
+
+        nameRect.anchoredPosition = new Vector2(visualFrameRect != null ? visualFrameRect.anchoredPosition.x : 0f, top);
+        nameRect.sizeDelta = new Vector2(width, 90f);
+        speciesNameText.alignment = TextAlignmentOptions.Center;
+        speciesNameText.text = speciesName;
+        speciesNameText.gameObject.SetActive(true);
+    }
+
+    private void RestoreSpeciesNamePose()
+    {
+        if (!speciesNamePoseCaptured || speciesNameText == null)
+            return;
+
+        RectTransform nameRect = speciesNameText.rectTransform;
+        if (speciesNameParent != null)
+        {
+            nameRect.SetParent(speciesNameParent, false);
+            nameRect.SetSiblingIndex(Mathf.Clamp(speciesNameSiblingIndex, 0, speciesNameParent.childCount - 1));
+        }
+
+        nameRect.anchorMin = speciesNameAnchorMin;
+        nameRect.anchorMax = speciesNameAnchorMax;
+        nameRect.pivot = speciesNamePivot;
+        nameRect.anchoredPosition = speciesNameAnchoredPosition;
+        nameRect.sizeDelta = speciesNameSizeDelta;
+        speciesNameText.alignment = speciesNameAlignment;
+    }
+
+    private void BeginPortraitChime()
+    {
+        ReleasePortraitDuck();
+        AudioHandle chime = default;
+        if (victoryChime != null && AudioService.Instance != null)
+            chime = AudioService.Instance.Play(victoryChime);
+
+        MusicConductor conductor = MusicConductor.Instance;
+        if (conductor != null)
+        {
+            activePortraitDuck = conductor.AcquireDuckToken(
+                "Capture portrait",
+                portraitDuckMultiplier,
+                portraitDuckAttackSeconds,
+                0f,
+                portraitDuckReleaseSeconds);
+        }
+
+        portraitDuckRoutine = StartCoroutine(ReleasePortraitDuckWhenChimeEnds(chime));
+    }
+
+    private IEnumerator ReleasePortraitDuckWhenChimeEnds(AudioHandle chime)
+    {
+        AudioService audio = AudioService.Instance;
+        float elapsed = 0f;
+        float silent = 0f;
+        const float safetySeconds = 30f;
+        while (chime.IsValid && elapsed < safetySeconds)
+        {
+            bool playing = audio != null && audio.IsPlaying(chime);
+            silent = playing ? 0f : silent + Time.unscaledDeltaTime;
+            elapsed += Time.unscaledDeltaTime;
+            if (elapsed > 0.05f && silent > 0.05f)
+                break;
+            yield return null;
+        }
+
+        portraitDuckRoutine = null;
+        ReleasePortraitDuck();
+    }
+
+    private void ReleasePortraitDuck()
+    {
+        if (portraitDuckRoutine != null)
+        {
+            StopCoroutine(portraitDuckRoutine);
+            portraitDuckRoutine = null;
+        }
+
+        if (activePortraitDuck.IsValid)
+            activePortraitDuck.Release();
+        activePortraitDuck = default;
+    }
+
     private void CacheVisualFramePose()
     {
         if (visualFrameRect == null)
@@ -1451,6 +1701,9 @@ public class StarterSelectionUI : MonoBehaviour
     private void PlaceStarterNameInputInTitleSlot()
     {
         if (starterNameInputField == null)
+            return;
+
+        if (starterNameInputUsesAuthoredPose)
             return;
 
         RectTransform shell = starterNameInputField.transform as RectTransform;
@@ -1508,6 +1761,11 @@ public class StarterSelectionUI : MonoBehaviour
             visualFrameRect.sizeDelta = visualFrameSizeDelta;
             visualFrameRect.pivot = visualFramePivot;
         }
+
+        RestoreSpeciesNamePose();
+        portraitReveal = false;
+        portraitProfile = null;
+        portraitFallback = null;
     }
 
     private List<CanvasGroup> CollectDismissContentGroups(Transform container)
@@ -1536,6 +1794,14 @@ public class StarterSelectionUI : MonoBehaviour
         RectTransform shell = starterNameInputField != null
             ? starterNameInputField.transform as RectTransform
             : FindChildByName<RectTransform>("StarterNameInput");
+        if (!starterNameInputResolved)
+        {
+            starterNameInputUsesAuthoredPose = shell != null;
+            starterNameTextAuthored = shell != null && shell.Find("Text")?.GetComponent<TextMeshProUGUI>() != null;
+            starterNamePlaceholderAuthored = shell != null && shell.Find("Placeholder")?.GetComponent<TextMeshProUGUI>() != null;
+            starterNameInputResolved = true;
+        }
+
         if (shell == null)
         {
             Transform host = titleText != null
@@ -1568,11 +1834,15 @@ public class StarterSelectionUI : MonoBehaviour
 
         if (shell.GetComponent<CanvasRenderer>() == null)
             shell.gameObject.AddComponent<CanvasRenderer>();
+        bool backgroundWasAuthored = shell.GetComponent<Image>() != null;
         Image background = shell.GetComponent<Image>();
         if (background == null)
             background = shell.gameObject.AddComponent<Image>();
-        background.color = Color.clear;
-        background.raycastTarget = false;
+        if (!backgroundWasAuthored)
+        {
+            background.color = Color.clear;
+            background.raycastTarget = false;
+        }
 
         starterNameInputField = shell.GetComponent<TMP_InputField>();
         if (starterNameInputField == null)
@@ -1581,13 +1851,20 @@ public class StarterSelectionUI : MonoBehaviour
         starterNameInputField.textViewport = shell;
 
         Color titleColor = titleText != null ? titleText.color : Color.white;
-        TextMeshProUGUI inputText = EnsureStarterNameInputText(shell, "Text", string.Empty, FontStyles.Bold, titleColor);
+        TextMeshProUGUI inputText = EnsureStarterNameInputText(
+            shell,
+            "Text",
+            string.Empty,
+            FontStyles.Bold | FontStyles.UpperCase,
+            titleColor,
+            starterNameTextAuthored);
         TextMeshProUGUI placeholder = EnsureStarterNameInputText(
             shell,
             "Placeholder",
             "Name your Chainling",
-            FontStyles.Italic,
-            new Color(titleColor.r, titleColor.g, titleColor.b, 0.45f));
+            FontStyles.Italic | FontStyles.UpperCase,
+            new Color(titleColor.r, titleColor.g, titleColor.b, 0.45f),
+            starterNamePlaceholderAuthored);
         starterNameInputField.textComponent = inputText;
         starterNameInputField.placeholder = placeholder;
         starterNameInputField.gameObject.SetActive(false);
@@ -1620,22 +1897,43 @@ public class StarterSelectionUI : MonoBehaviour
         TMP_FontAsset font = titleText != null ? titleText.font : TMP_Settings.defaultFontAsset;
         Material fontMaterial = titleText != null ? titleText.fontSharedMaterial : null;
 
-        StyleNameFieldLabel(
-            starterNameInputField.textComponent as TextMeshProUGUI,
-            font,
-            fontMaterial,
-            fontSize,
-            FontStyles.Bold,
-            color,
-            string.Empty);
-        StyleNameFieldLabel(
-            starterNameInputField.placeholder as TextMeshProUGUI,
-            font,
-            fontMaterial,
-            fontSize,
-            FontStyles.Italic,
-            new Color(color.r, color.g, color.b, 0.45f),
-            "Name your Chainling");
+        TextMeshProUGUI inputText = starterNameInputField.textComponent as TextMeshProUGUI;
+        TextMeshProUGUI placeholder = starterNameInputField.placeholder as TextMeshProUGUI;
+        if (starterNameTextAuthored)
+            ApplyUpperCaseFontStyle(inputText);
+        else
+        {
+            StyleNameFieldLabel(
+                inputText,
+                font,
+                fontMaterial,
+                fontSize,
+                FontStyles.Bold | FontStyles.UpperCase,
+                color,
+                string.Empty);
+        }
+
+        if (starterNamePlaceholderAuthored)
+            ApplyUpperCaseFontStyle(placeholder);
+        else
+        {
+            StyleNameFieldLabel(
+                placeholder,
+                font,
+                fontMaterial,
+                fontSize,
+                FontStyles.Italic | FontStyles.UpperCase,
+                new Color(color.r, color.g, color.b, 0.45f),
+                "Name your Chainling");
+        }
+    }
+
+    private static void ApplyUpperCaseFontStyle(TMP_Text text)
+    {
+        if (text == null)
+            return;
+
+        text.fontStyle = (text.fontStyle | FontStyles.UpperCase) & ~FontStyles.LowerCase & ~FontStyles.SmallCaps;
     }
 
     private static void StyleNameFieldLabel(
@@ -1655,7 +1953,7 @@ public class StarterSelectionUI : MonoBehaviour
         if (fontMaterial != null)
             text.fontSharedMaterial = fontMaterial;
         text.fontSize = fontSize;
-        text.fontStyle = style;
+        text.fontStyle = (style | FontStyles.UpperCase) & ~FontStyles.LowerCase & ~FontStyles.SmallCaps;
         text.alignment = TextAlignmentOptions.Center;
         text.color = color;
         text.raycastTarget = false;
@@ -1669,31 +1967,37 @@ public class StarterSelectionUI : MonoBehaviour
         string name,
         string value,
         FontStyles style,
-        Color color)
+        Color color,
+        bool preserveAuthoredPresentation)
     {
         Transform existing = parent.Find(name);
         TextMeshProUGUI text = existing != null ? existing.GetComponent<TextMeshProUGUI>() : null;
-        if (text == null)
+        bool created = text == null;
+        if (created)
         {
             GameObject textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
             textObject.transform.SetParent(parent, false);
             text = textObject.AddComponent<TextMeshProUGUI>();
         }
 
-        RectTransform rect = text.rectTransform;
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
-        if (text.font == null)
-            text.font = TMP_Settings.defaultFontAsset;
-        text.fontStyle = style;
-        text.color = color;
-        if (!string.IsNullOrEmpty(value) && string.IsNullOrEmpty(text.text))
-            text.text = value;
-        text.overflowMode = TextOverflowModes.Ellipsis;
-        text.textWrappingMode = TextWrappingModes.NoWrap;
-        text.raycastTarget = false;
+        if (created || !preserveAuthoredPresentation)
+        {
+            RectTransform rect = text.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            if (text.font == null)
+                text.font = TMP_Settings.defaultFontAsset;
+            text.fontStyle = style | FontStyles.UpperCase;
+            text.color = color;
+            if (!string.IsNullOrEmpty(value) && string.IsNullOrEmpty(text.text))
+                text.text = value;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.raycastTarget = false;
+        }
+
         return text;
     }
 

@@ -2073,6 +2073,9 @@ public class MainMenuSequenceController2 : MonoBehaviour
 
         // Stamp the cross-scene context before any scene load / intro sequence.
         PopulateGameSessionContext();
+        // Start shared menu profile reads now that the canonical identity is available.
+        // This intentionally does not delay narrative hydration or the scene handoff.
+        _ = PlayerProfileReadStore.ResolveOrCreate().HydrateCurrentProfileAsync();
 
         // Narrative state must be hydrated before scenes, guards, routers, or
         // interactables can observe quest state for this profile.
@@ -2087,6 +2090,45 @@ public class MainMenuSequenceController2 : MonoBehaviour
             Debug.LogError($"[MainMenuSequenceController2] Narrative profile hydration failed: {hydrationTask.Exception}");
             RestorePlayRouteAfterFailure("Narrative profile hydration failed.");
             yield break;
+        }
+
+        PendingBattleResumeCoordinator pendingBattleCoordinator = PendingBattleResumeCoordinator.Instance;
+        if (pendingBattleCoordinator != null)
+        {
+            var pendingBattleTask = pendingBattleCoordinator.ResolveCurrentAsync();
+            while (!pendingBattleTask.IsCompleted)
+                yield return null;
+
+            if (pendingBattleTask.IsFaulted || pendingBattleTask.IsCanceled)
+            {
+                Debug.LogWarning("[MainMenuSequenceController2] Battle check did not finish. Continuing without a resume.");
+            }
+            else if (pendingBattleTask.Result.Outcome == PendingBattleResumeOutcome.Rejoin ||
+                pendingBattleTask.Result.Outcome == PendingBattleResumeOutcome.Wipe)
+            {
+                yield return FadeOutMenuMusicBeforeSceneHandoff();
+                bool pendingRouteAccepted = pendingBattleTask.Result.Outcome == PendingBattleResumeOutcome.Rejoin
+                    ? PendingBattleRouteUtility.RequestRejoin(transitionStyle, "MainMenu.PendingBattleResume")
+                    : PendingBattleRouteUtility.RequestWipe(transitionStyle, "MainMenu.PendingBattleWipe");
+                if (!pendingRouteAccepted)
+                    RestorePlayRouteAfterFailure("The destination scene could not be loaded.");
+                yield break;
+            }
+            else if (!PendingBattleRouteUtility.ShouldContinueAfterProbe(pendingBattleTask.Result))
+            {
+                string detail = pendingBattleTask.Result.Message;
+                RestorePlayRouteAfterFailure(string.IsNullOrWhiteSpace(detail)
+                    ? "Signal sync is unavailable."
+                    : detail);
+                yield break;
+            }
+            else if (pendingBattleTask.Result.Outcome == PendingBattleResumeOutcome.Failed)
+            {
+                Debug.LogWarning(
+                    "[MainMenuSequenceController2] Battle service did not answer (" +
+                    pendingBattleTask.Result.Message +
+                    "). Continuing.");
+            }
         }
 
         // The durable quest row is authoritative over a stale compatibility

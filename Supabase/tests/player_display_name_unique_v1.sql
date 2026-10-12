@@ -2,7 +2,7 @@
 -- Does not touch chainling names, wallets, or RAM.
 BEGIN;
 
-SELECT plan(14);
+SELECT plan(20);
 
 INSERT INTO public.player_profiles (player_profile_id, platform_origin, last_platform_seen, display_name)
 VALUES
@@ -140,6 +140,45 @@ SELECT lives_ok(
            '20000000-0000-0000-0000-000000000006', 'test', 'test', 'NOVA'
        ) $$,
     'a grandfathered insert is outside the unique index'
+);
+
+SELECT is(
+    public.display_name_characters_allowed('Nyx_2'),
+    true,
+    'digits and underscore are allowed'
+);
+
+SELECT is(
+    public.display_name_characters_allowed('A.B'),
+    true,
+    'an interior period is allowed'
+);
+
+SELECT is(
+    public.display_name_characters_allowed('<size>'),
+    false,
+    'text mesh pro tags are rejected'
+);
+
+SELECT is(
+    public.display_name_characters_allowed('Nyx.'),
+    false,
+    'a trailing special is rejected'
+);
+
+SELECT is(
+    public.display_name_characters_allowed('Abcdefghijklm'),
+    true,
+    'a 13-character name is inside the 16-character saved-name limit'
+);
+
+SELECT is(
+    (public.profile_set_display_name_tx(
+        '20000000-0000-0000-0000-000000000004',
+        '<size=40>Nyx'
+    ) ->> 'error'),
+    'invalid_display_name',
+    'a direct call cannot store a text mesh pro tag'
 );
 
 SELECT * FROM finish();
