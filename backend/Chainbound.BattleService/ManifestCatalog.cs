@@ -42,6 +42,15 @@ public sealed class ManifestCatalog
         };
     }
 
+    public bool IsScriptedEncounter(string? encounterId)
+    {
+        if (string.IsNullOrWhiteSpace(encounterId))
+            return false;
+        ManifestEncounter? row = _manifest.Encounters.FirstOrDefault(x =>
+            string.Equals(x.EncounterId, encounterId, StringComparison.Ordinal));
+        return row != null && row.BattleKind == AuthoritativeBattleKind.Scripted;
+    }
+
     public ManifestEncounter ResolveEncounter(string zoneId, string narrativeEncounterId, uint seed)
     {
         IEnumerable<ManifestEncounter> candidates = _manifest.Encounters;

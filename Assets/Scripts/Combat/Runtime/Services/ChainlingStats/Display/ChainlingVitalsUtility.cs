@@ -55,6 +55,19 @@ namespace Chainbound.Combat
             return Mathf.Clamp(snapshot.currentHp, 0, maxHp);
         }
 
+        /// <summary>
+        /// Resolves a vital received from the authoritative battle state. A fresh profile can
+        /// carry the shared unsynced sentinel until the client has calculated this Chainling's
+        /// effective battle max HP; it therefore starts at full HP rather than fainted.
+        /// </summary>
+        public static int ResolveAuthoritativeCheckpointCurrentHp(int currentHp, int effectiveMaxHp)
+        {
+            int maxHp = Mathf.Max(1, effectiveMaxHp);
+            return currentHp == ChainlingVitalsConstants.UnsyncedCurrentHp
+                ? maxHp
+                : Mathf.Clamp(currentHp, 0, maxHp);
+        }
+
         public static ChainlingVitalsDisplay BuildDisplay(ChainlingSnapshot snapshot, SpeciesDefinitionSO species)
         {
             int maxHp = BuildMaxHp(snapshot, species);

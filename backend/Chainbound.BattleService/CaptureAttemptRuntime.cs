@@ -30,6 +30,7 @@ public sealed class CaptureAttemptRuntime : IDisposable
     private long _lastDisconnectStopwatchTicks;
     private bool _perfectLock = true;
     private Task? _loop;
+    private int _phase;
 
     public CaptureAttemptRuntime(
         CaptureChallengeSnapshot challenge,
@@ -46,9 +47,17 @@ public sealed class CaptureAttemptRuntime : IDisposable
         _checkpoint = checkpoint;
         _state = resumeState?.Clone() ?? CaptureSimulation.CreateInitial(challenge);
         _held = _state.IsHeld;
-        _latest = CaptureSimulation.ToSnapshot(challenge.AttemptId, _state.Tick, _state, challenge.Parameters, false);
+        _latest = CreateSnapshot(_state, false);
         _lastDisconnectStopwatchTicks = Stopwatch.GetTimestamp();
+        if (Challenge.DeadlineUnixMilliseconds > 0)
+            _phase = Armed;
+        else
+            _ = WatchArmGraceAsync();
     }
+
+    private const int Unarmed = 0;
+    private const int Armed = 1;
+    private const int Expired = 2;
 
     public CaptureChallengeSnapshot Challenge { get; }
     public Guid AttemptId => Guid.Parse(Challenge.AttemptId);
@@ -57,6 +66,32 @@ public sealed class CaptureAttemptRuntime : IDisposable
     public bool PerfectLock { get { lock (_gate) return _perfectLock; } }
     public IReadOnlyList<CaptureHistoryPoint> History { get { lock (_gate) return _history.ToArray(); } }
     public CaptureAuthoritativeState Latest { get { lock (_gate) return CloneSnapshot(_latest); } }
+    public bool IsArmed { get { lock (_gate) return _phase == Armed; } }
+
+    public async Task<bool> ArmAsync()
+    {
+        bool start;
+        lock (_gate)
+        {
+            if (_phase == Expired)
+                return false;
+            if (_phase == Armed)
+                return true;
+            _phase = Armed;
+            long now = _authorityNow();
+            long durationMilliseconds = (long)Math.Ceiling(
+                Challenge.Parameters.DurationTicks * 1000d / Math.Max(1, Challenge.Parameters.TickRate));
+            Challenge.DeadlineUnixMilliseconds = now + Math.Max(1, durationMilliseconds);
+            start = true;
+        }
+
+        if (start)
+        {
+            Start();
+            await _checkpoint(this, _state.Clone());
+        }
+        return true;
+    }
 
     public void Start()
     {
@@ -103,6 +138,45 @@ public sealed class CaptureAttemptRuntime : IDisposable
         _lifetime.Dispose();
     }
 
+    private async Task WatchArmGraceAsync()
+    {
+        try
+        {
+            await Task.Delay(_options.CaptureArmGrace, _lifetime.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        CaptureSimulationState expired;
+        lock (_gate)
+        {
+            if (_phase != Unarmed)
+                return;
+            _phase = Expired;
+            _state.Outcome = CaptureOutcomeKind.TimedOut;
+            expired = _state.Clone();
+        }
+
+        try
+        {
+            CaptureOutcome outcome = await _finalize(this, expired);
+            _completion.TrySetResult(outcome);
+        }
+        catch (Exception exception)
+        {
+            _completion.TrySetResult(new CaptureOutcome
+            {
+                AttemptId = Challenge.AttemptId,
+                Kind = CaptureOutcomeKind.Interrupted,
+                ErrorCode = "service_interrupted",
+                Message = exception.Message,
+                BattleContinues = true,
+            });
+        }
+    }
+
     private async Task RunAsync(CancellationToken cancellationToken)
     {
         try
@@ -122,12 +196,7 @@ public sealed class CaptureAttemptRuntime : IDisposable
                     if (_state.Tick % Math.Max(1, Challenge.Parameters.TickRate / _options.CorrectionRateHz) == 0 ||
                         _state.Outcome != CaptureOutcomeKind.None || tick.SpikeOccurred)
                     {
-                        _latest = CaptureSimulation.ToSnapshot(
-                            Challenge.AttemptId,
-                            _state.Tick,
-                            _state,
-                            Challenge.Parameters,
-                            tick.SpikeOccurred);
+                        _latest = CreateSnapshot(_state, tick.SpikeOccurred);
                         _history.Add(new CaptureHistoryPoint
                         {
                             Tick = _state.Tick,
@@ -184,7 +253,7 @@ public sealed class CaptureAttemptRuntime : IDisposable
         while (_state.Tick < expectedTick && _state.Outcome == CaptureOutcomeKind.None)
             _state = CaptureSimulation.Step(_state, Challenge.Parameters, false).State;
         lock (_gate)
-            _latest = CaptureSimulation.ToSnapshot(Challenge.AttemptId, _state.Tick, _state, Challenge.Parameters, false);
+            _latest = CreateSnapshot(_state, false);
     }
 
     private bool ResolveHeld()
@@ -212,10 +281,23 @@ public sealed class CaptureAttemptRuntime : IDisposable
             BandPositionUnits = source.BandPositionUnits,
             MeterBasisPoints = source.MeterBasisPoints,
             RemainingTicks = source.RemainingTicks,
+            LastInputSequence = source.LastInputSequence,
             IsHeld = source.IsHeld,
             IsInsideBand = source.IsInsideBand,
             SpikeOccurred = source.SpikeOccurred,
             Outcome = source.Outcome,
         };
+    }
+
+    private CaptureAuthoritativeState CreateSnapshot(CaptureSimulationState state, bool spikeOccurred)
+    {
+        CaptureAuthoritativeState snapshot = CaptureSimulation.ToSnapshot(
+            Challenge.AttemptId,
+            state.Tick,
+            state,
+            Challenge.Parameters,
+            spikeOccurred);
+        snapshot.LastInputSequence = _lastInputSequence;
+        return snapshot;
     }
 }

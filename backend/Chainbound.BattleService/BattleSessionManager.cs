@@ -62,19 +62,27 @@ public sealed class BattleSessionManager
             await current.Gate.WaitAsync(cancellationToken);
             try
             {
-                if (current.ExpiresAtUnixMilliseconds <= now)
+                if (await TryDismissScriptedBattleAsync(current, now, cancellationToken))
+                {
+                    // The cinematic row is closed. Start the requested battle below.
+                }
+                else if (current.ExpiresAtUnixMilliseconds <= now)
+                {
                     return await SettleBattleAsync(current, now, "Abandoned", true, cancellationToken);
-
-                EnsureCaptureRuntime(current);
-                CombatSessionEnvelope existing = BuildEnvelope(current);
-                existing.RequiresResumeChoice = !string.Equals(
-                    current.StartCommandId,
-                    request.CommandId?.Trim(),
-                    StringComparison.Ordinal);
-                existing.Message = existing.RequiresResumeChoice
-                    ? "A battle is still waiting."
-                    : existing.Message;
-                return existing;
+                }
+                else
+                {
+                    EnsureCaptureRuntime(current);
+                    CombatSessionEnvelope existing = BuildEnvelope(current);
+                    existing.RequiresResumeChoice = !string.Equals(
+                        current.StartCommandId,
+                        request.CommandId?.Trim(),
+                        StringComparison.Ordinal);
+                    existing.Message = existing.RequiresResumeChoice
+                        ? "A battle is still waiting."
+                        : existing.Message;
+                    return existing;
+                }
             }
             finally
             {
@@ -84,7 +92,9 @@ public sealed class BattleSessionManager
 
         uint seed = unchecked((uint)RandomNumberGenerator.GetInt32(1, int.MaxValue));
         ManifestEncounter encounter = _catalog.ResolveEncounter(request.ZoneId, request.NarrativeEncounterId, seed);
-        bool rewardEligible = await _gateway.IsNarrativeRewardEligibleAsync(owner.ProfileId, encounter, cancellationToken);
+        bool rewardsDisabled = string.Equals(_options.BattleRewardMode, "off", StringComparison.Ordinal);
+        bool rewardEligible = !rewardsDisabled &&
+            await _gateway.IsNarrativeRewardEligibleAsync(owner.ProfileId, encounter, cancellationToken);
         AuthorityLoadoutSnapshot loadout = await _gateway.GetLoadoutAsync(owner.ProfileId, now, cancellationToken);
         List<CombatVitalSnapshot> partyVitals = await _gateway.GetPartyVitalsAsync(owner.ProfileId, cancellationToken);
         Guid battleId = Guid.NewGuid();
@@ -161,6 +171,7 @@ public sealed class BattleSessionManager
         }
         EnsureOwner(session, owner);
         long now = _time.RequireUnixMilliseconds();
+        CaptureAttemptRuntime? finalizingAttempt = null;
         await session.Gate.WaitAsync(cancellationToken);
         try
         {
@@ -169,9 +180,37 @@ public sealed class BattleSessionManager
                 await EnsureRewardSettlementAsync(session, cancellationToken);
                 return BuildEnvelope(session);
             }
+            if (await TryDismissScriptedBattleAsync(session, now, cancellationToken))
+                throw new AuthorityException("battle_not_found", "The scripted battle was closed without a party loss.", 404);
             if (session.ExpiresAtUnixMilliseconds <= now)
                 return await SettleBattleAsync(session, now, "Abandoned", true, cancellationToken);
-            EnsureCaptureRuntime(session);
+
+            // A capture runtime can continue in an already-warm service instance. It owns its
+            // own finalization gate, so do not wait for it while holding the session gate.
+            // A cold instance has no runtime and must deterministically settle an elapsed
+            // challenge before this endpoint returns a resumable envelope.
+            if (TryGetElapsedCaptureRuntime(session, now, out CaptureAttemptRuntime? runningAttempt))
+            {
+                finalizingAttempt = runningAttempt;
+            }
+            else
+            {
+                await ReconcileCaptureForResumeAsync(session, now);
+                return BuildEnvelope(session);
+            }
+        }
+        finally
+        {
+            session.Gate.Release();
+        }
+
+        // The runtime was already active before this resume request. Waiting outside the
+        // session gate prevents a deadlock with its finalizer and guarantees the client does
+        // not receive a stale `capturing` state after the deadline has passed.
+        await finalizingAttempt!.Completion.WaitAsync(cancellationToken);
+        await session.Gate.WaitAsync(cancellationToken);
+        try
+        {
             return BuildEnvelope(session);
         }
         finally
@@ -194,6 +233,8 @@ public sealed class BattleSessionManager
         try
         {
             long now = _time.RequireUnixMilliseconds();
+            if (await TryDismissScriptedBattleAsync(session, now, cancellationToken))
+                return null;
             if (session.ExpiresAtUnixMilliseconds <= now)
                 return await SettleBattleAsync(session, now, "Abandoned", true, cancellationToken);
             EnsureCaptureRuntime(session);
@@ -216,6 +257,12 @@ public sealed class BattleSessionManager
         BattleSessionRecord session = await GetOwnedSession(owner, battleId, cancellationToken);
         if (session.Status is not ("completed" or "lost" or "abandoned"))
             throw new AuthorityException("battle_not_terminal", "This battle has not ended.", 409);
+        if (RewardsDisabledFor(session))
+        {
+            session.Settlement ??= BattleRewardSettlement.Unavailable(
+                battleId.ToString("D"), "rewards_disabled");
+            return session.Settlement;
+        }
         BattleRewardSettlement? stored = await _gateway.GetBattleRewardAsync(battleId, cancellationToken);
         if (stored != null)
         {
@@ -334,8 +381,7 @@ public sealed class BattleSessionManager
                 session.LockedLoadout.GearEffects,
                 attemptBoosts,
                 _catalog.Balance);
-            challenge.DeadlineUnixMilliseconds = now +
-                (long)Math.Ceiling(challenge.Parameters.DurationTicks * 1000d / challenge.Parameters.TickRate);
+            challenge.DeadlineUnixMilliseconds = 0;
 
             session.State.Phase = "capturing";
             session.State.ActiveAttemptId = challenge.AttemptId;
@@ -363,7 +409,6 @@ public sealed class BattleSessionManager
             session.Status = "capturing";
             var runtime = CreateRuntime(session, challenge, session.State.CaptureState);
             _attempts[attemptId] = runtime;
-            runtime.Start();
             CombatSessionEnvelope envelope = BuildEnvelope(session);
             _commandResults[commandKey] = envelope;
             return new CommandServiceResult { Ok = true, Session = session };
@@ -574,7 +619,10 @@ public sealed class BattleSessionManager
         }
         var runtime = CreateRuntime(session, session.State.ActiveChallenge, session.State.CaptureState);
         if (_attempts.TryAdd(attemptId, runtime))
-            runtime.Start();
+        {
+            if (session.State.ActiveChallenge.DeadlineUnixMilliseconds > 0)
+                runtime.Start();
+        }
         else
             runtime.Dispose();
     }
@@ -602,12 +650,41 @@ public sealed class BattleSessionManager
     private async Task<CaptureOutcome> FinalizeAttemptAsync(BattleSessionRecord session, CaptureAttemptRuntime runtime, CaptureSimulationState finalState)
     {
         await session.Gate.WaitAsync();
+        try
+        {
+            return await FinalizeAttemptWhileLockedAsync(
+                session,
+                runtime.AttemptId,
+                runtime.Challenge,
+                finalState,
+                runtime.History,
+                runtime.PerfectLock);
+        }
+        finally
+        {
+            session.Gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Finishes an attempt while the caller owns <see cref="BattleSessionRecord.Gate"/>.
+    /// This is shared by the live capture runtime and resume reconciliation so an elapsed
+    /// capture has one authoritative finalization path.
+    /// </summary>
+    private async Task<CaptureOutcome> FinalizeAttemptWhileLockedAsync(
+        BattleSessionRecord session,
+        Guid attemptId,
+        CaptureChallengeSnapshot challenge,
+        CaptureSimulationState finalState,
+        IReadOnlyList<CaptureHistoryPoint> history,
+        bool perfectLock)
+    {
         AuthoritativeBattleState stateBeforeFinalize = CloneBattleState(session.State);
         int versionBeforeFinalize = session.StateVersion;
         try
         {
             AuthoritativeBattleTarget? target = session.State.Targets.FirstOrDefault(x =>
-                string.Equals(x.TargetId, runtime.Challenge.TargetId, StringComparison.Ordinal));
+                string.Equals(x.TargetId, challenge.TargetId, StringComparison.Ordinal));
             if (target == null)
                 throw new InvalidOperationException("Capture target disappeared from authoritative state.");
 
@@ -645,9 +722,9 @@ public sealed class BattleSessionManager
             session.StateVersion++;
             int elapsedMilliseconds = (int)Math.Min(
                 int.MaxValue,
-                finalState.Tick * 1000L / Math.Max(1, runtime.Challenge.Parameters.TickRate));
-            string entangledType = kind == CaptureOutcomeKind.Locked && runtime.Challenge.OrbId == "entangle_orb"
-                ? _catalog.SelectEntangledType(runtime.Challenge.Seed)
+                finalState.Tick * 1000L / Math.Max(1, challenge.Parameters.TickRate));
+            string entangledType = kind == CaptureOutcomeKind.Locked && challenge.OrbId == "entangle_orb"
+                ? _catalog.SelectEntangledType(challenge.Seed)
                 : "";
             string? terminalOutcome = !battleContinues
                 ? kind == CaptureOutcomeKind.Locked
@@ -656,12 +733,12 @@ public sealed class BattleSessionManager
                 : null;
             JsonElement grant = await _gateway.FinalizeCaptureAttemptAsync(
                 session,
-                runtime.AttemptId,
+                attemptId,
                 kind,
                 elapsedMilliseconds,
                 finalState.MeterBasisPoints,
-                runtime.History,
-                runtime.PerfectLock,
+                history,
+                perfectLock,
                 entangledType,
                 terminalOutcome,
                 !battleContinues ? session.State.EndReason : null,
@@ -673,10 +750,10 @@ public sealed class BattleSessionManager
                 session.TerminalAtUnixMilliseconds = _time.RequireUnixMilliseconds();
                 await EnsureRewardSettlementAsync(session, CancellationToken.None);
             }
-            _attempts.TryRemove(runtime.AttemptId, out _);
+            _attempts.TryRemove(attemptId, out _);
             return new CaptureOutcome
             {
-                AttemptId = runtime.Challenge.AttemptId,
+                AttemptId = challenge.AttemptId,
                 Kind = kind,
                 BattleContinues = battleContinues,
                 FinalMeterBasisPoints = finalState.MeterBasisPoints,
@@ -702,11 +779,11 @@ public sealed class BattleSessionManager
             session.Status = "service_interrupted";
             session.State.Phase = "service_interrupted";
             session.StateVersion = versionBeforeFinalize;
-            _attempts.TryRemove(runtime.AttemptId, out _);
-            _logger.LogError(exception, "Capture finalization failed for {AttemptId}; no battle loss was assessed.", runtime.Challenge.AttemptId);
+            _attempts.TryRemove(attemptId, out _);
+            _logger.LogError(exception, "Capture finalization failed for {AttemptId}; no battle loss was assessed.", challenge.AttemptId);
             return new CaptureOutcome
             {
-                AttemptId = runtime.Challenge.AttemptId,
+                AttemptId = challenge.AttemptId,
                 Kind = CaptureOutcomeKind.Interrupted,
                 ErrorCode = "service_interrupted",
                 Message = "Capture authority was interrupted; the battle remains resumable and no loss was assessed.",
@@ -715,10 +792,79 @@ public sealed class BattleSessionManager
                 ElapsedTicks = finalState.Tick,
             };
         }
-        finally
+    }
+
+    private bool TryGetElapsedCaptureRuntime(
+        BattleSessionRecord session,
+        long authorityUnixMilliseconds,
+        out CaptureAttemptRuntime? runtime)
+    {
+        runtime = null;
+        if (!IsCaptureInProgress(session) ||
+            session.State.ActiveChallenge == null ||
+            session.State.ActiveChallenge.DeadlineUnixMilliseconds <= 0 ||
+            session.State.ActiveChallenge.DeadlineUnixMilliseconds > authorityUnixMilliseconds ||
+            !Guid.TryParse(session.State.ActiveAttemptId, out Guid attemptId))
         {
-            session.Gate.Release();
+            return false;
         }
+
+        return _attempts.TryGetValue(attemptId, out runtime);
+    }
+
+    /// <summary>
+    /// Resume is a synchronization boundary: an elapsed capture must be finalized before
+    /// returning a battle envelope. Otherwise the Unity client can rebuild a player turn
+    /// from a still-capturing snapshot and have its next action rejected.
+    /// </summary>
+    private async Task ReconcileCaptureForResumeAsync(
+        BattleSessionRecord session,
+        long authorityUnixMilliseconds)
+    {
+        if (!IsCaptureInProgress(session) || session.State.ActiveChallenge == null)
+            return;
+
+        CaptureChallengeSnapshot challenge = session.State.ActiveChallenge;
+        if (!Guid.TryParse(session.State.ActiveAttemptId, out Guid attemptId))
+            throw new AuthorityException("capture_attempt_not_found", "The active capture attempt could not be resumed.", 409);
+
+        if (challenge.DeadlineUnixMilliseconds <= 0 || challenge.DeadlineUnixMilliseconds > authorityUnixMilliseconds)
+        {
+            EnsureCaptureRuntime(session);
+            return;
+        }
+
+        CaptureSimulationState state = session.State.CaptureState?.Clone() ?? CaptureSimulation.CreateInitial(challenge);
+        var history = new List<CaptureHistoryPoint>();
+        while (state.Outcome == CaptureOutcomeKind.None)
+        {
+            CaptureTickResult tick = CaptureSimulation.Step(state, challenge.Parameters, held: false);
+            state = tick.State;
+            if (state.Tick % Math.Max(1, challenge.Parameters.TickRate / _options.CorrectionRateHz) == 0 ||
+                state.Outcome != CaptureOutcomeKind.None ||
+                tick.SpikeOccurred)
+            {
+                history.Add(new CaptureHistoryPoint
+                {
+                    Tick = state.Tick,
+                    MeterBasisPoints = state.MeterBasisPoints,
+                    InsideBand = state.IsInsideBand,
+                    TargetPositionUnits = state.TargetPositionUnits,
+                    BandPositionUnits = state.BandPositionUnits,
+                });
+            }
+        }
+
+        // Input history before the service restarted cannot prove a perfect lock. A conservative
+        // false avoids awarding a perfect-lock bonus from an incomplete checkpoint.
+        await FinalizeAttemptWhileLockedAsync(session, attemptId, challenge, state, history, perfectLock: false);
+    }
+
+    private static bool IsCaptureInProgress(BattleSessionRecord session)
+    {
+        return (string.Equals(session.Status, "capturing", StringComparison.Ordinal) ||
+                string.Equals(session.Status, "service_interrupted", StringComparison.Ordinal)) &&
+               string.Equals(session.State.Phase, "capturing", StringComparison.Ordinal);
     }
 
     private void RequireReady()
@@ -744,6 +890,54 @@ public sealed class BattleSessionManager
             "battle_expired",
             "The battle resume window expired. The battle was recorded as a loss and the party respawned.",
             410);
+    }
+
+    private bool IsScriptedBattle(BattleSessionRecord session)
+    {
+        return _catalog.IsScriptedEncounter(session.EncounterId) ||
+            session.State.BattleKind == AuthoritativeBattleKind.Scripted;
+    }
+
+    /// <summary>
+    /// Closes a cinematic battle that never used the player's party.
+    /// Party HP, RAM, and rewards stay untouched.
+    /// </summary>
+    private async Task<bool> TryDismissScriptedBattleAsync(
+        BattleSessionRecord session,
+        long authorityUnixMilliseconds,
+        CancellationToken cancellationToken)
+    {
+        if (!IsScriptedBattle(session))
+            return false;
+
+        JsonElement result = await _gateway.DismissScriptedBattleAsync(
+            session,
+            authorityUnixMilliseconds,
+            cancellationToken);
+        if (!ReadOk(result))
+        {
+            throw new AuthorityException(
+                ReadString(result, "code", "scripted_battle_dismiss_failed"),
+                "The scripted battle could not be closed. No additional battle may start until authority recovers.");
+        }
+
+        session.Status = "abandoned";
+        session.State.Phase = "complete";
+        session.State.EndReason = "ScriptedDismiss";
+        if (result.TryGetProperty("state_version", out JsonElement version) &&
+            version.ValueKind == JsonValueKind.Number &&
+            version.TryGetInt32(out int persistedVersion))
+            session.StateVersion = persistedVersion;
+        if (Guid.TryParse(session.State.ActiveAttemptId, out Guid attemptId) &&
+            _attempts.TryRemove(attemptId, out CaptureAttemptRuntime? attempt))
+        {
+            attempt.Dispose();
+        }
+        session.State.ActiveAttemptId = "";
+        session.State.ActiveChallenge = null;
+        session.State.CaptureState = null;
+        _sessions.TryRemove(session.BattleId, out _);
+        return true;
     }
 
     private async Task<CombatSessionEnvelope> SettleBattleAsync(
@@ -776,7 +970,9 @@ public sealed class BattleSessionManager
         session.Status = "abandoned";
         session.State.Phase = "complete";
         session.State.EndReason = endReason;
-        if (result.TryGetProperty("state_version", out JsonElement version) && version.TryGetInt32(out int persistedVersion))
+        if (result.TryGetProperty("state_version", out JsonElement version) &&
+            version.ValueKind == JsonValueKind.Number &&
+            version.TryGetInt32(out int persistedVersion))
             session.StateVersion = persistedVersion;
         if (Guid.TryParse(session.State.ActiveAttemptId, out Guid attemptId) && _attempts.TryRemove(attemptId, out CaptureAttemptRuntime? attempt))
             attempt.Dispose();
@@ -802,6 +998,12 @@ public sealed class BattleSessionManager
         BattleSessionRecord session,
         CancellationToken cancellationToken)
     {
+        if (RewardsDisabledFor(session))
+        {
+            session.Settlement ??= BattleRewardSettlement.Unavailable(
+                session.BattleId.ToString("D"), "rewards_disabled");
+            return;
+        }
         if (session.Settlement?.IsTerminal == true) return;
         SemaphoreSlim rewardGate = _rewardGates.GetOrAdd(session.BattleId, _ => new SemaphoreSlim(1, 1));
         await rewardGate.WaitAsync(cancellationToken);
@@ -838,6 +1040,12 @@ public sealed class BattleSessionManager
         {
             rewardGate.Release();
         }
+    }
+
+    private bool RewardsDisabledFor(BattleSessionRecord session)
+    {
+        return string.Equals(_options.BattleRewardMode, "off", StringComparison.Ordinal) ||
+            string.Equals(session.RewardTier, BattleRewardTier.None, StringComparison.Ordinal);
     }
 
     private static void EnsureOwner(BattleSessionRecord session, AuthenticatedProfile owner)

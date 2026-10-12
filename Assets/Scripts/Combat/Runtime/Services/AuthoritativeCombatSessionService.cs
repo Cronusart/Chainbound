@@ -447,11 +447,18 @@ namespace Chainbound.Combat
         private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private readonly TaskCompletionSource<CaptureChallengeSnapshot> challengeReady = new TaskCompletionSource<CaptureChallengeSnapshot>();
         private readonly TaskCompletionSource<CaptureOutcome> completion = new TaskCompletionSource<CaptureOutcome>();
+        private readonly TaskCompletionSource<long> armedReady = new TaskCompletionSource<long>();
         private readonly SemaphoreSlim sendGate = new SemaphoreSlim(1, 1);
         private CaptureChallengeSnapshot challenge;
         private CaptureAuthoritativeState latestState;
         private Task receiveLoop;
-        private long clearSequence;
+        private long nextInputSequence;
+        private long lastSentInputSequence = -1;
+        private long lastAcknowledgedInputSequence = -1;
+        private long lastResendStopwatchTicks;
+        private int desiredHeld;
+        private int disposing;
+        private int disposed;
 
         public AuthoritativeCaptureSession(Uri uri, string accessToken, string attemptId, bool debug)
         {
@@ -476,12 +483,16 @@ namespace Chainbound.Combat
                 throw new InvalidOperationException("Capture stream attempt id did not match the requested attempt.");
         }
 
-        public async Task SetHeldAsync(bool held, long inputSequence, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task ArmAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            ObserveInputSequence(inputSequence);
-            if (socket.State != WebSocketState.Open)
+            if (challenge != null && challenge.DeadlineUnixMilliseconds > 0)
                 return;
-            string json = JsonUtility.ToJson(new InputDto { sequence = inputSequence, held = held });
+            if (completion.Task.IsCompleted)
+                return;
+            if (socket.State != WebSocketState.Open)
+                throw new InvalidOperationException("Capture stream closed before the attempt could start.");
+
+            string json = JsonUtility.ToJson(new InputDto { sequence = 0, held = false, arm = true });
             byte[] bytes = Encoding.UTF8.GetBytes(json);
             await sendGate.WaitAsync(cancellationToken);
             try
@@ -492,28 +503,52 @@ namespace Chainbound.Combat
             {
                 sendGate.Release();
             }
+
+            await Task.WhenAny(armedReady.Task, completion.Task);
+        }
+
+        public async Task SetHeldAsync(bool held, long inputSequence, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            // The session, rather than any UI surface, owns the wire sequence.
+            // Clear/focus events otherwise race controller-local counters and can
+            // leave every later hold message stale from the server's perspective.
+            _ = inputSequence;
+            Volatile.Write(ref desiredHeld, held ? 1 : 0);
+            await SendHeldAsync(held, cancellationToken);
+        }
+
+        private async Task SendHeldAsync(bool held, CancellationToken cancellationToken)
+        {
+            if (Volatile.Read(ref disposed) != 0 || socket.State != WebSocketState.Open || completion.Task.IsCompleted)
+                return;
+            long sequence = Interlocked.Increment(ref nextInputSequence);
+            Interlocked.Exchange(ref lastSentInputSequence, sequence);
+            string json = JsonUtility.ToJson(new InputDto { sequence = sequence, held = held });
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            await sendGate.WaitAsync(cancellationToken);
+            try
+            {
+                if (Volatile.Read(ref disposed) != 0 || socket.State != WebSocketState.Open || completion.Task.IsCompleted)
+                    return;
+                await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
+            }
+            finally
+            {
+                sendGate.Release();
+            }
         }
 
         public void ClearHeldInput()
         {
-            _ = SetHeldAsync(false, Interlocked.Increment(ref clearSequence), CancellationToken.None);
-        }
-
-        private void ObserveInputSequence(long inputSequence)
-        {
-            long observed = Interlocked.Read(ref clearSequence);
-            while (inputSequence > observed)
-            {
-                long exchanged = Interlocked.CompareExchange(ref clearSequence, inputSequence, observed);
-                if (exchanged == observed)
-                    return;
-                observed = exchanged;
-            }
+            _ = SetHeldAsync(false, 0, CancellationToken.None);
         }
 
         public void Dispose()
         {
+            if (Interlocked.Exchange(ref disposing, 1) != 0)
+                return;
             ClearHeldInput();
+            Interlocked.Exchange(ref disposed, 1);
             lifetime.Cancel();
             socket.Dispose();
             lifetime.Dispose();
@@ -542,9 +577,17 @@ namespace Chainbound.Combat
                         CaptureChallengeSnapshot mapped = message.challenge.ToCore();
                         challengeReady.TrySetResult(mapped);
                     }
+                    else if (string.Equals(message.type, "armed", StringComparison.Ordinal))
+                    {
+                        if (challenge != null && message.deadlineUnixMilliseconds > 0)
+                            challenge.DeadlineUnixMilliseconds = message.deadlineUnixMilliseconds;
+                        armedReady.TrySetResult(message.deadlineUnixMilliseconds);
+                    }
                     else if (string.Equals(message.type, "snapshot", StringComparison.Ordinal))
                     {
                         latestState = message.state.ToCore();
+                        Interlocked.Exchange(ref lastAcknowledgedInputSequence, latestState.LastInputSequence);
+                        TryResendUnacknowledgedHeldState(latestState);
                         SnapshotReceived?.Invoke(latestState);
                     }
                     else if (string.Equals(message.type, "outcome", StringComparison.Ordinal))
@@ -571,10 +614,35 @@ namespace Chainbound.Combat
             }
         }
 
-        [Serializable] private sealed class InputDto { public long sequence; public bool held; }
+        private void TryResendUnacknowledgedHeldState(CaptureAuthoritativeState state)
+        {
+            if (state == null || completion.Task.IsCompleted || socket.State != WebSocketState.Open)
+                return;
+
+            long sent = Interlocked.Read(ref lastSentInputSequence);
+            long acknowledged = Interlocked.Read(ref lastAcknowledgedInputSequence);
+            bool held = Volatile.Read(ref desiredHeld) != 0;
+            if (sent <= acknowledged || state.IsHeld == held)
+                return;
+
+            long now = System.Diagnostics.Stopwatch.GetTimestamp();
+            long previous = Interlocked.Read(ref lastResendStopwatchTicks);
+            if (previous != 0 && (now - previous) * 1000L < System.Diagnostics.Stopwatch.Frequency / 4)
+                return;
+            Interlocked.Exchange(ref lastResendStopwatchTicks, now);
+            if (debug)
+                Debug.LogWarning($"[AuthoritativeCaptureSession] Re-sending capture input; server acknowledged {acknowledged}, latest sent {sent}, held={held}.");
+            _ = SetHeldAsync(held, 0, CancellationToken.None);
+        }
+
+        [Serializable] private sealed class InputDto { public long sequence; public bool held; public bool arm; }
         [Serializable] private sealed class StreamMessageDto
         {
-            public string type; public ChallengeDto challenge; public StateDto state; public OutcomeDto outcome;
+            public string type;
+            public long deadlineUnixMilliseconds;
+            public ChallengeDto challenge;
+            public StateDto state;
+            public OutcomeDto outcome;
         }
         [Serializable] private sealed class ChallengeDto
         {
@@ -628,11 +696,13 @@ namespace Chainbound.Combat
         {
             public string attemptId; public int version, tick, targetPositionUnits, bandPositionUnits,
                 meterBasisPoints, remainingTicks, outcome;
+            public long lastInputSequence;
             public bool isHeld, isInsideBand, spikeOccurred;
             public CaptureAuthoritativeState ToCore() => new CaptureAuthoritativeState
             {
                 AttemptId = attemptId, Version = version, Tick = tick, TargetPositionUnits = targetPositionUnits,
                 BandPositionUnits = bandPositionUnits, MeterBasisPoints = meterBasisPoints, RemainingTicks = remainingTicks,
+                LastInputSequence = lastInputSequence,
                 IsHeld = isHeld, IsInsideBand = isInsideBand, SpikeOccurred = spikeOccurred, Outcome = (CaptureOutcomeKind)outcome,
             };
         }

@@ -253,6 +253,14 @@ namespace Chainbound.Combat.Core
         public List<string> UnlockedAchievementIds { get; set; } = new List<string>();
 
         public bool IsFinal => Kind != CaptureOutcomeKind.None;
+        /// <summary>
+        /// The authority did not commit a terminal capture result. Presentation
+        /// must preserve the battle for rejoin/retry rather than showing a
+        /// normal escape or timeout result.
+        /// </summary>
+        public bool RequiresAuthorityRecovery =>
+            Kind == CaptureOutcomeKind.Rejected ||
+            Kind == CaptureOutcomeKind.Interrupted;
         public bool RemovesTargetFromBattle =>
             Kind == CaptureOutcomeKind.Locked ||
             Kind == CaptureOutcomeKind.Escaped;
@@ -268,6 +276,12 @@ namespace Chainbound.Combat.Core
         public int BandPositionUnits { get; set; }
         public int MeterBasisPoints { get; set; }
         public int RemainingTicks { get; set; }
+        /// <summary>
+        /// Last hold/release input sequence accepted by the capture authority.
+        /// This lets clients detect a dropped hold transition without trusting
+        /// their local prediction as terminal state.
+        /// </summary>
+        public long LastInputSequence { get; set; } = -1;
         public bool IsHeld { get; set; }
         public bool IsInsideBand { get; set; }
         public bool SpikeOccurred { get; set; }
@@ -337,6 +351,7 @@ namespace Chainbound.Combat.Core
         Task<CaptureOutcome> Completion { get; }
         event Action<CaptureAuthoritativeState> SnapshotReceived;
         Task SetHeldAsync(bool held, long inputSequence, CancellationToken cancellationToken = default(CancellationToken));
+        Task ArmAsync(CancellationToken cancellationToken = default(CancellationToken));
         void ClearHeldInput();
     }
 

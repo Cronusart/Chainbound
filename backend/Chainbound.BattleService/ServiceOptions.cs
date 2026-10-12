@@ -16,6 +16,7 @@ public sealed class ServiceOptions
     public TimeSpan BattleRewardRetryCooldown { get; init; } = TimeSpan.FromSeconds(ReadInt("BATTLE_REWARD_RETRY_COOLDOWN_SECONDS", 5, 1, 60));
     public bool AuthoritativePveCaptureEnabled { get; init; } = ReadBool("AUTHORITATIVE_PVE_CAPTURE_ENABLED", false);
     public TimeSpan BattleResumeWindow { get; init; } = TimeSpan.FromMinutes(5);
+    public TimeSpan CaptureArmGrace { get; init; } = TimeSpan.FromSeconds(20);
     public TimeSpan MaximumTimeExtrapolation { get; init; } = TimeSpan.FromMinutes(10);
     public TimeSpan DisconnectedHoldRetention { get; init; } = TimeSpan.FromMilliseconds(250);
     public int CorrectionRateHz { get; init; } = 10;

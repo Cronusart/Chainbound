@@ -16,6 +16,8 @@ public sealed class SupabaseAuthorityGateway
         _options = options;
     }
 
+    private bool RewardsOff => string.Equals(_options.BattleRewardMode, "off", StringComparison.Ordinal);
+
     public async Task<AuthenticatedProfile> AuthenticateAsync(string authorizationHeader, CancellationToken cancellationToken)
     {
         if (!_options.HasAuthoritySecrets)
@@ -130,6 +132,26 @@ public sealed class SupabaseAuthorityGateway
 
     public async Task<JsonElement> BeginBattleAsync(BattleSessionRecord session, CancellationToken cancellationToken)
     {
+        // Devnet still has the pre-reward begin function. Extra JSON keys make
+        // PostgREST reject the call, so a reward-off deployment sends only the
+        // arguments that function accepts.
+        if (RewardsOff)
+        {
+            return await RpcAsync("authoritative_begin_battle_service", new Dictionary<string, object?>
+            {
+                ["p_battle_id"] = session.BattleId,
+                ["p_profile_id"] = session.ProfileId,
+                ["p_start_command_id"] = session.StartCommandId,
+                ["p_battle_kind"] = ToBattleKind(session.State.BattleKind),
+                ["p_seed"] = (long)session.Seed,
+                ["p_manifest_hash"] = session.ManifestHash,
+                ["p_config_hash"] = session.ConfigHash,
+                ["p_state_json"] = session.State,
+                ["p_equipment_snapshot"] = session.LockedLoadout,
+                ["p_expires_at_unix_milliseconds"] = session.ExpiresAtUnixMilliseconds,
+            }, cancellationToken);
+        }
+
         bool noReward = string.Equals(session.RewardTier, BattleRewardTier.None, StringComparison.Ordinal);
         return await RpcAsync("authoritative_begin_battle_service", new
         {
@@ -155,6 +177,11 @@ public sealed class SupabaseAuthorityGateway
         ManifestEncounter encounter,
         CancellationToken cancellationToken)
     {
+        // Reward history is not part of battle-start authorization. When the
+        // deployment has rewards disabled, no receipt can be created and the
+        // receipt table is intentionally allowed to be absent.
+        if (string.Equals(_options.BattleRewardMode, "off", StringComparison.Ordinal))
+            return false;
         if (encounter.BattleKind == AuthoritativeBattleKind.Wild)
             return true;
         if (string.IsNullOrWhiteSpace(encounter.RewardEligibilityQuestId))
@@ -207,6 +234,20 @@ public sealed class SupabaseAuthorityGateway
         string terminalReason,
         CancellationToken cancellationToken)
     {
+        if (RewardsOff)
+        {
+            return await RpcAsync("authoritative_settle_battle_service", new Dictionary<string, object?>
+            {
+                ["p_battle_id"] = session.BattleId,
+                ["p_profile_id"] = session.ProfileId,
+                ["p_authority_unix_milliseconds"] = authorityUnixMilliseconds,
+                ["p_ram_penalty"] = ramPenalty,
+                ["p_respawn_hp_basis_points"] = respawnHpBasisPoints,
+                ["p_end_reason"] = endReason,
+                ["p_require_expired"] = requireExpired,
+            }, cancellationToken);
+        }
+
         return await RpcAsync("authoritative_settle_battle_service", new
         {
             p_battle_id = session.BattleId,
@@ -221,6 +262,19 @@ public sealed class SupabaseAuthorityGateway
         }, cancellationToken);
     }
 
+    public async Task<JsonElement> DismissScriptedBattleAsync(
+        BattleSessionRecord session,
+        long authorityUnixMilliseconds,
+        CancellationToken cancellationToken)
+    {
+        return await RpcAsync("authoritative_dismiss_scripted_battle_service", new
+        {
+            p_battle_id = session.BattleId,
+            p_profile_id = session.ProfileId,
+            p_authority_unix_milliseconds = authorityUnixMilliseconds,
+        }, cancellationToken);
+    }
+
     public async Task<JsonElement> CommitActionStepAsync(
         BattleSessionRecord session,
         TeamCommandApiRequest command,
@@ -232,6 +286,22 @@ public sealed class SupabaseAuthorityGateway
         string terminalReason,
         CancellationToken cancellationToken)
     {
+        if (RewardsOff)
+        {
+            return await RpcAsync("authoritative_commit_action_step_service", new Dictionary<string, object?>
+            {
+                ["p_battle_id"] = session.BattleId,
+                ["p_profile_id"] = session.ProfileId,
+                ["p_command_id"] = command.CommandId,
+                ["p_expected_version"] = command.ExpectedVersion,
+                ["p_new_state_version"] = nextVersion,
+                ["p_new_status"] = nextStatus,
+                ["p_new_state_json"] = nextState,
+                ["p_request_json"] = command,
+                ["p_expires_at_unix_milliseconds"] = expiresAtUnixMilliseconds,
+            }, cancellationToken);
+        }
+
         return await RpcAsync("authoritative_commit_action_step_service", new
         {
             p_battle_id = session.BattleId,
@@ -424,10 +494,16 @@ public sealed class SupabaseAuthorityGateway
         int fallbackIndex = 0;
         foreach (JsonElement row in json.RootElement.EnumerateArray())
         {
-            int rosterIndex = row.TryGetProperty("party_slot", out JsonElement slot) && slot.TryGetInt32(out int parsedSlot)
+            int rosterIndex = row.TryGetProperty("party_slot", out JsonElement slot) &&
+                slot.ValueKind == JsonValueKind.Number &&
+                slot.TryGetInt32(out int parsedSlot)
                 ? parsedSlot
                 : fallbackIndex;
-            int currentHp = row.TryGetProperty("current_hp", out JsonElement hp) && hp.TryGetInt32(out int parsedHp)
+            // A NULL current_hp means the profile has never persisted damage. Preserve the
+            // shared -1 sentinel so combat hydration resolves it to the Chainling's full HP.
+            int currentHp = row.TryGetProperty("current_hp", out JsonElement hp) &&
+                hp.ValueKind == JsonValueKind.Number &&
+                hp.TryGetInt32(out int parsedHp)
                 ? Math.Max(0, parsedHp)
                 : -1;
             result.Add(new CombatVitalSnapshot
@@ -578,12 +654,20 @@ public sealed class SupabaseAuthorityGateway
 
     private static int ReadInt(JsonElement parent, string property)
     {
-        return parent.TryGetProperty(property, out JsonElement value) && value.TryGetInt32(out int parsed) ? parsed : 0;
+        return parent.TryGetProperty(property, out JsonElement value) &&
+            value.ValueKind == JsonValueKind.Number &&
+            value.TryGetInt32(out int parsed)
+            ? parsed
+            : 0;
     }
 
     private static long ReadLong(JsonElement parent, string property)
     {
-        return parent.TryGetProperty(property, out JsonElement value) && value.TryGetInt64(out long parsed) ? parsed : 0L;
+        return parent.TryGetProperty(property, out JsonElement value) &&
+            value.ValueKind == JsonValueKind.Number &&
+            value.TryGetInt64(out long parsed)
+            ? parsed
+            : 0L;
     }
 
     private static long? ReadOptionalTimestampMilliseconds(JsonElement parent, string property)

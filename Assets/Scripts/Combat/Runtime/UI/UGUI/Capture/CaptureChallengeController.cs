@@ -128,6 +128,15 @@ namespace Chainbound.Combat
                     ? clientStepped.Step(sentHeld)
                     : CaptureSimulation.Step(predicted, challenge.Parameters, sentHeld);
                 predicted = result.State;
+                if (clientStepped == null && predicted.Outcome != CaptureOutcomeKind.None)
+                {
+                    // The stream authority alone is allowed to lock, escape, or
+                    // time out an online attempt. A locally predicted terminal
+                    // state can otherwise freeze presentation while the server
+                    // continues simulating a different held state.
+                    predicted.Outcome = CaptureOutcomeKind.None;
+                    predicted.MeterBasisPoints = Mathf.Clamp(predicted.MeterBasisPoints, 1, 9999);
+                }
                 PresentCrossing(result.EnteredBand, result.LeftBand, result.SpikeOccurred);
                 graph?.PushSample(
                     predicted.TargetPositionUnits,
@@ -424,6 +433,8 @@ namespace Chainbound.Combat
 
             if (outcome != null && outcome.Kind == CaptureOutcomeKind.Locked)
                 UiHapticsService.Instance?.TriggerCaptureSuccess();
+            else if (outcome != null && outcome.RequiresAuthorityRecovery)
+                UiHapticsService.Instance?.TriggerWarning();
             else
                 UiHapticsService.Instance?.TriggerCaptureFailure();
 
@@ -441,9 +452,10 @@ namespace Chainbound.Combat
             bool entered = renderedAuthority != null && !renderedAuthority.IsInsideBand && state.IsInsideBand;
             bool left = renderedAuthority != null && renderedAuthority.IsInsideBand && !state.IsInsideBand;
             renderedAuthority = state;
-            // Equal/older snapshots can arrive after a local recapture and freeze lock gain.
-            // Only hitch-catch when authority is strictly ahead of prediction.
-            if (predicted != null && state.Tick > predicted.Tick)
+            // Remote snapshots are the source of truth. They may be a few ticks
+            // behind local rendering, but skipping them permits an unacknowledged
+            // local hold to become a phantom terminal capture.
+            if (predicted != null)
             {
                 predicted.Tick = state.Tick;
                 predicted.TargetPositionUnits = state.TargetPositionUnits;
@@ -452,8 +464,7 @@ namespace Chainbound.Combat
                 predicted.MeterRemainder = 0;
                 predicted.IsInsideBand = state.IsInsideBand;
                 predicted.IsHeld = state.IsHeld;
-                if (state.Outcome != CaptureOutcomeKind.None)
-                    predicted.Outcome = state.Outcome;
+                predicted.Outcome = state.Outcome;
             }
             PresentCrossing(entered, left, state.SpikeOccurred);
         }

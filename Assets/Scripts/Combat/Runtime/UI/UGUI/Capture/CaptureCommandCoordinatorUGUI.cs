@@ -27,6 +27,7 @@ namespace Chainbound.Combat
         [SerializeField] private CaptureBalanceConfigSO practiceBalance;
         [SerializeField] private CombatVisualDatabaseSO visualDatabase;
         [SerializeField] private CaptureAttemptDirector attemptDirector;
+        private MonoBehaviour capturePortraitPresenterBehaviour;
         private string capturedDisplayName;
         private string capturedNameSaveWarning = "";
 
@@ -50,6 +51,7 @@ namespace Chainbound.Combat
         private readonly Dictionary<string, int> practiceAlertness = new Dictionary<string, int>(StringComparer.Ordinal);
         private bool practicePreviewLock;
         private float practicePreviewPanelHoldSeconds = 0.7f;
+        private string lastOrbInventoryError = string.Empty;
 
         /// <summary>
         /// Editor preview only. A practice attempt opens the capture panel, then locks
@@ -108,7 +110,7 @@ namespace Chainbound.Combat
 
             if (authority == null)
                 authority = FindFirstObjectByType<AuthoritativeCombatSessionService>(FindObjectsInactive.Include);
-            if (authority != null && authority.IsRolloutEnabled)
+            if (IsAuthoritativeSessionActive())
             {
                 if (!AuthoritativeBattleLaunchContext.TryReadState(out AuthoritativeClientBattleState serverState))
                     return false;
@@ -131,6 +133,18 @@ namespace Chainbound.Combat
 #else
             return false;
 #endif
+        }
+
+        public static bool ShouldUseAuthoritativeSession(bool rolloutEnabled, bool hasBoundSession)
+        {
+            return rolloutEnabled && hasBoundSession;
+        }
+
+        private bool IsAuthoritativeSessionActive()
+        {
+            return ShouldUseAuthoritativeSession(
+                authority != null && authority.IsRolloutEnabled,
+                AuthoritativeBattleLaunchContext.Current != null);
         }
 
         public bool BeginSelection(
@@ -243,6 +257,61 @@ namespace Chainbound.Combat
             yield return StartAttemptRoutine(orb);
         }
 
+        /// <summary>
+        /// Reopens an already accepted server attempt after a battle-scene resume. This does
+        /// not submit another capture command or consume another Orb; it only reconnects to
+        /// the attempt identified by the authoritative session snapshot.
+        /// </summary>
+        public IEnumerator ResumeAuthoritativeAttempt(
+            CombatState state,
+            EncounterSnapshot currentEncounter,
+            Action<string, CaptureOutcome, bool> onOutcome)
+        {
+            ResolveReferences();
+            if (IsSelecting || !IsAuthoritativeSessionActive() ||
+                !AuthoritativeBattleLaunchContext.TryReadState(out AuthoritativeClientBattleState serverState) ||
+                !string.Equals(serverState.phase, "capturing", StringComparison.Ordinal) ||
+                serverState.captureChallenge == null ||
+                string.IsNullOrWhiteSpace(serverState.captureChallenge.attemptId))
+            {
+                yield break;
+            }
+
+            combatState = state;
+            encounter = currentEncounter;
+            queuedCallback = null;
+            outcomeCallback = onOutcome;
+            canceledCallback = null;
+            attemptAccepted = true;
+            selecting = true;
+
+            // The client envelope intentionally exposes only the attempt id. Resolve the active
+            // target from that same authoritative snapshot rather than assuming a local instance
+            // id survived a scene reload.
+            string targetId = ResolveCaptureTargetId(serverState.captureChallenge.attemptId);
+            selectedTarget = FindTargetByAuthorityId(targetId);
+
+            if (selectedTarget == null || selectedTarget.LocalTarget == null || !selectedTarget.LocalTarget.isAlive)
+            {
+                ResetQueuedAttemptWithoutStarting();
+                yield break;
+            }
+
+            Task<ICaptureSession> open = OpenExistingAuthoritativeSessionAsync(serverState.captureChallenge.attemptId);
+            while (!open.IsCompleted)
+                yield return null;
+
+            if (open.IsFaulted || open.IsCanceled || open.Result == null)
+            {
+                ResolveAttemptDirector()?.Abort();
+                ResetQueuedAttemptWithoutStarting();
+                yield break;
+            }
+
+            SetPickerVisible(false);
+            yield return PlayAttemptPresentation(open.Result, practice: false);
+        }
+
         public void AbortSelection()
         {
             if (attemptAccepted)
@@ -283,7 +352,11 @@ namespace Chainbound.Combat
             if (orbs.Count == 0)
             {
                 if (pickerStatus != null)
-                    pickerStatus.text = "No compatible Orbs are available. Press B to choose another target.";
+                {
+                    pickerStatus.text = !string.IsNullOrWhiteSpace(lastOrbInventoryError)
+                        ? "Orb inventory is unavailable. Press B and try again."
+                        : "No compatible Orbs are available. Press B to choose another target.";
+                }
                 ClearChoiceButtons();
                 ShowOrbDetails(null, animate: false);
                 SetChoiceInteractable(true);
@@ -313,7 +386,7 @@ namespace Chainbound.Combat
             if (pickerStatus != null)
                 pickerStatus.text = "Synchronizing capture signal...";
 
-            bool practice = authority == null || !authority.IsRolloutEnabled;
+            bool practice = !IsAuthoritativeSessionActive();
             ICaptureSession captureSession = null;
             Exception error = null;
             if (!practice)
@@ -399,6 +472,16 @@ namespace Chainbound.Combat
             return await authority.OpenCaptureSessionAsync(updated.BattleId, serverState.captureChallenge.attemptId);
         }
 
+        private async Task<ICaptureSession> OpenExistingAuthoritativeSessionAsync(string attemptId)
+        {
+            CombatSessionEnvelope active = AuthoritativeBattleLaunchContext.Current;
+            if (active == null || string.IsNullOrWhiteSpace(active.BattleId))
+                throw new InvalidOperationException("The authoritative battle session is not bound.");
+            if (authority == null)
+                throw new InvalidOperationException("The capture authority is unavailable.");
+            return await authority.OpenCaptureSessionAsync(active.BattleId, attemptId);
+        }
+
         private IEnumerator PlayAttemptPresentation(ICaptureSession captureSession, bool practice)
         {
             CaptureAttemptDirector director = ResolveAttemptDirector();
@@ -426,6 +509,29 @@ namespace Chainbound.Combat
             challengeController?.PrepareFreshAttempt();
             if (challengeController != null)
                 yield return challengeController.PlayOpen();
+
+            if (captureSession.Challenge != null && captureSession.Challenge.DeadlineUnixMilliseconds <= 0)
+            {
+                Task arm = captureSession.ArmAsync();
+                while (!arm.IsCompleted)
+                    yield return null;
+                if (arm.IsFaulted || arm.IsCanceled)
+                {
+                    director?.Abort();
+                    yield return RestoreChainlingHudAfterCapture();
+                    attemptAccepted = false;
+                    selecting = false;
+                    Exception exception = arm.Exception != null
+                        ? arm.Exception.GetBaseException()
+                        : new InvalidOperationException("Capture attempt failed to start.");
+                    if (pickerStatus != null)
+                        pickerStatus.text = exception.Message;
+                    SetChoiceInteractable(true);
+                    UiHapticsService.Instance?.TriggerWarning();
+                    yield break;
+                }
+            }
+
             director?.BeginChallengeAudio(challengeController);
 
             if (challengeController == null)
@@ -459,10 +565,39 @@ namespace Chainbound.Combat
                 yield break;
             }
 
-            if (outcome != null && outcome.Kind == CaptureOutcomeKind.Locked)
+            if (outcome == null || outcome.RequiresAuthorityRecovery)
+                yield return AbortAfterAuthorityInterruption(outcome, practice, introTarget);
+            else if (outcome.Kind == CaptureOutcomeKind.Locked)
                 yield return FinishLockedOutcome(outcome, practice, introTarget);
             else
                 yield return FinishAfterOutcomeDelay(outcome, practice, introTarget);
+        }
+
+        private IEnumerator AbortAfterAuthorityInterruption(
+            CaptureOutcome outcome,
+            bool practice,
+            string localTarget)
+        {
+            // An interrupted/rejected authoritative attempt is not an escaped
+            // target. Do not play the failure result or conclude the local
+            // battle; the controller will gate actions and offer the stored
+            // session's normal rejoin/forfeit recovery path.
+            ResolveAttemptDirector()?.Abort();
+            challengeController?.Close();
+            SetChallengeRootActive(false);
+            yield return RestoreChainlingHudAfterCapture();
+
+            selecting = false;
+            attemptAccepted = false;
+            Action<string, CaptureOutcome, bool> callback = outcomeCallback;
+            ClearCallbacks();
+            callback?.Invoke(localTarget, outcome ?? new CaptureOutcome
+            {
+                Kind = CaptureOutcomeKind.Interrupted,
+                ErrorCode = "capture_missing_outcome",
+                Message = "Capture authority returned no terminal result.",
+                BattleContinues = true,
+            }, practice);
         }
 
         private IEnumerator FinishLockedOutcome(CaptureOutcome outcome, bool practice, string localTarget)
@@ -477,6 +612,7 @@ namespace Chainbound.Combat
             }
             SetChallengeRootActive(false);
             string fallbackName = selectedTarget != null ? selectedTarget.DisplayName : "Chainling";
+            yield return PresentCapturePortrait(ResolveCapturedSpeciesName(fallbackName));
             capturedDisplayName = null;
             capturedNameSaveWarning = "";
             string profileId = GameSessionContext.Instance != null
@@ -492,8 +628,8 @@ namespace Chainbound.Combat
             }
 
             // The book page is part of the capture reveal in every mode. Authoritative
-            // captures hydrate the server row; practice (editor) captures and grants whose
-            // id has not arrived show the rolled target instead so the flow stays visible.
+            // captures hydrate the server row. Practice captures and grants whose id has
+            // not arrived show the one equipped known move, not the wild fight kit.
             ICaptureDossierPresenter dossierPresenter = ResolveCaptureDossierPresenter();
             if (dossierPresenter != null)
             {
@@ -694,9 +830,38 @@ namespace Chainbound.Combat
             yield return RestoreChainlingHudAfterCapture();
             selecting = false;
             attemptAccepted = false;
+
+            // Capture finalization advances the authoritative battle version. Refresh before
+            // combat resumes so the next action cannot replay the stale `capturing` version.
+            if (!practice)
+                yield return RefreshAuthoritativeBattleAfterAttempt();
+
             Action<string, CaptureOutcome, bool> callback = outcomeCallback;
             ClearCallbacks();
             callback?.Invoke(localTarget, outcome, practice);
+        }
+
+        private IEnumerator RefreshAuthoritativeBattleAfterAttempt()
+        {
+            if (authority == null)
+                yield break;
+            CombatSessionEnvelope active = AuthoritativeBattleLaunchContext.Current;
+            if (active == null || string.IsNullOrWhiteSpace(active.BattleId))
+                yield break;
+
+            Task<CombatSessionEnvelope> refresh = authority.ResumeEncounterAsync(active.BattleId);
+            while (!refresh.IsCompleted)
+                yield return null;
+
+            if (!refresh.IsFaulted && !refresh.IsCanceled && refresh.Result != null)
+            {
+                AuthoritativeBattleLaunchContext.Publish(refresh.Result);
+                yield break;
+            }
+
+            Debug.LogWarning(
+                "[CaptureCommandCoordinatorUGUI] Capture finalization succeeded but the battle snapshot could not be refreshed.",
+                this);
         }
 
         private CaptureAttemptDirector ResolveAttemptDirector()
@@ -915,7 +1080,7 @@ namespace Chainbound.Combat
                 ? combatState.team1.GetActiveChainlings()
                 : new List<ChainlingInstance>();
 
-            if (authority != null && authority.IsRolloutEnabled &&
+            if (IsAuthoritativeSessionActive() &&
                 AuthoritativeBattleLaunchContext.TryReadState(out AuthoritativeClientBattleState server))
             {
                 int localIndex = 0;
@@ -955,13 +1120,27 @@ namespace Chainbound.Combat
         private async Task<List<CaptureOrbChoice>> ResolveOrbChoicesAsync(bool targetEntangled)
         {
             var result = new List<CaptureOrbChoice>();
+            lastOrbInventoryError = string.Empty;
             IInventoryService inventory = ResolveInventoryService();
             InventorySnapshot snapshot = null;
             if (inventory != null)
             {
                 string profile = GameSessionContext.Instance != null ? GameSessionContext.Instance.PlayerProfileId : "";
                 string wallet = GameSessionContext.Instance != null ? GameSessionContext.Instance.WalletAddress : "";
-                snapshot = await inventory.FetchInventoryAsync(profile, wallet);
+                try
+                {
+                    snapshot = await PlayerProfileReadStore.ResolveOrCreate().RefreshInventoryAsync(inventory, profile, wallet);
+                    lastOrbInventoryError = snapshot != null ? snapshot.lastError ?? string.Empty : "inventory_snapshot_missing";
+                }
+                catch (Exception exception)
+                {
+                    lastOrbInventoryError = exception.Message;
+                    Debug.LogWarning($"[CaptureCommandCoordinator] Orb inventory fetch failed: {exception.Message}", this);
+                }
+            }
+            else
+            {
+                lastOrbInventoryError = "inventory_service_missing";
             }
 
             if (snapshot != null && snapshot.stacks != null)
@@ -985,7 +1164,8 @@ namespace Chainbound.Combat
             }
 
 #if UNITY_EDITOR || UNITY_INCLUDE_TESTS
-            if ((authority == null || !authority.IsRolloutEnabled) && result.Count == 0)
+            if (!IsAuthoritativeSessionActive() && result.Count == 0)
+            {
                 result.Add(new CaptureOrbChoice
                 {
                     ItemId = "signal_orb",
@@ -993,14 +1173,61 @@ namespace Chainbound.Combat
                     Quantity = 1,
                     Description = "Neutral capture band and lock profile.",
                 });
+                lastOrbInventoryError = string.Empty;
+            }
 #endif
             return result;
         }
 
         private IInventoryService ResolveInventoryService()
         {
+            bool authoritativeSession = IsAuthoritativeSessionActive();
             if (inventoryServiceBehaviour is IInventoryService assigned)
-                return assigned;
+            {
+                bool sandboxOnly = assigned is IChainlingsMenuTestHarness || assigned is StubPlayerItemInventory;
+                if (!authoritativeSession || !sandboxOnly)
+                    return assigned;
+                inventoryServiceBehaviour = null;
+            }
+
+#if UNITY_EDITOR || UNITY_INCLUDE_TESTS
+            if (!authoritativeSession)
+            {
+                ChainlingsMenuTestHarness harness = FindFirstObjectByType<ChainlingsMenuTestHarness>(FindObjectsInactive.Include);
+                if (harness != null)
+                {
+                    inventoryServiceBehaviour = harness;
+                    return harness;
+                }
+            }
+#endif
+
+            // Production grants and reads share the persistent Core bag under GameServices.
+            // Prefer that explicit implementation instead of accepting scene enumeration order.
+            CoreBagItemInventoryService core = FindFirstObjectByType<CoreBagItemInventoryService>(FindObjectsInactive.Include);
+            if (core != null)
+            {
+                inventoryServiceBehaviour = core;
+                return core;
+            }
+
+#if UNITY_EDITOR || UNITY_INCLUDE_TESTS
+            // The editor pickup stub owns both sides of its in-memory bag.
+            StubPlayerItemInventory stub = FindFirstObjectByType<StubPlayerItemInventory>(FindObjectsInactive.Include);
+            if (stub != null)
+            {
+                inventoryServiceBehaviour = stub;
+                return stub;
+            }
+#endif
+
+            if (authoritativeSession && Application.isPlaying)
+            {
+                core = CoreBagItemInventoryService.EnsureInstance();
+                inventoryServiceBehaviour = core;
+                return core;
+            }
+
             MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             for (int i = 0; i < behaviours.Length; i++)
             {
@@ -1015,7 +1242,7 @@ namespace Chainbound.Combat
 
         private async Task<bool> CanStartAuthoritativeCaptureAsync()
         {
-            if (authority == null || !authority.IsRolloutEnabled)
+            if (!IsAuthoritativeSessionActive())
                 return true;
 
             if (pickerStatus != null)
@@ -1031,7 +1258,10 @@ namespace Chainbound.Combat
 
             try
             {
-                PlayerRosterSnapshot roster = await provider.FetchRosterAsync(session.PlayerProfileId, session.WalletAddress);
+                PlayerRosterSnapshot roster = await PlayerProfileReadStore.ResolveOrCreate().RefreshRosterAsync(
+                    provider,
+                    session.PlayerProfileId,
+                    session.WalletAddress);
                 if (roster == null)
                 {
                     ShowCaptureCapacityBlocked("Capture capacity could not be verified. Try again.");
@@ -1090,8 +1320,8 @@ namespace Chainbound.Combat
 
         /// <summary>
         /// Builds the page data for a capture that has no server row to hydrate. The
-        /// rolled encounter snapshot is preferred (it carries the Known move and visual
-        /// identity); the live battle instance fills HP and the display name.
+        /// rolled encounter snapshot supplies the Known move and visual identity. The
+        /// live battle instance fills HP and the display name. The fight kit is not copied.
         /// </summary>
         private ChainlingSnapshot BuildLocalDossierSnapshot(string fallbackName)
         {
@@ -1127,7 +1357,6 @@ namespace Chainbound.Combat
                 mutationId = source != null ? source.mutationId : "",
                 isEntangled = target.isEntangled,
                 entangledType = target.isEntangled ? target.entangledType : ChainlingType.None,
-                knownMoveId = source != null ? source.knownMoveId : "",
                 legacyBaseCaptureRate = target.legacyBaseCaptureRate,
                 hasCaptureProfile = target.hasCaptureProfile,
                 captureProfile = target.captureProfile,
@@ -1143,27 +1372,69 @@ namespace Chainbound.Combat
                     : new int[CombatConstants.STAT_COUNT],
             };
 
-            if (source?.moveIds != null && source.moveIds.Count > 0)
+            CaptureDossierLoadout.ApplyOwnedMove(snapshot, source);
+            return snapshot;
+        }
+
+        private IEnumerator PresentCapturePortrait(string speciesName)
+        {
+            ICaptureSuccessPortraitPresenter presenter = ResolveCapturePortraitPresenter();
+            if (presenter == null)
+                yield break;
+
+            ChainlingInstance target = selectedTarget != null ? selectedTarget.LocalTarget : null;
+            CombatVisualProfileSO profile = null;
+            if (target != null)
             {
-                snapshot.moveIds = new List<string>(source.moveIds);
-                snapshot.modifier1SectionIds = source.modifier1SectionIds != null
-                    ? new List<string>(source.modifier1SectionIds)
-                    : new List<string>();
-                snapshot.modifier2SectionIds = source.modifier2SectionIds != null
-                    ? new List<string>(source.modifier2SectionIds)
-                    : new List<string>();
+                CombatVisualDatabaseSO database = ResolveVisualDatabase();
+                ChainlingVisualIdentity identity = ChainlingVisualIdentity.CloneOrDefault(target.visualIdentity);
+                ChainlingType entangled = target.isEntangled ? target.entangledType : ChainlingType.None;
+                if (database != null)
+                    profile = database.GetProfile(target.speciesId, identity.visualVariantId, entangled);
             }
-            else if (target.moves != null)
+
+            yield return presenter.Present(new CaptureSuccessPortraitRequest
             {
-                for (int i = 0; i < target.moves.Count; i++)
+                speciesDisplayName = speciesName,
+                visualProfile = profile,
+                fallbackSprite = profile != null ? profile.portrait : null,
+            });
+        }
+
+        private string ResolveCapturedSpeciesName(string fallbackName)
+        {
+            ChainlingInstance target = selectedTarget != null ? selectedTarget.LocalTarget : null;
+            if (target != null)
+            {
+                CombatBattleController battle = FindFirstObjectByType<CombatBattleController>();
+                SpeciesDefinitionSO species = battle != null && battle.SpeciesDatabase != null
+                    ? battle.SpeciesDatabase.GetById(target.speciesId)
+                    : null;
+                if (species != null && !string.IsNullOrWhiteSpace(species.displayName))
+                    return species.displayName.Trim();
+                if (!string.IsNullOrWhiteSpace(target.displayName))
+                    return target.displayName.Trim();
+            }
+
+            return string.IsNullOrWhiteSpace(fallbackName) ? "Chainling" : fallbackName.Trim();
+        }
+
+        private ICaptureSuccessPortraitPresenter ResolveCapturePortraitPresenter()
+        {
+            if (capturePortraitPresenterBehaviour is ICaptureSuccessPortraitPresenter assigned)
+                return assigned;
+
+            MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is ICaptureSuccessPortraitPresenter found)
                 {
-                    MoveInstance move = target.moves[i];
-                    if (move != null && !string.IsNullOrWhiteSpace(move.definitionId))
-                        snapshot.moveIds.Add(move.definitionId);
+                    capturePortraitPresenterBehaviour = behaviours[i];
+                    return found;
                 }
             }
 
-            return snapshot;
+            return null;
         }
 
         private ICaptureDossierPresenter ResolveCaptureDossierPresenter()
@@ -1215,6 +1486,45 @@ namespace Chainbound.Combat
             }
 
             return null;
+        }
+
+        private CaptureTargetChoice FindTargetByAuthorityId(string authorityTargetId)
+        {
+            if (string.IsNullOrWhiteSpace(authorityTargetId))
+                return null;
+
+            List<CaptureTargetChoice> targets = ResolveTargetChoices();
+            for (int i = 0; i < targets.Count; i++)
+            {
+                CaptureTargetChoice candidate = targets[i];
+                if (candidate != null &&
+                    string.Equals(candidate.AuthorityTargetId, authorityTargetId, StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static string ResolveCaptureTargetId(string attemptId)
+        {
+            if (!AuthoritativeBattleLaunchContext.TryReadState(out AuthoritativeClientBattleState serverState) ||
+                serverState.targets == null ||
+                serverState.captureChallenge == null ||
+                !string.Equals(serverState.captureChallenge.attemptId, attemptId, StringComparison.Ordinal))
+            {
+                return string.Empty;
+            }
+
+            for (int i = 0; i < serverState.targets.Count; i++)
+            {
+                AuthoritativeClientBattleTarget target = serverState.targets[i];
+                if (target != null && target.isActive && !target.isRemoved)
+                    return target.targetId;
+            }
+
+            return string.Empty;
         }
 
         private void RebuildOrbChoices(List<CaptureOrbChoice> values)

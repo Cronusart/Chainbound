@@ -22,7 +22,7 @@ namespace Chainbound.Combat
             var encounter = new EncounterSnapshot
             {
                 encounterSeed = state != null && state.seed != 0 ? unchecked((int)state.seed) : seed,
-                teamName = "Wild",
+                teamName = ResolveTeamName(state),
                 aiPersonality = AIPersonality.Aggressive,
                 zoneId = state != null ? state.zoneId ?? string.Empty : string.Empty,
                 captureEnabled = state != null && state.encounterCaptureEnabled,
@@ -68,6 +68,13 @@ namespace Chainbound.Combat
                 });
             }
             return encounter;
+        }
+
+        private static string ResolveTeamName(AuthoritativeClientBattleState source)
+        {
+            return source != null && (AuthoritativeBattleKind)source.battleKind == AuthoritativeBattleKind.Boss
+                ? "Boss"
+                : "Wild";
         }
 
         private static EncounterDifficulty ResolveDifficulty(AuthoritativeClientBattleState source)

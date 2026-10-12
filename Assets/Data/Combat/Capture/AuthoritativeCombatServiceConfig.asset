@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0947487818b93048ac3ca8a0ba0ef01, type: 3}
   m_Name: AuthoritativeCombatServiceConfig
   m_EditorClassIdentifier: 
-  serviceBaseUrl: http://localhost:8080
+  serviceBaseUrl: https://chainbound-battle-devnet-1049191619203.us-central1.run.app
   authoritativePveCaptureEnabled: 1
-  gameplayManifestHash: c25fd14b8d2f26edada3a5110ee0f422a6c6f4ef0c13bb3f308b0e92feff0a22
+  gameplayManifestHash: a4d001c4df3875df4c22c98f826bdc0ee52bf6736da113c557ffafb8d423cd2c
   requestTimeoutSeconds: 12
-  allowLocalPracticeInEditor: 1
+  allowLocalPracticeInEditor: 0

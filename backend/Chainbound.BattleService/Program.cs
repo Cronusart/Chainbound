@@ -298,7 +298,11 @@ static async Task ReceiveInputs(WebSocket socket, CaptureAttemptRuntime attempt,
         if (result.MessageType != WebSocketMessageType.Text || !result.EndOfMessage)
             continue;
         CaptureStreamInput? input = JsonSerializer.Deserialize<CaptureStreamInput>(buffer.AsSpan(0, result.Count), JsonDefaults.Options);
-        if (input != null)
+        if (input == null)
+            continue;
+        if (input.Arm)
+            await attempt.ArmAsync();
+        else
             attempt.SetInput(input.Sequence, input.Held);
     }
 }
@@ -306,8 +310,20 @@ static async Task ReceiveInputs(WebSocket socket, CaptureAttemptRuntime attempt,
 static async Task SendSnapshots(WebSocket socket, CaptureAttemptRuntime attempt, CancellationToken cancellationToken)
 {
     using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+    bool announcedArm = false;
     while (socket.State == WebSocketState.Open && !attempt.Completion.IsCompleted && await timer.WaitForNextTickAsync(cancellationToken))
+    {
+        if (!announcedArm && attempt.IsArmed)
+        {
+            announcedArm = true;
+            await SendJson(socket, new
+            {
+                type = "armed",
+                deadlineUnixMilliseconds = attempt.Challenge.DeadlineUnixMilliseconds,
+            }, cancellationToken);
+        }
         await SendJson(socket, new { type = "snapshot", state = attempt.Latest }, cancellationToken);
+    }
     CaptureOutcome outcome = await attempt.Completion;
     if (socket.State == WebSocketState.Open)
         await SendJson(socket, new { type = "outcome", outcome }, cancellationToken);

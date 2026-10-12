@@ -45,6 +45,7 @@ public sealed class CaptureStreamInput
 {
     public long Sequence { get; set; }
     public bool Held { get; set; }
+    public bool Arm { get; set; }
 }
 
 public sealed class ApiError

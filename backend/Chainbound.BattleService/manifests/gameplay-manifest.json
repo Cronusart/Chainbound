@@ -5190,7 +5190,7 @@
             "encounterId": "intro_first_creature",
             "zoneId": "",
             "battleKind": 3,
-            "rewardTier": "elite",
+            "rewardTier": "standard",
             "rewardEligibilityQuestId": "chainbound_intro",
             "captureEnabled": false,
             "capturePolicy": 2,
@@ -5198,19 +5198,19 @@
             "targets": [
                 {
                     "targetId": "intro_first_creature:0",
-                    "speciesId": "balloom",
-                    "displayName": "Balloom",
+                    "speciesId": "kreechank",
+                    "displayName": "Kreechank",
                     "visualVariantId": "base",
                     "mutationId": "none",
                     "mutated": false,
                     "entangled": false,
                     "entangledTypeId": "none",
-                    "difficultyId": "elite",
-                    "currentHp": 130,
-                    "maxHp": 130,
+                    "difficultyId": "standard",
+                    "currentHp": 124,
+                    "maxHp": 124,
                     "legacyBaseCaptureRate": 45,
                     "captureProfile": 1,
-                    "stars": 0,
+                    "stars": 3,
                     "level": 1,
                     "ivs": [
                         0,
@@ -5220,7 +5220,7 @@
                         0,
                         0
                     ],
-                    "knownMoveId": "baseline_striker",
+                    "knownMoveId": "baseline_jab",
                     "startsActive": true
                 }
             ]

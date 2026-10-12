@@ -10,6 +10,17 @@ The capture minigame is split into three layers:
 
 Production clients predict the same 30 Hz integer simulation for responsiveness. Only the service result is committed. The WebSocket returns authoritative corrections at 10 Hz. Disconnecting retains the last input for 250 ms and then releases it; the capture deadline continues.
 
+## Resume semantics
+
+Resume is phase-driven and the battle service is the authority for the transition:
+
+- `capturing` with a future deadline reconnects the client to the existing attempt. The client never sends a second capture command or consumes a second Orb.
+- `capturing` with an elapsed deadline is deterministically advanced with released input and finalized **before** the resume endpoint returns. The resulting envelope is active/terminal rather than a stale capture snapshot.
+- A timeout consumes its already-accepted Orb and leaves the target in the battle. A lock or escape removes that target according to the normal finalizer.
+- Capture finalization refreshes the client battle envelope before ordinary combat can continue, so subsequent action checkpoints use the new state version.
+
+No action may be submitted against a `capturing` snapshot. This is enforced by the service and by the Unity resume flow; a rejected action is not treated as an enemy-AI failure.
+
 `TimeOfDayManager` remains presentation-only. Capture boosters and resumable battle deadlines use server time calibrated from finalized Solana block time, with monotonic extrapolation limited to ten minutes. When that authority is stale, the service refuses new expiry-sensitive operations rather than guessing.
 
 An unrecovered 15-minute battle expiry is committed once as an abandoned PvE loss. The same service-only transaction interrupts a pending capture attempt without refunding its Orb, caps the RAM deduction at the available balance, and revives persisted KO'd party Chainlings. The deployment levers are `BATTLE_ABANDONMENT_RAM_PENALTY` (default 5) and `BATTLE_DEFEAT_RESPAWN_HP_BP` (default 5000, or 50% MaxHP); the latter uses the same canonical species/IV/progression MaxHP derivation as passive recovery.
