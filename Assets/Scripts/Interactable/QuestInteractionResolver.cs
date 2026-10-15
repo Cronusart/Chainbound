@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Chainbound.Combat;
 using UnityEngine;
 
 /// <summary>
@@ -287,6 +288,7 @@ public static class QuestInteractionResolver
 
         return FlagPredicatesMatch(rule.flagPredicates, npcMemory)
             && WorldFlagPredicatesMatch(rule.worldFlagPredicates)
+            && BagItemPredicatesMatch(rule.bagItemPredicates)
             && CounterPredicatesMatch(rule.counterPredicates, npcMemory)
             && TimePredicateMatches(rule, timeOfDayService, contextLabel, ruleIndex, out warning);
     }
@@ -511,6 +513,34 @@ public static class QuestInteractionResolver
             default:
                 return false;
         }
+    }
+
+    private static bool BagItemPredicatesMatch(IReadOnlyList<QuestInteractionBagItemPredicate> predicates)
+    {
+        if (predicates == null || predicates.Count == 0)
+            return true;
+
+        for (int i = 0; i < predicates.Count; i++)
+        {
+            if (!BagItemPredicateMatches(predicates[i]))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool BagItemPredicateMatches(QuestInteractionBagItemPredicate predicate)
+    {
+        if (predicate == null)
+            return true;
+
+        if (string.IsNullOrWhiteSpace(predicate.itemId))
+            return false;
+
+        if (!ProfileBagQuantity.TryGetQuantity(predicate.itemId, out int quantity))
+            return false;
+
+        return quantity >= Mathf.Max(1, predicate.minimumQuantity);
     }
 
     private static bool CounterPredicatesMatch(

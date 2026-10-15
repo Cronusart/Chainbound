@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bad47ff02805224b899bd7fb4385d6a, type: 3}
+  m_Name: fisher_ape_lucky_crayon_sequence
+  m_EditorClassIdentifier: 
+  sequenceId: fisher_ape_lucky_crayon
+  startCheckpointId: 
+  safeResumeLabel: 
+  contentVersion: 1
+  autoStartWhenNoSequenceRunning: 0
+  autoStartQuestId: 
+  autoStartLifecycleMask: 0
+  autoStartSkipWorldFlagKey: 
+  autoStartRequiredWorldFlagKey: 
+  steps:
+  - {fileID: 11400000, guid: 6a3d956558be26a4f9b1e172bad5d18b, type: 2}
+  - {fileID: 11400000, guid: 15867728dacefeb478dd4a104ba4cbe9, type: 2}
+  - {fileID: 11400000, guid: bd5f77b0510f356498fe0ad0f206bfc4, type: 2}
+  - {fileID: 11400000, guid: 63a0ef51923bf0e46a4028d83e463f44, type: 2}
+  - {fileID: 11400000, guid: 6f8447b8154258e41b21f25d94128426, type: 2}
+  - {fileID: 11400000, guid: e34a4c3cd5787454a8d833b25b155dc3, type: 2}
+  - {fileID: 11400000, guid: 9f6ca64a6f15a2c4682388c95de9f5a5, type: 2}
+  - {fileID: 11400000, guid: adde0c777dc4d2c46808a78a0105da27, type: 2}
+  - {fileID: 11400000, guid: 63728df74598cc248bad6b19cf3b6217, type: 2}
+  - {fileID: 11400000, guid: e8da571ae384f3f49a126ed9dc057649, type: 2}
+  - {fileID: 11400000, guid: f0784b20aa4f51f4d8fc7d5d42b55892, type: 2}
+  - {fileID: 11400000, guid: b47385af3e51eb8428ced10588981ed4, type: 2}
+  - {fileID: 11400000, guid: 115b3d76c7ceee04bbcd26a073fed02e, type: 2}
+  - {fileID: 11400000, guid: 0b1de3c98f411d34fba3d55f777ecc3a, type: 2}

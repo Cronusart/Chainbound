@@ -60,6 +60,7 @@ namespace Chainbound.Combat
                     quantity = 1;
                     return true;
                 case "world.pickup.loomville_mart.open_crate_orb":
+                case "world.pickup.link1.backpack_02":
                     itemId = "signal_orb";
                     quantity = 1;
                     return true;
@@ -147,6 +148,7 @@ namespace Chainbound.Combat
             RegisterSpawn("world.pickup.jungle.backpack_01", "chainling_patch", 1);
             RegisterSpawn("world.pickup.loomville_mart.open_crate_patch", "chainling_patch", 1);
             RegisterSpawn("world.pickup.loomville_mart.open_crate_orb", "signal_orb", 1);
+            RegisterSpawn("world.pickup.link1.backpack_02", "signal_orb", 1);
         }
 
         private struct SpawnReward
