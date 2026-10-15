@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Chainbound.Combat;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -16,6 +17,7 @@ public class QuestInteractionResolverTests
         }
 
         cleanup.Clear();
+        ProfileBagQuantity.SetTestSnapshot(null, false);
     }
 
     [Test]
@@ -638,6 +640,97 @@ public class QuestInteractionResolverTests
         QuestInteractionResolver.QuestInteractionResolution after = QuestInteractionResolver.Resolve(
             service, null, null, null, null, profile);
         Assert.That(after.TriggerId, Is.EqualTo("fallback_trigger"));
+    }
+
+    [Test]
+    public void Resolve_BagItemFailsClosedUntilTheCrayonIsCached()
+    {
+        QuestService service = NarrativeTestUtility.CreateQuestService();
+        cleanup.Add(service.gameObject);
+
+        DialogueSequenceSO hint = NarrativeTestUtility.CreateDialogue("hint");
+        DialogueSequenceSO epilogue = NarrativeTestUtility.CreateDialogue("epilogue");
+        cleanup.Add(hint);
+        cleanup.Add(epilogue);
+
+        QuestInteractionRule returned = new QuestInteractionRule
+        {
+            label = "crayon returned",
+            lifecycleScope = QuestInteractionRuleLifecycleScope.UseLifecycleMask,
+            lifecycleMask = NarrativeQuestLifecycleMask.Unknown,
+            dialogue = epilogue,
+            worldFlagPredicates = new List<QuestInteractionWorldFlagPredicate>
+            {
+                new QuestInteractionWorldFlagPredicate
+                {
+                    key = "world.fisher_ape.crayon_returned",
+                    comparison = QuestInteractionMemoryFlagComparison.IsTrue
+                }
+            }
+        };
+        QuestInteractionRule carrying = new QuestInteractionRule
+        {
+            label = "has lucky crayon",
+            lifecycleScope = QuestInteractionRuleLifecycleScope.UseLifecycleMask,
+            lifecycleMask = NarrativeQuestLifecycleMask.Unknown,
+            triggerId = "fisher_ape_lucky_crayon",
+            worldFlagPredicates = new List<QuestInteractionWorldFlagPredicate>
+            {
+                new QuestInteractionWorldFlagPredicate
+                {
+                    key = "world.fisher_ape.crayon_returned",
+                    comparison = QuestInteractionMemoryFlagComparison.IsFalse
+                }
+            },
+            bagItemPredicates = new List<QuestInteractionBagItemPredicate>
+            {
+                new QuestInteractionBagItemPredicate
+                {
+                    itemId = "lucky_crayon",
+                    minimumQuantity = 1
+                }
+            }
+        };
+
+        QuestInteractionProfileSO profile = NarrativeTestUtility.CreateProfile(
+            "ambient_npc_fisher_ape",
+            new[] { returned, carrying },
+            inactiveDialogue: hint);
+        cleanup.Add(profile);
+
+        ProfileWorldFlagStateService flags = ProfileWorldFlagStateService.Instance;
+        cleanup.Add(flags.gameObject);
+        flags.SetFlag("world.fisher_ape.crayon_returned", false);
+
+        ProfileBagQuantity.SetTestSnapshot(null, true);
+        QuestInteractionResolver.QuestInteractionResolution unknown = QuestInteractionResolver.Resolve(
+            service, null, null, null, null, profile);
+        Assert.That(unknown.Dialogue, Is.SameAs(hint));
+        Assert.That(unknown.TriggerId, Is.EqualTo(""));
+
+        ProfileBagQuantity.SetTestSnapshot(new InventorySnapshot(), true);
+        QuestInteractionResolver.QuestInteractionResolution empty = QuestInteractionResolver.Resolve(
+            service, null, null, null, null, profile);
+        Assert.That(empty.Dialogue, Is.SameAs(hint));
+
+        ProfileBagQuantity.SetTestSnapshot(new InventorySnapshot
+        {
+            stacks = new List<MenuInventoryItemStack>
+            {
+                new MenuInventoryItemStack { itemId = "lucky_crayon", quantity = 1 }
+            }
+        }, true);
+        QuestInteractionResolver.QuestInteractionResolution reward = QuestInteractionResolver.Resolve(
+            service, null, null, null, null, profile);
+        Assert.That(reward.Dialogue, Is.Null);
+        Assert.That(reward.TriggerId, Is.EqualTo("fisher_ape_lucky_crayon"));
+
+        flags.SetFlag("world.fisher_ape.crayon_returned", true);
+        QuestInteractionResolver.QuestInteractionResolution done = QuestInteractionResolver.Resolve(
+            service, null, null, null, null, profile);
+        Assert.That(done.Dialogue, Is.SameAs(epilogue));
+        Assert.That(done.TriggerId, Is.EqualTo(""));
+        flags.SetFlag("world.fisher_ape.crayon_returned", false);
     }
 
     [Test]

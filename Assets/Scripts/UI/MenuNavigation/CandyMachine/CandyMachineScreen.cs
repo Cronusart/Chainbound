@@ -76,6 +76,8 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private CandyMachineRuntimeMode runtimeMode = CandyMachineRuntimeMode.LocalPreview;
         [SerializeField] private bool enableDevnetOwnershipSpine;
         [SerializeField] private MonoBehaviour ownershipGateway;
+        [Tooltip("Canonical move inventory projection. Falls back to the ownership records only in local preview.")]
+        [SerializeField] private MonoBehaviour moveInventoryProviderBehaviour;
         [SerializeField] private SolanaConfigSO solanaConfig;
         [SerializeField, Min(1)] private int supportedSchemaVersion = 1;
 
@@ -160,6 +162,8 @@ namespace SignalJam.UI.MenuNavigation
         private IKnownMoveService knownMoves;
         private IStampedMoveService stampedMoves;
         private IOwnershipSpineRuntimeService ownershipService;
+        private IMoveInventoryProvider moveInventoryProvider;
+        private MoveInventorySnapshot canonicalMoveInventory;
         private DevCandyMachineInventory devInventory;
         private CandyMachineMode mode = CandyMachineMode.GetKnown;
         private int selectedKnownIndex;
@@ -650,6 +654,20 @@ namespace SignalJam.UI.MenuNavigation
 
             if (solanaConfig == null && SolanaServiceBridge.Instance != null)
                 solanaConfig = SolanaServiceBridge.Instance.Config;
+
+            if (!(moveInventoryProviderBehaviour is IMoveInventoryProvider))
+            {
+                MonoBehaviour[] behaviours = FindObjectsOfType<MonoBehaviour>(true);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is IMoveInventoryProvider provider)
+                    {
+                        moveInventoryProviderBehaviour = behaviours[i];
+                        break;
+                    }
+                }
+            }
+            moveInventoryProvider = moveInventoryProviderBehaviour as IMoveInventoryProvider;
         }
 
         private bool HasFeatureServices() =>
@@ -676,11 +694,23 @@ namespace SignalJam.UI.MenuNavigation
                 return;
 
             await ownershipService.RefreshAsync();
+            await RefreshCanonicalMoveInventoryAsync();
             if (showing)
             {
                 RefreshPresentation();
                 grantPanel?.RefreshForCurrentState();
             }
+        }
+
+        private async Task RefreshCanonicalMoveInventoryAsync()
+        {
+            if (moveInventoryProvider == null)
+                return;
+
+            GameSessionContext session = GameSessionContext.Instance;
+            canonicalMoveInventory = await moveInventoryProvider.FetchMoveInventoryAsync(
+                session != null ? session.PlayerProfileId : "",
+                session != null ? session.WalletAddress : "");
         }
 
         private async void RefreshOwnershipStateOnOpen()
@@ -719,6 +749,7 @@ namespace SignalJam.UI.MenuNavigation
             if (ownershipService == null)
                 throw new InvalidOperationException("Devnet ownership service is unavailable.");
             KnownMoveRecord result = await ownershipService.GetKnownAsync(Guid.NewGuid().ToString("N"));
+            await RefreshCanonicalMoveInventoryAfterMutationAsync();
             RefreshPresentation();
             return result;
         }
@@ -761,6 +792,7 @@ namespace SignalJam.UI.MenuNavigation
                 }
 
                 selectedKnownIndex = Mathf.Max(0, knownMoves.CachedKnown.Count - 1);
+                await RefreshCanonicalMoveInventoryAfterMutationAsync();
                 BeginCommittedPull(BuildKnownReveal(result));
             }
             catch (Exception exception)
@@ -904,6 +936,7 @@ namespace SignalJam.UI.MenuNavigation
                 }
 
                 selectedKnownIndex = 0;
+                await RefreshCanonicalMoveInventoryAfterMutationAsync();
                 BeginCommittedPull(BuildStampReveal(result.verifiedAsset, stampHostAcquisition));
             }
             catch (Exception exception)
@@ -1069,6 +1102,15 @@ namespace SignalJam.UI.MenuNavigation
             for (int i = listContent.childCount - 1; i >= 0; i--)
                 DestroyView(listContent.GetChild(i).gameObject);
 
+            if (canonicalMoveInventory != null && canonicalMoveInventory.moves != null)
+            {
+                if (mode == CandyMachineMode.GetKnown)
+                    RefreshCanonicalKnownList();
+                else
+                    RefreshCanonicalStampList();
+                return;
+            }
+
             if (mode != CandyMachineMode.Stamp || knownMoves == null)
                 return;
 
@@ -1120,6 +1162,113 @@ namespace SignalJam.UI.MenuNavigation
                         knownRowButtons[i].interactable = false;
                 }
             }
+        }
+
+        private void RefreshCanonicalStampList()
+        {
+            PendingStampRecord pendingStamp = ownershipService?.PendingStamp;
+            bool lockToPreparedStamp = PendingStampRequiresWalletSignature(pendingStamp);
+            List<MenuMoveItem> moves = new List<MenuMoveItem>(canonicalMoveInventory.moves);
+            moves.Sort(CompareCandyMoveRows);
+
+            for (int i = 0; i < moves.Count; i++)
+            {
+                MenuMoveItem move = moves[i];
+                if (move == null)
+                    continue;
+
+                bool stampableKnown = move.tier == MoveTier.Known && !string.IsNullOrWhiteSpace(move.knownInstanceId);
+                int knownIndex = stampableKnown ? FindKnownIndex(move.knownInstanceId) : -1;
+                string state = stampableKnown
+                    ? FormatMeter(0)
+                    : FormatMeter(!string.IsNullOrWhiteSpace(move.modifier2SectionId) ? 2 : 1);
+                string equippedMark = FormatEquippedMark(move);
+                if (!string.IsNullOrWhiteSpace(equippedMark))
+                    state = $"{state} | {equippedMark}";
+
+                Button row = EnsureRow(
+                    $"MoveItem_{move.moveItemId}",
+                    ResolveMoveName(move.moveId).ToUpperInvariant(),
+                    state);
+                SetRowSelected(row, knownIndex >= 0 && knownIndex == selectedKnownIndex);
+                row.interactable = stampableKnown && knownIndex >= 0 && !move.bindSealed && !(move.escrowLocked || move.locked);
+                if (lockToPreparedStamp && !string.Equals(move.knownInstanceId, pendingStamp.knownInstanceId, StringComparison.Ordinal))
+                    row.interactable = false;
+                if (row.interactable)
+                {
+                    int capturedIndex = knownIndex;
+                    row.onClick.AddListener(() => SelectKnown(capturedIndex));
+                }
+                knownRowButtons.Add(row);
+            }
+
+            if (navLayer != CandyMachineNavLayer.Browse)
+            {
+                for (int i = 0; i < knownRowButtons.Count; i++)
+                {
+                    if (knownRowButtons[i] != null)
+                        knownRowButtons[i].interactable = false;
+                }
+            }
+        }
+
+        private void RefreshCanonicalKnownList()
+        {
+            List<MenuMoveItem> moves = new List<MenuMoveItem>(canonicalMoveInventory.moves);
+            moves.Sort(CompareCandyMoveRows);
+
+            for (int i = 0; i < moves.Count; i++)
+            {
+                MenuMoveItem move = moves[i];
+                if (move == null || move.tier != MoveTier.Known)
+                    continue;
+
+                string state = FormatMeter(0);
+                string equippedMark = FormatEquippedMark(move);
+                if (!string.IsNullOrWhiteSpace(equippedMark))
+                    state = $"{state} | {equippedMark}";
+
+                Button row = EnsureRow(
+                    $"MoveItem_{move.moveItemId}",
+                    ResolveMoveName(move.moveId).ToUpperInvariant(),
+                    state);
+                // This is an inventory projection for the roll folio; rolling is driven by the CTA.
+                row.interactable = false;
+                SetRowSelected(row, false);
+                knownRowButtons.Add(row);
+            }
+        }
+
+        private int FindKnownIndex(string knownInstanceId)
+        {
+            if (knownMoves == null || string.IsNullOrWhiteSpace(knownInstanceId))
+                return -1;
+            IReadOnlyList<KnownMoveRecord> records = knownMoves.CachedKnown;
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (string.Equals(records[i].instanceId, knownInstanceId, StringComparison.Ordinal))
+                    return i;
+            }
+            return -1;
+        }
+
+        private static int CompareCandyMoveRows(MenuMoveItem left, MenuMoveItem right)
+        {
+            int leftTier = left != null && left.tier == MoveTier.Known ? 0 : 1;
+            int rightTier = right != null && right.tier == MoveTier.Known ? 0 : 1;
+            if (leftTier != rightTier)
+                return leftTier.CompareTo(rightTier);
+            return string.Compare(left?.moveId, right?.moveId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatEquippedMark(MenuMoveItem move)
+        {
+            if (move == null || string.IsNullOrWhiteSpace(move.equippedChainlingId))
+                return "";
+            string name = string.IsNullOrWhiteSpace(move.equippedChainlingName)
+                ? "Chainling"
+                : move.equippedChainlingName;
+            return $"Equipped · {name}";
         }
 
         private void RefreshRecentChips()
@@ -1566,6 +1715,7 @@ namespace SignalJam.UI.MenuNavigation
                         && ContainsCachedStamp(result.verifiedAsset.assetAddress))
                     {
                         selectedKnownIndex = 0;
+                        await RefreshCanonicalMoveInventoryAfterMutationAsync();
                         CandyMachineRevealData reveal = BuildStampReveal(result.verifiedAsset, stampHostAcquisition);
                         if (playSettlementPull)
                             BeginCommittedPull(reveal);
@@ -1599,6 +1749,19 @@ namespace SignalJam.UI.MenuNavigation
                 stampReconciliationRunning = false;
                 if (showing)
                     RefreshPresentation();
+            }
+        }
+
+        private async Task RefreshCanonicalMoveInventoryAfterMutationAsync()
+        {
+            try
+            {
+                await RefreshCanonicalMoveInventoryAsync();
+            }
+            catch (Exception exception)
+            {
+                // Confirmation is authoritative. A presentation refresh may be retried on the next open.
+                Debug.LogWarning($"[CandyMachineScreen] Canonical move inventory refresh failed: {exception.Message}");
             }
         }
 

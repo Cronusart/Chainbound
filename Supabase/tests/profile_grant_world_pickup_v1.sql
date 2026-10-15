@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(8);
+SELECT plan(10);
 
 INSERT INTO public.player_profiles (player_profile_id, platform_origin, last_platform_seen)
 VALUES ('20000000-0000-0000-0000-000000000001', 'test', 'test');
@@ -17,6 +17,20 @@ SELECT is(
      WHERE spawn_id = 'world.pickup.link1.backpack_01'),
     1,
     'link1 backpack spawn grants quantity 1'
+);
+
+SELECT is(
+    (SELECT item_id FROM public.chainbound_world_pickup_spawns
+     WHERE spawn_id = 'world.pickup.link1.backpack_02'),
+    'signal_orb',
+    'link1 backpack_02 spawn is seeded as signal_orb'
+);
+
+SELECT is(
+    (SELECT quantity FROM public.chainbound_world_pickup_spawns
+     WHERE spawn_id = 'world.pickup.link1.backpack_02'),
+    1,
+    'link1 backpack_02 spawn grants quantity 1'
 );
 
 CREATE TEMP TABLE grant_results (name TEXT PRIMARY KEY, payload JSONB);

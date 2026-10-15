@@ -146,6 +146,20 @@ public class QuestInteractionWorldFlagPredicate
 }
 
 /// <summary>
+/// One profile-bag quantity predicate within a quest interaction rule.
+/// An unread bag fails closed so a reward line cannot fire before inventory is known.
+/// </summary>
+[Serializable]
+public class QuestInteractionBagItemPredicate
+{
+    [Tooltip("Profile bag item id, e.g. lucky_crayon.")]
+    public string itemId = "";
+
+    [Tooltip("Rule matches when the cached bag quantity is at least this value.")]
+    public int minimumQuantity = 1;
+}
+
+/// <summary>
 /// One NPC memory counter predicate within a quest interaction rule.
 /// </summary>
 [Serializable]
@@ -251,6 +265,9 @@ public class QuestInteractionRule
 
     [Tooltip("All profile world-flag predicates must pass. IsTrue requires the flag to exist and be true. IsFalse matches when the flag is absent or false.")]
     public List<QuestInteractionWorldFlagPredicate> worldFlagPredicates = new List<QuestInteractionWorldFlagPredicate>();
+
+    [Tooltip("All bag-item predicates must pass. A missing or unread inventory fails the rule.")]
+    public List<QuestInteractionBagItemPredicate> bagItemPredicates = new List<QuestInteractionBagItemPredicate>();
 
     [Tooltip("All counter predicates must pass for this rule to match.")]
     public List<QuestInteractionMemoryCounterPredicate> counterPredicates = new List<QuestInteractionMemoryCounterPredicate>();

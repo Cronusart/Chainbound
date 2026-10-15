@@ -30,6 +30,35 @@ namespace Chainbound.Combat
             ramBalance = cachedSnapshot.ramBalance;
             return true;
         }
+
+        /// <summary>
+        /// Reads one item from the last successful bag fetch. Returns false when no snapshot is cached.
+        /// A cached bag that simply lacks the item returns true and quantity 0.
+        /// </summary>
+        public bool TryGetCachedQuantity(string itemId, out int quantity)
+        {
+            quantity = 0;
+            if (cachedSnapshot == null)
+                return false;
+
+            string id = (itemId ?? "").Trim();
+            if (id.Length == 0)
+                return false;
+
+            if (cachedSnapshot.stacks == null)
+                return true;
+
+            for (int i = 0; i < cachedSnapshot.stacks.Count; i++)
+            {
+                MenuInventoryItemStack stack = cachedSnapshot.stacks[i];
+                if (stack == null || !string.Equals(stack.itemId, id, StringComparison.Ordinal))
+                    continue;
+
+                quantity += Mathf.Max(0, stack.quantity);
+            }
+
+            return true;
+        }
         private string cacheKey;
         private DateTime cacheExpiresAtUtc;
         private IWalletService boundWallet;

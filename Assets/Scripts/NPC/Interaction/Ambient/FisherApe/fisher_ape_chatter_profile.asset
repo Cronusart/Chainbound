@@ -14,7 +14,59 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   questDefinition: {fileID: 0}
   questId: ambient_npc_fisher_ape
-  rules: []
+  rules:
+  - label: crayon returned
+    lifecycleScope: 1
+    lifecycleMask: 1
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.fisher_ape.crayon_returned
+      comparison: 2
+    bagItemPredicates: []
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 11400000, guid: 0230482d4cf36294291812ebe9641b51, type: 2}
+    useDialogueCamera: 0
+    triggerId: 
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
+  - label: has lucky crayon
+    lifecycleScope: 1
+    lifecycleMask: 1
+    objectiveId: 
+    objectiveComparison: 0
+    objectiveValue: 0
+    sequenceProgressPredicates: []
+    resolutionPredicates: []
+    flagPredicates: []
+    worldFlagPredicates:
+    - key: world.fisher_ape.crayon_returned
+      comparison: 3
+    bagItemPredicates:
+    - itemId: lucky_crayon
+      minimumQuantity: 1
+    counterPredicates: []
+    timeOfDay:
+      allowedSegments: 0
+      useNormalizedTimeRange: 0
+      minNormalizedTime: 0
+      maxNormalizedTime: 0
+    dialogue: {fileID: 0}
+    useDialogueCamera: 0
+    triggerId: fisher_ape_lucky_crayon
+    npcBehavior:
+      mode: 1
+      behaviorOverride: {fileID: 0}
   inactiveDialogue: {fileID: 11400000, guid: 6f8d22795bfe8f2428b8347a7d71a7ae, type: 2}
   inactiveTriggerId: 
   inactiveNpcBehavior:
@@ -25,7 +77,7 @@ MonoBehaviour:
   activeFallbackNpcBehavior:
     mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: Repeatable ambient dialogue for Fisher-Ape; scene placement is intentionally
-    not authored here.
+  designerNotes: Hint without the crayon. Reward when the bag has lucky_crayon and
+    the return flag is false. Epilogue after world.fisher_ape.crayon_returned.
   activateQuestOnInactiveInteract: 0
   completeObjectiveOnActivate: 

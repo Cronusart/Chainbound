@@ -40,10 +40,17 @@ namespace Chainbound.Combat.Tests
                 Assert.That(orb.alreadyClaimed, Is.False);
                 Assert.That(orb.remainingQuantity, Is.EqualTo(1));
 
+                WorldPickupGrantResult linkOrb = await stub.GrantWorldPickupAsync(
+                    "world.pickup.link1.backpack_02");
+                Assert.That(linkOrb.ok, Is.True);
+                Assert.That(linkOrb.itemId, Is.EqualTo("signal_orb"));
+                Assert.That(linkOrb.alreadyClaimed, Is.False);
+                Assert.That(linkOrb.remainingQuantity, Is.EqualTo(2));
+
                 InventorySnapshot snapshot = await stub.FetchInventoryAsync("editor-profile", "editor-wallet");
                 MenuInventoryItemStack orbStack = snapshot.stacks.Find(stack => stack.itemId == "signal_orb");
                 Assert.That(orbStack, Is.Not.Null);
-                Assert.That(orbStack.quantity, Is.EqualTo(1));
+                Assert.That(orbStack.quantity, Is.EqualTo(2));
             }
             finally
             {

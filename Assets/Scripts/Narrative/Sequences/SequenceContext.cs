@@ -283,15 +283,52 @@ public class SequenceContext
     
     /// <summary>
     /// Release every stored NPC claim (sequence stop / clear / completion safety net).
+    /// Also drops interaction-session retentions so an aborted track cannot leave an NPC held.
     /// </summary>
     public void ReleaseAllNpcClaims()
     {
+        ReleaseAllNpcInteractionRetentions();
+
         foreach (var kv in npcClaimsByNpcId)
         {
             kv.Value?.Release();
         }
         
         npcClaimsByNpcId.Clear();
+    }
+
+    private int npcInteractionRetentions;
+
+    /// <summary>
+    /// Holds the active NPC interaction session across dialogue gaps. Returns false when no session exists.
+    /// </summary>
+    public bool TryRetainNpcInteraction()
+    {
+        NPCInteractionSessionService service = NPCInteractionSessionService.Instance;
+        if (service == null || !service.HasActiveSession)
+            return false;
+
+        service.RetainActiveSession();
+        npcInteractionRetentions++;
+        return true;
+    }
+
+    /// <summary>
+    /// Drops one interaction-session retention acquired by this context.
+    /// </summary>
+    public void ReleaseNpcInteractionRetention()
+    {
+        if (npcInteractionRetentions <= 0)
+            return;
+
+        npcInteractionRetentions--;
+        NPCInteractionSessionService.Instance?.ReleaseActiveSessionRetention();
+    }
+
+    public void ReleaseAllNpcInteractionRetentions()
+    {
+        while (npcInteractionRetentions > 0)
+            ReleaseNpcInteractionRetention();
     }
     
     // Service accessors (lazy-loaded)
