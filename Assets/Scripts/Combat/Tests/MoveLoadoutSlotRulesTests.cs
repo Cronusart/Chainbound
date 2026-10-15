@@ -50,6 +50,36 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void ChainlingLoadout_RejectsRemovingItsLastMove()
+        {
+            var loadout = new ChainlingLoadout();
+            MoveInstance starterMove = CreateMove("starter", MoveCategory.DamagingMelee, MoveTier.Known);
+            loadout.equipped.Add(starterMove);
+
+            LoadoutValidationResult result = loadout.CanUnequip(starterMove);
+
+            Assert.IsFalse(result.isValid);
+            Assert.AreEqual(LoadoutValidationError.LastMoveRequired, result.error);
+            Assert.AreEqual(1, loadout.equipped.Count);
+        }
+
+        [Test]
+        public void ChainlingLoadout_AllowsStarterToBeReplacedThenRemoved()
+        {
+            var loadout = new ChainlingLoadout();
+            MoveInstance starterMove = CreateMove("starter", MoveCategory.DamagingMelee, MoveTier.Known);
+            MoveInstance captureMove = CreateMove("capture", MoveCategory.DamagingRanged, MoveTier.Known);
+            loadout.equipped.Add(starterMove);
+            loadout.equipped.Add(captureMove);
+
+            LoadoutValidationResult result = loadout.Unequip(starterMove);
+
+            Assert.IsTrue(result.isValid);
+            Assert.AreEqual(1, loadout.equipped.Count);
+            Assert.AreEqual("capture", loadout.equipped[0].instanceId);
+        }
+
+        [Test]
         public void CombatFactory_KeepsMoreThanFourMovesWhenRebirthAllows()
         {
             SpeciesDefinitionSO species = ScriptableObject.CreateInstance<SpeciesDefinitionSO>();

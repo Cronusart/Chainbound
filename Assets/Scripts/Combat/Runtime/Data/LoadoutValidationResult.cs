@@ -55,6 +55,9 @@ namespace Chainbound.Combat
         /// <summary>The move is escrowed and cannot be unequipped.</summary>
         MoveEscrowed,
 
+        /// <summary>A Chainling must retain at least one equipped move.</summary>
+        LastMoveRequired,
+
         /// <summary>Modifier stacking rules would be violated by equipping this move.</summary>
         ModifierStackingViolation,
 
