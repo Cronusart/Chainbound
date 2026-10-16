@@ -65,6 +65,7 @@ public sealed class ManifestEncounter
 {
     public string EncounterId { get; set; } = "";
     public string ZoneId { get; set; } = "";
+    public string TimeSegment { get; set; } = "";
     public AuthoritativeBattleKind BattleKind { get; set; } = AuthoritativeBattleKind.Wild;
     public string RewardTier { get; set; } = BattleRewardTier.Standard;
     public string RewardEligibilityQuestId { get; set; } = "";
@@ -104,7 +105,11 @@ public sealed class ManifestTarget
     public int LegacyBaseCaptureRate { get; set; } = 45;
     public int CaptureProfile { get; set; } = (int)CaptureVolatilityProfile.Standard;
     public int Stars { get; set; }
+    public int StarVariance { get; set; }
     public int Level { get; set; } = 1;
+    public bool RollIvs { get; set; }
+    public int IvMin { get; set; } = -5;
+    public int IvMax { get; set; } = 5;
     public int[] Ivs { get; set; } = new int[6];
     public string KnownMoveId { get; set; } = "baseline_jab";
     public bool StartsActive { get; set; } = true;
