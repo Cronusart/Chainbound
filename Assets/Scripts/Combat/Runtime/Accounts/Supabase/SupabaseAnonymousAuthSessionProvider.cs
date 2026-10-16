@@ -20,27 +20,72 @@ namespace Chainbound.Combat
 
         [SerializeField] private bool enableDebugLogs;
 
+        private readonly object sessionGate = new object();
         private CachedSession cached;
+        private Task<AccountAuthSessionResult> sessionOperation;
+
+#if UNITY_INCLUDE_TESTS
+        public static Func<bool, bool, Task<AccountAuthSessionResult>> TestSessionOperationOverride;
+
+        public static void ResetTestHooks()
+        {
+            TestSessionOperationOverride = null;
+        }
+#endif
 
         public bool HasCachedSession => !string.IsNullOrWhiteSpace(cached.refresh_token) || !string.IsNullOrWhiteSpace(cached.access_token);
         public string AccessToken => cached.access_token ?? "";
         public string AuthUserId => cached.user_id ?? "";
 
-        public async Task<AccountAuthSessionResult> BootstrapAsync(SupabaseConfigSO config)
+        public Task<AccountAuthSessionResult> BootstrapAsync(SupabaseConfigSO config)
+        {
+            return GetOrStartSessionOperation(config, forceRefresh: false, allowCreate: true);
+        }
+
+        public Task<AccountAuthSessionResult> RefreshSessionAsync(SupabaseConfigSO config, bool forceRefresh = false)
+        {
+            return GetOrStartSessionOperation(config, forceRefresh, allowCreate: false);
+        }
+
+        private Task<AccountAuthSessionResult> GetOrStartSessionOperation(
+            SupabaseConfigSO config,
+            bool forceRefresh,
+            bool allowCreate)
+        {
+            lock (sessionGate)
+            {
+                if (sessionOperation != null && !sessionOperation.IsCompleted)
+                    return sessionOperation;
+
+                sessionOperation = RunSessionOperationAsync(config, forceRefresh, allowCreate);
+                return sessionOperation;
+            }
+        }
+
+        private async Task<AccountAuthSessionResult> RunSessionOperationAsync(
+            SupabaseConfigSO config,
+            bool forceRefresh,
+            bool allowCreate)
         {
             config = PlatformContext.ResolveSupabaseConfig(config);
             if (config == null || string.IsNullOrWhiteSpace(config.supabaseUrl) || string.IsNullOrWhiteSpace(config.supabaseAnonKey))
                 return AccountAuthSessionResult.Failed("Profile service configuration is unavailable.");
 
+#if UNITY_INCLUDE_TESTS
+            if (TestSessionOperationOverride != null)
+                return await TestSessionOperationOverride(forceRefresh, allowCreate);
+#endif
+
             // Preserve an unexpired process-memory JWT when callers bootstrap
             // more than once during the same app session.
-            if (!string.IsNullOrWhiteSpace(cached.access_token) && !IsExpiringSoon(cached))
+            if (!forceRefresh && !string.IsNullOrWhiteSpace(cached.access_token) && !IsExpiringSoon(cached))
             {
                 SupabaseAuthSessionContext.AccessToken = cached.access_token;
                 return Success(restored: true);
             }
 
-            cached = LoadCachedSession();
+            if (string.IsNullOrWhiteSpace(cached.refresh_token))
+                cached = LoadCachedSession();
             bool hadCachedSession = HasCachedSession;
 
             if (!string.IsNullOrWhiteSpace(cached.refresh_token))
@@ -51,10 +96,18 @@ namespace Chainbound.Combat
                     JsonUtility.ToJson(new RefreshRequest { refresh_token = cached.refresh_token }));
                 if (refresh.success)
                     return StoreAndReturn(refresh.payload, restored: true);
+
+                // Never replace an existing anonymous identity merely because its
+                // refresh failed. Doing so would strand the player's profile behind
+                // a newly-created auth user. Keep the refresh credential for a later
+                // retry and surface the reconnect failure instead.
+                return AccountAuthSessionResult.Failed(BuildFailureMessage(refresh, hadCachedSession: true));
             }
 
-            // A fresh install only reaches this branch after a live auth request.
-            // We deliberately do not synthesize an offline identity.
+            if (!allowCreate)
+                return AccountAuthSessionResult.Failed("No refreshable profile session is available.");
+
+            // Only a genuinely fresh install may create a new anonymous identity.
             AuthResponse signup = await SendAuthRequestAsync(config, "/auth/v1/signup", "{}");
             if (!signup.success)
                 return AccountAuthSessionResult.Failed(BuildFailureMessage(signup, hadCachedSession));
