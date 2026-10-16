@@ -194,7 +194,8 @@ namespace Chainbound.Combat
 
         /// <summary>
         /// Opens the combat-native slot targeter for a non-move command. Eligible instance IDs
-        /// keep command-specific rules outside the shared presentation layer.
+        /// keep command-specific rules outside the shared presentation layer. The move-select
+        /// frame stays closed; capture uses the battlefield targeter only.
         /// </summary>
         public bool BeginTargetSelection(
             CombatState state,
@@ -203,8 +204,7 @@ namespace Chainbound.Combat
             ChainlingInstance actor,
             IReadOnlyCollection<string> eligibleInstanceIds,
             Action<string> onConfirm,
-            Action onCancel,
-            string prompt = null)
+            Action onCancel)
         {
             ResolveFallbacks();
             if (state == null || hudController == null || onConfirm == null || eligibleInstanceIds == null)
@@ -238,11 +238,12 @@ namespace Chainbound.Combat
             }
 
             _targetCursor = 0;
-            _activeTargetingPromptMessage = string.IsNullOrWhiteSpace(prompt) ? null : prompt;
+            _activeTargetingPromptMessage = null;
             _mode = Mode.ExternalTargetSelect;
+            HideTargetingPrompt();
+            moveSelectPanel?.SetVisible(false);
             swapSelectPanel?.SetVisible(false);
             moveInfoPanel?.SetVisible(false);
-            ShowTargetingPrompt();
             RefreshPreviewTargets();
             return true;
         }

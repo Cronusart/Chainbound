@@ -165,12 +165,18 @@ namespace Chainbound.Combat.Editor
             foreach (EncounterZoneSO zone in LoadAssets<EncounterZoneSO>().Where(x => x != null && !string.IsNullOrWhiteSpace(x.zoneId)).OrderBy(x => x.zoneId, StringComparer.Ordinal))
             {
                 List<ZoneEncounterEntry> entries = ResolveZoneEntries(zone);
-                for (int i = 0; i < entries.Count; i++)
+                foreach (TimeSegment segment in Enum.GetValues(typeof(TimeSegment)).Cast<TimeSegment>())
                 {
-                    ZoneEncounterEntry entry = entries[i];
-                    if (entry == null || entry.weight <= 0 || !species.TryGetValue(entry.speciesId ?? "", out SpeciesDefinitionSO definition))
-                        continue;
-                    manifest.encounters.Add(ToZoneEncounter(zone, entry, definition));
+                    for (int i = 0; i < entries.Count; i++)
+                    {
+                        ZoneEncounterEntry entry = entries[i];
+                        float segmentWeight = entry != null && entry.IsSegmentAllowed(segment)
+                            ? Mathf.Max(0f, entry.weight * entry.GetSegmentWeightMultiplier(segment))
+                            : 0f;
+                        if (entry == null || segmentWeight <= 0f || !species.TryGetValue(entry.speciesId ?? "", out SpeciesDefinitionSO definition))
+                            continue;
+                        manifest.encounters.Add(ToZoneEncounter(zone, entry, definition, segment, segmentWeight));
+                    }
                 }
             }
 
@@ -184,26 +190,43 @@ namespace Chainbound.Combat.Editor
             return manifest;
         }
 
-        private static ManifestEncounterDto ToZoneEncounter(EncounterZoneSO zone, ZoneEncounterEntry entry, SpeciesDefinitionSO species)
+        private static ManifestEncounterDto ToZoneEncounter(
+            EncounterZoneSO zone,
+            ZoneEncounterEntry entry,
+            SpeciesDefinitionSO species,
+            TimeSegment segment,
+            float resolvedWeight)
         {
             EncounterDifficulty difficulty = zone.inheritDifficulty && zone.area != null ? zone.area.difficulty : zone.difficulty;
             bool boss = difficulty == EncounterDifficulty.Boss;
             string moveId = ResolveOrdinalMove(entry, zone, species);
+            int ivMin = zone.ivMinOverride != int.MinValue
+                ? zone.ivMinOverride
+                : zone.area != null && zone.area.wildTraits != null ? zone.area.wildTraits.ivMin : CombatConstants.IV_MIN;
+            int ivMax = zone.ivMaxOverride != int.MinValue
+                ? zone.ivMaxOverride
+                : zone.area != null && zone.area.wildTraits != null ? zone.area.wildTraits.ivMax : CombatConstants.IV_MAX;
+            if (ivMax < ivMin)
+                ivMax = ivMin;
+            string segmentId = segment.ToString().ToLowerInvariant();
             var target = new ManifestTargetDto
             {
-                targetId = $"{zone.zoneId}:{entry.speciesId}", speciesId = species.speciesId, displayName = species.displayName,
+                targetId = $"{zone.zoneId}:{segmentId}:{entry.speciesId}", speciesId = species.speciesId, displayName = species.displayName,
                 difficultyId = difficulty.ToString().ToLowerInvariant(), maxHp = Mathf.Max(1, species.baseMaxHP),
                 currentHp = Mathf.Max(1, species.baseMaxHP), legacyBaseCaptureRate = entry.baseCaptureRate,
                 captureProfile = (int)species.defaultCaptureProfile,
-                stars = entry.baseStars, level = 1, knownMoveId = moveId, startsActive = true,
+                stars = entry.baseStars, starVariance = entry.starVariance, level = 1,
+                rollIvs = true, ivMin = ivMin, ivMax = ivMax,
+                knownMoveId = moveId, startsActive = true,
             };
             return new ManifestEncounterDto
             {
-                encounterId = $"zone:{zone.zoneId}:{entry.speciesId}", zoneId = zone.zoneId,
+                encounterId = $"zone:{zone.zoneId}:{segmentId}:{entry.speciesId}", zoneId = zone.zoneId,
+                timeSegment = segmentId,
                 battleKind = boss ? (int)AuthoritativeBattleKind.Boss : (int)AuthoritativeBattleKind.Wild,
                 rewardTier = ResolveRewardTier(difficulty),
                 captureEnabled = !boss, capturePolicy = (int)EncounterCapturePolicy.UseEncounterDefault,
-                weight = Mathf.Max(1, entry.weight), targets = new List<ManifestTargetDto> { target },
+                weight = Mathf.Max(1, Mathf.RoundToInt(resolvedWeight * 1000f)), targets = new List<ManifestTargetDto> { target },
             };
         }
 
@@ -433,14 +456,14 @@ namespace Chainbound.Combat.Editor
         private static int[] CopyArray(int[] source) { var result = new int[6]; if (source != null) Array.Copy(source, result, Math.Min(6, source.Length)); return result; }
         private static string FirstMove(List<string> moves) => moves != null && moves.Count > 0 && !string.IsNullOrWhiteSpace(moves[0]) ? moves[0] : "baseline_jab";
 
-        [Serializable] private sealed class GameplayManifestDto { public int manifestVersion = 1; public List<SpeciesDto> species = new List<SpeciesDto>(); public List<MoveDto> moves = new List<MoveDto>(); public List<StatusDto> statuses = new List<StatusDto>(); public List<RulesetDto> rulesets = new List<RulesetDto>(); public List<ManifestEncounterDto> encounters = new List<ManifestEncounterDto>(); }
+        [Serializable] private sealed class GameplayManifestDto { public int manifestVersion = 2; public List<SpeciesDto> species = new List<SpeciesDto>(); public List<MoveDto> moves = new List<MoveDto>(); public List<StatusDto> statuses = new List<StatusDto>(); public List<RulesetDto> rulesets = new List<RulesetDto>(); public List<ManifestEncounterDto> encounters = new List<ManifestEncounterDto>(); }
         [Serializable] private sealed class SpeciesDto { public string speciesId; public string displayName; public int primaryType; public int secondaryType; public int baseMaxHp; public int baseMeleeAttack; public int baseMeleeDefense; public int baseRangedAttack; public int baseRangedDefense; public int baseSpeed; public List<string> initialMoveIds = new List<string>(); }
         [Serializable] private sealed class MoveDto { public string moveId; public string displayName; public int category; public int baseType; public int rarity; public int targeting; public int contactType; public int power; public int apCost; public int accuracy; public int hitCountMin; public int hitCountMax; public int rechargeTurns; public List<string> tags = new List<string>(); public List<MoveStatusDto> statusEffects = new List<MoveStatusDto>(); }
         [Serializable] private sealed class MoveStatusDto { public string statusId; public int duration; public int chanceBasisPoints; }
         [Serializable] private sealed class StatusDto { public string statusId; public string displayName; public int statusClass; public int origin; public int defaultDuration; public int counterThreshold; public bool preventsAction; public int endOfTurnDamageBasisPoints; public int endOfTurnApChange; }
         [Serializable] private sealed class RulesetDto { public string rulesetId; public string displayName; public int configVersion; public List<int> allowedTypes = new List<int>(); public List<string> requiredMoveIds = new List<string>(); public List<string> bannedMoveIds = new List<string>(); }
-        [Serializable] private sealed class ManifestEncounterDto { public string encounterId; public string zoneId; public int battleKind; public string rewardTier = BattleRewardTier.Standard; public string rewardEligibilityQuestId = ""; public bool captureEnabled; public int capturePolicy; public int weight = 1; public List<ManifestTargetDto> targets = new List<ManifestTargetDto>(); }
-        [Serializable] private sealed class ManifestTargetDto { public string targetId; public string speciesId; public string displayName; public string visualVariantId = "base"; public string mutationId = "none"; public bool mutated; public bool entangled; public string entangledTypeId = "none"; public string difficultyId = "standard"; public int currentHp = 1; public int maxHp = 1; public int legacyBaseCaptureRate = 45; public int captureProfile = 1; public int stars; public int level = 1; public int[] ivs = new int[6]; public string knownMoveId = "baseline_jab"; public bool startsActive = true; }
+        [Serializable] private sealed class ManifestEncounterDto { public string encounterId; public string zoneId; public string timeSegment = ""; public int battleKind; public string rewardTier = BattleRewardTier.Standard; public string rewardEligibilityQuestId = ""; public bool captureEnabled; public int capturePolicy; public int weight = 1; public List<ManifestTargetDto> targets = new List<ManifestTargetDto>(); }
+        [Serializable] private sealed class ManifestTargetDto { public string targetId; public string speciesId; public string displayName; public string visualVariantId = "base"; public string mutationId = "none"; public bool mutated; public bool entangled; public string entangledTypeId = "none"; public string difficultyId = "standard"; public int currentHp = 1; public int maxHp = 1; public int legacyBaseCaptureRate = 45; public int captureProfile = 1; public int stars; public int starVariance; public int level = 1; public bool rollIvs; public int ivMin = CombatConstants.IV_MIN; public int ivMax = CombatConstants.IV_MAX; public int[] ivs = new int[6]; public string knownMoveId = "baseline_jab"; public bool startsActive = true; }
         [Serializable] private sealed class BattleRewardsManifestDto { public int schemaVersion = 1; public int configVersion = 1; public BattleRewardValuesDto rewards = new BattleRewardValuesDto(); }
         [Serializable] private sealed class BattleRewardValuesDto { public int standard; public int elite; public int boss; }
         [Serializable] private sealed class CaptureBalanceManifestDto { public int configVersion; public string configHash; public BalanceDto balance = new BalanceDto(); public List<WeightedTypeDto> entangledTypes = new List<WeightedTypeDto>(); }

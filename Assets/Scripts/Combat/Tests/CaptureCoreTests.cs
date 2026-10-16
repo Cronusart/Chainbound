@@ -214,15 +214,131 @@ namespace Chainbound.Combat.Tests
             }
 
             Assert.AreEqual(180, left.Tick);
-            Assert.AreEqual(2124024666u, left.RngState);
-            Assert.AreEqual(6705, left.TargetPositionUnits);
-            Assert.AreEqual(-593, left.TargetVelocityUnitsPerSecond);
+            Assert.AreEqual(1961476631u, left.RngState);
+            Assert.AreEqual(7604, left.TargetPositionUnits);
+            Assert.AreEqual(-240, left.TargetVelocityUnitsPerSecond);
+            Assert.AreEqual(CaptureTraceRegime.Consolidation, left.TraceRegime);
+            Assert.AreEqual(101, left.TraceRegimeTicksRemaining);
+            Assert.AreEqual(7584, left.TraceConsolidationAnchorUnits);
+            Assert.AreEqual(7584, left.TraceImpulseTargetPositionUnits);
+            Assert.IsTrue(left.IsTraceRegimeInitialized);
             Assert.AreEqual(9986, left.BandPositionUnits);
             Assert.AreEqual(-121, left.BandVelocityUnitsPerSecond);
-            Assert.AreEqual(4847, left.MeterBasisPoints);
+            Assert.AreEqual(1637, left.MeterBasisPoints);
             Assert.AreEqual(-20, left.MeterRemainder);
             Assert.IsFalse(left.IsInsideBand);
             Assert.AreEqual(CaptureOutcomeKind.None, left.Outcome);
+        }
+
+        [Test]
+        public void ConsolidationStaysNearItsAnchorWithoutCenterPull()
+        {
+            CaptureSimulationParameters parameters = TraceOnlyParameters();
+            var state = new CaptureSimulationState
+            {
+                RngState = 123u,
+                TargetPositionUnits = 1000,
+                TargetVelocityUnitsPerSecond = 0,
+                TraceRegime = CaptureTraceRegime.Consolidation,
+                TraceRegimeTicksRemaining = 60,
+                TraceConsolidationAnchorUnits = 1000,
+                TraceImpulseTargetPositionUnits = 1000,
+                IsTraceRegimeInitialized = true,
+                BandPositionUnits = 5000,
+                MeterBasisPoints = 5000,
+            };
+
+            for (int tick = 0; tick < 45; tick++)
+            {
+                state = CaptureSimulation.Step(state, parameters, false).State;
+                Assert.AreEqual(CaptureTraceRegime.Consolidation, state.TraceRegime);
+                Assert.That(state.TargetPositionUnits, Is.InRange(800, 1200));
+                Assert.LessOrEqual(System.Math.Abs(state.TargetVelocityUnitsPerSecond), 390);
+            }
+
+            Assert.Less(state.TargetPositionUnits, 1500, "Consolidation must not pull toward chart center.");
+        }
+
+        [Test]
+        public void ImpulseTravelsDirectlyToTargetThenRests()
+        {
+            CaptureSimulationParameters parameters = TraceOnlyParameters();
+            var state = new CaptureSimulationState
+            {
+                RngState = 456u,
+                TargetPositionUnits = 1000,
+                TargetVelocityUnitsPerSecond = 6500,
+                TraceRegime = CaptureTraceRegime.Impulse,
+                TraceRegimeTicksRemaining = 60,
+                TraceConsolidationAnchorUnits = 1000,
+                TraceImpulseTargetPositionUnits = 8000,
+                IsTraceRegimeInitialized = true,
+                BandPositionUnits = 5000,
+                MeterBasisPoints = 5000,
+            };
+
+            int previous = state.TargetPositionUnits;
+            while (state.TraceRegime == CaptureTraceRegime.Impulse)
+            {
+                state = CaptureSimulation.Step(state, parameters, false).State;
+                Assert.GreaterOrEqual(state.TargetPositionUnits, previous);
+                Assert.LessOrEqual(state.TargetPositionUnits, 8000);
+                previous = state.TargetPositionUnits;
+            }
+
+            Assert.AreEqual(8000, state.TargetPositionUnits);
+            Assert.AreEqual(0, state.TargetVelocityUnitsPerSecond);
+            Assert.AreEqual(8000, state.TraceConsolidationAnchorUnits);
+        }
+
+        [Test]
+        public void EdgeContactRejectsIntoANewInteriorImpulse()
+        {
+            CaptureSimulationParameters parameters = TraceOnlyParameters();
+            var state = new CaptureSimulationState
+            {
+                RngState = 789u,
+                TargetPositionUnits = 0,
+                TraceRegime = CaptureTraceRegime.Consolidation,
+                TraceRegimeTicksRemaining = 30,
+                TraceConsolidationAnchorUnits = 0,
+                IsTraceRegimeInitialized = true,
+                BandPositionUnits = 5000,
+                MeterBasisPoints = 5000,
+            };
+
+            state = CaptureSimulation.Step(state, parameters, false).State;
+
+            Assert.AreEqual(CaptureTraceRegime.Impulse, state.TraceRegime);
+            Assert.Greater(state.TargetPositionUnits, 0);
+            Assert.That(state.TraceImpulseTargetPositionUnits, Is.InRange(2000, 7999));
+            Assert.Greater(state.TargetVelocityUnitsPerSecond, 0);
+        }
+
+        [Test]
+        public void AuthoritativeSnapRebuildsTraceAtCorrectedPosition()
+        {
+            CaptureSimulationParameters parameters = TraceOnlyParameters();
+            var state = new CaptureSimulationState
+            {
+                RngState = 987u,
+                TargetPositionUnits = 4200,
+                TargetVelocityUnitsPerSecond = 6500,
+                TraceRegime = CaptureTraceRegime.Impulse,
+                TraceRegimeTicksRemaining = 17,
+                TraceConsolidationAnchorUnits = 1000,
+                TraceImpulseTargetPositionUnits = 9000,
+                IsTraceRegimeInitialized = true,
+            };
+
+            CaptureSimulation.RebuildTraceRegimeAfterSnapshot(state, parameters);
+
+            Assert.AreEqual(987u, state.RngState);
+            Assert.AreEqual(CaptureTraceRegime.Consolidation, state.TraceRegime);
+            Assert.AreEqual(17, state.TraceRegimeTicksRemaining);
+            Assert.AreEqual(4200, state.TraceConsolidationAnchorUnits);
+            Assert.AreEqual(4200, state.TraceImpulseTargetPositionUnits);
+            Assert.AreEqual(0, state.TargetVelocityUnitsPerSecond);
         }
 
         [Test]
@@ -484,12 +600,40 @@ namespace Chainbound.Combat.Tests
             };
         }
 
+        private static CaptureSimulationParameters TraceOnlyParameters()
+        {
+            return new CaptureSimulationParameters
+            {
+                TickRate = 30,
+                DurationTicks = 1000,
+                GraphUnits = 10000,
+                BandHeightUnits = 1,
+                LockRateBasisPointsPerSecond = 0,
+                EscapeRateBasisPointsPerSecond = 0,
+                BandLiftAccelerationUnitsPerSecondSquared = 0,
+                BandGravityUnitsPerSecondSquared = 0,
+                BandMaximumSpeedUnitsPerSecond = 1,
+                BandEdgeBounceBasisPoints = 0,
+                TraceAccelerationUnitsPerSecondSquared = 12000,
+                TraceMaximumSpeedUnitsPerSecond = 6500,
+                TraceMeanReversionUnitsPerSecondSquared = 8000,
+                TraceEdgeBounceBasisPoints = 6500,
+                SpikeChanceBasisPointsPerTick = 0,
+                SpikeVelocityImpulseUnitsPerSecond = 2400,
+            };
+        }
+
         private static void AssertStateEqual(CaptureSimulationState expected, CaptureSimulationState actual)
         {
             Assert.AreEqual(expected.Tick, actual.Tick);
             Assert.AreEqual(expected.RngState, actual.RngState);
             Assert.AreEqual(expected.TargetPositionUnits, actual.TargetPositionUnits);
             Assert.AreEqual(expected.TargetVelocityUnitsPerSecond, actual.TargetVelocityUnitsPerSecond);
+            Assert.AreEqual(expected.TraceRegime, actual.TraceRegime);
+            Assert.AreEqual(expected.TraceRegimeTicksRemaining, actual.TraceRegimeTicksRemaining);
+            Assert.AreEqual(expected.TraceConsolidationAnchorUnits, actual.TraceConsolidationAnchorUnits);
+            Assert.AreEqual(expected.TraceImpulseTargetPositionUnits, actual.TraceImpulseTargetPositionUnits);
+            Assert.AreEqual(expected.IsTraceRegimeInitialized, actual.IsTraceRegimeInitialized);
             Assert.AreEqual(expected.BandPositionUnits, actual.BandPositionUnits);
             Assert.AreEqual(expected.BandVelocityUnitsPerSecond, actual.BandVelocityUnitsPerSecond);
             Assert.AreEqual(expected.MeterBasisPoints, actual.MeterBasisPoints);
