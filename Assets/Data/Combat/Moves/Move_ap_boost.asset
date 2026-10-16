@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: ap_boost
   displayName: AP Boost
-  description: Gain +2 AP now; 3-turn recharge.
+  description: Gain +2 AP now. Skips the next 2 turns.
   category: 2
   baseType: 0
   rarity: 0

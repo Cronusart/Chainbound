@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: extend_protocol
   displayName: Extend Protocol
-  description: Extend one ally buff by 1 turn; 3-turn recharge.
+  description: Extend one ally buff by 1 turn. Skips the next 2 turns.
   category: 2
   baseType: 1
   rarity: 0

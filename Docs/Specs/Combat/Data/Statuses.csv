@@ -54,10 +54,11 @@ ThreadLock,Thread Lock,General,Duration,1,0,Target cannot gain AP,,false,true,fa
 ExploitMark,Exploit Mark,General,Duration,2,0,Allies deal +15% dmg to target,,false,true,false,false,0,0
 Broadcast,Broadcast,General,Consumed,2,0,Next move hits all foes,,false,false,true,false,0,0
 Yield,Yield,General,Duration,3,0,+1 AP at End of Turn,,false,false,true,false,0,1
-Immovable,Immovable,General,Duration,2,0,Immune to forced swap,,false,false,true,false,0,0
+Immovable,Immovable,General,Duration,2,0,Immune to forced swap; Def +2 while active,MeleeDef:2,false,false,true,false,0,0
 Staggered,Staggered,General,Consumed,1,0,Next move deals -10% power. Holds through the next turn if unused.,,false,true,false,false,0,0
 Surging,Surging,General,Consumed,1,0,Next move deals +25% power. Holds through the next turn if unused.,,false,false,true,false,0,0
 Unsealed,Unsealed,General,Duration,2,0,50% chance to bypass single-hit barriers per hit,,false,false,true,false,0,0
 Relay,Relay,General,Consumed,1,0,Full barrier bypass for next hit,,false,false,true,false,0,0
 DamageIntercept,Damage Intercept,General,Consumed,1,0,Redirect the next single-target hit. Holds through the next turn if unused.,,false,false,true,false,0,0
 Recharging,Recharging,General,Consumed,0,0,Move recharge timer,,false,false,false,false,0,0
+SearField,Sear Field,General,Duration,1,0,Atk -1 for the rest of this turn,MeleeAtk:-1,false,true,false,false,0,0

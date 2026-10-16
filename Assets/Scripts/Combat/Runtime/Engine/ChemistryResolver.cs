@@ -394,17 +394,11 @@ namespace Chainbound.Combat
                     for (int e = 0; e < statusDef.stageEffects.Length; e++)
                     {
                         var eff = statusDef.stageEffects[e];
-                        if (eff.applyOnce)
+                        if (!eff.applyOnce)
+                            continue;
+                        int appliedDelta = instance.ApplyOwnedStage(recipient, eff.stat, eff.stages);
+                        if (appliedDelta != 0)
                         {
-                            int oldStage = recipient.GetStage(eff.stat);
-                            recipient.SetStage(eff.stat, oldStage + eff.stages);
-                            int appliedDelta = recipient.GetStage(eff.stat) - oldStage;
-                            if (output.statusId == StatusId.FOMO)
-                            {
-                                instance.hasTemporaryStageDelta = true;
-                                instance.temporaryStageStat = eff.stat;
-                                instance.temporaryStageDelta = appliedDelta;
-                            }
                             _log.LogStageChange(turn, recipient.instanceId, eff.stat,
                                 appliedDelta, recipient.GetStage(eff.stat));
                         }
