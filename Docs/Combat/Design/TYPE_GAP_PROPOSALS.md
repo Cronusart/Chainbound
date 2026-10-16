@@ -28,101 +28,136 @@ Working comparisons used below:
 
 `Drain` in `CombatApService` stops at 0. It does not wrap or delete a move. `Steal` drains the target, then gains that many on the user, then the cap of 10 deletes the overflow. `Gain` refuses the whole gain while `ThreadLock` is active, including the +2 regen.
 
+### Typed-pool rule
+
+A typed move or passive draws from a smaller equip pool than a typeless card of the same job. It has to be better than that typeless card. A typeless effect plus a condition that only makes it fire less often does not qualify. Partner Beacon was that shape: on its best turn it matched `turn_start_ap_gain` (+1 AP to the holder), and on turn 1 it usually did nothing, because the partner had no buff yet.
+
+Two further tests:
+
+- It works on turn 1, when the fighter's AP is only the +2 regen from an empty pool (`currentAP` defaults to 0, then `ProcessStartOfTurn` adds `AP_PER_TURN`). Or the slow opening clearly pays back, and the payback is written down in numbers.
+- It rewards the type's profile with something a typeless card cannot do. Routing AP onto a buffed ally, or putting a burn on a foe you hit, qualifies. A second copy of "gain 1 AP" does not.
+
+Sections 2 and 3 were drafted before this rule. They are not re-cut in this pass.
+
 ## 1. Passives for types that lack one
 
 ### Node
 
 Profile: team coordinator. Routes AP, extends buffs, wide heals. Keywords: support-heavy, AP management, wide buffs, redirect. Chart role: net 0 starter, four wins (Frozen, Forked, Mined, Compressed).
 
-Node already has the wide heal (`hub_heal`, 15% to all allies, 3 AP) and the AP move (`ap_router`, up to 2 AP between allies, hardcoded). Extend Protocol's "extend a buff" clause is an open unimplemented row. These passives do not implement that clause, and they do not apply NodeRelay (no producer, no resolver body).
+Node already has the wide heal (`hub_heal`, 15% to all allies, 3 AP) and the AP move (`ap_router`, up to 2 AP between allies, hardcoded). Extend Protocol's "extend a buff" clause is an open unimplemented row. Relay does not implement that clause, and it does not apply the NodeRelay status (no producer, no resolver body).
 
-#### Option N1 — Partner Beacon (recommended)
+Partner Beacon and Relay Dividend are withdrawn. Partner Beacon was a conditional copy of the typeless +1 AP passive. Relay Dividend paid +1 on any Support, including heals, which overlaps Group Hug and does not care whether a buff landed.
+
+#### Relay (recommended)
 
 | Field | Proposal |
 |---|---|
-| Name | Partner Beacon (`partner_beacon`) |
+| Name | Relay (`relay`) |
 | Category | Passive, Node, Uncommon, self, AP 0, accuracy 0, power 0, recharge 0 |
-| Rule | At the start of your turn, after the +2 regen, if at least one other active ally has a buff, you gain +1 AP. |
-| Trigger | `TurnStart`, condition `BuffedPartnerCountAtLeast` 1, opcode `GainAP:1` on self. Same column shape as `fee_collector`. |
-| Numbers | +1 AP. Cap 10 still applies. No stage, no heal, no status. |
+| Rule | When this Chainling applies a buff to an ally, that ally gains +1 AP. Each ally can receive this point at most once per turn. |
+| Numbers | +1 AP per buffed ally, cap 10. The Node's own pool does not gain this point. No heal and no extra stage. |
 
-**Chemistry, stages, AP, bench.** No chemistry and no stages. The point is the same size as `turn_start_ap_gain`, gated on a buffed partner, so a solo Node or a Node whose partner is unbuffed gets nothing. Turn start does not run on the bench, and a benched partner is not an active ally, so parking the buffed partner turns the passive off. Recharge on the Node's moves is unaffected.
+**What counts as applying a buff.** A positive stage (`stages > 0`) written onto an ally, or a status applied to an ally whose catalog row is a buff (`IsBuff`). The write has to succeed: a missed chance, a failed status apply, or a stage that does not change the value because of a cap does not count. Heals, cleanses, AP transfers, debuffs, and moving an existing buff (`relay_packet`) do not count. `hub_heal` does not fire Relay.
+
+**Self-buffs.** If the stage or status target is this Chainling, Relay does not pay. `signal_redirect` raises the user's own Def (`MeleeDef:1:1.0:true` on a self-targeted stage) and does not fire Relay. `network_response` raises the user's Speed and does not fire it either.
+
+**Timing.** The check runs once, after the action has finished every buff write for that action (`ApplyMoveStageChanges` and buff-status apply). Two positive stages in one action, such as Pack Rally's Atk +1 and Speed +1, are one application. The ally is marked for this turn before `Gain`, so a later buff in the same turn cannot pay them again.
+
+**Multi-target.** Each living ally who received at least one buff from the action, and who has not already been paid by Relay this turn, gains +1 AP. `AddAliveTargets` includes every living active, including the user. The user is skipped. In the current 2-active roster that is the partner. A second active ally, if one were ever both buffed and not the user, would each get their own point.
+
+**Fainted, benched, cap, Thread Lock.** A fainted ally is not a legal target (`AddUniqueTarget` requires `isAlive`) and is skipped. A benched ally is not in `activeIndices`, so a wide buff does not hit them and Relay does not pay them. `Gain` clamps at 10. If the ally is already at 10, or `ThreadLock` blocks the gain, the point is lost and the once-per-turn mark is still spent. Chemistry is not involved.
+
+**Turn 1 and the payback.** Turn 1 AP is 2. The Node buff that actually writes ally stages today is `pack_rally` (Uncommon, AllAllies, Atk +1 and Speed +1, 3 AP). `network_sync` is 2 AP and would be a turn-1 buff, but its payload is empty (open row), so Relay does not pretend it fires. Relay therefore does not pay on turn 1 with the current working cards. The payback is the first rally, which is available on turn 2 if turn 1 spent 0 or 1 AP (turn 2 opens at 4 or 3). That action gives the partner Atk +1 (1.5×) and Speed +1 from the move, and +1 AP from Relay in the partner's pool. A typeless +1 AP passive over those two turns has put +2 on the Node only. Relay has put the point on the partner, in the same action as the buff, so a partner who has not acted yet can spend it this turn. The typeless card cannot move a point onto the ally you just buffed.
 
 **Side by side**
 
-| | Partner Beacon | `turn_start_ap_gain` | `fee_collector` | `low_ap_surge` |
+| | Relay | `turn_start_ap_gain` | `immutable_ledger` | `fee_collector` |
 |---|---|---|---|---|
-| When | Turn start, partner buffed | Turn start, always | Turn start, a foe is ahead on AP | Turn start, your AP is at most 1 after regen |
-| Payout | +1 AP to you | +1 AP to you | −1 AP on each foe | Speed +1 |
-| Floor | Can whiff the whole turn | Never whiffs | Whiffs when you are ahead or tied | Whiffs when you are at 2+ AP |
+| Rarity | Uncommon, Node | Common, typeless | Uncommon, Block | Rare, Gas |
+| Who is paid | The ally who received the buff | The holder, every turn | The holder, when hit | Foes lose 1, if they are ahead |
+| Turn 1 | No working ally-buff costs 2 AP or less, so no pay | +1 on top of regen | Pays if they are hit | Pays if a foe has more AP |
+| What typeless cannot do | The point is created on the buffed ally, once per ally per turn | Pays only the holder | Pays the holder for being hit | Taxes foes |
 
-It is strictly inside the Common "plus one AP" band, and weaker than that Common because of the partner gate. It does not reach Patience Passive's Def stack or Firewall's 25% projectile cut.
+Relay is not a smaller `turn_start_ap_gain`. It is a routing payment the typeless passive has no way to make. It stays under Patience Passive's Def +1 every end of turn, and it does not add Group Hug's "any stamped support pays every active."
 
-**Primitives.** Data-only: `GainAP`, `TurnStart`, `BuffedPartnerCountAtLeast`. No new status.
+**AI.** Utility scoring gives a support +15 and does not know Relay (`UtilityStatusAI`). Proposed scorer change, small: a move that writes a positive stage or a buff status onto an ally gains a bonus when that ally is under the AP cap and has not been paid by Relay this turn. The bonus should beat a self-buff that does not route, and it should lose to a believed KO. Aggressive keeps ignoring non-damage. Defensive already buffs when the team is above 55% HP; with Relay equipped it should prefer the ally-buff over a self-buff in that step.
 
-#### Option N2 — Relay Dividend
+**Primitives.** Engine. No opcode means "after this fighter buffs an ally, that ally gains 1 AP, once per ally per turn." The hook sits after stage and buff-status application in `CombatResolver`, calls `CombatApService.Gain`, and stores the paid ally ids for the turn. It is not a data-only row, and it must not reuse modifier `4.5-a`.
 
-| Field | Proposal |
-|---|---|
-| Name | Relay Dividend (`relay_dividend`) |
-| Category | Passive, Node, Rare, self, AP 0 |
-| Rule | After you resolve a Support move, the other living active ally gains +1 AP. Your own AP is unchanged by the passive. |
-| Trigger | `OnAction`, then a category check that the action was Support. |
-| Numbers | +1 AP to one ally. Cap 10. No copy of the support's heal or stages. |
-
-**Chemistry, stages, AP, bench.** The ally must be active. A benched partner gets nothing, matching Group Hug. Group Hug (`4.5-a`) already grants +1 AP to each active ally after a *stamped* support. This passive would do a smaller version on every Node support, with no stamp. Support costs are already 2–4, so the turn is still spent.
-
-**Side by side.** Against `turn_start_ap_gain` it pays less often (only on support turns) but pays the partner, which is the coordinator fantasy. Against `hub_heal` (15% to all allies for 3 AP) it adds a point of AP on top of a heal the player already paid for. Against Group Hug it is the same resource without the Epic stamp. That overlap is why it is not the recommendation.
-
-**Primitives.** Engine. `OnAction` exists. The utility runner does not currently test "the action's category was Support" before `GainAP`. A small branch next to the Group Hug check would do it. Do not reuse modifier `4.5-a`.
-
-**Recommendation.** N1. It is inside the existing AP-passive band, it uses the coordinator condition the profile already points at (a buffed partner), and it needs no new code. N2 can wait until Group Hug's stamp and a passive routing trigger are meant to be different buttons.
+**Recommendation.** Relay. It is the Node passive.
 
 ### Burned
 
-Profile: DoT pressure, wide coverage, wins long attrition lanes. Keywords: DoT, burn, coating setups. Statuses named on the profile: Burned Tokens, FUD. Burned Tokens' "enemy DoT heals you" body is an open item. This passive does not depend on it. Rugged, the chemistry DoT Burned already prints on five cells, remains the matchup pressure: `counter / 16` of MaxHP at end of turn for a catalog duration of 3 (`StatusProcessor`, `Statuses.csv`).
+Profile: DoT pressure, wide coverage, wins long attrition lanes. Keywords: DoT, burn, coating setups. Statuses named on the profile: Burned Tokens, FUD. Burned Tokens' "enemy DoT heals you" body is an open item (`Statuses.csv` marks it neither a buff nor a debuff, and the heal does not run). These passives do not implement that heal and do not apply FUD. Rugged, the chemistry DoT Burned already prints on advantage hits, stays the matchup pressure: the catalog row is 0.0625, and `StatusProcessor` replaces that with `tick / 16` of MaxHP, then increments the tick, for a catalog duration of 3.
 
-#### Option B1 — Cinder Idle (recommended)
+Cinder Idle is withdrawn. It was +1 AP at turn start only if you had been hit, which is `turn_start_ap_gain` with an extra gate. Scorch Echo is withdrawn. Draining 1 AP from whoever hit you is the Gas and Bot verb (`fee_collector`, section 3), it does not burn, and the old draft was Rare.
+
+Both options below share one new status, **Kindled**. Only the equipped passive is authored. They do not stack.
+
+**Kindled** (`StatusId.Kindled`, distinct from the passive id). General, Duration, default duration 1, debuff, not a buff. `hasEndOfTurnDamage` true. No stage string. `StatusProcessor` already deals `endOfTurnDamagePercent` of MaxHP for every end-of-turn damage status except the Rugged and FOMO overrides, using `Math.Max(1, (int)(EffectiveMaxHP * percent))`, which truncates. Kindled must stay off those two overrides, and off `IsNextActionStatus`. A duration that is not a next-action status ticks on the granting end step: the percent lands, then `Tick` drops duration 1 to 0 and the status expires. `HoldThroughGrantTurn` is only applied to next-action statuses today, so Kindled must not be added to that set or the first tick would slip to the following turn.
+
+Encrypted Seal blocks a debuff apply, so a sealed foe does not gain Kindled. A swap-out before end of turn pauses every non-recharge status (`COMBAT_Resolution.txt` §1.2). The percent does not land while they are benched. It lands on a later end step after they return, then duration 1 expires. Being hit again while Kindled is still up does not refresh it and does not add a second tick. Refresh today sets `turnsRemaining = max(current, new)` (`StatusProcessor.ApplyStatus`); the hook below skips that branch entirely when Kindled is already present and not expired.
+
+The Common median used for HP sketches is 132, Ghost excluded (`COMBAT_SYSTEMS_ANALYSIS.md`). The same note's neutral hit model is `power * 0.925 * accuracy`.
+
+#### Kindling (recommended)
 
 | Field | Proposal |
 |---|---|
-| Name | Cinder Idle (`cinder_idle`) |
+| Name | Kindling (`kindling`) |
 | Category | Passive, Burned, Uncommon, self, AP 0, accuracy 0, power 0, recharge 0 |
-| Rule | At the start of your turn, after regen, if you were damaged last turn, gain +1 AP. |
-| Trigger | `TurnStart`, condition `WasDamagedLastTurn`, opcode `GainAP:1` on self. |
-| Numbers | +1 AP. No damage, no stage, no heal. |
+| Rule | When this Chainling's damaging hit deals HP damage to a living foe, that foe gains Kindled (6% MaxHP at end of turn). Each foe can gain it at most once per turn. |
+| Numbers | `endOfTurnDamagePercent` 0.06. On a 132 HP body that truncates to 7. No AP, no heal, no stage. |
 
-**Chemistry, stages, AP, bench.** It does not add a second DoT on top of Rugged, and it does not heal, so it does not quietly implement Burned Tokens. A Burned fighter who is not being hit gets no extra AP and has to spend the +2 regen like anyone else. Turn start does not run while benched. The "damaged last turn" flag is on the fighter; if a swap-in still carries a stale flag, the first turn back could pay the point once. That is a reason to check the flag when the passive is built, not a change to bench rules here.
+**What counts.** The hit is from this Chainling, it is a damaging move, it reduced the foe's HP, and the foe is still alive afterward. A miss deals no HP and does not mark. A hit that KOs does not mark: there is no living body to tick. The user's own HP never counts. An ally never counts. Chemistry damage that is not this Chainling's hit does not count.
+
+**Once per foe per turn.** If that foe already has Kindled and it is not expired, the hook does nothing. It does not refresh. `cinder_burst` (2–4 hits, 3 AP) therefore marks once, not once per hit. `ember_shower` (AllEnemies, power 38, accuracy 95, 3 AP) marks each foe who took HP and lived, each once.
+
+**Turn 1.** Turn 1 AP is 2. `scorch_shot` and `flame_charge` are both power 64, accuracy 95, 2 AP, so either is legal after regen. A landed shot that leaves the foe alive applies Kindled during the action. If they are still active at end of turn, the 6% lands in that same end step and the status expires. The systems-analysis model puts a neutral power-64 accuracy-95 hit at `64 * 0.925 * 0.95 = 56.2` expected damage. Adding the truncated 7 on a 132 HP body is about 63 if the shot lands and they stay in through end of turn. `ember_shower` costs 3 and is not a turn-1 mark. A miss is the attack's 5% miss, not a passive that was off.
+
+**Chemistry.** Rugged and Kindled are different statuses. An advantage hit can carry both: Rugged's first tick is 1/16 (6.25%, which truncates to 8 on 132 HP) and then escalates, and Kindled adds a flat 6% that does not escalate. A neutral or disadvantage hit still applies Kindled. The passive does not read Burned Tokens or FUD.
+
+**Bench, faint, cap.** Fainted foes are skipped. A foe who swaps out before end of turn keeps Kindled paused and takes the 7 HP on a later end step after they come back, which is the counterplay. There is no AP to cap. `ThreadLock` does not interact.
 
 **Side by side**
 
-| | Cinder Idle | `turn_start_ap_gain` | `flame_charge` | `sustain_regen` |
-|---|---|---|---|---|
-| When | Turn start, you were hit last turn | Turn start, always | You spend 2 AP on a power-64 hit, and the foe has 0 AP | End of turn, always |
-| Payout | +1 AP | +1 AP | +30% damage and +1 AP | 3% MaxHP (about 4 HP on a 132 HP Common) |
-| Attrition fit | Pays for staying in a lane that hits you | Pays for existing | Pays for finding a foe at 0 AP | A small heal, any type |
+| | Kindling | `reactive_ping` | `sustain_regen` | `on_hit_momentum` | `patience_passive` |
+|---|---|---|---|---|---|
+| Rarity | Uncommon, Burned | Common, typeless | Common, typeless | Common, typeless | Uncommon, Staked |
+| When | You deal HP to a living foe | A foe misses you | Every end of turn | 25% of your hits | Every end of turn |
+| Payout | 6% MaxHP to that foe at end of turn (7 on 132 HP), once per foe per turn | 5% MaxHP to the attacker | 3% MaxHP to yourself (about 4 on 132 HP) | Atk +1, cap +3 | Def +1, cap +6 |
+| Turn 1 | `scorch_shot` or `flame_charge` at 2 AP | Only if someone misses you | Pays even if you never attack | Only if you hit and win the 25% | Pays even if you never attack |
+| What typeless cannot do | A burn on the foe you just hit, including neutral matchups, stacked with Rugged on advantage | Punishes their miss | Heals you | A stage on you | A stage on you |
 
-`flame_charge` is the active Burned card that already pays +1 AP, and it also boosts a 64-power hit. The passive is only the point, and only after you have been hit. That is under both the Common AP passive and the Uncommon attack.
+Kindling is not a smaller `turn_start_ap_gain` and it is not `reactive_ping` with a different gate. The typeless on-hit passive raises your own Attack on a coin flip. Kindling spends the hit on the foe's HP again at end of turn, which no typeless passive does. It does not reach Patience Passive's Def stack or Firewall's 25% projectile cut. `flame_charge` can still grant its own +1 AP and +30% damage when the foe is at 0 AP; Kindling does not replace that rider and does not add AP of its own.
 
-**Primitives.** Data-only: `GainAP`, `TurnStart`, `WasDamagedLastTurn`. No new status.
+**AI.** Utility scoring starts a status move at +30 and prices damage as `DamagePerAP * 2` (`UtilityStatusAI`), so a Utility Burned will coat and mark instead of attacking, and Kindling will not fire. Proposed scorer change, small: while Kindling is equipped and a living foe does not already have Kindled, a damaging move that can hit them scores above a utility that does not apply Kindled. The bonus loses to a believed KO. Aggressive already picks by `DamagePerAP` and will kindle by attacking. Defensive still heals first.
 
-#### Option B2 — Scorch Echo
+**Primitives.** Engine. No opcode means "after this fighter's damaging hit deals HP, apply a status once per living foe per turn." The status body is the generic end-of-turn percent that already exists. The new pieces are `StatusId.Kindled`, a `Statuses.csv` row at 0.06, the catalog entry beside the other general statuses, and a hit-path hook in `CombatResolver` after HP is reduced. The hook applies duration 1 only when Kindled is absent. It does not go through the refresh branch. Putting Kindled on each Burned move row would copy the passive onto cards and would refresh; do not do that.
+
+#### Sear Echo (alternative)
 
 | Field | Proposal |
 |---|---|
-| Name | Scorch Echo (`scorch_echo`) |
-| Category | Passive, Burned, Rare, self, AP 0 |
-| Rule | The first time you take damage each turn, the attacker loses 1 AP. Further hits that turn do not drain again. |
-| Trigger | `OnDamageTaken`, once per turn, `DrainAP:1` on the attacker. |
-| Numbers | −1 AP on the attacker, floor 0. No reflect, no heal, no stage. |
+| Name | Sear Echo (`sear_echo`) |
+| Category | Passive, Burned, Uncommon, self, AP 0, accuracy 0, power 0, recharge 0 |
+| Rule | When this Chainling successfully applies a negative stage or a debuff status to a living foe, that foe gains Kindled at 8% MaxHP. Each foe at most once per turn. |
+| Numbers | `endOfTurnDamagePercent` 0.08. On a 132 HP body that truncates to 10. Same duration-1 clock as Kindling. No AP and no heal. |
 
-**Chemistry, stages, AP, bench.** Chemistry DoTs that are not a "hit" should not trip it, or Rugged would tax AP as well as HP. The drain follows the attacker, not the slot: if they swap afterward, the incoming fighter inherits the slot's AP, including the missing point (`CombatResolver` swap path). While you are benched the passive does not see hits.
+**What counts.** A stage write with `stages < 0` that actually changes the stage, or a status apply whose catalog row is a debuff (`IsDebuff`). The write has to succeed. A missed chance does not count. `sear_field` (AllEnemies, 2 AP, accuracy 0) applies Sear Field, which is a debuff and an Atk −1 for duration 1, so both living foes qualify. `deflation_mark` (1 AP) writes Atk −1 for certain; Burned Tokens itself is not a debuff, and the stage is what fires Sear Echo. `scorch_shot`'s Def −1 is 25%, and `ember_shower`'s Atk −1 is 25%, so a damage turn often does not qualify. `flame_charge` has no stage and no status, so it never fires Sear Echo. `cinder_burst`'s Atk −1 is 20% per hit; one landed stage marks the foe once.
 
-**Side by side.** `conductive_counter` returns 15% of contact damage and gives *you* +1 AP, once a turn. `ember_wall` makes the attacker lose 1 AP when they hit that barrier, up to its hit budget. `immutable_ledger` reduces the first hit by 20% and gives you +1 AP. Scorch Echo is the smaller one: no damage cut, no point for you, one point off the attacker. That is in band only if the once-per-turn cap is real. Without the cap, a multi-hit would drain once per hit and walk someone to 0 in a single action.
+**Turn 1.** It works. `sear_field` costs 2 and can mark both foes before anyone is hit. `deflation_mark` costs 1 and marks one. If they stay active, each takes the truncated 10 at that end step. A turn spent only on `scorch_shot` usually pays nothing, which is why this is the alternative.
 
-**Primitives.** Engine. `OnDamageTaken` exists, and `Drain` exists, but a new passive has to receive the attacker as the drain target and ignore later hits that turn. `immutable_ledger`'s "first hit" behavior is hardcoded, not a shared opcode. Do not fold this into `ember_wall`.
+**Same interactions as Kindling.** Once per foe per turn, no refresh, no mark on a fainted foe, bench pauses the tick, Encrypted Seal blocks the debuff apply, Rugged still stacks on advantage hits that also debuff, no Burned Tokens heal. Two stages in one action, or a debuff that also writes a stage, are one mark.
 
-**Recommendation.** B1. Attrition income for being hit matches the long-lane profile, stays under the Common +1 AP passive, and is data-only. B2 is the better "burn taxes the striker" fantasy once a once-per-turn attacker drain exists as a real primitive.
+**Side by side.** 10 HP on 132 is larger than Kindling's 7 because fewer actions qualify. It is still one non-escalating tick, under a second Rugged tick (2/16). `automated_pressure` drops a stage and does not burn. `reactive_ping` pays 5% only when they miss you. Sear Echo puts the burn on the foe you coated, which those two cannot do. It does not reach Patience Passive's every-turn Def +1.
+
+**AI.** Utility already starts status moves at +30, so it will cast `sear_field` and `deflation_mark` and play this passive without a new term. It will not chase the 25% riders. Aggressive scores non-damage at 0.1 and will not spend the turn coating.
+
+**Primitives.** Same Kindled status and the same generic end-of-turn percent, authored at 0.08 instead of 0.06. The hook sits where a negative stage or a debuff status has just been applied by this Chainling, not on the HP-damage path. Skip when Kindled is already present. Engine, not a data-only row. Equip one of the two passives, not both; they share the status id so a second apply in the same turn is a no-op anyway.
+
+**Recommendation.** Kindling. The profile is a burn on the hits that carry the attrition lane, and `scorch_shot` or `flame_charge` pays it on turn 1 even when the 25% rider misses. Sear Echo is the coating build: bigger tick, turn-1 spread through Sear Field, and it misses every Flame Charge turn.
 
 ## 2. Compressed support and utility
 
@@ -207,9 +242,9 @@ Meme stays out of chemistry. The developer's type-profile copy marks it excluded
 
 | Gap | Pick | Why |
 |---|---|---|
-| Node passive | **Partner Beacon** (N1), not Relay Dividend | +1 AP at turn start only if a partner is buffed. Inside the Common AP-passive band, data-only, and it does not stack on Group Hug. |
-| Burned passive | **Cinder Idle** (B1), not Scorch Echo | +1 AP at turn start only if you were hit last turn. Under `turn_start_ap_gain` and under `flame_charge`. Scorch Echo needs a once-per-turn attacker drain that is not an opcode yet. |
+| Node passive | **Relay**, not Partner Beacon | When this Chainling buffs an ally, that ally gains +1 AP, once per ally per turn. The point lands on the partner, which `turn_start_ap_gain` cannot do. Turn 1 does not pay with current working cards (`pack_rally` is 3 AP); the first rally pays it back. Engine hook. |
+| Burned passive | **Kindling**, not Cinder Idle | 6% MaxHP end-of-turn burn on each living foe you damage, once per foe per turn, including turn 1 via `scorch_shot` or `flame_charge`. Sear Echo is the coating alternative (8% when you debuff, turn 1 via `sear_field`). Cinder Idle and Scorch Echo are withdrawn. |
 | Other types missing a passive | None | The other 12 types already have a Passive row. |
-| Compressed | All seven (C1–C7), data-only | Soft heal, Evasion +1, Accuracy −1, Accuracy +1, a 15% wall with a real hit budget, a speed-gated 1 AP drain, and a no-bonus bank of 3. |
-| Bot denial | Ship the data-only set D1–D7 with the AI exceptions | Drain 1, steal 1, one skipped regen on a recharging duration-2 Thread Lock, a +1 surcharge, a weaker hit that drains 1, an every-other-turn team tax, and a drain that leaves at least 1. No card drains and blocks regen together. |
+| Compressed | All seven (C1–C7), data-only | Soft heal, Evasion +1, Accuracy −1, Accuracy +1, a 15% wall with a real hit budget, a speed-gated 1 AP drain, and a no-bonus bank of 3. Drafted before the typed-pool rule; not re-cut in this pass. |
+| Bot denial | Ship the data-only set D1–D7 with the AI exceptions | Drain 1, steal 1, one skipped regen on a recharging duration-2 Thread Lock, a +1 surcharge, a weaker hit that drains 1, an every-other-turn team tax, and a drain that leaves at least 1. No card drains and blocks regen together. Drafted before the typed-pool rule; not re-cut in this pass. |
 | Meme chemistry | Leave it | Already out of the pass by design. |
