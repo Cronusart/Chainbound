@@ -116,7 +116,7 @@ The Common median used for HP sketches is 132, Ghost excluded (`COMBAT_SYSTEMS_A
 
 **Turn 1.** Turn 1 AP is 2. `scorch_shot` and `flame_charge` are both power 64, accuracy 95, 2 AP, so either is legal after regen. A landed shot that leaves the foe alive applies Kindled during the action. If they are still active at end of turn, the 6% lands in that same end step and the status expires. The systems-analysis model puts a neutral power-64 accuracy-95 hit at `64 * 0.925 * 0.95 = 56.2` expected damage. Adding the truncated 7 on a 132 HP body is about 63 if the shot lands and they stay in through end of turn. `ember_shower` costs 3 and is not a turn-1 mark. A miss is the attack's 5% miss, not a passive that was off.
 
-**Chemistry.** Rugged and Kindled are different statuses. An advantage hit can carry both: Rugged's first tick is 1/16 (6.25%, which truncates to 8 on 132 HP) and then escalates, and Kindled adds a flat 6% that does not escalate. A neutral or disadvantage hit still applies Kindled. The passive does not read Burned Tokens or FUD.
+**Chemistry.** Rugged and Kindled are different statuses, so an advantage hit can carry both. The reaction list, the stack check, and the 1–3 turn clock are in the next section. A neutral or resisted hit still applies Kindled. The passive does not read Burned Tokens or FUD.
 
 **Bench, faint, cap.** Fainted foes are skipped. A foe who swaps out before end of turn keeps Kindled paused and takes the 7 HP on a later end step after they come back, which is the counterplay. There is no AP to cap. `ThreadLock` does not interact.
 
@@ -157,7 +157,107 @@ Kindling is not a smaller `turn_start_ap_gain` and it is not `reactive_ping` wit
 
 **Primitives.** Same Kindled status and the same generic end-of-turn percent, authored at 0.08 instead of 0.06. The hook sits where a negative stage or a debuff status has just been applied by this Chainling, not on the HP-damage path. Skip when Kindled is already present. Engine, not a data-only row. Equip one of the two passives, not both; they share the status id so a second apply in the same turn is a no-op anyway.
 
-**Recommendation.** Kindling. The profile is a burn on the hits that carry the attrition lane, and `scorch_shot` or `flame_charge` pays it on turn 1 even when the 25% rider misses. Sear Echo is the coating build: bigger tick, turn-1 spread through Sear Field, and it misses every Flame Charge turn.
+**Recommendation.** Kindling. The profile is a burn on the hits that carry the attrition lane, and `scorch_shot` or `flame_charge` pays it on turn 1 even when the 25% rider misses. Sear Echo is the coating build: bigger tick, turn-1 spread through Sear Field, and it misses every Flame Charge turn. The chemistry section keeps Kindled at 6% on top of Rugged.
+
+## Kindling and Burned chemistry
+
+This section checks the Kindling proposal against the reactions a Burned damaging hit already triggers. It does not retune Rugged, and it does not implement Backlash. `COMBAT_Interaction_Matrix_v2.csv` is not the live matrix. The importer reads `COMBAT_Interaction_Matrix_v1.csv` (`Combat2DataImporter.ImportChemistryMatrixFromCSV`).
+
+### Reactions a Burned hit can trigger
+
+Chemistry runs only when a damaging hit lands (`COMBAT_Chemistry.txt` §2, `ChemistryResolver.Resolve` from the hit loop in `CombatResolver`). A miss does not apply a reaction. `sear_field` and `deflation_mark` are not damaging hits, so they do not. The relation is one number: a forward cell is +1, a reverse cell is −1, and the hit is Advantage ×1.2, Neutral ×1.0, or Resisted ×0.8 (`chemistryAdvantageFactor` 1.2 on `CombatResolverConfig_Default.asset`). The status applies only on Advantage, at most once per target per action. Later hits in the same action, including `cinder_burst`, still use the ×1.2 multiplier.
+
+Burned's row in `COMBAT_Interaction_Matrix_v1.csv`:
+
+| Defender | Cell | What the defender receives | Numbers |
+|---|---|---|---|
+| Gas, Frozen, Mined, Compressed, Shard | `Rugged @Foe` | Rugged, ChemistryOnly, debuff | Duration 3. End-of-turn damage is `counter / 16` of MaxHP, then the counter increments, cap 15 (`StatusProcessor`, `CombatConstants.RUGGED_TICK_CAP`). First apply sets the counter to 1 (`ChemistryResolver`). A later advantage hit sets `turnsRemaining = max(current, 3)` and does not raise the counter. Catalog percent 0.0625 is the stored column; the processor replaces it for this status id. |
+| Staked | `Isolated @Foe` | Isolated, ChemistryOnly, debuff | Duration 2. No HP. Ally Support, healing, AP transfer, and ally stage buffs are rejected (`COMBAT_Statuses.txt`). Refresh sets the duration back to 2. |
+| Bot | `Backlash Bot Dmg @Foe` | `BacklashType`, parameterized Bot, ChemistryOnly, debuff | Duration 3. Catalog end-of-turn percent is 0. No contact tick runs (`ChemistryResolver` has no Backlash branch). Open item E-09. The token is applied. It deals 0 HP. |
+| Node, Burned, Meme | `-` | None | Neutral ×1.0. No status. |
+| Block, Encrypted, Forked, Glitched | reverse cell only | None from Burned | Resisted ×0.8. The reverse cell is the other type's reaction when *they* hit Burned. This hit does not apply it. |
+
+Five of the seven Advantage cells are the same Rugged tick. Isolated and Backlash are not damage. A Burned hit does not apply FOMO, FUD, or Burned Tokens through chemistry. FUD is an Encrypted move (`verification_lock`). Burned Tokens is `deflation_mark`, and its heal does not run.
+
+### Can Kindled sit beside those statuses?
+
+Yes. Statuses are a list. Refresh and the Rugged branch look up one `statusId`. Kindled is a new id, so it does not replace Rugged, Isolated, or Backlash, and their refresh does not clear it. End of turn walks the list and deals each status's own percent. Rugged's `tick / 16` override is `status.statusId == StatusId.Rugged` only, so Kindled keeps 0.06. No engine change is required for them to coexist.
+
+Rules that already fall out of that:
+
+- Same action: the first landed hit can apply Rugged and Kindled. Further hits in that action do not apply Rugged again (once per target per action) and do not apply Kindled again (once per foe per turn, no refresh).
+- Later turns: Rugged is still up, so a new hit refreshes its duration and does not bump the counter. Kindled expired at the previous end step, so the new hit applies a fresh duration-1 burn.
+- Encrypted Seal blocks both. Rugged is a debuff, and Kindled is proposed as a debuff.
+- A bench before end of turn pauses both. Rugged's counter does not increment while benched. Kindled does not tick. That is the same counterplay as the Kindling spec.
+- If an earlier status in the list KOs at end of turn, `StatusProcessor` returns and later ticks do not run. Rugged is applied during the hit, before damage. Kindled is applied after the hit leaves them alive, so Rugged is earlier in the list and ticks first.
+- Backlash adds no HP today. Kindled is the only burn on a Bot body besides the ×1.2 hit. This note does not give Backlash a tick.
+
+### Damage clock
+
+Model, same shape as the systems note, with the miss pulled out of the hit because the riders only exist when the hit landed. Atk/Def = 1, no crit, no mitigation, STAB off (`enableStab: 0`), `PROGRESSION_DAMAGE_FACTOR` 1. The roll is uniform from 0.85 to 1 (`randomRollMin`, `randomRollMax`). A landed power-64 Advantage hit at the midpoint is `64 * 0.925 * 1.2 = 71.04`, and `DamageCalculator` floors, so 71. A max roll is `64 * 1.2 = 76.8`, floored to 76. The systems note's 67.5 is that landed hit times accuracy 0.95, which is the right number for turns-to-KO across misses and the wrong number for a hit that has already landed. DoT uses `Math.Max(1, (int)(MaxHP * percent))`, which truncates. Median MaxHP is 132 Common and 122 Rare, Ghost excluded (`COMBAT_SYSTEMS_ANALYSIS.md`).
+
+One landed `scorch_shot` or `flame_charge`, then no further hit, target stays active for the whole Rugged duration. Kindled ticks once, on the granting end step. Rugged ticks three times: 1/16, 2/16, 3/16.
+
+| Body | Landed hit | Kindled | Rugged 1/16, 2/16, 3/16 | Total | Left |
+|---|---|---|---|---|---|
+| Common 132, midpoint roll | 71 | 7 | 8 + 16 + 24 | 126 | 6 |
+| Common 132, max roll | 76 | 7 | 8 + 16 + 24 | 131 | 1 |
+| Rare 122, midpoint roll | 71 | 7 | 7 + 15 + 22 | 122 | 0 |
+| Rare 122, max roll | 76 | 7 | 7 + 15 + 22 | 127 | 0, by 5 |
+| Rare 122, midpoint, no Kindling | 71 | 0 | 7 + 15 + 22 | 115 | 7 |
+
+The flagged line is the Rare row. One landed Advantage hit, plus staying in for three end steps, is a KO on 122 HP at the midpoint roll. Without Kindling that body has 7 left. The Common median survives the same line with 6 left, or 1 on a max roll. Rugged is 44 of the 51 DoT HP on the Rare body. Kindling is the last 7.
+
+Keeping the attack up does not get more dangerous because of Kindling. Two landed Advantage hits are 71 + 71 = 142 before any end step. Both medians die on the second hit. The accuracy-weighted figure from the systems note, 67.5 a turn, is still a 2-turn KO on 132 (135) and on 122. Kindling's 7 on the first land does not remove a turn. The turn-2 and turn-3 Rugged ticks in the table above happen only when the second hit does not.
+
+`flame_charge`'s +30% (`1.3` while the foe has 0 AP) multiplies the hit on top of ×1.2. That is a conditional spike on the move, not a Kindling number. A foe at 0 AP is already outside the +2 regen, so it is not the clock above.
+
+Other typed passives on the same power-64 fight, Common 132:
+
+| Passive | What it changes | Turns to KO on Advantage |
+|---|---|---|
+| None | ×1.2 only | 2 |
+| Kindling | +7 HP on each landed damaging turn, and Rugged is already there | 2 |
+| `on_hit_momentum` | 25% chance of Atk +1. A proc makes the next hit 1.5×, which can pull a *neutral* KO from 3 hits to 2 | Already 2 on Advantage |
+| `conductive_counter` | 15% of one contact hit back, plus 1 AP. About 11 off a 71 hit | Does not speed your KO |
+| `patience_passive` | Def +1 at end of turn. After one tick, incoming damage is divided by 1.5 | Lengthens the fight |
+| `firewall_passive` | Projectile hits deal 25% less | Lengthens the fight |
+| `immutable_ledger` | The first hit each turn deals 20% less | Lengthens the fight |
+| `sustain_regen` | About 4 HP to the holder | Does not outheal a 71 hit |
+
+Kindling is a 7 HP chip in the band of Conductive Counter's reflect. It is smaller than one stage of Patience. The large rider on this lane is Rugged, which already ships on five cells.
+
+### Guardrails, and the recommendation
+
+Three gates were considered.
+
+- **Skip Kindled when a chemistry burn is already on the target.** This does not touch the flagged line. The first hit applies Rugged and Kindled together, so Rugged was not already there. Later hits are the ones this gate blocks, and those are the hits that already KO on contact.
+- **Cut Kindled to about 3% while Rugged is up, including the hit that just applied it.** On the Rare cook that is `floor(122 * 0.03) = 3` instead of 7, and the body lives with 4. It keeps a small burn on the win cells. It is a special case for 4 HP.
+- **Cap every damage-over-time tick in the end step, or skip Kindled's tick when Rugged also ticks.** A shared cap would also clip Rugged, Leaked, and FOMO, which this note is not changing. Skipping only Kindled's tick on an end step that already dealt chemistry damage would remove the 7 from the cook and leave the neutral, Isolated, and Backlash burns alone. The cost is that Kindling goes silent on the five Rugged matchups, which are the profile's attrition cells.
+
+**Recommendation: keep the 6% stack. Add none of these gates.** Two landed hits already KO both medians without Kindling, so the stack does not shorten the fight the attacker is trying to play. The one-hit KO is real on the Rare median, and it is 44 HP of Rugged plus 7 of Kindling, and only if that body stays active through three end steps. Benching pauses both ticks, which is the counterplay already in the Kindling spec. A 15% heal is about 18 HP on 122 and erases the last 7 with room to spare. Turning Kindling off on Rugged cells would make the passive disappear on five of Burned's seven wins.
+
+If that Rare cook is rejected anyway, the gate to use is the shared end step: when Rugged deals HP at end of turn, skip Kindled's tick that same step. Do not use "already on the target," and do not cap Rugged.
+
+### Node ally buffs at 1–2 AP
+
+No working Common move at 1 or 2 AP buffs an ally. Relay's turn-1 gap is the whole Node kit, not one missing card that was overlooked. Rows are `Moves.csv`. Empty payloads are the open list in `UNIMPLEMENTED_MOVE_EFFECTS.md`.
+
+| Move | Rarity | AP | Ally buff? |
+|---|---|---|---|
+| `extend_protocol` | Common | 1 | No. The text extends one ally buff by 1 turn. The extend does not run. Recharge 3 does. |
+| `network_response` | Common | 1 | No. Self Speed +1 after an enemy miss. |
+| `relay_packet` | Common | 2 | No. Moves an existing General buff or debuff. Relay does not count a move. |
+| `ap_router` | Common | 2 | No. Moves up to 2 AP. |
+| `signal_redirect` | Common | 2 | No. Def +1 is `targetsSelf` true. |
+| `network_sync` | Common | 2 | No. The text raises every ally's lowest stage by 1. The payload is empty. |
+| `coordinated_shot` | Common | 2 | No. A hit that reads a buffed partner. It does not write a buff. |
+| `hub_heal` | Common | 3 | No. 15% heal. Also above 2 AP. |
+| `overflow_reboot` | Rare | 2 | No. Heals allies 10% if a foe faints. A heal is not a buff. |
+| `hammer_sync` | Rare | 2 | No. A hit. |
+| `pack_rally` | Uncommon | 3 | Yes. Atk +1 and Speed +1 on living allies. This is the only working ally buff. |
+
+`extend_protocol` and `network_sync` are the two Common cards that would be turn-1 Relay payments if their open clauses were built. This pass does not draft a replacement and does not implement those clauses.
 
 ## 2. Compressed support and utility
 
@@ -243,7 +343,7 @@ Meme stays out of chemistry. The developer's type-profile copy marks it excluded
 | Gap | Pick | Why |
 |---|---|---|
 | Node passive | **Relay**, not Partner Beacon | When this Chainling buffs an ally, that ally gains +1 AP, once per ally per turn. The point lands on the partner, which `turn_start_ap_gain` cannot do. Turn 1 does not pay with current working cards (`pack_rally` is 3 AP); the first rally pays it back. Engine hook. |
-| Burned passive | **Kindling**, not Cinder Idle | 6% MaxHP end-of-turn burn on each living foe you damage, once per foe per turn, including turn 1 via `scorch_shot` or `flame_charge`. Sear Echo is the coating alternative (8% when you debuff, turn 1 via `sear_field`). Cinder Idle and Scorch Echo are withdrawn. |
+| Burned passive | **Kindling**, not Cinder Idle | 6% MaxHP end-of-turn burn on each living foe you damage, once per foe per turn, including turn 1 via `scorch_shot` or `flame_charge`. It stacks with Rugged; the chemistry section keeps the 6% and adds no gate. Sear Echo is the coating alternative. |
 | Other types missing a passive | None | The other 12 types already have a Passive row. |
 | Compressed | All seven (C1–C7), data-only | Soft heal, Evasion +1, Accuracy −1, Accuracy +1, a 15% wall with a real hit budget, a speed-gated 1 AP drain, and a no-bonus bank of 3. Drafted before the typed-pool rule; not re-cut in this pass. |
 | Bot denial | Ship the data-only set D1–D7 with the AI exceptions | Drain 1, steal 1, one skipped regen on a recharging duration-2 Thread Lock, a +1 surcharge, a weaker hit that drains 1, an every-other-turn team tax, and a drain that leaves at least 1. No card drains and blocks regen together. Drafted before the typed-pool rule; not re-cut in this pass. |
