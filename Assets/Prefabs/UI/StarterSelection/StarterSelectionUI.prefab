@@ -707,7 +707,7 @@ MonoBehaviour:
   victoryChime: {fileID: 11400000, guid: c54c39ce4814442ea8f7d8440548c738, type: 2}
   portraitDuckMultiplier: 0.05
   portraitDuckAttackSeconds: 0.08
-  portraitDuckReleaseSeconds: 0.35
+  portraitDuckReleaseSeconds: 0.5
   portraitDismissDelaySeconds: 1
   enableDebugLogs: 0
 --- !u!1 &1641245334161193763

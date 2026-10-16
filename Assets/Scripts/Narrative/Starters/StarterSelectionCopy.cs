@@ -25,6 +25,22 @@ public static class StarterSelectionCopy
         return FormatLabeled(SpeciesLabel, displayName);
     }
 
+    public static string FormatPortraitBanner(string format, string speciesName)
+    {
+        string species = string.IsNullOrWhiteSpace(speciesName) ? "Chainling" : speciesName.Trim();
+        if (string.IsNullOrWhiteSpace(format) || format.IndexOf("{0}", System.StringComparison.Ordinal) < 0)
+            return species;
+
+        try
+        {
+            return string.Format(format.Trim(), species);
+        }
+        catch (System.FormatException)
+        {
+            return species;
+        }
+    }
+
     public static string FormatType(string typeDisplayName)
     {
         return FormatLabeled(TypeLabel, typeDisplayName);

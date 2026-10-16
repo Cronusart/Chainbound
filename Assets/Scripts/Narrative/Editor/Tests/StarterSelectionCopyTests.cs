@@ -10,6 +10,13 @@ public sealed class StarterSelectionCopyTests
     }
 
     [Test]
+    public void FormatPortraitBanner_PutsTheSpeciesUnderTheCallout()
+    {
+        Assert.AreEqual("CAPTURED!\nHopoch", StarterSelectionCopy.FormatPortraitBanner("CAPTURED!\n{0}", "Hopoch"));
+        Assert.AreEqual("Chainling", StarterSelectionCopy.FormatPortraitBanner("CAPTURED!", "  "));
+    }
+
+    [Test]
     public void FormatType_PrefixesLabel()
     {
         Assert.AreEqual("Type: Node", StarterSelectionCopy.FormatType("Node"));
