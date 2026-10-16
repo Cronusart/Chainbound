@@ -14,12 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 3.2-c
   displayName: After Hours
-  effectDescription: 12-15% chance to auto-use random equipped move at end of turn
+  effectDescription: Retired. No combat effect.
   category: 1
   scope: 0
   minimumRarity: 4
-  effectMin: 12
-  effectMax: 15
+  effectMin: 0
+  effectMax: 0
+  weight: 0
   allowedCategories: 
   forbiddenCombinations: []
   slotCostIncrease: 0

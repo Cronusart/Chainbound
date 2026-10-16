@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 3.2-b
   displayName: Side Quest
-  effectDescription: 15-20% chance to auto-use random Common/Uncommon typeless move
-    at end of turn
+  effectDescription: Retired. No combat effect.
   category: 1
   scope: 0
   minimumRarity: 3
-  effectMin: 15
-  effectMax: 20
+  effectMin: 0
+  effectMax: 0
+  weight: 0
   allowedCategories: 
   forbiddenCombinations: []
   slotCostIncrease: 0

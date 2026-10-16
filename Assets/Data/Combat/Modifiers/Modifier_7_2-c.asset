@@ -14,12 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 7.2-c
   displayName: Setup Feed
-  effectDescription: 'Next ally move: +10-15% power'
+  effectDescription: Next ally action gains 12% power. A non-power action wastes it.
   category: 6
   scope: 0
   minimumRarity: 1
-  effectMin: 10
-  effectMax: 15
+  effectMin: 12
+  effectMax: 12
+  weight: 1
   allowedCategories: 02000000
   forbiddenCombinations: []
   slotCostIncrease: 0

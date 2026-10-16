@@ -14,12 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 10.2-c
   displayName: Tournament Badge
-  effectDescription: Badge display + ranked bonus (Tournament)
+  effectDescription: Retired combat effect. Reserved for PvP tournament-win grants.
   category: 0
   scope: 0
   minimumRarity: 2
   effectMin: 0
   effectMax: 0
+  weight: 0
   allowedCategories: 
   forbiddenCombinations: []
   slotCostIncrease: 0

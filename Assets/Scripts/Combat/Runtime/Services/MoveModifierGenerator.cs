@@ -34,7 +34,7 @@ namespace Chainbound.Combat
             "2.2-a", "2.2-b", "2.2-c", "2.2-d",
             "2.3-a", "2.3-b", "2.3-c", "2.3-d", "2.3-e",
             "3.1-a", "3.1-b", "3.1-c",
-            "3.2-a", "3.2-b", "3.2-c",
+            "3.2-a",
             "6.1-a", "6.1-b", "6.1-c", "6.1-d", "6.1-e", "6.1-f",
             "6.2-a", "6.2-b", "6.2-c",
             "6.3-a", "6.3-b", "6.3-c", "6.3-d", "6.3-e",
@@ -519,7 +519,7 @@ namespace Chainbound.Combat
                 if (minimumRarity > rolledRarity)
                     continue;
 
-                if (ResolveWeight(def, overlay) <= 0)
+                if (IsRetiredFromVending(def.sectionId) || ResolveWeight(def, overlay) <= 0)
                     continue;
 
                 pool.Add(def);
@@ -557,6 +557,15 @@ namespace Chainbound.Combat
             }
 
             return pool[pool.Count - 1];
+        }
+
+        private static bool IsRetiredFromVending(string sectionId)
+        {
+            return sectionId.Equals("3.2-b", StringComparison.OrdinalIgnoreCase)
+                || sectionId.Equals("3.2-c", StringComparison.OrdinalIgnoreCase)
+                || sectionId.Equals("10.1-d", StringComparison.OrdinalIgnoreCase)
+                || sectionId.Equals("10.2-b", StringComparison.OrdinalIgnoreCase)
+                || sectionId.Equals("10.2-c", StringComparison.OrdinalIgnoreCase);
         }
 
         private static int ResolveWeight(ModifierDefinitionSO definition, ModifierBalanceOverlaySO overlay)
