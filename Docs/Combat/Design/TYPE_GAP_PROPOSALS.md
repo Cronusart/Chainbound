@@ -68,7 +68,7 @@ Partner Beacon and Relay Dividend are withdrawn. Partner Beacon was a conditiona
 
 **Fainted, benched, cap, Thread Lock.** A fainted ally is not a legal target (`AddUniqueTarget` requires `isAlive`) and is skipped. A benched ally is not in `activeIndices`, so a wide buff does not hit them and Relay does not pay them. `Gain` clamps at 10. If the ally is already at 10, or `ThreadLock` blocks the gain, the point is lost and the once-per-turn mark is still spent. Chemistry is not involved.
 
-**Turn 1 and the payback.** Turn 1 AP is 2. The Node buff that actually writes ally stages today is `pack_rally` (Uncommon, AllAllies, Atk +1 and Speed +1, 3 AP). `network_sync` is 2 AP and would be a turn-1 buff, but its payload is empty (open row), so Relay does not pretend it fires. Relay therefore does not pay on turn 1 with the current working cards. The payback is the first rally, which is available on turn 2 if turn 1 spent 0 or 1 AP (turn 2 opens at 4 or 3). That action gives the partner Atk +1 (1.5×) and Speed +1 from the move, and +1 AP from Relay in the partner's pool. A typeless +1 AP passive over those two turns has put +2 on the Node only. Relay has put the point on the partner, in the same action as the buff, so a partner who has not acted yet can spend it this turn. The typeless card cannot move a point onto the ally you just buffed.
+**Turn 1 and the payback.** Turn 1 AP is 2. The Node buff that actually writes ally stages today is `pack_rally` (Uncommon, AllAllies, Atk +1 and Speed +1, 3 AP). `network_sync` is 2 AP and would be a turn-1 buff, but its payload is empty (open row), so Relay does not pretend it fires. With the cards that run today, Relay does not pay on turn 1. The payback on that kit is the first rally, available on turn 2 if turn 1 spent 0 or 1 AP (turn 2 opens at 4 or 3). That action gives the partner Atk +1 (1.5×) and Speed +1 from the move, and +1 AP from Relay in the partner's pool. Link Pulse, drafted in the Node ally-buff section, is the Common 2 AP single-ally buff that would pay Relay on turn 1. It is not a row yet. A typeless +1 AP passive over those two turns has put +2 on the Node only. Relay has put the point on the partner, in the same action as the buff, so a partner who has not acted yet can spend it this turn. The typeless card cannot move a point onto the ally you just buffed.
 
 **Side by side**
 
@@ -76,7 +76,7 @@ Partner Beacon and Relay Dividend are withdrawn. Partner Beacon was a conditiona
 |---|---|---|---|---|
 | Rarity | Uncommon, Node | Common, typeless | Uncommon, Block | Rare, Gas |
 | Who is paid | The ally who received the buff | The holder, every turn | The holder, when hit | Foes lose 1, if they are ahead |
-| Turn 1 | No working ally-buff costs 2 AP or less, so no pay | +1 on top of regen | Pays if they are hit | Pays if a foe has more AP |
+| Turn 1 | No working ally-buff costs 2 AP or less, so no pay until Link Pulse exists | +1 on top of regen | Pays if they are hit | Pays if a foe has more AP |
 | What typeless cannot do | The point is created on the buffed ally, once per ally per turn | Pays only the holder | Pays the holder for being hit | Taxes foes |
 
 Relay is not a smaller `turn_start_ap_gain`. It is a routing payment the typeless passive has no way to make. It stays under Patience Passive's Def +1 every end of turn, and it does not add Group Hug's "any stamped support pays every active."
@@ -237,7 +237,7 @@ Three gates were considered.
 
 **Recommendation: keep the 6% stack. Add none of these gates.** Two landed hits already KO both medians without Kindling, so the stack does not shorten the fight the attacker is trying to play. The one-hit KO is real on the Rare median, and it is 44 HP of Rugged plus 7 of Kindling, and only if that body stays active through three end steps. Benching pauses both ticks, which is the counterplay already in the Kindling spec. A 15% heal is about 18 HP on 122 and erases the last 7 with room to spare. Turning Kindling off on Rugged cells would make the passive disappear on five of Burned's seven wins.
 
-If that Rare cook is rejected anyway, the gate to use is the shared end step: when Rugged deals HP at end of turn, skip Kindled's tick that same step. Do not use "already on the target," and do not cap Rugged.
+Approved: Kindling stays at 6% and keeps the stack. The optional trim, if a later pass wants it, is the shared end step: when Rugged deals HP at end of turn, skip Kindled's tick that same step. Do not use "already on the target," and do not cap Rugged.
 
 ### Node ally buffs at 1–2 AP
 
@@ -257,7 +257,80 @@ No working Common move at 1 or 2 AP buffs an ally. Relay's turn-1 gap is the who
 | `hammer_sync` | Rare | 2 | No. A hit. |
 | `pack_rally` | Uncommon | 3 | Yes. Atk +1 and Speed +1 on living allies. This is the only working ally buff. |
 
-`extend_protocol` and `network_sync` are the two Common cards that would be turn-1 Relay payments if their open clauses were built. This pass does not draft a replacement and does not implement those clauses.
+`extend_protocol` and `network_sync` stay on the open list. The draft below is a new id. It does not fill either payload.
+
+### Turn-1 ally buff
+
+Node's profile is the coordinator: route AP, extend buffs, heal wide. The wide heal is `hub_heal` (3 AP). The wide stage buff is `pack_rally` (Uncommon, 3 AP). Neither fits in turn 1's 2 AP, so Relay cannot pay on the first turn with a card that runs. The typeless card of this job is `buff_ally`: Common, Support, SingleAlly, 2 AP, accuracy 0, power 0, recharge 0, Atk +1 and Def +1, no duration. Those stages are permanent move-column writes, the same shape as Pack Rally. `rally_cry` is Common, AllAllies, 3 AP, and its working payload is Speed +1. The turn-end +1 AP in that tooltip is not in `UtilityEffects`. Self buffs at 1 AP (`power_surge` Atk +1, `defensive_stance` Def +1, `speed_boost` Speed +1) do not touch an ally, so they cannot fire Relay.
+
+Stage +1 is 1.5×. Speed does not enter the damage formula. Def +1 divides incoming damage by 1.5. The table still clamps at ±6. A write that does not change a capped stage does not count.
+
+#### Link Pulse (recommended)
+
+| Field | Proposal |
+|---|---|
+| Name | Link Pulse (`link_pulse`) |
+| Rarity | Common, Node |
+| Category | Support |
+| AP | 2 |
+| Accuracy | 0 |
+| Power | 0 |
+| Target | SingleAlly |
+| Recharge | 0 |
+| Duration | None. Atk +1, Def +1, and Speed +1 stick, same as `buff_ally` and `pack_rally`. |
+| Effect | The chosen living ally gains Atk +1, Def +1, and Speed +1. Column: `MeleeAtk:1:1.0:false\|MeleeDef:1:1.0:false\|Speed:1:1.0:false`. |
+
+**Why it beats the typeless card.** Same rarity band, same 2 AP, same single ally, same Atk +1 and Def +1, plus Speed +1. That is `buff_ally` with the coordinator's tempo stat added. It is not a second damage multiplier. It is castable on turn 1, because 2 AP is the whole regen.
+
+**Against Pack Rally.** Pack Rally is Uncommon, 3 AP, AllAllies, Atk +1 and Speed +1 on every living active, including the user. On the 2-active roster that is four stage writes and both attackers at 1.5×. It does not fit in turn 1. Link Pulse is one body, three stages, 2 AP, and it does not raise the Node's own Attack unless the Node targets themself. The Uncommon stays the team damage button. The Common is the turn you can actually take at the start. Casting Link Pulse every turn spends the +2 regen, so Pack Rally still waits for a turn that opens at 3 or more.
+
+**Relay.** Three positive stages on the ally, all `targetsSelf` false, are one application. Relay pays that ally +1 AP once this turn, then marks them. The move itself grants no AP, so the passive is not a second copy of a point the card already gave. With no explicit target, `ResolveSingleSelectedTarget` uses `FindAlly`, the other living active, so the default cast is the partner. An explicit self-cast writes the stages on the Node and Relay does not pay. A fainted ally is not added (`isAlive`). A benched ally is not in `activeIndices`. If every stage is already at the ±6 cap, nothing landed and Relay does not pay. If one of the three lands, it pays once. Isolated blocks ally support, including these stages (`IsAllySupportBlockedByIsolation`); a blocked write does not pay Relay. Self-support is not blocked.
+
+Turn 1: the Node spends 2. The partner, if they have not acted, has their +2 regen plus this +1, so 3 AP, and can spend a 3 AP move in the same turn. If they have already acted, the point waits in their pool, cap 10. Thread Lock still deletes the gain and the mark is still spent.
+
+**Side by side**
+
+| | Link Pulse | `buff_ally` | `pack_rally` | `rally_cry` | `power_surge` |
+|---|---|---|---|---|---|
+| Rarity | Common, Node | Common, typeless | Uncommon, Node | Common, typeless | Common, typeless |
+| AP | 2 | 2 | 3 | 3 | 1 |
+| Who | One ally | One ally | All allies, including the user | All allies | Self |
+| Stages | Atk +1, Def +1, Speed +1 | Atk +1, Def +1 | Atk +1, Speed +1 | Speed +1 | Atk +1 |
+| Turn 1 | Yes | Yes | No | No | Yes, and it does not buff an ally |
+| Relay | +1 AP on that ally, once | Would pay, on a Node that had it | Pays the partner once; the user's own stages do not pay | Would pay each other ally once | Does not pay |
+
+**AI.** A Support scores from 15, then minus AP (`UtilityStatusAI`), so this is about 13 before any Relay term. A status utility still starts at +30, so a Utility Node will not cast Link Pulse unless the Relay scorer bonus from the passive section is in. That bonus should beat a self-buff and lose to a believed KO. Aggressive still ignores non-damage. Defensive, with the team above 55% HP, should be able to pick this ally buff.
+
+**Primitives.** Data-only. The stage column and `ApplyMoveStageChanges` already do this for `buff_ally` and `pack_rally`. No new status and no new opcode. Relay stays the engine hook it already is. Do not put a `GainAP` on this row. That would pay the ally twice when Relay is equipped.
+
+#### Open Line (alternative)
+
+| Field | Proposal |
+|---|---|
+| Name | Open Line (`open_line`) |
+| Rarity | Common, Node |
+| Category | Support |
+| AP | 1 |
+| Accuracy | 0 |
+| Power | 0 |
+| Target | SingleAlly |
+| Recharge | 0 |
+| Duration | None. Atk +1 and Def +1 stick. |
+| Effect | The chosen living ally gains Atk +1 and Def +1. Column: `MeleeAtk:1:1.0:false\|MeleeDef:1:1.0:false`. |
+
+This is `buff_ally` at 1 AP instead of 2. Same stages, half the cost, so it is strictly cheaper than the typeless card, and turn 1 leaves 1 AP on the Node (turn 2 then opens at 3). Relay pays the ally +1 once, on the same rules as Link Pulse, including the self-cast miss and the Isolated block. It does not add Speed, so it is the typeless package with a better cost, not the Node tempo package. Pack Rally remains the only Atk-and-Speed button, and it still costs 3.
+
+Data-only, same stage column. No `GainAP` on the row.
+
+**Recommendation.** Link Pulse. It is the one that is better than `buff_ally` on the same 2 AP and still reads as Node, and it is the turn-1 Relay trigger. Open Line is the cut to take if three stages at Common is too close to Pack Rally.
+
+#### Do not reuse the empty rows
+
+`extend_protocol` should stay `extend_protocol`. It is Common, SingleAlly, 1 AP, recharge 3. The recharge runs and skips the next 2 turns. The extend does not. An extend is not a new positive stage and not a new buff status, so Relay would not pay it even if the clause were built. Turn 1 often has no buff to extend, which is the dead first turn this rule already rejected. Recharge 3 also means it cannot be the every-turn Relay button. Replacing that tooltip with Link Pulse would throw away the extend job and the recharge that was just clarified. Leave the open row open.
+
+`network_sync` should stay `network_sync`. It is Common, AllAllies, 2 AP, and the text raises every ally's lowest stage by 1. That is a wide one-stage bump, not a single-ally three-stage buff. The payload is empty, and there is no opcode for "lowest stage," so filling the text is engine work. One stage on the partner is less than `buff_ally`'s two stages, so the written card does not beat the typeless buff. Putting Link Pulse's column on that id would change the target and the tooltip and close an open row by renaming it. Leave it open.
+
+The new ids are `link_pulse` and `open_line`. Neither is in `Moves.csv`.
 
 ## 2. Compressed support and utility
 
@@ -342,8 +415,8 @@ Meme stays out of chemistry. The developer's type-profile copy marks it excluded
 
 | Gap | Pick | Why |
 |---|---|---|
-| Node passive | **Relay**, not Partner Beacon | When this Chainling buffs an ally, that ally gains +1 AP, once per ally per turn. The point lands on the partner, which `turn_start_ap_gain` cannot do. Turn 1 does not pay with current working cards (`pack_rally` is 3 AP); the first rally pays it back. Engine hook. |
-| Burned passive | **Kindling**, not Cinder Idle | 6% MaxHP end-of-turn burn on each living foe you damage, once per foe per turn, including turn 1 via `scorch_shot` or `flame_charge`. It stacks with Rugged; the chemistry section keeps the 6% and adds no gate. Sear Echo is the coating alternative. |
+| Node passive | **Relay**, not Partner Beacon | When this Chainling buffs an ally, that ally gains +1 AP, once per ally per turn. The turn-1 card that would fire it is **Link Pulse** (Common, 2 AP, one ally, Atk +1, Def +1, Speed +1). Open Line is the 1 AP alternative. Do not rewrite `extend_protocol` or `network_sync`. |
+| Burned passive | **Kindling**, not Cinder Idle | Approved at 6% MaxHP, stacked with Rugged. Optional trim, if wanted later: skip Kindled's tick on an end step where Rugged also deals HP. Sear Echo is the coating alternative. |
 | Other types missing a passive | None | The other 12 types already have a Passive row. |
 | Compressed | All seven (C1–C7), data-only | Soft heal, Evasion +1, Accuracy −1, Accuracy +1, a 15% wall with a real hit budget, a speed-gated 1 AP drain, and a no-bonus bank of 3. Drafted before the typed-pool rule; not re-cut in this pass. |
 | Bot denial | Ship the data-only set D1–D7 with the AI exceptions | Drain 1, steal 1, one skipped regen on a recharging duration-2 Thread Lock, a +1 surcharge, a weaker hit that drains 1, an every-other-turn team tax, and a drain that leaves at least 1. No card drains and blocks regen together. Drafted before the typed-pool rule; not re-cut in this pass. |
