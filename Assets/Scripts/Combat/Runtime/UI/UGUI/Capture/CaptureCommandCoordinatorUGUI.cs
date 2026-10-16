@@ -633,6 +633,10 @@ namespace Chainbound.Combat
             ICaptureDossierPresenter dossierPresenter = ResolveCaptureDossierPresenter();
             if (dossierPresenter != null)
             {
+                ChainlingSnapshot provisionalSnapshot = BuildLocalDossierSnapshot(fallbackName);
+                if (provisionalSnapshot != null && hasGrant)
+                    provisionalSnapshot.backendChainlingId = outcome.GrantedChainlingId;
+
                 bool namePromptStarted = false;
                 Task dossierTask = dossierPresenter.PresentAsync(new CaptureDossierRequest
                 {
@@ -640,7 +644,8 @@ namespace Chainbound.Combat
                     chainlingId = hasGrant ? outcome.GrantedChainlingId : "",
                     fallbackDisplayName = fallbackName,
                     practice = practice,
-                    localSnapshot = hasGrant ? null : BuildLocalDossierSnapshot(fallbackName),
+                    localSnapshot = hasGrant ? null : provisionalSnapshot,
+                    fallbackSnapshot = hasGrant ? provisionalSnapshot : null,
                     addedToParty = outcome.AddedToParty,
                     presentNamePrompt = setLiveName =>
                     {

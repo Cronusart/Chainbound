@@ -80,6 +80,16 @@ namespace SignalJam.UI.MenuNavigation
                         if (attempt + 1 < hydrateAttempts)
                             await Task.Delay(TimeSpan.FromSeconds(retryDelaySeconds));
                     }
+
+                    if (captured == null && request.fallbackSnapshot != null &&
+                        !string.IsNullOrWhiteSpace(request.fallbackSnapshot.speciesId))
+                    {
+                        captured = BuildProvisionalEntry(request, roster);
+
+                        Debug.LogWarning(
+                            $"[ChainlingCaptureDossierPresenter] Showing provisional dossier for '{request.chainlingId}' while server hydration is unavailable.",
+                            this);
+                    }
                 }
 
                 if (captured == null || dossierPrefab == null)
@@ -208,6 +218,22 @@ namespace SignalJam.UI.MenuNavigation
                     return candidate;
             }
             return null;
+        }
+
+        private static PlayerRosterEntry BuildProvisionalEntry(
+            CaptureDossierRequest request,
+            PlayerRosterSnapshot roster)
+        {
+            request.fallbackSnapshot.backendChainlingId = request.chainlingId;
+            var captured = new PlayerRosterEntry
+            {
+                snapshot = request.fallbackSnapshot,
+                isPartyMember = request.addedToParty,
+                partySlot = request.addedToParty && roster != null ? roster.PartyCount : -1,
+            };
+            if (string.IsNullOrWhiteSpace(captured.snapshot.displayName))
+                captured.snapshot.displayName = request.fallbackDisplayName;
+            return captured;
         }
     }
 }

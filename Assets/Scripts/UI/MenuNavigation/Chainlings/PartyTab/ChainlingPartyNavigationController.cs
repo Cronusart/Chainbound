@@ -163,17 +163,10 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
 
         public bool TryHandleDetailedView()
         {
-            if (phase != ChainlingPartyNavigationPhase.ColumnEditing &&
-                phase != ChainlingPartyNavigationPhase.PartySection)
-            {
-                return false;
-            }
-
-            if (phase == ChainlingPartyNavigationPhase.PartySection)
-                EnterColumnEditing();
-
-            DetailRequested?.Invoke();
-            return true;
+            // Frozen. Y/I used to open the remembered column, which duplicated Confirm
+            // once a column was focused and opened the wrong Chainling before focus.
+            // Confirm on a focused column is the dossier path until a better shortcut exists.
+            return false;
         }
 
         public bool TryHandleCloseMenu()

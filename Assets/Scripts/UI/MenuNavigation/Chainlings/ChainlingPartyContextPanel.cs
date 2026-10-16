@@ -104,7 +104,7 @@ namespace SignalJam.UI.MenuNavigation
 
             headingLabel = headingLabel != null
                 ? headingLabel
-                : PlayerMenuUiFactory.CreateText("Heading", transform, "LEAD CONTEXT", 26f, TextAlignmentOptions.TopLeft, false);
+                : PlayerMenuUiFactory.CreateText("Heading", transform, "PARTY SLOT", 26f, TextAlignmentOptions.TopLeft, false);
             headingLabel.color = PlayerMenuUiFactory.Accent;
             PlayerMenuUiFactory.LayoutElement(headingLabel.gameObject, preferredHeight: 38f);
 

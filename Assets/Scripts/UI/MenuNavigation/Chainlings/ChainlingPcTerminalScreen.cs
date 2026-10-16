@@ -19,11 +19,12 @@ namespace SignalJam.UI.MenuNavigation
     public sealed partial class ChainlingPcTerminalScreen : MonoBehaviour
     {
         private const string PlayerRoomTerminalId = "player_room_pc";
-        private static readonly string[] SlotNames = { "LEAD", "PARTNER", "BENCH" };
 
         [Header("Catalogs")]
         [SerializeField] private SpeciesDatabaseSO speciesDatabase;
         [SerializeField] private CombatVisualDatabaseSO visualDatabase;
+        [SerializeField] private ChainlingVisualIdentityDatabaseSO identityDatabase;
+        [SerializeField] private MoveDatabaseSO moveDatabase;
         [SerializeField] private ChainlingCardWidget cardPrefab;
         [SerializeField] private SupabaseConfigSO supabaseConfig;
 
@@ -83,6 +84,7 @@ namespace SignalJam.UI.MenuNavigation
         private float partyRevealUntil;
         private int lastCloseFrame = -1;
         private ChainlingDetailScreen openDetail;
+        private int actionSheetRequest;
         private InputLockHandle inputLock;
         private bool hasInputLock;
         private string terminalId;
@@ -194,8 +196,7 @@ namespace SignalJam.UI.MenuNavigation
             root.alpha = 1f;
             root.blocksRaycasts = true;
             root.interactable = false;
-            if (inputContext != null)
-                inputContext.SetAnimationHold(true);
+            ArmTerminalInput();
             SetStatus("LOADING CHAINLING STORAGE...");
             PlayCue(PlayerMenuSfxCue.MenuOpen);
             PlayerMenuSfxResolver.SuppressNavigationCues(0.6f);
@@ -233,18 +234,19 @@ namespace SignalJam.UI.MenuNavigation
 
             if (root == null || !root.gameObject.activeSelf)
             {
+                ReleaseTerminalInput();
                 ReleaseInputLock();
                 return;
             }
 
             closing = true;
             entranceSettled = false;
+            HideActionSheetImmediate();
             choosingSlot = false;
             selectedStorage = null;
             actionTarget = null;
             root.interactable = false;
-            if (inputContext != null)
-                inputContext.SetAnimationHold(true);
+            ReleaseTerminalInput();
             KillPartyMotion();
             PlayCue(PlayerMenuSfxCue.MenuClose);
             PlayPartyRowClose(() =>
@@ -261,6 +263,7 @@ namespace SignalJam.UI.MenuNavigation
             WireView();
             if (root != null)
                 root.gameObject.SetActive(false);
+            ReleaseTerminalInput();
         }
 
         private void OnDisable()
@@ -269,6 +272,7 @@ namespace SignalJam.UI.MenuNavigation
             KillPartyMotion();
             closing = false;
             entranceSettled = false;
+            ReleaseTerminalInput();
             ReleaseInputLock();
         }
 
@@ -417,6 +421,7 @@ namespace SignalJam.UI.MenuNavigation
             selectedStorage = entry;
             BindPreview();
             PlayCue(PlayerMenuSfxCue.ChainlingSelect);
+            actionSheetRequest++;
             OpenActionSheet(entry, false);
         }
 
@@ -443,7 +448,13 @@ namespace SignalJam.UI.MenuNavigation
             if (row != null)
                 row.PlaySelectPulse();
             PlayCue(PlayerMenuSfxCue.ChainlingSelect);
-            DOVirtual.DelayedCall(0.16f, () => OpenActionSheet(entry, true), false)
+            int request = ++actionSheetRequest;
+            DOVirtual.DelayedCall(0.16f, () =>
+            {
+                if (request != actionSheetRequest || closing)
+                    return;
+                OpenActionSheet(entry, true);
+            }, false)
                 .SetUpdate(true)
                 .SetTarget(this);
         }
@@ -653,7 +664,7 @@ namespace SignalJam.UI.MenuNavigation
                     break;
 
                 InventoryItemUseTargetSlot row = Instantiate(partyRowPrefab, partyRoot);
-                row.gameObject.name = $"Party_{SlotNames[slot]}";
+                row.gameObject.name = $"PartySlot_{slot + 1}";
                 row.gameObject.SetActive(true);
                 LayoutElement element = row.GetComponent<LayoutElement>();
                 if (element == null)
@@ -961,7 +972,10 @@ namespace SignalJam.UI.MenuNavigation
             entranceSettled = true;
             root.interactable = true;
             if (inputContext != null)
+            {
                 inputContext.SetAnimationHold(false);
+                inputContext.SetInteractionEnabled(true);
+            }
             PlayPartyRowReveal();
             RefreshNavigation();
         }
@@ -976,8 +990,7 @@ namespace SignalJam.UI.MenuNavigation
                 root.gameObject.SetActive(false);
             }
 
-            if (inputContext != null)
-                inputContext.SetAnimationHold(false);
+            ReleaseTerminalInput();
             closing = false;
             ReleaseInputLock();
         }
@@ -1094,11 +1107,75 @@ namespace SignalJam.UI.MenuNavigation
             return service;
         }
 
+        private ChainlingDetailScreen ResolveDetailPrefab()
+        {
+            if (detailPrefab != null)
+                return detailPrefab;
+
+            ChainlingsPartyScreen party = FindObjectOfType<ChainlingsPartyScreen>(true);
+            if (party != null && party.DetailViewPrefab != null)
+                detailPrefab = party.DetailViewPrefab;
+
+            return detailPrefab;
+        }
+
+        private MonoBehaviour ResolveCosmeticInventory()
+        {
+            return FindObjectOfType<CoreCosmeticInventoryService>(true);
+        }
+
+        private MonoBehaviour ResolveOrAddMenuService<TService, TFallback>()
+            where TFallback : MonoBehaviour, TService
+        {
+            TFallback existing = FindObjectOfType<TFallback>(true);
+            if (existing != null)
+                return existing;
+
+            TFallback created = GetComponent<TFallback>();
+            if (created == null)
+                created = gameObject.AddComponent<TFallback>();
+
+            SupabaseConfigSO config = ResolveSupabaseConfig();
+            if (created is SupabaseMoveInventoryProvider moveInventory)
+                moveInventory.Configure(config);
+            else if (created is SupabaseMenuMoveEquipService moveEquip)
+                moveEquip.Configure(config);
+            else if (created is SupabaseMenuVisualIdentityService visualIdentity)
+                visualIdentity.Configure(config);
+            else if (created is SupabaseRebirthService rebirth)
+                rebirth.Configure(config);
+
+            return created;
+        }
+
         private SupabaseConfigSO ResolveSupabaseConfig()
         {
             if (supabaseConfig == null)
                 supabaseConfig = Resources.Load<SupabaseConfigSO>("SupabaseConfig");
             return supabaseConfig;
+        }
+
+        private void ArmTerminalInput()
+        {
+            if (inputContext == null)
+                return;
+
+            inputContext.SetInteractionEnabled(false);
+            inputContext.SetAnimationHold(true);
+            inputContext.enabled = true;
+        }
+
+        private void ReleaseTerminalInput()
+        {
+            if (EventSystem.current != null)
+            {
+                GameObject selected = EventSystem.current.currentSelectedGameObject;
+                if (selected != null && selected.transform.IsChildOf(transform))
+                    EventSystem.current.SetSelectedGameObject(null);
+            }
+
+            if (inputContext != null)
+                inputContext.enabled = false;
         }
 
         private void AcquireInputLock()

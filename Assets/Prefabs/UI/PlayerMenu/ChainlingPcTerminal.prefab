@@ -2036,7 +2036,7 @@ GameObject:
   - component: {fileID: 7846277160170095564}
   - component: {fileID: 4428726847335959071}
   m_Layer: 0
-  m_Name: Party_PARTNER
+  m_Name: PartySlot_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2384,7 +2384,7 @@ GameObject:
   - component: {fileID: 2487238516019666366}
   - component: {fileID: 3593673308848814990}
   m_Layer: 0
-  m_Name: Party_BENCH
+  m_Name: PartySlot_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5142,6 +5142,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1981757751769833183}
+  - {fileID: 6267244049128362485}
   m_Father: {fileID: 2573599779403398014}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -6952,6 +6953,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speciesDatabase: {fileID: 11400000, guid: 30d36b2ab437f37498a64868dc46ed1c, type: 2}
   visualDatabase: {fileID: 11400000, guid: 1afd18d53a246a54ca6511ff1e0cfdd9, type: 2}
+  identityDatabase: {fileID: 11400000, guid: 7b2056062f79466cbb8c87da1b678195, type: 2}
+  moveDatabase: {fileID: 11400000, guid: d112e1ae5104c074285be2f6993c1978, type: 2}
   cardPrefab: {fileID: 1636399649124807043, guid: ff227692f0fcd8e46bfd19cd062b3187, type: 3}
   supabaseConfig: {fileID: 11400000, guid: a1072ad04952ce64a840e2b9fde60191, type: 2}
   rosterProviderBehaviour: {fileID: 0}
@@ -7512,17 +7515,17 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4449650356161793291}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1981757751769833183}
+  m_Father: {fileID: 7759594089758709748}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 511.94604, y: 88}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6570280387442054088
 CanvasRenderer:
@@ -10846,13 +10849,12 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 6267244049128362485}
+  m_Children: []
   m_Father: {fileID: 7759594089758709748}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0.000015258789}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2836081977431507438
@@ -10877,7 +10879,7 @@ MonoBehaviour:
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 1
-  m_ChildControlHeight: 1
+  m_ChildControlHeight: 0
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
@@ -14013,7 +14015,7 @@ GameObject:
   - component: {fileID: 8215470085932938448}
   - component: {fileID: 553824330377658892}
   m_Layer: 0
-  m_Name: Party_LEAD
+  m_Name: PartySlot_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
