@@ -47,6 +47,8 @@ const RECONCILE_RAM_DELTA_DISCRIMINATOR = bytes(0, 109, 140, 149, 153, 119, 226,
 const GRANT_RAM_DISCRIMINATOR = bytes(178, 154, 17, 238, 34, 122, 206, 163);
 const PREPARE_STAMP_DISCRIMINATOR = bytes(244, 254, 92, 75, 125, 49, 21, 158);
 const STAMP_KNOWN_DISCRIMINATOR = bytes(169, 191, 199, 46, 62, 34, 188, 181);
+const PREPARE_PROFILE_STAMP_DISCRIMINATOR = bytes(14, 195, 234, 21, 25, 158, 57, 144);
+const STAMP_PROFILE_KNOWN_DISCRIMINATOR = bytes(158, 107, 90, 125, 109, 128, 171, 210);
 const BIND_CHAINLING_DISCRIMINATOR = bytes(181, 19, 166, 249, 245, 197, 66, 176);
 const GAME_CONFIG_DISCRIMINATOR = bytes(45, 146, 146, 33, 170, 69, 96, 133);
 const PLAYER_PROFILE_DISCRIMINATOR = bytes(82, 226, 99, 87, 164, 130, 181, 80);
@@ -113,6 +115,7 @@ export interface OwnershipConfig {
 export interface BindOwnershipConfig extends OwnershipConfig {
   coversCollection: PublicKey;
   cosmeticsCollection: PublicKey;
+  cosmeticsUpdateAuthorities: ReadonlySet<string>;
   archivesCollection: PublicKey;
 }
 
@@ -155,6 +158,7 @@ export interface BuiltStampTransaction {
   chainRamBalance: number;
   chainRamRequired: number;
   reservationAddress: string;
+  knownSource: "legacy_onchain" | "profile";
 }
 
 export interface BuiltBindTransaction {
@@ -334,6 +338,9 @@ export function loadBindConfig(): BindOwnershipConfig {
       requiredEnv("CHAINBOUND_CORE_COSMETICS_COLLECTION"),
       "cosmetics_collection_unset_or_invalid",
     ),
+    cosmeticsUpdateAuthorities: parseCoreUpdateAuthorityAllowlist(
+      requiredEnv("CHAINBOUND_CORE_COSMETICS_UPDATE_AUTHORITIES"),
+    ),
     archivesCollection: publicKey(
       requiredEnv("CHAINBOUND_CORE_ARCHIVES_COLLECTION"),
       "archives_collection_unset_or_invalid",
@@ -493,6 +500,29 @@ export async function deriveRamOperationId(profileId: string, kind: string, idem
   value[8] = (value[8] & 0x3f) | 0x80;
   const hex = bytesToHex(value);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function parseCoreUpdateAuthorityAllowlist(value: string): ReadonlySet<string> {
+  const candidates = value.split(",").map((candidate) => candidate.trim()).filter(Boolean);
+  if (candidates.length === 0 || candidates.length > 16) {
+    throw new OwnershipConfigurationError("invalid_cosmetics_update_authorities");
+  }
+  const authorities = new Set<string>();
+  for (const candidate of candidates) {
+    const normalized = publicKey(candidate, "invalid_cosmetics_update_authorities").toBase58();
+    if (authorities.has(normalized)) {
+      throw new OwnershipConfigurationError("invalid_cosmetics_update_authorities");
+    }
+    authorities.add(normalized);
+  }
+  return authorities;
+}
+
+/** Stable non-zero u64 written to the legacy receipt field for profile-native Known moves. */
+export async function deriveProfileKnownReference(knownId: string): Promise<bigint> {
+  const digest = await sha256Bytes(`profile-known:${knownId}`);
+  const value = readU64(digest, 0);
+  return value === 0n ? 1n : value;
 }
 
 /**
@@ -1185,13 +1215,7 @@ export async function buildStampTransaction(args: {
   const owner = publicKey(args.walletAddress, "invalid_wallet_public_key");
   const connection = new Connection(args.config.rpcUrl, "confirmed");
   const program = args.config.programId;
-  const [vault] = PublicKey.findProgramAddressSync([utf8("move_vault"), owner.toBytes()], program);
-  const [profile] = PublicKey.findProgramAddressSync([utf8("player_profile"), owner.toBytes()], program);
   const operationHash = await sha256Bytes(args.operationId);
-  const [reservation] = PublicKey.findProgramAddressSync(
-    [utf8("ram_reservation"), owner.toBytes(), operationHash],
-    program,
-  );
   const [ownershipConfig] = PublicKey.findProgramAddressSync([utf8("ownership_config")], program);
   const [gameConfig] = PublicKey.findProgramAddressSync([utf8("game_config")], program);
   const [coreAuthority] = PublicKey.findProgramAddressSync([utf8("core_authority")], program);
@@ -1200,72 +1224,123 @@ export async function buildStampTransaction(args: {
     [utf8("stamped_asset"), owner.toBytes(), operationHash],
     program,
   );
-
-  const [vaultInfo, profileInfo] = await connection.getMultipleAccountsInfo([vault, profile], "confirmed");
-  if (!vaultInfo) throw new Error("move_vault_not_initialized");
-  if (!profileInfo) throw new Error("player_profile_not_initialized");
-  if (!vaultInfo.owner.equals(program)) throw new Error("move_vault_wrong_program_owner");
-  if (!profileInfo.owner.equals(program)) throw new Error("player_profile_wrong_program_owner");
-  const vaultState = decodeMoveVault(new Uint8Array(vaultInfo.data));
-  const profileState = decodePlayerProfile(new Uint8Array(profileInfo.data));
-  if (profileState.owner !== owner.toBase58()) throw new Error("player_profile_owner_mismatch");
-  if (!args.existingOnchainInstanceId) throw new Error("known_onchain_instance_missing");
-  const onchainInstanceId = BigInt(args.existingOnchainInstanceId);
-  if (!vaultState.instanceIds.some((value) => value === onchainInstanceId)) {
-    throw new Error("known_onchain_instance_missing");
-  }
-  const chainRamRequired = args.config.stampRamCost;
-  if (profileState.ramBalance < chainRamRequired) throw new Error("insufficient_ram");
-
   const instructions: TransactionInstruction[] = [];
-
   const expiresAt = args.expiresAt;
   if (expiresAt.getTime() <= Date.now()) throw new Error("ram_reservation_expired");
   const assetName = `Chainbound Stamped ${args.knownMoveId}`;
   const assetUri = stampMetadataUri(args.config.metadataUriBase, stampedAsset.toBase58());
-  instructions.push(
-    new TransactionInstruction({
-      programId: program,
-      keys: [
-        meta(ticket, false, true),
-        meta(vault, false, false),
-        meta(ownershipConfig, false, false),
-        meta(owner, false, false),
-        meta(gameConfig, false, false),
-        meta(args.config.resultAuthority.publicKey, true, true),
-        meta(SystemProgram.programId, false, false),
-      ],
-      data: instructionData(concat(
-        PREPARE_STAMP_DISCRIMINATOR,
-        operationHash,
-        u64(onchainInstanceId),
-        stringVector(args.modifierIds),
-        bytes(args.rarity),
-        borshString(assetName),
-        borshString(assetUri),
-        i64(BigInt(Math.floor(expiresAt.getTime() / 1000))),
-      )),
-    }),
-  );
-  instructions.push(
-    new TransactionInstruction({
-      programId: program,
-      keys: [
-        meta(owner, true, true),
-        meta(profile, false, true),
-        meta(reservation, false, true),
-        meta(vault, false, true),
-        meta(ticket, false, true),
-        meta(ownershipConfig, false, false),
-        meta(coreAuthority, false, false),
-        meta(stampedAsset, false, true),
-        meta(args.config.movesCollection, false, true),
-        meta(new PublicKey(CORE_PROGRAM_ID), false, false),
-        meta(SystemProgram.programId, false, false),
-      ],
-      data: instructionData(concat(STAMP_KNOWN_DISCRIMINATOR, operationHash)),
-    }),
-  );
+  const profileNative = !args.existingOnchainInstanceId;
+  let onchainInstanceId: bigint;
+  let chainRamBalance = 0;
+  let chainRamRequired = 0;
+  let reservationAddress = "";
+
+  if (profileNative) {
+    onchainInstanceId = await deriveProfileKnownReference(args.knownId);
+    instructions.push(
+      new TransactionInstruction({
+        programId: program,
+        keys: [
+          meta(ticket, false, true),
+          meta(ownershipConfig, false, false),
+          meta(owner, false, false),
+          meta(gameConfig, false, false),
+          meta(args.config.resultAuthority.publicKey, true, true),
+          meta(SystemProgram.programId, false, false),
+        ],
+        data: instructionData(concat(
+          PREPARE_PROFILE_STAMP_DISCRIMINATOR,
+          operationHash,
+          u64(onchainInstanceId),
+          u16(args.knownMoveId),
+          stringVector(args.modifierIds),
+          bytes(args.rarity),
+          borshString(assetName),
+          borshString(assetUri),
+          i64(BigInt(Math.floor(expiresAt.getTime() / 1000))),
+        )),
+      }),
+      new TransactionInstruction({
+        programId: program,
+        keys: [
+          meta(owner, true, true),
+          meta(ticket, false, true),
+          meta(ownershipConfig, false, false),
+          meta(coreAuthority, false, false),
+          meta(stampedAsset, false, true),
+          meta(args.config.movesCollection, false, true),
+          meta(new PublicKey(CORE_PROGRAM_ID), false, false),
+          meta(SystemProgram.programId, false, false),
+        ],
+        data: instructionData(concat(STAMP_PROFILE_KNOWN_DISCRIMINATOR, operationHash)),
+      }),
+    );
+  } else {
+    const [vault] = PublicKey.findProgramAddressSync([utf8("move_vault"), owner.toBytes()], program);
+    const [profile] = PublicKey.findProgramAddressSync([utf8("player_profile"), owner.toBytes()], program);
+    const [reservation] = PublicKey.findProgramAddressSync(
+      [utf8("ram_reservation"), owner.toBytes(), operationHash],
+      program,
+    );
+    const [vaultInfo, profileInfo] = await connection.getMultipleAccountsInfo([vault, profile], "confirmed");
+    if (!vaultInfo) throw new Error("move_vault_not_initialized");
+    if (!profileInfo) throw new Error("player_profile_not_initialized");
+    if (!vaultInfo.owner.equals(program)) throw new Error("move_vault_wrong_program_owner");
+    if (!profileInfo.owner.equals(program)) throw new Error("player_profile_wrong_program_owner");
+    const vaultState = decodeMoveVault(new Uint8Array(vaultInfo.data));
+    const profileState = decodePlayerProfile(new Uint8Array(profileInfo.data));
+    if (profileState.owner !== owner.toBase58()) throw new Error("player_profile_owner_mismatch");
+    onchainInstanceId = BigInt(args.existingOnchainInstanceId!);
+    if (!vaultState.instanceIds.some((value) => value === onchainInstanceId)) {
+      throw new Error("known_onchain_instance_missing");
+    }
+    chainRamBalance = profileState.ramBalance;
+    chainRamRequired = args.config.stampRamCost;
+    if (chainRamBalance < chainRamRequired) throw new Error("insufficient_ram");
+    reservationAddress = reservation.toBase58();
+
+    instructions.push(
+      new TransactionInstruction({
+        programId: program,
+        keys: [
+          meta(ticket, false, true),
+          meta(vault, false, false),
+          meta(ownershipConfig, false, false),
+          meta(owner, false, false),
+          meta(gameConfig, false, false),
+          meta(args.config.resultAuthority.publicKey, true, true),
+          meta(SystemProgram.programId, false, false),
+        ],
+        data: instructionData(concat(
+          PREPARE_STAMP_DISCRIMINATOR,
+          operationHash,
+          u64(onchainInstanceId),
+          stringVector(args.modifierIds),
+          bytes(args.rarity),
+          borshString(assetName),
+          borshString(assetUri),
+          i64(BigInt(Math.floor(expiresAt.getTime() / 1000))),
+        )),
+      }),
+      new TransactionInstruction({
+        programId: program,
+        keys: [
+          meta(owner, true, true),
+          meta(profile, false, true),
+          meta(reservation, false, true),
+          meta(vault, false, true),
+          meta(ticket, false, true),
+          meta(ownershipConfig, false, false),
+          meta(coreAuthority, false, false),
+          meta(stampedAsset, false, true),
+          meta(args.config.movesCollection, false, true),
+          meta(new PublicKey(CORE_PROGRAM_ID), false, false),
+          meta(SystemProgram.programId, false, false),
+        ],
+        data: instructionData(concat(STAMP_KNOWN_DISCRIMINATOR, operationHash)),
+      }),
+    );
+  }
 
   const latest = await connection.getLatestBlockhash("confirmed");
   const tx = new Transaction({ feePayer: owner, recentBlockhash: latest.blockhash });
@@ -1282,9 +1357,10 @@ export async function buildStampTransaction(args: {
     onchainInstanceId,
     estimatedNetworkFeeLamports: estimated.value ?? 0,
     expiresAt,
-    chainRamBalance: profileState.ramBalance,
+    chainRamBalance,
     chainRamRequired,
-    reservationAddress: reservation.toBase58(),
+    reservationAddress,
+    knownSource: profileNative ? "profile" : "legacy_onchain",
   };
 }
 
