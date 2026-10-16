@@ -43,6 +43,14 @@ namespace Chainbound.Combat
         public bool isDefeatReturn;
 
         /// <summary>
+        /// True when battle completion had no durable overworld return context
+        /// (for example after an interrupted rejoin). The presentation layer
+        /// must route this to sanctuary rather than trusting a generic home
+        /// fallback that may not be safe in the current streaming layout.
+        /// </summary>
+        public bool returnContextMissing;
+
+        /// <summary>
         /// Authored overworld chunks that must be resident on sanctuary continue/wipe.
         /// Empty keeps the streaming set's preload-on-entry list.
         /// </summary>

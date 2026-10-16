@@ -510,6 +510,7 @@ namespace Chainbound.Combat
                     sceneName = homeSceneName,
                     spawnId = homeSpawnId,
                     useExactPosition = false,
+                    returnContextMissing = true,
                 });
             }
 
