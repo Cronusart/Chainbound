@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 4.5-a
   displayName: Group Hug
-  effectDescription: Single-target ally support affects both allies at 20-30% reduced
-    potency
+  effectDescription: After this support move resolves, each active ally gains +1
+    AP.
   category: 3
   scope: 0
   minimumRarity: 3
-  effectMin: 20
-  effectMax: 30
+  effectMin: 1
+  effectMax: 1
   allowedCategories: 03000000
   forbiddenCombinations: []
   slotCostIncrease: 0

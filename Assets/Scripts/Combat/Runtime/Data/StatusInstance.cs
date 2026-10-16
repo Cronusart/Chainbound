@@ -124,6 +124,21 @@ namespace Chainbound.Combat
         }
 
         /// <summary>
+        /// Apply a stage change and remember the clamped delta so expiry can undo it.
+        /// A refresh of the same status does not call this again for apply-once stages.
+        /// </summary>
+        public int ApplyOwnedStage(ChainlingInstance target, CoreStat stat, int stages)
+        {
+            if (target == null || stages == 0)
+                return 0;
+            int before = target.GetStage(stat);
+            target.SetStage(stat, before + stages);
+            int applied = target.GetStage(stat) - before;
+            AddOwnedStage(stat, applied);
+            return applied;
+        }
+
+        /// <summary>
         /// Consumed statuses that mean "your next action," not "the rest of this turn."
         /// They stay up through the granting turn's end tick, then expire if unused.
         /// </summary>

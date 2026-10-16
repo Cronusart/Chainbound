@@ -2,7 +2,47 @@
 
 Date: 2026-10-16. Snapshot: combat CSVs under `Docs/Specs/Combat/Data/`, the live chemistry matrix `Docs/Specs/Combat/COMBAT_Interaction_Matrix_v1.csv`, and the Unity resolver in `Assets/Scripts/Combat/Runtime/Engine/`.
 
-This is an audit. It does not change gameplay code or data. Suggested fixes are descriptions of what to change later.
+This audit was written before the follow-up. The original findings below stay as the record of what was observed. The decision round is the current status.
+
+## Decision round (2026-10-16)
+
+Developer answers applied on this branch. Stamp modifiers `3.2-b`, `3.2-c`, `7.2-c`, `10.1-d`, `10.2-b`, and `10.2-c` were not touched.
+
+| Finding | Status |
+|---|---|
+| E-01 Bean Sip | **Fixed.** `rechargeTurns` stays 2, which skips the next turn. The log and the card say 1 turn. The move also grants +1 AP. |
+| E-02 Other recharge wording | **Fixed for the sentence.** AP Boost and Extend Protocol stay at 3 and the card and log say 2 skipped turns. Fox Feint stays at 999 and the log says it cannot be used again this battle. Gecko Guard's unused 999 was left on the passive. |
+| E-03 Slowed action-loss label | **Deferred.** |
+| E-04 Drip "once" | **Deferred.** |
+| E-05 Cascade "KO" comment | **Deferred.** |
+| E-06 FUD Accuracy comment | **Deferred.** The stages now revert with the status (E-15). The Accuracy word was not added. |
+| E-07 Jammed Acc -2 | **Deferred.** Listed in [UNIMPLEMENTED_MOVE_EFFECTS.md](UNIMPLEMENTED_MOVE_EFFECTS.md). |
+| E-08 Leaked | **Deferred.** Same doc. |
+| E-09 Backlash | **Deferred.** Same doc. |
+| E-10 Dusted | **Partial.** Speed -3 reverts with the status. Eva -3 was not added. |
+| E-11 HODLed ramp | **Deferred.** The double ramp and the missing immunity were not retuned. Owned stages revert if it is ever applied. No producer was added. |
+| E-12 MEV Extracted drain vs steal | **Deferred.** |
+| E-13 Burned Tokens | **Deferred.** |
+| E-14 Overleveraged | **Deferred.** |
+| E-15 Timed stages | **Fixed.** Apply-once and repeating stages are owned by the status instance and revert when it expires. General refresh sets `turnsRemaining` to `max(current, new)` and does not reapply apply-once stages. Chemistry refresh sets `turnsRemaining` back to `defaultDuration` and does not reapply stages. Sear Field is status `SearField` (310) for the granting turn. Immovable's Def +2 lives on the Immovable status. |
+| E-16 Ice Wall comma | **Fixed as an import bug.** The description is quoted and both opcodes import. The restored mitigation `hitBudget` is still 0, so the wall does not mitigate. The speed-based +1 AP opcode is present. |
+| E-17 Hit budget 0 | **Deferred.** Ash Guard, Compound Guard, and Ice Wall. No hit count was invented. |
+| E-18 Empty Acc/Eva | **Deferred.** Listed per move in the unimplemented doc. |
+| E-19 Missing payloads | **Deferred.** Same doc. Extend Protocol's recharge sentence was fixed; the extend clause was not implemented. |
+| E-20 Streamlined Flow double Def | **Deferred.** |
+| E-21 Compression Burst every hit | **Deferred.** |
+| E-22 Group Hug | **Fixed by replacement.** The percent-copy is gone. After a Support move resolves, each living active ally gains +1 AP. The host move stays single-target. |
+| E-23 Six stamp modifiers | **Deferred.** Another agent owns them. Not edited. |
+| E-24 Tripwire | **Deferred.** |
+| E-25 Charged Relay ledger timing | **Deferred.** |
+| E-26 FUD and Reinforced stages | **Fixed as the shared revert rule.** FUD's stages revert. Reinforced still has no producer; if applied, Def +3 reverts. |
+| E-27 No producer | **No content change.** Findings per status are in [CATALOG_STATUSES_WITHOUT_PRODUCERS.md](CATALOG_STATUSES_WITHOUT_PRODUCERS.md). |
+| E-28 Passive target override | **Deferred.** |
+| E-29 Bench recharge | **Fixed.** Recharge keeps ticking on the bench. Other statuses still pause. Spec §1.2 point 6 and the changelog match. `BenchPausesStatusDurationUntilSwapIn` was replaced. |
+
+Open item from E-01: Cofi's encounter is `bean_sip` plus `civet_beam` (Bean Beam, power 12, 2 AP). Utility AI has no 6 AP check and no stronger Bean Beam. None was added. Once Cofi reaches 6 AP the kit still only has the power-12 beam.
+
+The duration clock below describes the pre-follow-up log and the old bench pause. Player-facing recharge text is now `rechargeTurns - 1` upcoming turns, and benched recharge ticks. See the table above before using those paragraphs as current behavior.
 
 ## Counts
 
@@ -654,13 +694,13 @@ These were easy to "fix" into a bug. They already do what the duration clock say
 | `rally_cry` | Partial | E-19 |
 | `refinery` | Partial | E-19 |
 | `double_or_nothing` | Partial | E-19 |
-| `fuel_surge` | Partial | E-15 |
-| `sear_field` | Partial | E-15 |
-| `shard_partition` | Partial | E-15 |
-| `verification_lock` | Partial | E-15, E-26 |
+| `fuel_surge` | Fixed (stages revert) | E-15 |
+| `sear_field` | Fixed (status window) | E-15 |
+| `shard_partition` | Fixed (stages revert) | E-15 |
+| `verification_lock` | Fixed for stages; Acc comment deferred | E-15, E-06, E-26 |
 | `ash_guard` | Partial | E-17 |
 | `compound_guard` | Partial | E-17 |
-| `ice_wall` | Partial | E-16, E-17 |
+| `ice_wall` | Comma fixed; hit budget 0 deferred | E-16, E-17 |
 | `mev_extract` | Partial | E-12 |
 | `deflation_mark` | Partial | E-13 |
 | `voltage_rush` | Partial | E-14 |
@@ -668,18 +708,25 @@ These were easy to "fix" into a bug. They already do what the duration clock say
 | `streamlined_flow` | Partial | E-20 |
 | `compression_burst` | Partial | E-21 |
 | `charged_relay` | Partial | E-25 |
-| `bean_sip` | Wording | E-01 |
-| `ap_boost` | Wording | E-02 |
-| `fox_feint` | Wording | E-02 |
+| `bean_sip` | Fixed (wording + 1 AP) | E-01 |
+| `ap_boost` | Fixed (wording) | E-02 |
+| `fox_feint` | Fixed (wording) | E-02 |
 | `gecko_guard` | Unused recharge column | E-02 |
 
 ## Decisions for the developer
 
-1. Recharge copy versus duration. The recommendation is to change the sentence to upcoming skipped turns and leave `rechargeTurns`, the unit test, and the Cofi design note. Do not add a lockout to make the current sentence true.
-2. One rule for stages on a timed status (E-26): revert with the token, or stop putting a duration on a permanent stage.
-3. Empty tooltips (E-18, E-19): implement the clause, or rewrite the tooltip to the payload. Do this before any rarity number pass. Missing costs (`all_in`, `recoil_strike`, `volatile_shot`) and missing Rare upside (`crystal_bash`) dominate the balance doc.
-4. `COMBAT_Moves.txt` §6.1 treats rarity as complexity and availability, and keeps Common raw output competitive with Epic. Typed Commons at power 64 above the typeless Rare refined line fit that sentence. See the balance audit before retiering.
-5. Group Hug: full potency is what ships. The card says 20–30% less.
-6. The six modifiers in E-23: implement them, or stop offering them.
-7. Producer-less statuses (E-27): content, or deprecated.
-8. Bench time pauses recharge. Update §1.2 point 6, unless bench time should count.
+Answered in the decision round at the top of this file:
+
+1. Recharge copy uses upcoming skipped turns. `rechargeTurns` was left as authored. Bean Sip also grants +1 AP. A stronger Bean Beam at 6 AP was not in the kit and was not added.
+2. Timed-status stages revert with the token. Refresh does not stack apply-once stages.
+3. Group Hug no longer copies a support move. Each active ally gains +1 AP.
+4. Bench recharge keeps ticking. Other statuses still pause. §1.2 matches.
+5. The balance screen now flags a typeless Rare that sits under a typed Common. §6.1 was not rewritten, and no power number was changed.
+
+Still open:
+
+1. Empty tooltips (E-18, E-19) and the chemistry clauses in E-07 through E-14. Each row is in [UNIMPLEMENTED_MOVE_EFFECTS.md](UNIMPLEMENTED_MOVE_EFFECTS.md), with change / remove / implement. Missing costs (`all_in`, `recoil_strike`, `volatile_shot`) and `crystal_bash` at power 0 still dominate any later number pass.
+2. Hit budget 0 on Ash Guard, Compound Guard, and the restored Ice Wall. Pick a hit count before those walls mitigate.
+3. The six stamp modifiers in E-23. Left for the other agent.
+4. Producer-less statuses. Research is in [CATALOG_STATUSES_WITHOUT_PRODUCERS.md](CATALOG_STATUSES_WITHOUT_PRODUCERS.md). No row was deprecated and no producer was added.
+5. HODLed's double ramp and missing immunity. The shared revert covers the stages if it is applied. The formula was not changed.

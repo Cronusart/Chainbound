@@ -471,6 +471,42 @@ namespace Chainbound.Combat
                     c.apDonationUsedThisTurn = false;
                 }
             }
+
+            TickBenchedRecharge(team, turn);
+        }
+
+        private void TickBenchedRecharge(TeamState team, int turn)
+        {
+            if (team?.chainlings == null)
+                return;
+
+            for (int i = 0; i < team.chainlings.Count; i++)
+            {
+                ChainlingInstance chainling = team.chainlings[i];
+                if (chainling == null || !chainling.isAlive || chainling.isActive)
+                    continue;
+                if (team.activeIndices != null && team.activeIndices.Contains(i))
+                    continue;
+                _statusProcessor.TickRechargeWhileBenched(chainling, turn);
+            }
+        }
+
+        /// <summary>
+        /// Player-facing recharge length. Authored rechargeTurns includes the granting
+        /// turn's end tick, so the skipped upcoming turns are one less. A sentinel of
+        /// 100 or more is the once-per-battle lock (Fox Feint uses 999).
+        /// </summary>
+        public static string FormatPlayerFacingRecharge(string displayName, int rechargeTurns)
+        {
+            string name = string.IsNullOrWhiteSpace(displayName) ? "Move" : displayName;
+            if (rechargeTurns >= 100)
+                return $"{name} cannot be used again this battle.";
+
+            int skippedTurns = Math.Max(0, rechargeTurns - 1);
+            if (skippedTurns <= 0)
+                return $"{name} can be used again next turn.";
+            string unit = skippedTurns == 1 ? "turn" : "turns";
+            return $"{name} now recharging ({skippedTurns} {unit})";
         }
 
         private void HandleEndOfTurnKo(TeamState defeatedTeam, ChainlingInstance defeated, int turn)
@@ -1707,7 +1743,8 @@ namespace Chainbound.Combat
 
             ProcessActionEconomyModifiers(state, actingTeam, opposingTeam, actor, target, move, conditionMet);
 
-            // Apply recharge if needed
+            // Apply recharge if needed. The granting turn's end tick consumes one
+            // count, so the log reports the upcoming turns the move cannot be selected.
             if (move.rechargeTurns > 0)
             {
                 var rechargeStatus = new StatusInstance(
@@ -1716,7 +1753,7 @@ namespace Chainbound.Combat
                 rechargeStatus.rechargingMoveId = move.instanceId;
                 actor.statuses.Add(rechargeStatus);
                 _log.LogMessage(CombatEventType.MoveRecharging,
-                    $"{move.displayName} now recharging ({move.rechargeTurns} turns)",
+                    FormatPlayerFacingRecharge(move.displayName, move.rechargeTurns),
                     state.currentTurn);
             }
 
@@ -2566,27 +2603,37 @@ namespace Chainbound.Combat
                 }
             }
 
-            ResolvedMoveModifier allySpreadModifier;
-            bool supportExpandedToAllies = TryGetMoveModifier(move, "4.5-a", out allySpreadModifier) &&
-                                           move.category == MoveCategory.Support &&
-                                           move.targeting == MoveTargeting.SingleAlly;
-            if (supportExpandedToAllies)
-                AddAliveTargets(actingTeam, resolvedTargets);
-
             for (int i = 0; i < resolvedTargets.Count; i++)
                 ApplyUtilityEffects(actor, resolvedTargets[i], move, state.currentTurn, conditionMet, opposingTeam);
 
-            if (supportExpandedToAllies && resolvedTargets.Count > 1)
+            // Group Hug is its own effect: a shared +1 AP for the active pair.
+            // The host support move stays single-target. It does not copy that move.
+            if (TryGetMoveModifier(move, "4.5-a", out ResolvedMoveModifier groupHug) &&
+                move.category == MoveCategory.Support &&
+                actingTeam != null)
             {
+                List<ChainlingInstance> allies = actingTeam.GetActiveChainlings();
+                int hugged = 0;
+                for (int i = 0; i < allies.Count; i++)
+                {
+                    ChainlingInstance ally = allies[i];
+                    if (ally == null || !ally.isAlive)
+                        continue;
+                    if (_apService.Gain(ally, 1, state.currentTurn, "4.5-a") > 0)
+                        hugged++;
+                }
+
                 LogModifierOutcome(
-                    allySpreadModifier,
+                    groupHug,
                     actor,
                     selectedTarget ?? actor,
                     move,
                     state.currentTurn,
-                    true,
-                    "Support targeting expanded to allies",
-                    "LINK",
+                    hugged > 0,
+                    hugged > 0
+                        ? "Group Hug granted +1 AP to each active ally"
+                        : "Group Hug found no ally who could gain AP",
+                    "+1 AP",
                     actor.instanceId,
                     ModifierPopupMoment.OnProcSucceeded);
             }
@@ -5238,7 +5285,7 @@ namespace Chainbound.Combat
             if (section.Equals("4.4-a", StringComparison.OrdinalIgnoreCase))
                 return "SPREAD";
             if (section.Equals("4.5-a", StringComparison.OrdinalIgnoreCase))
-                return "LINK";
+                return "+1 AP";
             if (section.Equals("4.6-a", StringComparison.OrdinalIgnoreCase) ||
                 section.Equals("4.8-a", StringComparison.OrdinalIgnoreCase))
                 return "BYPASS";

@@ -75,6 +75,7 @@ namespace Chainbound.Combat
         Unsealed            = 307,  // 50% chance to bypass single-hit barriers per hit
         Relay               = 308,  // Full barrier bypass for next hit (Consumed)
         DamageIntercept     = 309,  // Redirect next single-target attack to interceptor (Consumed)
+        SearField           = 310,  // Atk -1 for the rest of the granting turn; stage reverts on expiry
 
         // â”€â”€ Engine-Internal Statuses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Recharging          = 900,  // Stamped recharge timer (ConsumedStatus, see 02C Â§1.2)

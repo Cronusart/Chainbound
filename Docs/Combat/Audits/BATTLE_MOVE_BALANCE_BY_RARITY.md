@@ -14,10 +14,12 @@ The index is a damage screen only. Attack versus defense, chemistry, crits, and 
 4. Field index = that value times 2 when Targeting is `AllEnemies` or `Field`, else times 1. The 2 is a stated 2v2 assumption that both foes are alive. A spread move into one living foe is worth half of this field index.
 5. Per AP = field index / APCost when APCost is above 0. AP 0 is reported as free.
 
-`COMBAT_Moves.txt` §6.1 says rarity is complexity and availability, and that a Common move at max evolution should stay competitive with Epic in raw output. A Common index above a Rare index is allowed by that rule. This doc flags two tighter cases:
+`COMBAT_Moves.txt` §6.1 still says rarity is complexity and availability, and that a Common move at max evolution should stay competitive with Epic in raw output. That sentence was not edited. The developer rule for this doc is narrower and overrides §6.1 for the flags below: a typeless Rare should sit roughly in line with a typed Common. A typed Common field index above a typeless Rare of the same AP and shape is a flag. No power, accuracy, hit count, or AP number was changed.
+
+Two flag shapes:
 
 - **Strictly worse as shipped.** Same AP, same shape (single-target or spread), and the higher-rarity move's field index is lower while its described upside is missing from the columns (see the correctness audit) and the lower-rarity move's described downside is also missing. The higher rarity then loses on the only number the battle uses.
-- **Design tension.** The typed Common power-64 band versus the typeless Rare refined ladder. The spec allows this. Suggestions below are optional.
+- **Typeless Rare below a typed Common.** The refined Rare ladder sits under the typed Common power-64 band. Under the rule above, that gap is out of order. It is not "allowed by §6.1" for this screen. Fixing it means raising the refined Rares toward that Common band, or lowering the typed Commons once their missing riders exist. This pass only re-labels the flag.
 
 Effect text is listed beside the index. It is not converted into bonus points, because many of those clauses do not run.
 
@@ -173,9 +175,9 @@ These lose on the field index to a lower rarity of the same AP and shape, and th
 | 3 | `refined_blast` | Rare | 50.40 | Kinetic wave for sweeping enemy-line pressure. |
 | 3 | `baseline_blast` | Common | 41.80 | Broad burst for pressuring the enemy line. |
 
-At AP 2, Common `baseline_barrage` (47.50) is above Rare `refined_volley` (39.60). At AP 3, Common `fork_split` (87.40) is above Rare `refined_barrage` (54.00) and Rare `refined_blast` (50.40). Uncommon `civet_beam` (22.80) is the lowest AP-2 spread and is also the one whose Speed -1 rider is in the stage column. Uncommon `shard_scatter` (85.50) is close to Fork Split on the index, and its Eva rider is missing (correctness E-18).
+At AP 2, Common `baseline_barrage` (47.50) is above Rare `refined_volley` (39.60). At AP 3, typed Common `fork_split` (87.40) is above typeless Rare `refined_barrage` (54.00) and `refined_blast` (50.40). That second gap is a flag under the rule that a typeless Rare lines up with a typed Common. Pellet Storm is a typeless Common above a typeless Rare of the same AP, and it is flagged with them. Uncommon `civet_beam` (22.80) is the lowest AP-2 spread and is also the one whose Speed -1 rider is in the stage column. Uncommon `shard_scatter` (85.50) is close to Fork Split on the index, and its Eva rider is missing (correctness E-18). No spread power was changed.
 
-The typeless baseline → refined ladder itself is ordered: Snap Strike 30 to Impact Knuckle 42, Body Check 30 to the Rare slam 48, and the wide Common burst 22 to Kinetic Burst 28. The inversion is the typed Common band (power 64, accuracy 95, field index 60.80 at 2 AP) sitting on top of that Rare typeless line (Impact Knuckle 37.80, Vector Shot 34.20, Rupture Point 30.60).
+The typeless baseline → refined ladder itself is ordered: Snap Strike 30 to Impact Knuckle 42, Body Check 30 to the Rare slam 48, and the wide Common burst 22 to Kinetic Burst 28. Under the developer rule, the typed Common band (power 64, accuracy 95, field index 60.80 at 2 AP) sitting on top of that Rare typeless line (Impact Knuckle 37.80, Vector Shot 34.20, Rupture Point 30.60) is a flag. A typeless Rare should land near those typed Commons. The numbers were not moved.
 
 ### Costs that do not exist
 
@@ -194,9 +196,9 @@ These Commons are the best hits in their AP bucket because the text's drawback i
 Each line is a suggestion. None of these numbers were edited in the CSV.
 
 1. **SUGGESTION — fix payloads before retiering.** Give `crystal_bash` a real power or a Def-scaling column, and give `recoil_strike`, `volatile_shot`, and `all_in` their costs, before comparing tiers. With the costs missing, those three Commons should not be the template for "what a Common is allowed to do."
-2. **SUGGESTION — keep the §6.1 rule, and say so on the refined line.** `COMBAT_Moves.txt` says rarity is availability and complexity, and that a Common at max evolution should stay competitive with Epic in raw output. Typed Commons at power 64 above typeless Rares at power 34–48 fits that rule. If the refined line is supposed to be the better generic attack, raise Rare refined power into the 64 band or lower the typed Commons once their riders exist. Raising the Rares while the dead Common costs stay missing widens the gap.
-3. **SUGGESTION — spread.** `baseline_barrage` (Common, multi-hit, index 47.50) and `fork_split` (Common, index 87.40) outdamage the Rare spreads in the same AP. Either that is the intended "Commons stay competitive" outcome, or the Rare spreads (`refined_volley`, `refined_blast`, `refined_barrage`) need power or a rider that exists in data. `civet_beam` is the Uncommon that currently loses to both Common spreads around it; its Speed drop is real, and the power 12 is why the index is 22.80.
-4. **SUGGESTION — Epic.** `bulwark_blow` is the only Epic damage move. Leave the Def-scaling identity. If Epic should win on Atk as well, the raw power has to move, and that fights §6.1. `defensive_reflex` is a real 20% mitigation passive with an AP drain; it is not an empty Epic.
+2. **FLAG — typeless Rare should line up with typed Common.** Do not treat the power-64 typed Commons (field index 60.80 at 2 AP) above Impact Knuckle (42 power, index 37.80), Vector Shot (38, index 34.20), and Rupture Point (34, index 30.60) as allowed. §6.1 still says rarity is complexity and availability, and that a Common should stay competitive with Epic. This screen follows the developer rule instead, and it does not edit §6.1 or any power number. When a retune happens, raise the refined Rares toward the typed Common band or lower the typed Commons after their dead riders exist. Doing either while `all_in`, `recoil_strike`, and `volatile_shot` are still missing their costs will aim at the wrong Commons.
+3. **FLAG — spread.** `baseline_barrage` (Common, multi-hit, index 47.50) is above Rare `refined_volley` (39.60) at 2 AP. `fork_split` (Common, index 87.40) is above Rare `refined_barrage` (54.00) and Rare `refined_blast` (50.40) at 3 AP. Those are the same typeless-Rare versus typed-or-plain-Common gap. `civet_beam` is the Uncommon at index 22.80; its Speed drop is real, and the power 12 is why the index is low. No spread number was changed.
+4. **SUGGESTION — Epic.** `bulwark_blow` is the only Epic damage move (field index 45.00 at 3 AP, accuracy 90, attacks with MeleeDef). The Def column is real. On a wall Chainling it can pass an Atk-based Common. On an attacker the Atk index stays under several AP-3 Commons, including `deep_dig` at 68.40. Leave the identity until a retune. `defensive_reflex` is a real 20% mitigation passive with an AP drain. §6.1's "Common stays competitive with Epic" line is still in the spec and was not rewritten.
 5. **SUGGESTION — do not spend rarity budget on empty text.** `hype_train`, `glitch_barrage`, `cipher_burst`, `lucky_scatter`, and `interest_strike` are Rare in the table and Common in the resolver. Implement the rider or drop the rarity until the rider exists.
 6. **SUGGESTION — Ice Wall, Ash Guard, and Compound Guard** are support, not damage, and their mitigation does not run (correctness E-16, E-17). A balance pass that buffs their neighbors will not make those three walls work.
 
@@ -236,7 +238,7 @@ All 206 rows from `Moves.csv`, in file order. Field index is 0 for non-damaging 
 | `speed_reduction` | Speed Reduction | StatusUtility | Common | None | 1 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | stage Speed:-1:1.0:false | Lower target Speed by 1 to win turn order. |
 | `accuracy_disrupt` | Accuracy Disrupt | StatusUtility | Common | None | 1 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | — | Lower target Acc by 1 to force misses. |
 | `evasion_pin` | Evasion Pin | StatusUtility | Common | None | 1 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | — | Lower target Eva by 1 so allies can land hits. |
-| `ap_boost` | AP Boost | StatusUtility | Common | None | 0 | 0 | 0 | 1.0 | 3 | Self | 0.00 | util GainAP:2:100%:Self:ap_boost; recharge 3 | Gain +2 AP now; 3-turn recharge. |
+| `ap_boost` | AP Boost | StatusUtility | Common | None | 0 | 0 | 0 | 1.0 | 3 | Self | 0.00 | util GainAP:2:100%:Self:ap_boost; recharge 3 | Gain +2 AP now. Skips the next 2 turns. |
 | `ap_drain` | AP Drain | StatusUtility | Common | None | 2 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | — | Cut target AP by 1; 25% chance to steal it. |
 | `cleanse` | Cleanse | StatusUtility | Common | None | 1 | 0 | 0 | 1.0 | 0 | SingleAlly | 0.00 | util Cleanse:3:1.0:SingleAlly | Remove up to 3 General duration debuffs from a target ally. |
 | `position_swap` | Position Swap | StatusUtility | Common | None | 1 | 0 | 0 | 1.0 | 0 | SingleAlly | 0.00 | — | Priority swap with partner; redirects slot-based targeting. |
@@ -271,7 +273,7 @@ All 206 rows from `Moves.csv`, in file order. Field index is 0 for non-damaging 
 | `signal_redirect` | Signal Redirect | Support | Common | Node | 2 | 0 | 0 | 1.0 | 0 | SingleAlly | 0.00 | stage MeleeDef:1:1.0:true | Redirect the next hit on an ally to yourself and gain Def +1. Holds through next turn. |
 | `network_sync` | Network Sync | StatusUtility | Common | Node | 2 | 0 | 0 | 1.0 | 0 | AllAllies | 0.00 | — | All allies raise their lowest stage stat by +1. |
 | `coordinated_shot` | Coordinated Shot | DamagingRanged | Common | Node | 2 | 64 | 95 | 1.0 | 0 | SingleEnemy | 60.80 | cond x1 +0.15/count cap 1.3 | Ranged hit gains +15% damage per buffed partner. |
-| `extend_protocol` | Extend Protocol | StatusUtility | Common | Node | 1 | 0 | 0 | 1.0 | 3 | SingleAlly | 0.00 | recharge 3 | Extend one ally buff by 1 turn; 3-turn recharge. |
+| `extend_protocol` | Extend Protocol | StatusUtility | Common | Node | 1 | 0 | 0 | 1.0 | 3 | SingleAlly | 0.00 | recharge 3 | Extend one ally buff by 1 turn. Skips the next 2 turns. |
 | `network_response` | Network Response | StatusUtility | Common | Node | 1 | 0 | 0 | 1.0 | 0 | Self | 0.00 | util ArmUtilityWindow:EnemyMiss:1:1:1:0%:Speed:1:Self:0%:false:0:network_response | If an enemy misses this turn gain +1 AP and Speed +1. |
 | `overflow_reboot` | Overflow Reboot | StatusUtility | Rare | Node | 2 | 0 | 0 | 1.0 | 0 | Self | 0.00 | util ArmUtilityWindow:FoeKO:1:1:1:10%:MeleeAtk:0:Self:0%:true:0:overflow_reboot; heal 10% | If a foe faints this turn gain +1 AP and heal allies 10%. |
 | `fuel_surge` | Fuel Surge | StatusUtility | Common | Gas | 0 | 0 | 0 | 1.0 | 0 | Self | 0.00 | status GasSpike:2:1.0:Self; util GainAP:3:100%:Self:fuel_surge | Gain +3 AP; also gain Atk +2 and Def -2 for 2 turns. |
@@ -283,7 +285,7 @@ All 206 rows from `Moves.csv`, in file order. Field index is 0 for non-damaging 
 | `ap_siphon` | AP Siphon | DamagingRanged | Common | Gas | 3 | 56 | 95 | 1.0 | 0 | SingleEnemy | 53.20 | — | Ranged hit with 50% chance to drain 1 AP. |
 | `combustive_shift` | Combustive Shift | DamagingRanged | Rare | Gas | 2 | 22 | 95 | 2.0 | 0 | SingleEnemy | 41.80 | — | 2 hits; bonus damage vs debuffed targets missing AP. |
 | `vapor_barrier` | Vapor Barrier | Support | Uncommon | Gas | 2 | 0 | 0 | 1.0 | 0 | SingleAlly | 0.00 | util FullAbsorbBarrier:2:1:wall_vapor | Block the next hit within 2 turns. |
-| `immovable_stance` | Immovable Stance | StatusUtility | Common | Block | 1 | 0 | 0 | 1.0 | 0 | Self | 0.00 | status Immovable:2:1.0:Self; stage MeleeDef:2:1.0:true | Gain Def +2 and forced-swap immunity for 2 turns. |
+| `immovable_stance` | Immovable Stance | StatusUtility | Common | Block | 1 | 0 | 0 | 1.0 | 0 | Self | 0.00 | status Immovable:2:1.0:Self | Gain Def +2 and forced-swap immunity for 2 turns. |
 | `chain_seal` | Chain Seal | StatusUtility | Common | Block | 1 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | stage Speed:-1:1.0:false | Lower target Speed and Eva by 1. |
 | `dust_fees` | Dust Fees | StatusUtility | Common | Block | 1 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | — | Lower target Acc and Eva by 1. |
 | `solid_strike` | Solid Strike | DamagingMelee | Common | Block | 2 | 64 | 95 | 1.0 | 0 | SingleEnemy | 60.80 | stage Speed:-1:0.25:false | Contact hit with 25% chance to lower Speed. |
@@ -304,7 +306,7 @@ All 206 rows from `Moves.csv`, in file order. Field index is 0 for non-damaging 
 | `cipher_burst` | Cipher Burst | DamagingRanged | Rare | Encrypted | 3 | 22 | 95 | 2.5 | 0 | SingleEnemy | 52.25 | — | 2-3 hits; each has 25% chance to erase one target buff. |
 | `deflation_mark` | Deflation Mark | StatusUtility | Common | Burned | 1 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | status BurnedTokens:2:1.0:; stage MeleeAtk:-1:1.0:false | Apply Burned Tokens so enemy DoT heals you; lower Atk -1. |
 | `scorch_shot` | Scorch Shot | DamagingRanged | Common | Burned | 2 | 64 | 95 | 1.0 | 0 | SingleEnemy | 60.80 | stage MeleeDef:-1:0.25:false | Ranged hit with 25% chance to lower Def. |
-| `sear_field` | Sear Field | StatusUtility | Common | Burned | 2 | 0 | 0 | 1.0 | 0 | AllEnemies | 0.00 | stage MeleeAtk:-1:1.0:false | All foes lose Atk -1 for the turn. |
+| `sear_field` | Sear Field | StatusUtility | Common | Burned | 2 | 0 | 0 | 1.0 | 0 | AllEnemies | 0.00 | status SearField:1:1.0: | All foes lose Atk -1 for the turn. |
 | `hype_burst` | Hype Burst | StatusUtility | Common | Burned | 2 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | — | Remove up to 2 target buffs; gain Atk +1 for each. |
 | `ash_guard` | Ash Guard | Support | Common | Burned | 2 | 0 | 0 | 1.0 | 0 | SingleAlly | 0.00 | util MitigationWindow:20%:2:0:wall_ash; heal 5% | Give an ally 20% mitigation for 2 turns. |
 | `finish_burn` | Finish Burn | DamagingRanged | Common | Burned | 3 | 64 | 95 | 1.0 | 0 | SingleEnemy | 60.80 | cond x1.5 +0/count cap 1.5 | Ranged finisher deals +50% damage below 40% target HP. |
@@ -315,7 +317,7 @@ All 206 rows from `Moves.csv`, in file order. Field index is 0 for non-damaging 
 | `cold_snap` | Cold Snap | StatusUtility | Common | Frozen | 1 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | stage Speed:-2:1.0:false | Lower target Speed by 2. |
 | `lock_assets` | Lock Assets | StatusUtility | Common | Frozen | 1 | 0 | 0 | 1.0 | 0 | SingleEnemy | 0.00 | status FrozenAssets:1:1.0: | Apply Frozen Assets next turn; target cannot swap. |
 | `stasis_field` | Stasis Field | StatusUtility | Common | Frozen | 2 | 0 | 0 | 1.0 | 0 | Field | 0.00 | util FieldEntryStageChange:Speed:-1:2:100%:stasis_field | Field effect for 2 turns; entrants lose Speed -1. |
-| `ice_wall` | Ice Wall | Support | Common | Frozen | 3 | 0 | 0 | 1.0 | 0 | SingleAlly | 0.00 | util 0; heal 0% | Give an ally 25% mitigation for the rest of this turn. If you are faster |
+| `ice_wall` | Ice Wall | Support | Common | Frozen | 3 | 0 | 0 | 1.0 | 0 | SingleAlly | 0.00 | util MitigationWindow 25% turn 1 hit 0, plus GainApOnDamageIfSpeedHigher +1 | Give an ally 25% mitigation for the rest of this turn. If you are faster, gain +1 AP when hit. |
 | `frost_shot` | Frost Shot | DamagingRanged | Common | Frozen | 2 | 64 | 95 | 1.0 | 0 | SingleEnemy | 60.80 | stage Speed:-1:0.25:false | Ranged hit with 25% chance to lower Speed. |
 | `hibernate` | Hibernate | StatusUtility | Common | Frozen | 2 | 0 | 0 | 1.0 | 0 | Self | 0.00 | stage MeleeDef:2:1.0:true; heal 25% | Skip action to heal 25% MaxHP and gain Def +2. |
 | `frost_shards` | Frost Shards | DamagingRanged | Common | Frozen | 3 | 12 | 95 | 3.0 | 0 | SingleEnemy | 34.20 | stage Speed:-1:0.2:false | 2 hits guaranteed; possible 3-4; each can lower Speed. |
@@ -408,7 +410,7 @@ All 206 rows from `Moves.csv`, in file order. Field index is 0 for non-damaging 
 | `gecko_guard` | Gecko Guard | Passive | Rare | Frozen | 0 | 0 | 0 | 1.0 | 999 | Self | 0.00 | stage MeleeDef:2:1.0:true/Speed:1:1.0:true; recharge 999 | Passive - below 50% HP gain Def +2 and Speed +1 once. |
 | `blade_flurry` | Blade Flurry | DamagingMelee | Rare | Bot | 2 | 18 | 95 | 3.0 | 0 | SingleEnemy | 51.30 | — | 3-hit contact combo. |
 | `fox_feint` | Fox Feint | StatusUtility | Rare | Bot | 1 | 0 | 0 | 1.0 | 999 | Self | 0.00 | util ArmUtilityWindow:IncomingHit:999:1:0:0%:MeleeAtk:0:Self:10%:false:0:fox_feint; recharge 999 | Dodge and counter once per battle. |
-| `bean_sip` | Bean Sip | StatusUtility | Uncommon | Staked | 1 | 0 | 0 | 1.0 | 2 | Self | 0.00 | stage Speed:1:1.0:true; heal 8%; recharge 2 | Priority sip. Heal 8% MaxHP and raise Speed +1. |
+| `bean_sip` | Bean Sip | StatusUtility | Uncommon | Staked | 1 | 0 | 0 | 1.0 | 2 | Self | 0.00 | stage Speed:1:1.0:true; heal 8%; util GainAP:1:100%:Self:bean_sip; recharge 2 | Priority sip. Heal 8% MaxHP, raise Speed +1, and gain +1 AP. Recharges for 1 turn. |
 | `civet_beam` | Bean Beam | DamagingRanged | Uncommon | Staked | 2 | 12 | 95 | 1.0 | 0 | AllEnemies | 22.80 | stage Speed:-1:1.0:false | Low-power beam hits all foes and drops their Speed. |
 | `bulwark_blow` | Bulwark Blow | DamagingMelee | Epic | Block | 3 | 50 | 90 | 1.0 | 0 | SingleEnemy | 45.00 | cond atk MeleeDef | Contact hit that strikes with Def instead of Atk. |
 | `seam_cut` | Seam Cut | DamagingMelee | Rare | Shard | 2 | 52 | 95 | 1.0 | 0 | SingleEnemy | 49.40 | cond x1.25 | Precise contact cut. Deals more damage if you are faster. |

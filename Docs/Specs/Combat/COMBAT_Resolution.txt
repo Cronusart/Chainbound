@@ -37,7 +37,7 @@ RESOLUTION:
 3. Recharging has a duration (e.g., 3 turns); decrements at End of Turn
 4. While Recharging is active, that inscription cannot be selected
 5. Recharging expires → inscription becomes available again
-6. Switching out does NOT pause the recharge timer (it continues ticking)
+6. Switching out does NOT pause recharge. The timer keeps ticking at each end of turn while the Chainling is benched. Other statuses still pause on the bench.
 
 DATA STRUCTURE:
 ```
@@ -51,11 +51,14 @@ InscriptionRecharging {
 This approach keeps the engine purely status-driven with no separate cooldown
 timer system. All recharge state is observable in the combat log.
 
+The combat log reports upcoming skipped turns, which is rechargeTurns minus 1, because the granting turn's end tick already counts. A rechargeTurns value of 100 or more is a once-per-battle sentinel and the log says the move cannot be used again this battle.
+
 INSCRIPTIONS USING RECHARGE:
-- Extend Protocol (Node): Recharging(3) — after use, 3 turns before reuse
-- AP Boost (Typeless): Recharging(3) — after use, 3 turns before reuse
-- Gecko Guard (Gilarime exclusive): once per battle — Recharging(999)
-- Fox Feint (Kitsauto exclusive): once per battle — Recharging(999)
+- Bean Sip (Cofi Lootwak): Recharging(2) — skips the next turn; the log says 1 turn. Also grants +1 AP.
+- Extend Protocol (Node): Recharging(3) — skips the next 2 turns; the log says 2 turns
+- AP Boost (Typeless): Recharging(3) — skips the next 2 turns; the log says 2 turns
+- Gecko Guard (Gilarime exclusive): passive, once per battle — Recharging(999) is unused because passives are not actions
+- Fox Feint (Kitsauto exclusive): once per battle — Recharging(999); the log says it cannot be used again this battle
 
 1.3 AP Cost Rules
 AP costs are defined per inscription and are immutable:
