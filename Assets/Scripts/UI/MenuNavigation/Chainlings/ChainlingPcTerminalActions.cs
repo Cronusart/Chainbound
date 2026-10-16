@@ -17,7 +17,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private void LateUpdate()
         {
-            if (!entranceSettled || closing || partyRows == null || IsActionSheetOpen)
+            if (!entranceSettled || closing || openDetail != null || partyRows == null || IsActionSheetOpen)
                 return;
             if (Time.unscaledTime < partyRevealUntil)
                 return;
@@ -56,7 +56,7 @@ namespace SignalJam.UI.MenuNavigation
             if (partyRows == null)
                 return;
 
-            for (int slot = 0; slot < partyRows.Length && slot < SlotNames.Length; slot++)
+            for (int slot = 0; slot < partyRows.Length; slot++)
             {
                 InventoryItemUseTargetSlot row = partyRows[slot];
                 if (row == null)
@@ -71,7 +71,7 @@ namespace SignalJam.UI.MenuNavigation
                     starArt,
                     cyclePalette,
                     motionProfile,
-                    $"{SlotNames[slot]} · {captionName}");
+                    captionName);
                 if (row.Button != null)
                     row.Button.interactable = true;
                 if (entranceSettled && Application.isPlaying)
@@ -340,6 +340,7 @@ namespace SignalJam.UI.MenuNavigation
                 releaseButton.gameObject.SetActive(!inParty);
 
             ShowActionButtons();
+            actionSheet.transform.SetAsLastSibling();
             actionSheet.gameObject.SetActive(true);
             actionSheet.alpha = 0f;
             actionSheet.interactable = true;
@@ -389,7 +390,7 @@ namespace SignalJam.UI.MenuNavigation
             HideActionSheetImmediate();
             SetStatus(actionTargetInParty
                 ? "CHOOSE THE NEW SLOT."
-                : "CHOOSE LEAD, PARTNER, OR BENCH.");
+                : "CHOOSE A PARTY SLOT.");
             PlayCue(PlayerMenuSfxCue.Confirm);
             if (entranceSettled)
                 RefreshNavigation();
@@ -424,7 +425,8 @@ namespace SignalJam.UI.MenuNavigation
             if (entry == null)
                 return;
 
-            if (detailPrefab == null)
+            ChainlingDetailScreen prefab = ResolveDetailPrefab();
+            if (prefab == null)
             {
                 SetStatus("CHAINLING DETAILS ARE UNAVAILABLE.");
                 PlayCue(PlayerMenuSfxCue.Invalid);
@@ -439,28 +441,31 @@ namespace SignalJam.UI.MenuNavigation
                 openDetail = null;
             }
 
-            openDetail = Instantiate(detailPrefab, transform);
+            openDetail = Instantiate(prefab, transform);
             openDetail.gameObject.name = "ChainlingDetailView";
             openDetail.transform.SetAsLastSibling();
             RectTransform rect = openDetail.transform as RectTransform;
             if (rect != null)
                 PlayerMenuUiFactory.Stretch(rect);
 
+            openDetail.SetDataSourceMode(ChainlingsDataSourceMode.Production);
             openDetail.Configure(
                 ResolveSupabaseConfig(),
                 speciesDatabase,
                 visualDatabase,
+                identityDatabase,
+                moveDatabase,
                 null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+                ResolveCosmeticInventory(),
+                ResolveOrAddMenuService<IMoveInventoryProvider, SupabaseMoveInventoryProvider>(),
+                ResolveOrAddMenuService<IMenuMoveEquipService, SupabaseMenuMoveEquipService>(),
+                ResolveOrAddMenuService<IMenuVisualIdentityService, SupabaseMenuVisualIdentityService>(),
+                ResolveOrAddMenuService<IChainlingRebirthService, SupabaseRebirthService>());
             openDetail.Closed += HandleDetailClosed;
             openDetail.OpenForManagement(entry, roster);
             openDetail.Show();
+            if (inputContext != null)
+                openDetail.ConfigureInputContext(inputContext);
             if (root != null)
                 root.interactable = false;
         }
@@ -478,6 +483,8 @@ namespace SignalJam.UI.MenuNavigation
 
             if (root != null && !closing)
                 root.interactable = entranceSettled;
+            if (!closing)
+                RefreshNavigation();
 
             await RefreshAsync();
         }

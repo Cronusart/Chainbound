@@ -62,9 +62,6 @@ public sealed class EncounterReturnPlacement : MonoBehaviour
     [Tooltip("Place the root this far above the hit point after a successful ground snap.")]
     [SerializeField] private float groundSnapSkinOffset = 0.08f;
 
-    [Tooltip("If no ground hit, add this to snapshot Y as a small bump.")]
-    [SerializeField] private float snapshotFallbackYOffset = 0.2f;
-
     [SerializeField] private LayerMask groundSnapLayers = ~0;
 
     [SerializeField] private bool enablePlacementDebugLogs = false;
@@ -98,8 +95,8 @@ public sealed class EncounterReturnPlacement : MonoBehaviour
 
     /// <summary>
     /// Teleport the player to the exact snapshot position with ground snap + one-frame physics hold.
-    /// The scene-authored <c>encounter_return</c> spawn point reverts to its default transform on reload,
-    /// so we always use the snapshot position stored in PlayerPrefs rather than <c>SpawnPlayerAt</c>.
+    /// If that snapshot has no ground, use the durable authored fallback that
+    /// was captured at encounter start before routing to sanctuary.
     /// </summary>
     public void ApplyEncounterReturnPlacement(OverworldReturnInfo info)
     {
@@ -116,11 +113,11 @@ public sealed class EncounterReturnPlacement : MonoBehaviour
         if (enablePlacementDebugLogs)
         {
             Debug.Log($"[{nameof(EncounterReturnPlacement)}] Using snapshot teleport to ({info.position.x:F2}, {info.position.y:F2}, {info.position.z:F2}). " +
-                      $"returnSpawnId='{info.returnSpawnId}' (not used for placement — spawn point resets on scene reload).");
+                      $"returnSpawnId='{info.returnSpawnId}' (used only when the snapshot is unsafe).");
         }
 
         ArmWorldVolumeEnterSuppress();
-        TeleportPlayerSnapshotSafe(player, info.position, info.rotation);
+        TeleportPlayerSnapshotSafe(player, info);
 
         // Clear leftover lead-in overlay weight on the persistent bridge.
         EncounterTransitionBridge bridge = EncounterTransitionBridge.Instance;
@@ -128,7 +125,7 @@ public sealed class EncounterReturnPlacement : MonoBehaviour
             bridge.ResetChromaticAberration();
     }
 
-    private void TeleportPlayerSnapshotSafe(GameObject player, Vector3 snapshotPosition, Quaternion rotation)
+    private void TeleportPlayerSnapshotSafe(GameObject player, OverworldReturnInfo info)
     {
         Rigidbody rb = player.GetComponent<Rigidbody>();
         CharacterController cc = player.GetComponent<CharacterController>();
@@ -152,29 +149,71 @@ public sealed class EncounterReturnPlacement : MonoBehaviour
             rb.useGravity = false;
         }
 
-        Vector3 target = snapshotPosition;
-        if (TryGroundSnap(snapshotPosition, out Vector3 snapped))
+        if (TryGroundSnap(info.position, out Vector3 snapped))
         {
-            target = snapped;
+            player.transform.SetPositionAndRotation(snapped, info.rotation);
+            Physics.SyncTransforms();
+            SpawnService.Instance?.ClearStoredSpawnId();
+
             if (enablePlacementDebugLogs)
-                Debug.Log($"[{nameof(EncounterReturnPlacement)}] Ground snap applied: {snapshotPosition} -> {target}");
-        }
-        else
-        {
-            target = snapshotPosition + Vector3.up * snapshotFallbackYOffset;
-            if (enablePlacementDebugLogs)
-                Debug.Log($"[{nameof(EncounterReturnPlacement)}] No ground hit; using snapshot + fallback Y offset: {target}");
+                Debug.Log($"[{nameof(EncounterReturnPlacement)}] Ground snap applied: {info.position} -> {snapped}");
+
+            StartCoroutine(RestorePhysicsAfterPlacementCoroutine(player, hadCc, restoreKinematic, restoreGravity));
+            return;
         }
 
-        player.transform.SetPositionAndRotation(target, rotation);
+        // A snapshot can point at an unloaded streamed chunk or legacy void.
+        // Prefer the authored point captured at battle start. Historic contexts
+        // without that ID use the closest loaded-scene authored point instead.
+        // Keep physics held until the handoff is complete so an invalid snapshot
+        // cannot fall while we resolve the recovery route.
+        if (TrySpawnAtSafeReturnPoint(info.returnSpawnId, info.position))
+        {
+            RestorePhysicsAfterPlacement(player, hadCc, restoreKinematic, restoreGravity);
+            if (enablePlacementDebugLogs)
+                Debug.Log($"[{nameof(EncounterReturnPlacement)}] No ground at snapshot; used authored safe spawn.");
+            return;
+        }
+
+        // Keep the player frozen while the current return transition finishes.
+        // The next transition immediately sends them to sanctuary, so gravity
+        // never gets a chance to pull them through an invalid map.
+        player.transform.SetPositionAndRotation(info.position, info.rotation);
         Physics.SyncTransforms();
-
         SpawnService.Instance?.ClearStoredSpawnId();
+        StartCoroutine(RouteToSanctuaryAfterTransition(
+            player,
+            hadCc,
+            restoreKinematic,
+            restoreGravity));
+    }
 
-        if (enablePlacementDebugLogs)
-            Debug.Log($"[{nameof(EncounterReturnPlacement)}] Snapshot teleport (safe) to {target}.");
+    private static bool TrySpawnAtSafeReturnPoint(string preferredSpawnId, Vector3 snapshotPosition)
+    {
+        SpawnService spawnService = SpawnService.Instance;
+        if (spawnService == null)
+            return false;
 
-        StartCoroutine(RestorePhysicsAfterPlacementCoroutine(player, hadCc, restoreKinematic, restoreGravity));
+        if (TrySpawnAtLoadedScenePoint(spawnService, preferredSpawnId))
+            return true;
+
+        SpawnPoint nearest = spawnService.GetNearestSpawnPointInLoadedScenes(snapshotPosition);
+        return nearest != null && spawnService.SpawnPlayerAt(nearest.SpawnId);
+    }
+
+    private static bool TrySpawnAtLoadedScenePoint(SpawnService spawnService, string spawnId)
+    {
+        if (string.IsNullOrWhiteSpace(spawnId))
+            return false;
+
+        SpawnPoint spawnPoint = spawnService.GetSpawnPoint(spawnId);
+        if (spawnPoint == null ||
+            !spawnPoint.gameObject.scene.IsValid() ||
+            !spawnPoint.gameObject.scene.isLoaded ||
+            string.Equals(spawnPoint.gameObject.scene.name, "DontDestroyOnLoad", System.StringComparison.Ordinal))
+            return false;
+
+        return spawnService.SpawnPlayerAt(spawnPoint.SpawnId);
     }
 
     private bool TryGroundSnap(Vector3 snapshotPosition, out Vector3 worldPosition)
@@ -207,6 +246,18 @@ public sealed class EncounterReturnPlacement : MonoBehaviour
         if (player == null)
             yield break;
 
+        RestorePhysicsAfterPlacement(player, restoreCcState, restoreKinematic, restoreUseGravity);
+    }
+
+    private static void RestorePhysicsAfterPlacement(
+        GameObject player,
+        bool restoreCcState,
+        bool restoreKinematic,
+        bool restoreUseGravity)
+    {
+        if (player == null)
+            return;
+
         Rigidbody rb = player.GetComponent<Rigidbody>();
         CharacterController cc = player.GetComponent<CharacterController>();
 
@@ -223,5 +274,50 @@ public sealed class EncounterReturnPlacement : MonoBehaviour
 
         if (cc != null && restoreCcState)
             cc.enabled = true;
+    }
+
+    private IEnumerator RouteToSanctuaryAfterTransition(
+        GameObject player,
+        bool restoreCcState,
+        bool restoreKinematic,
+        bool restoreUseGravity)
+    {
+        SceneLoader sceneLoader = SceneLoader.Instance;
+        while (sceneLoader != null && sceneLoader.IsTransitioning)
+            yield return null;
+
+        if (sceneLoader == null)
+        {
+            Debug.LogError($"[{nameof(EncounterReturnPlacement)}] Could not route unsafe return to sanctuary: SceneLoader is unavailable.");
+            yield break;
+        }
+
+        SanctuaryStateService sanctuary = SanctuaryStateService.Instance;
+        string sceneId = SanctuaryStateService.DefaultWipeSceneId;
+        string spawnId = SanctuaryStateService.DefaultWipeSpawnId;
+        string[] residentChunkSceneIds = null;
+        if (sanctuary != null)
+        {
+            sanctuary.GetWipeDestination(
+                out sceneId,
+                out spawnId,
+                out bool _,
+                out residentChunkSceneIds);
+        }
+
+        RestorePhysicsAfterPlacement(player, restoreCcState, restoreKinematic, restoreUseGravity);
+        SanctuarySpawnDirector.ClearPendingPresentation();
+        bool requested = sceneLoader.RequestTransition(new SceneTransitionRequest(
+            sceneId,
+            spawnId,
+            TransitionStyle.FullLoading,
+            sourceId: "EncounterReturnPlacement.UnsafeSnapshot",
+            preferredOverworldChunkSceneIds: residentChunkSceneIds));
+        if (!requested)
+        {
+            Debug.LogError(
+                $"[{nameof(EncounterReturnPlacement)}] Sanctuary fallback transition was rejected for " +
+                $"scene '{sceneId}' (spawn '{spawnId}').");
+        }
     }
 }

@@ -310,6 +310,12 @@ public sealed class SolanaMobileReleaseValidator : IPreprocessBuildWithReport, I
                 errors.Add("Mainnet Smoke must not reuse the Devnet game program ID.");
             if (string.Equals(selectedProfile.SolanaConfig.coreMovesCollectionId, devnet.SolanaConfig.coreMovesCollectionId, StringComparison.Ordinal))
                 errors.Add("Mainnet Smoke must not reuse the Devnet Core Moves collection.");
+            if (string.Equals(selectedProfile.SolanaConfig.coreArchivesCollectionId, devnet.SolanaConfig.coreArchivesCollectionId, StringComparison.Ordinal))
+                errors.Add("Mainnet Smoke must not reuse the Devnet Core Archives collection.");
+            if (string.Equals(selectedProfile.SolanaConfig.coreCoversCollectionId, devnet.SolanaConfig.coreCoversCollectionId, StringComparison.Ordinal))
+                errors.Add("Mainnet Smoke must not reuse the Devnet Core Covers collection.");
+            if (string.Equals(selectedProfile.SolanaConfig.coreCosmeticsCollectionId, devnet.SolanaConfig.coreCosmeticsCollectionId, StringComparison.Ordinal))
+                errors.Add("Mainnet Smoke must not reuse the Devnet Core Cosmetics collection.");
         }
     }
 

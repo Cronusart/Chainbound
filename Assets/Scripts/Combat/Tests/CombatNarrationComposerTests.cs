@@ -399,6 +399,68 @@ namespace Chainbound.Combat.Tests
             Object.DestroyImmediate(profile);
         }
 
+        [Test]
+        public void ComposeAction_SetupFeedStatesTheExactPowerBonus()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.Log(new CombatEvent
+            {
+                eventType = CombatEventType.MoveUsed,
+                turn = 1,
+                sourceId = "actor",
+                targetId = "target",
+                moveId = "move",
+            });
+            log.Log(ModifierOutcomePayload.CreateEvent(
+                turn: 1,
+                sectionId: "7.2-c",
+                category: ModifierCategory.SYN,
+                displayText: "SETUP",
+                anchorChainlingId: "actor",
+                moment: ModifierPopupMoment.OnSynergyMet,
+                gameplayApplied: true,
+                reason: "Setup Feed triggered. The next ally move gains 12% power.",
+                sourceChainlingId: "actor",
+                targetChainlingId: "actor",
+                moveId: "move"));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            Assert.IsNotNull(plan.consequencePage);
+            Assert.AreEqual("Setup Feed triggered. The next ally move gains 12% power.", plan.consequencePage.text);
+        }
+
+        [Test]
+        public void ComposeAction_SetupFeedFadeStatesTheLostBonus()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.Log(new CombatEvent
+            {
+                eventType = CombatEventType.MoveUsed,
+                turn = 2,
+                sourceId = "actor",
+                moveId = "move",
+            });
+            log.Log(ModifierOutcomePayload.CreateEvent(
+                turn: 2,
+                sectionId: "7.2-c",
+                category: ModifierCategory.SYN,
+                displayText: "SETUP",
+                anchorChainlingId: "actor",
+                moment: ModifierPopupMoment.OnSynergyMet,
+                gameplayApplied: false,
+                reason: "Setup Feed faded. The ally's next action was not a power move, so the 12% boost was lost.",
+                sourceChainlingId: "actor",
+                targetChainlingId: "actor",
+                moveId: "move"));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 2, 0);
+
+            Assert.AreEqual(
+                "Setup Feed faded. The ally's next action was not a power move, so the 12% boost was lost.",
+                plan.consequencePage.text);
+        }
+
         private static CombatEventLog NewNamedLog()
         {
             var log = new CombatEventLog(7);

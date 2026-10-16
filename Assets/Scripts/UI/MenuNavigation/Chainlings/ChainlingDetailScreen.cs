@@ -150,6 +150,15 @@ namespace SignalJam.UI.MenuNavigation
             EnsureBuilt();
         }
 
+        public override void ConfigureInputContext(MenuInputContextController context)
+        {
+            if (context == null)
+                return;
+
+            context.SetContentInputHandler(null);
+            base.ConfigureInputContext(context);
+        }
+
         public override void Show()
         {
             EnsureBuilt();

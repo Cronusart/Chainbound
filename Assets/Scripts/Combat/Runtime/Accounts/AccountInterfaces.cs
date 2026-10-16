@@ -60,6 +60,7 @@ namespace Chainbound.Combat
         string AccessToken { get; }
         string AuthUserId { get; }
         Task<AccountAuthSessionResult> BootstrapAsync(SupabaseConfigSO config);
+        Task<AccountAuthSessionResult> RefreshSessionAsync(SupabaseConfigSO config, bool forceRefresh = false);
         void ClearSession();
     }
 

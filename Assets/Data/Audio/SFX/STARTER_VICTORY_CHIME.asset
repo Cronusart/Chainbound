@@ -17,8 +17,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 8bb3ff53093e18e47a892cdbab8bd78c, type: 3}
   outputBus: 1
   loop: 0
-  volumeMin: 1
-  volumeMax: 1
+  volumeMin: 0.8
+  volumeMax: 0.8
   pitchMin: 1
   pitchMax: 1
   is3D: 0

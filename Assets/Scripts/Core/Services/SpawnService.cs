@@ -1048,7 +1048,81 @@ public class SpawnService : MonoBehaviour
                 nearest = kvp.Value;
             }
         }
-        
+
+        return nearest;
+    }
+
+    /// <summary>
+    /// Get the closest authored spawn point in the active scene. Unlike
+    /// <see cref="GetNearestSpawnPoint"/>, this never returns a persistent
+    /// runtime point from DontDestroyOnLoad, which is important when restoring
+    /// a player after an interrupted encounter.
+    /// </summary>
+    public SpawnPoint GetNearestSpawnPointInActiveScene(Vector3 position, string idPrefix = null)
+    {
+        return GetNearestSpawnPointInScene(position, SceneManager.GetActiveScene(), idPrefix);
+    }
+
+    /// <summary>
+    /// Get the closest authored spawn point in a specific loaded scene.
+    /// </summary>
+    public SpawnPoint GetNearestSpawnPointInScene(Vector3 position, Scene scene, string idPrefix = null)
+    {
+        if (!scene.IsValid() || !scene.isLoaded || IsPersistentScene(scene))
+            return null;
+
+        SpawnPoint nearest = null;
+        float nearestSqDist = float.MaxValue;
+
+        foreach (var kvp in spawnPoints)
+        {
+            SpawnPoint candidate = kvp.Value;
+            if (candidate == null || candidate.gameObject == null || candidate.gameObject.scene != scene)
+                continue;
+            if (!string.IsNullOrEmpty(idPrefix) && !kvp.Key.StartsWith(idPrefix))
+                continue;
+
+            float sqDist = (candidate.Position - position).sqrMagnitude;
+            if (sqDist < nearestSqDist)
+            {
+                nearestSqDist = sqDist;
+                nearest = candidate;
+            }
+        }
+
+        return nearest;
+    }
+
+    /// <summary>
+    /// Get the closest authored spawn among every loaded gameplay scene. This
+    /// includes restored additive overworld chunks, but excludes persistent
+    /// runtime points such as <c>encounter_return</c>.
+    /// </summary>
+    public SpawnPoint GetNearestSpawnPointInLoadedScenes(Vector3 position, string idPrefix = null)
+    {
+        SpawnPoint nearest = null;
+        float nearestSqDist = float.MaxValue;
+
+        foreach (var kvp in spawnPoints)
+        {
+            SpawnPoint candidate = kvp.Value;
+            if (candidate == null || candidate.gameObject == null)
+                continue;
+
+            Scene scene = candidate.gameObject.scene;
+            if (!scene.IsValid() || !scene.isLoaded || IsPersistentScene(scene))
+                continue;
+            if (!string.IsNullOrEmpty(idPrefix) && !kvp.Key.StartsWith(idPrefix))
+                continue;
+
+            float sqDist = (candidate.Position - position).sqrMagnitude;
+            if (sqDist < nearestSqDist)
+            {
+                nearestSqDist = sqDist;
+                nearest = candidate;
+            }
+        }
+
         return nearest;
     }
     

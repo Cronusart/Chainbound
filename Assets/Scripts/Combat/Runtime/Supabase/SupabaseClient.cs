@@ -18,6 +18,16 @@ namespace Chainbound.Combat
         private static readonly object AuditLock = new object();
         private static readonly List<string> RequestAuditUrls = new List<string>(MaxAuditEntries);
 
+#if UNITY_INCLUDE_TESTS
+        public static Func<SupabaseConfigSO, string, string, string, int, Task<Response>> TestPostOverride;
+
+        public static void ResetTestHooks()
+        {
+            TestPostOverride = null;
+            SupabaseAuthSessionContext.AccessToken = string.Empty;
+        }
+#endif
+
         public struct Response
         {
             public int statusCode;
@@ -75,7 +85,7 @@ namespace Chainbound.Combat
             string functionName,
             string jsonBody)
         {
-            return await PostJsonAsync(config, functionName, jsonBody, SupabaseAuthSessionContext.AccessToken, 0);
+            return await PostJsonWithAuthRecoveryAsync(config, functionName, jsonBody, 0);
         }
 
         public static async Task<Response> PostJsonAsync(
@@ -84,12 +94,7 @@ namespace Chainbound.Combat
             string jsonBody,
             int timeoutSeconds)
         {
-            return await PostJsonAsync(
-                config,
-                functionName,
-                jsonBody,
-                SupabaseAuthSessionContext.AccessToken,
-                timeoutSeconds);
+            return await PostJsonWithAuthRecoveryAsync(config, functionName, jsonBody, timeoutSeconds);
         }
 
         /// <summary>
@@ -103,10 +108,69 @@ namespace Chainbound.Combat
             string jsonBody,
             string accessToken)
         {
-            return await PostJsonAsync(config, functionName, jsonBody, accessToken, 0);
+            return await PostJsonCoreAsync(config, functionName, jsonBody, accessToken, 0);
         }
 
         public static async Task<Response> PostJsonAsync(
+            SupabaseConfigSO config,
+            string functionName,
+            string jsonBody,
+            string accessToken,
+            int timeoutSeconds)
+        {
+            return await PostJsonCoreAsync(config, functionName, jsonBody, accessToken, timeoutSeconds);
+        }
+
+        private static async Task<Response> PostJsonWithAuthRecoveryAsync(
+            SupabaseConfigSO config,
+            string functionName,
+            string jsonBody,
+            int timeoutSeconds)
+        {
+            string accessToken = await ResolveAccessTokenAsync(forceRefresh: false);
+            Response response = await PostJsonCoreAsync(config, functionName, jsonBody, accessToken, timeoutSeconds);
+            if (!IsAccessTokenFailure(response) || AccountSessionService.Instance == null)
+                return response;
+
+            string refreshedToken = await ResolveAccessTokenAsync(forceRefresh: true);
+            if (string.IsNullOrWhiteSpace(refreshedToken))
+                return response;
+
+            return await PostJsonCoreAsync(config, functionName, jsonBody, refreshedToken, timeoutSeconds);
+        }
+
+        private static async Task<string> ResolveAccessTokenAsync(bool forceRefresh)
+        {
+            AccountSessionService sessions = AccountSessionService.Instance;
+            if (sessions == null)
+                return SupabaseAuthSessionContext.AccessToken;
+
+            AccountAuthSessionResult result = await sessions.EnsureFreshAuthSessionAsync(forceRefresh);
+            if (result != null && result.success && !string.IsNullOrWhiteSpace(result.accessToken))
+            {
+                SupabaseAuthSessionContext.AccessToken = result.accessToken.Trim();
+                return SupabaseAuthSessionContext.AccessToken;
+            }
+
+            // A proactive refresh may fail transiently while the current JWT still
+            // has usable time remaining. A forced refresh follows a concrete 401,
+            // so never retry that rejected credential.
+            return forceRefresh ? string.Empty : SupabaseAuthSessionContext.AccessToken;
+        }
+
+        private static bool IsAccessTokenFailure(Response response)
+        {
+            if (response.statusCode != 401)
+                return false;
+
+            string body = response.body ?? string.Empty;
+            return body.Length == 0 ||
+                   body.IndexOf("UNAUTHORIZED_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   body.IndexOf("invalid jwt", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   body.IndexOf("expired", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static async Task<Response> PostJsonCoreAsync(
             SupabaseConfigSO config,
             string functionName,
             string jsonBody,
@@ -129,6 +193,11 @@ namespace Chainbound.Combat
 
             string url = BuildFunctionUrl(config, functionName);
             RecordRequestUrl(url);
+
+#if UNITY_INCLUDE_TESTS
+            if (TestPostOverride != null)
+                return await TestPostOverride(config, functionName, jsonBody, accessToken, timeoutSeconds);
+#endif
 
             if (!IsAllowedEdgeFunctionUrl(url))
             {

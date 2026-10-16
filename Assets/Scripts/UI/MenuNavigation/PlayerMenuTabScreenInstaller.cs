@@ -324,11 +324,14 @@ namespace SignalJam.UI.MenuNavigation
             ChainlingsMenuViewsSO views = controller != null ? controller.ChainlingsMenuViews : null;
 
             ChainlingDetailScreen detailScreen = FindEmbeddedChainlingDetailScreen(controller);
-            if (detailScreen == null)
+            if (views != null && views.DetailViewPrefab != null)
+                partyScreen.WireDetailViewPrefab(views.DetailViewPrefab);
+
+            if (detailScreen == null && partyScreen.DetailViewPrefab == null)
             {
                 Debug.LogWarning(
-                    "[PlayerMenuTabScreenInstaller] ChainlingDetailScreen was not found under ScreenStackHost. " +
-                    "Embed Screen_ChainlingDetail on PlayerMenuRoot or assign detailScreen on ChainlingsPartyScreen.",
+                    "[PlayerMenuTabScreenInstaller] ChainlingDetailView is not assigned. " +
+                    "Set detailViewPrefab on Chainlings Menu Views.",
                     partyScreen);
             }
 

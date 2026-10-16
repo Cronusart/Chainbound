@@ -4,6 +4,7 @@
     "references": [
         "Chainbound.Combat.Core",
         "Chainbound.Combat.Runtime",
+        "Chainbound.World.TimeOfDay",
         "SignalJam.AudioData",
         "Unity.TextMeshPro"
     ],

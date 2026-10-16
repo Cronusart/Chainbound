@@ -22,7 +22,7 @@ MonoBehaviour:
     portraitSprite: {fileID: 0}
     portraitTint: {r: 0, g: 0, b: 0, a: 0}
     camera:
-      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      shotPreset: {fileID: 0}
       targetSource: 3
       npcId: zeb
       targetTag: 
@@ -35,7 +35,7 @@ MonoBehaviour:
     portraitSprite: {fileID: 0}
     portraitTint: {r: 0, g: 0, b: 0, a: 0}
     camera:
-      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      shotPreset: {fileID: 0}
       targetSource: 3
       npcId: zeb
       targetTag: 
@@ -47,7 +47,7 @@ MonoBehaviour:
     portraitSprite: {fileID: 0}
     portraitTint: {r: 0, g: 0, b: 0, a: 0}
     camera:
-      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      shotPreset: {fileID: 0}
       targetSource: 3
       npcId: zeb
       targetTag: 
@@ -60,7 +60,7 @@ MonoBehaviour:
     portraitSprite: {fileID: 0}
     portraitTint: {r: 0, g: 0, b: 0, a: 0}
     camera:
-      shotPreset: {fileID: 11400000, guid: e2e99b5b538b6914d99ce0ebfaca93f7, type: 2}
+      shotPreset: {fileID: 0}
       targetSource: 3
       npcId: zeb
       targetTag: 
