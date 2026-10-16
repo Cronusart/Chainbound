@@ -946,11 +946,11 @@ export const MODIFIER_CARD_CATALOG = {
   },
   "3.2-b": {
     "displayName": "Side Quest",
-    "effect": "15-20% chance to auto-use random Common/Uncommon typeless move at end of turn",
+    "effect": "Retired. No combat effect.",
   },
   "3.2-c": {
     "displayName": "After Hours",
-    "effect": "12-15% chance to auto-use random equipped move at end of turn",
+    "effect": "Retired. No combat effect.",
   },
   "4.1-a": {
     "displayName": "Extra Hit",
@@ -1106,7 +1106,7 @@ export const MODIFIER_CARD_CATALOG = {
   },
   "7.2-c": {
     "displayName": "Setup Feed",
-    "effect": "Next ally move: +10-15% power",
+    "effect": "Next ally action gains 12% power. A non-power action wastes it.",
   },
   "10.1-a": {
     "displayName": "Equalizer",
@@ -1122,7 +1122,7 @@ export const MODIFIER_CARD_CATALOG = {
   },
   "10.1-d": {
     "displayName": "All-Stat Burn",
-    "effect": "+3 to +4 stages to all 5 stats; self-damage 5% MaxHP per turn",
+    "effect": "Retired combat effect. Reserved for entangled-only grants.",
   },
   "10.2-a": {
     "displayName": "Seasonal Skin",
@@ -1130,11 +1130,11 @@ export const MODIFIER_CARD_CATALOG = {
   },
   "10.2-b": {
     "displayName": "Anniversary Mark",
-    "effect": "Unique visual + 3-5% all stats (Anniversary)",
+    "effect": "Retired combat effect. Reserved for server-wide event grants.",
   },
   "10.2-c": {
     "displayName": "Tournament Badge",
-    "effect": "Badge display + ranked bonus (Tournament)",
+    "effect": "Retired combat effect. Reserved for PvP tournament-win grants.",
   },
   "1.1-a": {
     "displayName": "Hair Trigger",

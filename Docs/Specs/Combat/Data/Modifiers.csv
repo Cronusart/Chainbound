@@ -24,8 +24,8 @@ SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCatego
 3.1-c,Full Refund,EFF,Active,Rare,15,20,,,0,false,false,MeleeAtk,None,0,15-20% chance to refund 1 AP,0,0,,None
 # 3.2 Bonus Action
 3.2-a,Echo,EFF,Active,Rare,8,12,DamagingMelee|DamagingRanged|StatusUtility,,0,false,false,MeleeAtk,None,0,8-12% chance to repeat this move (no AP cost),80,2,MULTI|PRIOR,ActionEconomy
-3.2-b,Side Quest,EFF,Active,Epic,15,20,,,0,false,false,MeleeAtk,None,0,15-20% chance to auto-use random Common/Uncommon typeless move at end of turn,0,0,,None
-3.2-c,After Hours,EFF,Active,Legendary,12,15,,,0,false,false,MeleeAtk,None,0,12-15% chance to auto-use random equipped move at end of turn,0,0,,None
+3.2-b,Side Quest,EFF,Active,Epic,0,0,,,0,false,false,MeleeAtk,None,0,Retired. No combat effect.,0,0,,None,0
+3.2-c,After Hours,EFF,Active,Legendary,0,0,,,0,false,false,MeleeAtk,None,0,Retired. No combat effect.,0,0,,None,0
 # Section 4 ? Augmentation (AUG)
 4.1-a,Extra Hit,AUG,Active,Rare,1,1,,,0,false,false,MeleeAtk,None,0,+1 guaranteed extra hit (MULTI moves only),0,0,,None
 4.2-a,Ricochet,AUG,Active,Epic,50,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Hit bounces to 1 adjacent target at -50% power (single-target DMG only),0,0,,None
@@ -77,17 +77,17 @@ SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCatego
 # 7.2 Combo
 7.2-a,Tag Team,SYN,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,If ally attacked this turn: +15-25% power,0,0,,None
 7.2-b,Pile-On,SYN,Active,Epic,40,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+40-50% power if target was hit this turn,0,0,,None
-7.2-c,Setup Feed,SYN,Active,Uncommon,10,15,StatusUtility,,0,false,false,MeleeAtk,None,0,Next ally move: +10-15% power,0,0,,None
+7.2-c,Setup Feed,SYN,Active,Uncommon,12,12,StatusUtility,,0,false,false,MeleeAtk,None,0,Next ally action gains 12% power. A non-power action wastes it.,0,0,,None,1
 # Section 10 ? Special
 # 10.1 Entangled-Exclusive
 10.1-a,Equalizer,TRG,Active,Rare,0,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Crit chance = 50% minus current crit% (inversely scales),0,0,,None
 10.1-b,Glass Overclock,POT,Active,Epic,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+25-35% power; -15% accuracy,0,0,,None
 10.1-c,Volatile,POT,Active,Legendary,20,30,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Random +/- 20-30% power per use,0,0,,None
-10.1-d,All-Stat Burn,POT,Passive,Mythic,3,4,Passive,,0,false,false,MeleeAtk,None,0,+3 to +4 stages to all 5 stats; self-damage 5% MaxHP per turn,0,0,,None
+10.1-d,All-Stat Burn,POT,Passive,Mythic,0,0,Passive,,0,false,false,MeleeAtk,None,0,Retired combat effect. Reserved for entangled-only grants.,0,0,,None,0
 # 10.2 Event-Exclusive
 10.2-a,Seasonal Skin,POT,Active,Rare,3,5,,,0,false,false,MeleeAtk,None,0,Cosmetic effect + 3-5% power bonus (Seasonal),0,0,,None
-10.2-b,Anniversary Mark,POT,Active,Rare,3,5,,,0,false,false,MeleeAtk,None,0,Unique visual + 3-5% all stats (Anniversary),0,0,,None
-10.2-c,Tournament Badge,POT,Active,Rare,0,0,,,0,false,false,MeleeAtk,None,0,Badge display + ranked bonus (Tournament),0,0,,None
+10.2-b,Anniversary Mark,POT,Active,Rare,0,0,,,0,false,false,MeleeAtk,None,0,Retired combat effect. Reserved for server-wide event grants.,0,0,,None,0
+10.2-c,Tournament Badge,POT,Active,Rare,0,0,,,0,false,false,MeleeAtk,None,0,Retired combat effect. Reserved for PvP tournament-win grants.,0,0,,None,0
 
 # Section 1 ? Initiative (INIT)
 1.1-a,Hair Trigger,INIT,Active,Rare,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,8-12% chance to gain priority within speed tier,0,0,PRIOR,INIT

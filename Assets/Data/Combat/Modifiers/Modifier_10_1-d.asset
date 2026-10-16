@@ -14,12 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 10.1-d
   displayName: All-Stat Burn
-  effectDescription: +3 to +4 stages to all 5 stats; self-damage 5% MaxHP per turn
+  effectDescription: Retired combat effect. Reserved for entangled-only grants.
   category: 0
   scope: 1
   minimumRarity: 5
-  effectMin: 3
-  effectMax: 4
+  effectMin: 0
+  effectMax: 0
+  weight: 0
   allowedCategories: 04000000
   forbiddenCombinations: []
   slotCostIncrease: 0
