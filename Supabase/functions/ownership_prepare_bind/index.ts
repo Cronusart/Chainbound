@@ -14,6 +14,7 @@ import {
   WalletBindingError,
 } from "../_shared/account_helpers.ts";
 import { advanceBindOperation, bindOperationResponse } from "../_shared/ownership_bind.ts";
+import { inspectBindSourceTrust, inspectionDigest } from "../_shared/bindery_foundation.ts";
 import {
   BIND_RAM_COST_PIN,
   buildBindTransaction,
@@ -75,10 +76,39 @@ serve(async (req: Request) => {
 
     const { data: source, error: sourceError } = await supabase.from("ownership_bind_sources").select("*")
       .eq("source_id", sourceId).eq("player_profile_id", profile.player_profile_id)
-      .eq("wallet_address", walletAddress).eq("cluster", config.cluster)
-      .eq("enabled", true).is("consumed_at", null).maybeSingle();
+      .eq("wallet_address", walletAddress).eq("cluster", config.cluster).maybeSingle();
     if (sourceError) throw sourceError;
     if (!source) return jsonResponse({ success: false, error: "bind_not_configured" }, 503);
+
+    // Preparation must reuse the same live Core/DAS and Chainling trust proof
+    // exposed by the read-only inspection endpoint. A database allowlist row
+    // alone is never sufficient authority for a burn transaction.
+    const { data: chainling, error: chainlingError } = await supabase.from("chainlings").select("id")
+      .eq("id", str(source.chainling_id)).eq("player_profile_id", profile.player_profile_id).maybeSingle();
+    if (chainlingError) throw chainlingError;
+    const inspection = await inspectBindSourceTrust({
+      config,
+      source: source as JsonMap,
+      profileChainlingOwned: chainling != null,
+    });
+    const inspectionHash = await inspectionDigest(inspection);
+    const { error: inspectionError } = await supabase.rpc("ownership_record_bind_source_inspection_service", {
+      p_source_id: sourceId,
+      p_inspection_digest: inspectionHash,
+      p_trusted: inspection.selection_trusted,
+    });
+    if (inspectionError) throw inspectionError;
+    if (!inspection.selection_trusted) {
+      return jsonResponse({
+        success: false,
+        error: "bind_source_untrusted",
+        inspection_digest: inspectionHash,
+        inspection,
+      }, 412);
+    }
+    if (!inspection.prepare_eligible) {
+      return jsonResponse({ success: false, error: "bind_source_not_available" }, 409);
+    }
 
     operationId = await deriveRamOperationId(profile.player_profile_id, "bind", idempotencyKey);
     const expiresAt = new Date(Date.now() + config.ticketTtlSeconds * 1000);
@@ -162,6 +192,7 @@ serve(async (req: Request) => {
         archiveAsset: built.archiveAssetAddress,
         estimatedNetworkFeeLamports: String(built.estimatedNetworkFeeLamports),
         simulationSucceeded: true,
+        inspectionDigest: inspectionHash,
       },
     }));
   } catch (error) {
