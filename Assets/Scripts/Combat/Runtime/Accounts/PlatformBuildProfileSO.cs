@@ -120,6 +120,9 @@ namespace Chainbound.Combat
                     RequireValue(chain.gameProgramId, "Game program ID", errors);
                     RequireValue(chain.coreMovesCollectionId, "Core Moves collection", errors);
                     RequireValue(chain.coreMovesUpdateAuthority, "Core Moves update authority", errors);
+                    RequireValue(chain.coreArchivesCollectionId, "Core Archives collection", errors);
+                    RequireValue(chain.coreCoversCollectionId, "Core Covers collection", errors);
+                    RequireValue(chain.coreCosmeticsCollectionId, "Core Cosmetics collection", errors);
                 }
             }
 
