@@ -827,6 +827,11 @@ namespace Chainbound.Combat
                 ClearBattleIntroState();
                 presenter?.AbortQueuedPresentation();
 
+                bool authorityClosed = false;
+                yield return CommitAuthoritativeFlee(success => authorityClosed = success);
+                if (!authorityClosed)
+                    yield break;
+
                 _state.isActive = false;
                 _state.currentPhase = TurnPhase.BattleOver;
                 _state.winnerTeamIndex = 1;
@@ -917,6 +922,64 @@ namespace Chainbound.Combat
                 _fleeRoutine = null;
                 _scriptedFleeSkipPresentation = false;
             }
+        }
+
+        private IEnumerator CommitAuthoritativeFlee(Action<bool> completed)
+        {
+            CombatSessionEnvelope current = AuthoritativeBattleLaunchContext.Current;
+            if (current == null || !current.IsResumable || string.IsNullOrWhiteSpace(current.BattleId))
+            {
+                completed?.Invoke(true);
+                yield break;
+            }
+
+            ICombatSessionService service = SolanaServiceBridge.Instance != null
+                ? SolanaServiceBridge.Instance.CombatSessionService
+                : null;
+            if (service == null)
+            {
+                BlockOnAuthorityFailure("Battle authority is unavailable; flee was not committed.");
+                completed?.Invoke(false);
+                yield break;
+            }
+
+            CombatTeamCommand command = BuildAuthoritativeFleeCommand(current, _state, _turnCount);
+            Task<CombatSessionEnvelope> commit = service.SubmitTeamCommandAsync(current.BattleId, command);
+            while (!commit.IsCompleted)
+                yield return null;
+
+            if (commit.IsFaulted || commit.IsCanceled || commit.Result == null)
+            {
+                string detail = commit.Exception != null
+                    ? commit.Exception.GetBaseException().Message
+                    : "The flee checkpoint was not acknowledged.";
+                BlockOnAuthorityFailure(detail);
+                completed?.Invoke(false);
+                yield break;
+            }
+
+            AuthoritativeBattleLaunchContext.Publish(commit.Result);
+            completed?.Invoke(true);
+        }
+
+        private static CombatTeamCommand BuildAuthoritativeFleeCommand(
+            CombatSessionEnvelope current,
+            CombatState state,
+            int turnCount)
+        {
+            return new CombatTeamCommand
+            {
+                CommandId = string.Concat(current.BattleId, ":", current.Version.ToString(), ":flee"),
+                ExpectedVersion = current.Version,
+                Kind = "action_step",
+                ActionId = "flee",
+                TurnNumber = Mathf.Max(1, turnCount),
+                StepIndex = 0,
+                BattleActive = false,
+                WinnerTeamIndex = -1,
+                EndReason = "Flee",
+                Vitals = BuildAuthorityVitals(state),
+            };
         }
 
         private void TryPlayFleeSound(Vector3 worldPosition)
@@ -1632,9 +1695,14 @@ namespace Chainbound.Combat
 
         private List<CombatVitalSnapshot> BuildAuthorityVitals()
         {
+            return BuildAuthorityVitals(_state);
+        }
+
+        private static List<CombatVitalSnapshot> BuildAuthorityVitals(CombatState state)
+        {
             var result = new List<CombatVitalSnapshot>();
-            AppendTeamVitals(result, _state?.team0, 0);
-            AppendTeamVitals(result, _state?.team1, 1);
+            AppendTeamVitals(result, state?.team0, 0);
+            AppendTeamVitals(result, state?.team1, 1);
             return result;
         }
 
