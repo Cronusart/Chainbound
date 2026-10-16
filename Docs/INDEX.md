@@ -32,6 +32,7 @@ Use this page to find a mechanic and the doc that describes it. Status was check
 | Combat systems analysis (2026-10-16) | Analysis plus proposals | [systems analysis](Combat/Design/COMBAT_SYSTEMS_ANALYSIS.md). Chemistry coverage, AI targeting, pacing, and per-type identity. Open audit items stay open. | none — design only |
 | Type gap proposals (2026-10-16) | Proposals only | [type gaps](Combat/Design/TYPE_GAP_PROPOSALS.md). Typed-pool rule. Node passive is Relay. Link Pulse and Open Line are withdrawn. Burned passive is Kindling at 6%, stacked with Rugged. Compressed support and Bot AP denial were not re-cut. Meme chemistry stays out. Open audit items stay open. | none — design only |
 | Empty payload investigation (2026-10-16) | Findings only | [empty payloads](Combat/Audits/EMPTY_PAYLOAD_INVESTIGATION.md). Why `extend_protocol` and `network_sync` spend AP and do not apply the described effect. No code change. | none — investigation only |
+| Combat issue tracker (2026-10-16) | Index only | [issue master](Combat/COMBAT_ISSUES_MASTER.md). One list of the audit and design items: fixed rows, open defects, calls still waiting, and the two approved proposals. | none — index only |
 | Capture difficulty | Partial | [CAPTURE_DIFFICULTY_COMPOSITION_v1.md](Specs/Combat/CAPTURE_DIFFICULTY_COMPOSITION_v1.md) | Practice path for kits, traits, and the HP cliff. SQL assignment rows are still called out as follow-up in that spec. |
 
 ## Chainlings, capture, and encounters
