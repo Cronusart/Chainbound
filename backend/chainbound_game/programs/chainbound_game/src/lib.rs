@@ -32,7 +32,7 @@ const MAX_MUTATION_IDS: usize = 4;
 const MAX_MUTATION_ID_LEN: usize = 32;
 const MAX_CHAINLING_KNOWN_MOVE_IDS: usize = 16;
 const COMPONENT_STAMPED_MOVE: u8 = 0;
-const COMPONENT_COSMETIC_SKIN: u8 = 1;
+const COMPONENT_COSMETIC: u8 = 1;
 const KNOWN_ROLL_RAM_COST: u32 = 5;
 const RAM_RESERVATION_KIND_KNOWN: u8 = 0;
 const RAM_RESERVATION_KIND_STAMP: u8 = 1;
@@ -708,6 +708,62 @@ pub mod chainbound_game {
         Ok(())
     }
 
+    /// Records a Stamp ticket for a profile-owned Known move. The Known exists
+    /// only in the authenticated Postgres profile until this wallet-signed
+    /// transaction creates the Core asset; no wallet MoveVault row is required.
+    pub fn prepare_profile_stamp_ticket(
+        ctx: Context<PrepareProfileStampTicket>,
+        idempotency_key: [u8; 32],
+        known_reference: u64,
+        move_id: u16,
+        modifier_ids: Vec<String>,
+        rarity: u8,
+        asset_name: String,
+        asset_uri: String,
+        expires_at: i64,
+    ) -> Result<()> {
+        require!(known_reference != 0, ChainboundError::InvalidKnownReference);
+        require!(
+            modifier_ids.len() == 1 || modifier_ids.len() == 2,
+            ChainboundError::InvalidModifierCount
+        );
+        require!(
+            modifier_ids.iter().all(|value| !value.trim().is_empty()),
+            ChainboundError::InvalidModifier
+        );
+        if modifier_ids.len() == 2 {
+            require!(
+                modifier_ids[0] != modifier_ids[1],
+                ChainboundError::DuplicateModifier
+            );
+        }
+        let now = Clock::get()?.unix_timestamp;
+        require!(expires_at > now, ChainboundError::TicketExpired);
+
+        let mut stored_modifiers = [String::new(), String::new()];
+        for (index, modifier_id) in modifier_ids.into_iter().enumerate() {
+            stored_modifiers[index] = bounded_string(modifier_id, MAX_MODIFIER_ID_LEN)?;
+        }
+
+        let ticket = &mut ctx.accounts.ticket;
+        ticket.owner = ctx.accounts.owner.key();
+        ticket.idempotency_key = idempotency_key;
+        ticket.known_instance_id = known_reference;
+        ticket.move_id = move_id;
+        ticket.modifier_count = if stored_modifiers[1].is_empty() { 1 } else { 2 };
+        ticket.modifier_ids = stored_modifiers;
+        ticket.rarity = rarity;
+        ticket.asset_name = bounded_string(asset_name, MAX_ASSET_NAME_LEN)?;
+        ticket.asset_uri = bounded_string(asset_uri, MAX_ASSET_URI_LEN)?;
+        ticket.expires_at = expires_at;
+        ticket.consumed = false;
+        ticket.stamped_asset = Pubkey::default();
+        ticket.generator_version = ctx.accounts.ownership_config.generator_version;
+        ticket.pool_hash = ctx.accounts.ownership_config.pool_hash;
+        ticket.bump = ctx.bumps.ticket;
+        Ok(())
+    }
+
     /// Atomically consumes one Known instance and RAM and creates its Stamped Core asset.
     pub fn stamp_known_move(ctx: Context<StampKnownMove>, idempotency_key: [u8; 32]) -> Result<()> {
         let owner_key = ctx.accounts.owner.key();
@@ -836,6 +892,109 @@ pub mod chainbound_game {
         Ok(())
     }
 
+    /// Atomically turns a profile-owned Known into a wallet-owned Core asset.
+    /// Postgres is the canonical RAM ledger for this path, so the program only
+    /// requires the wallet signature and the result-authority-issued ticket.
+    pub fn stamp_profile_known_move(
+        ctx: Context<StampProfileKnownMove>,
+        idempotency_key: [u8; 32],
+    ) -> Result<()> {
+        let owner_key = ctx.accounts.owner.key();
+        let now = Clock::get()?.unix_timestamp;
+        let ticket = &ctx.accounts.ticket;
+
+        require!(ticket.owner == owner_key, ChainboundError::InvalidAuthority);
+        require!(
+            ticket.idempotency_key == idempotency_key,
+            ChainboundError::IdempotencyMismatch
+        );
+        require!(
+            ticket.known_instance_id != 0,
+            ChainboundError::InvalidKnownReference
+        );
+        require!(!ticket.consumed, ChainboundError::TicketAlreadyConsumed);
+        require!(ticket.expires_at >= now, ChainboundError::TicketExpired);
+        require!(
+            ticket.modifier_count == 1 || ticket.modifier_count == 2,
+            ChainboundError::InvalidModifierCount
+        );
+        require!(
+            ticket.generator_version == ctx.accounts.ownership_config.generator_version
+                && ticket.pool_hash == ctx.accounts.ownership_config.pool_hash,
+            ChainboundError::StaleConfiguration
+        );
+        require!(
+            !ticket.modifier_ids[0].is_empty()
+                && (ticket.modifier_count == 1 || !ticket.modifier_ids[1].is_empty()),
+            ChainboundError::InvalidModifier
+        );
+        if ticket.modifier_count == 2 {
+            require!(
+                ticket.modifier_ids[0] != ticket.modifier_ids[1],
+                ChainboundError::DuplicateModifier
+            );
+        }
+
+        validate_collection(
+            &ctx.accounts.moves_collection,
+            ctx.accounts.ownership_config.moves_collection,
+            ctx.accounts.core_authority.key(),
+        )?;
+
+        let attributes = profile_stamped_attributes(&ctx.accounts.ownership_config, ticket);
+        let known_instance_id = ticket.known_instance_id;
+        let move_id = ticket.move_id;
+        let modifier_count = ticket.modifier_count;
+        ctx.accounts.ticket.consumed = true;
+        ctx.accounts.ticket.stamped_asset = ctx.accounts.stamped_asset.key();
+
+        let core_program_info = ctx.accounts.core_program.to_account_info();
+        let stamped_asset_info = ctx.accounts.stamped_asset.to_account_info();
+        let moves_collection_info = ctx.accounts.moves_collection.to_account_info();
+        let core_authority_info = ctx.accounts.core_authority.to_account_info();
+        let owner_info = ctx.accounts.owner.to_account_info();
+        let system_program_info = ctx.accounts.system_program.to_account_info();
+        let asset_bump = [ctx.bumps.stamped_asset];
+        let authority_bump = [ctx.bumps.core_authority];
+        let asset_seeds: &[&[u8]] = &[
+            b"stamped_asset",
+            owner_key.as_ref(),
+            idempotency_key.as_ref(),
+            &asset_bump,
+        ];
+        let authority_seeds: &[&[u8]] = &[b"core_authority", &authority_bump];
+        let signer_seeds: &[&[&[u8]]] = &[asset_seeds, authority_seeds];
+
+        CreateV2CpiBuilder::new(&core_program_info)
+            .asset(&stamped_asset_info)
+            .collection(Some(&moves_collection_info))
+            .authority(Some(&core_authority_info))
+            .payer(&owner_info)
+            .owner(Some(&owner_info))
+            .update_authority(None)
+            .system_program(&system_program_info)
+            .data_state(DataState::AccountState)
+            .name(ctx.accounts.ticket.asset_name.clone())
+            .uri(ctx.accounts.ticket.asset_uri.clone())
+            .plugins(vec![PluginAuthorityPair {
+                plugin: Plugin::Attributes(Attributes {
+                    attribute_list: attributes,
+                }),
+                authority: Some(PluginAuthority::UpdateAuthority),
+            }])
+            .invoke_signed(signer_seeds)?;
+
+        emit!(StampedMoveCreated {
+            owner: owner_key,
+            known_instance_id,
+            move_id,
+            modifier_count,
+            asset: ctx.accounts.stamped_asset.key(),
+            idempotency_key,
+        });
+        Ok(())
+    }
+
     /// Publishes one Chainling Archive and atomically consumes its cover plus the selected
     /// Stamped move or cosmetic skin Core asset.
     pub fn bind_chainling(
@@ -855,7 +1014,7 @@ pub mod chainbound_game {
             Clock::get()?.unix_timestamp,
         )?;
         require!(
-            component_kind == COMPONENT_STAMPED_MOVE || component_kind == COMPONENT_COSMETIC_SKIN,
+            component_kind == COMPONENT_STAMPED_MOVE || component_kind == COMPONENT_COSMETIC,
             ChainboundError::InvalidComponentKind
         );
         require!(
@@ -1645,6 +1804,32 @@ pub struct PrepareStampTicket<'info> {
 
 #[derive(Accounts)]
 #[instruction(idempotency_key: [u8; 32])]
+pub struct PrepareProfileStampTicket<'info> {
+    #[account(
+        init,
+        payer = result_authority,
+        space = 8 + StampTicket::LEN,
+        seeds = [b"stamp_ticket", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump
+    )]
+    pub ticket: Account<'info, StampTicket>,
+    #[account(seeds = [b"ownership_config"], bump = ownership_config.bump)]
+    pub ownership_config: Account<'info, OwnershipConfig>,
+    /// CHECK: The authenticated backend binds this address to the profile's active wallet.
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(idempotency_key: [u8; 32])]
 pub struct StampKnownMove<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -1669,6 +1854,39 @@ pub struct StampKnownMove<'info> {
         constraint = vault.owner == owner.key() @ ChainboundError::InvalidAuthority
     )]
     pub vault: Box<Account<'info, MoveVault>>,
+    #[account(
+        mut,
+        seeds = [b"stamp_ticket", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump = ticket.bump,
+        constraint = ticket.owner == owner.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub ticket: Account<'info, StampTicket>,
+    #[account(seeds = [b"ownership_config"], bump = ownership_config.bump)]
+    pub ownership_config: Account<'info, OwnershipConfig>,
+    /// CHECK: The key and signer authority are enforced by this program's PDA seeds.
+    #[account(seeds = [b"core_authority"], bump)]
+    pub core_authority: UncheckedAccount<'info>,
+    /// CHECK: Metaplex Core creates this PDA; it must be empty before the CPI.
+    #[account(
+        mut,
+        seeds = [b"stamped_asset", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump
+    )]
+    pub stamped_asset: UncheckedAccount<'info>,
+    /// CHECK: Owner is constrained to Metaplex Core; collection data is parsed and validated.
+    #[account(mut, owner = mpl_core::ID)]
+    pub moves_collection: UncheckedAccount<'info>,
+    /// CHECK: Fixed address prevents arbitrary CPI substitution.
+    #[account(address = mpl_core::ID)]
+    pub core_program: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(idempotency_key: [u8; 32])]
+pub struct StampProfileKnownMove<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
     #[account(
         mut,
         seeds = [b"stamp_ticket", owner.key().as_ref(), idempotency_key.as_ref()],
@@ -2473,6 +2691,12 @@ fn stamped_attributes(config: &OwnershipConfig, ticket: &StampTicket) -> Vec<Att
     values
 }
 
+fn profile_stamped_attributes(config: &OwnershipConfig, ticket: &StampTicket) -> Vec<Attribute> {
+    let mut values = stamped_attributes(config, ticket);
+    values.push(attribute("cb.known_source", "profile".to_string()));
+    values
+}
+
 fn archive_attributes(
     config: &OwnershipConfig,
     chainling: &ChainlingAccount,
@@ -2489,7 +2713,7 @@ fn archive_attributes(
         .join(",");
     vec![
         attribute("cb.schema_version", config.schema_version.to_string()),
-        attribute("cb.kind", "bound_chainling".to_string()),
+        attribute("cb.kind", "chainling_archive".to_string()),
         attribute("cb.chainling_id", chainling.chainling_id.to_string()),
         attribute("cb.species_id", chainling.species_id.clone()),
         attribute("cb.level", chainling.level.to_string()),
@@ -2511,7 +2735,7 @@ fn archive_attributes(
             if component_kind == COMPONENT_STAMPED_MOVE {
                 "stamped_move".to_string()
             } else {
-                "cosmetic_skin".to_string()
+                "cosmetic".to_string()
             },
         ),
     ]
@@ -2562,6 +2786,8 @@ pub enum ChainboundError {
     InvalidConfig,
     #[msg("The Known move instance does not exist or was already consumed.")]
     KnownMoveNotFound,
+    #[msg("The profile-owned Known reference is invalid.")]
+    InvalidKnownReference,
     #[msg("The ticket move no longer matches the selected Known instance.")]
     KnownMoveMismatch,
     #[msg("Stamped moves require exactly one or two modifiers.")]
@@ -2764,6 +2990,29 @@ mod tests {
         assert!(attrs
             .iter()
             .any(|item| item.key == "cb.known_move_ids" && item.value == "7,8"));
+        assert!(attrs
+            .iter()
+            .any(|item| item.key == "cb.kind" && item.value == "chainling_archive"));
+        assert!(attrs.iter().any(|item| {
+            item.key == "cb.bind_component_kind" && item.value == "stamped_move"
+        }));
+        assert!(!attrs.iter().any(|item| {
+            item.value == "bound_chainling" || item.value == "cosmetic_skin"
+        }));
+
+        let cosmetic_attrs = archive_attributes(
+            &config,
+            &chainling,
+            Pubkey::new_unique(),
+            Pubkey::new_unique(),
+            COMPONENT_COSMETIC,
+        );
+        assert!(cosmetic_attrs
+            .iter()
+            .any(|item| item.key == "cb.bind_component_kind" && item.value == "cosmetic"));
+        assert!(!cosmetic_attrs.iter().any(|item| {
+            item.value == "bound_chainling" || item.value == "cosmetic_skin"
+        }));
     }
 
     #[test]
