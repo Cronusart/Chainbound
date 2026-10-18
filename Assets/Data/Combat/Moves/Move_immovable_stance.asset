@@ -33,11 +33,7 @@ MonoBehaviour:
     overrideTargeting: 1
     targetOverride: 4
     parameterType: 0
-  stageChanges:
-  - stat: 2
-    stages: 2
-    chance: 1
-    targetsSelf: 1
+  stageChanges: []
   tags:
   - UTIL
   selectionPolicy: 0

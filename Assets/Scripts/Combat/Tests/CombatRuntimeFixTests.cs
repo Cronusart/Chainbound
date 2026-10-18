@@ -243,12 +243,16 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
-        public void BenchPausesStatusDurationUntilSwapIn()
+        public void BenchRechargeTicksWhileOtherStatusesStayPaused()
         {
             var resolver = CreateResolver();
-            var active = CreateChainling("active", 0, 20);
+            var lead = CreateChainling("lead", 0, 20);
+            var partner = CreateChainling("partner", 0, 18);
             var bench = CreateChainling("bench", 0, 15);
             var enemy = CreateChainling("enemy", 0, 10);
+            TeamState allies = CreateTeam(0, lead, partner, bench);
+            CombatState state = resolver.InitializeBattle(allies, CreateTeam(1, enemy));
+
             bench.statuses.Add(new StatusInstance(
                 StatusId.Recharging,
                 StatusClass.Consumed,
@@ -258,19 +262,24 @@ namespace Chainbound.Combat.Tests
             {
                 rechargingMoveId = "bench_move",
             });
+            bench.statuses.Add(new StatusInstance(
+                StatusId.ThreadLock,
+                StatusClass.Duration,
+                StatusOrigin.General,
+                2,
+                "bench_lock"));
 
-            TeamState allies = CreateTeam(0, active, bench);
-            CombatState state = resolver.InitializeBattle(allies, CreateTeam(1, enemy));
             resolver.ExecuteTurn(state, CombatAction.Pass(0), CombatAction.Pass(1));
 
-            Assert.AreEqual(2, bench.statuses.Single().turnsRemaining);
+            StatusInstance recharge = bench.statuses.Single(s => s.statusId == StatusId.Recharging);
+            StatusInstance threadLock = bench.statuses.Single(s => s.statusId == StatusId.ThreadLock);
+            Assert.AreEqual(1, recharge.turnsRemaining);
+            Assert.AreEqual(2, threadLock.turnsRemaining);
 
-            allies.activeIndices[0] = 1;
-            active.isActive = false;
-            bench.isActive = true;
             resolver.ExecuteTurn(state, CombatAction.Pass(0), CombatAction.Pass(1));
 
-            Assert.AreEqual(1, bench.statuses.Single().turnsRemaining);
+            Assert.IsFalse(bench.statuses.Any(s => s.statusId == StatusId.Recharging));
+            Assert.AreEqual(2, bench.statuses.Single(s => s.statusId == StatusId.ThreadLock).turnsRemaining);
         }
 
         [Test]

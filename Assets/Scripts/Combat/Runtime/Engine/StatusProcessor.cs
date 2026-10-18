@@ -138,7 +138,8 @@ namespace Chainbound.Combat
                     }
                 }
 
-                // Per-turn stage effects (e.g., Corroded = Def -1 at End of Turn)
+                // Per-turn stage effects (e.g., Corroded = Def -1 at End of Turn).
+                // Each tick is owned by the status and reverted when it expires.
                 if (def.stageEffects != null)
                 {
                     for (int e = 0; e < def.stageEffects.Length; e++)
@@ -146,23 +147,29 @@ namespace Chainbound.Combat
                         var eff = def.stageEffects[e];
                         if (!eff.applyOnce)
                         {
-                            int oldStage = chainling.GetStage(eff.stat);
-                            chainling.SetStage(eff.stat, oldStage + eff.stages);
-                            _log.LogStageChange(turn, chainling.instanceId, eff.stat,
-                                eff.stages, chainling.GetStage(eff.stat));
+                            int applied = status.ApplyOwnedStage(chainling, eff.stat, eff.stages);
+                            if (applied != 0)
+                            {
+                                _log.LogStageChange(turn, chainling.instanceId, eff.stat,
+                                    applied, chainling.GetStage(eff.stat));
+                            }
                         }
                     }
                 }
 
-                // HODLed: Def ramps +1/turn (up to +3)
+                // HODLed: an extra Def +1/turn while Def is below +3, on top of its repeating stage.
+                // Both writes are owned and revert together when the status expires.
                 if (status.statusId == StatusId.HODLed)
                 {
                     int currentDef = chainling.GetStage(CoreStat.MeleeDef);
                     if (currentDef < 3)
                     {
-                        chainling.SetStage(CoreStat.MeleeDef, currentDef + 1);
-                        _log.LogStageChange(turn, chainling.instanceId, CoreStat.MeleeDef,
-                            1, chainling.GetStage(CoreStat.MeleeDef));
+                        int applied = status.ApplyOwnedStage(chainling, CoreStat.MeleeDef, 1);
+                        if (applied != 0)
+                        {
+                            _log.LogStageChange(turn, chainling.instanceId, CoreStat.MeleeDef,
+                                applied, chainling.GetStage(CoreStat.MeleeDef));
+                        }
                     }
                 }
             }
@@ -199,6 +206,34 @@ namespace Chainbound.Combat
                         chainling.instanceId, status.statusId, 0);
                     chainling.statuses.RemoveAt(i);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Recharge from a used move keeps counting on the bench. Other statuses stay paused.
+        /// </summary>
+        public void TickRechargeWhileBenched(ChainlingInstance chainling, int turn)
+        {
+            if (chainling?.statuses == null)
+                return;
+
+            for (int i = chainling.statuses.Count - 1; i >= 0; i--)
+            {
+                StatusInstance status = chainling.statuses[i];
+                if (status == null || status.statusId != StatusId.Recharging || status.IsExpired)
+                    continue;
+
+                bool stillActive = status.Tick(turn);
+                if (stillActive)
+                    continue;
+
+                _log.LogMessage(
+                    CombatEventType.MoveRechargeComplete,
+                    $"Move {status.rechargingMoveId} finished recharging",
+                    turn);
+                _log.LogStatus(turn, CombatEventType.StatusExpired,
+                    chainling.instanceId, status.statusId, 0);
+                chainling.statuses.RemoveAt(i);
             }
         }
 
@@ -451,27 +486,19 @@ namespace Chainbound.Combat
                 new List<string> { target.instanceId },
                 turn);
 
-            // Apply one-time stage effects
+            // Apply-once stages are owned by this instance. Refresh (above) does not
+            // re-apply them, so a second application extends duration without stacking.
+            // Expiry reverts the clamped delta once.
             if (def.stageEffects != null)
             {
                 for (int e = 0; e < def.stageEffects.Length; e++)
                 {
                     var eff = def.stageEffects[e];
-                    if (eff.applyOnce)
+                    if (!eff.applyOnce)
+                        continue;
+                    int appliedDelta = instance.ApplyOwnedStage(target, eff.stat, eff.stages);
+                    if (appliedDelta != 0)
                     {
-                        int oldStage = target.GetStage(eff.stat);
-                        target.SetStage(eff.stat, oldStage + eff.stages);
-                        int appliedDelta = target.GetStage(eff.stat) - oldStage;
-                        if (statusId == StatusId.FOMO)
-                        {
-                            instance.hasTemporaryStageDelta = true;
-                            instance.temporaryStageStat = eff.stat;
-                            instance.temporaryStageDelta = appliedDelta;
-                        }
-                        else if (statusId == StatusId.BotSwarm || statusId == StatusId.FiftyOnePercentAttacked)
-                        {
-                            instance.AddOwnedStage(eff.stat, appliedDelta);
-                        }
                         _log.LogStageChange(turn, target.instanceId, eff.stat,
                             appliedDelta, target.GetStage(eff.stat));
                     }

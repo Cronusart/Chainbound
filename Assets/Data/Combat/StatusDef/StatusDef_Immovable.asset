@@ -14,12 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 304
   displayName: Immovable
-  effectSummary: Immune to forced swap
+  effectSummary: Immune to forced swap; Def +2 while active
   statusClass: 0
   origin: 1
   defaultDuration: 2
   counterThreshold: 0
-  stageEffects: []
+  stageEffects:
+  - stat: 2
+    stages: 2
+    applyOnce: 1
   isParameterized: 0
   isDebuff: 0
   isBuff: 1

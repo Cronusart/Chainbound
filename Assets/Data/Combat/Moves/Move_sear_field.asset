@@ -26,12 +26,14 @@ MonoBehaviour:
   hitCountMin: 1
   hitCountMax: 1
   rechargeTurns: 0
-  statusEffects: []
-  stageChanges:
-  - stat: 1
-    stages: -1
+  statusEffects:
+  - statusId: 310
+    duration: 1
     chance: 1
-    targetsSelf: 0
+    overrideTargeting: 0
+    targetOverride: 1
+    parameterType: 0
+  stageChanges: []
   tags:
   - UTIL
   - AOE

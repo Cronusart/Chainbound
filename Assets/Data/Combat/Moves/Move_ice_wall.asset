@@ -15,7 +15,7 @@ MonoBehaviour:
   moveId: ice_wall
   displayName: Ice Wall
   description: Give an ally 25% mitigation for the rest of this turn. If you are
-    faster
+    faster, gain +1 AP when hit.
   category: 3
   baseType: 6
   rarity: 0
@@ -38,11 +38,32 @@ MonoBehaviour:
   activeConditionThresholdPercent: 0
   utilityEffects:
   - effectType: 0
-    magnitude: 0
-    turnBudget: 0
+    magnitude: 0.25
+    turnBudget: 1
     hitBudget: 0
     apGain: 0
-    stackKey: 
+    stackKey: wall_ice
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 0
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
+  - effectType: 1
+    magnitude: 0
+    turnBudget: 1
+    hitBudget: 0
+    apGain: 1
+    stackKey: wall_ice_ap
     statusId: 0
     statusDuration: 0
     targetOverride: 0

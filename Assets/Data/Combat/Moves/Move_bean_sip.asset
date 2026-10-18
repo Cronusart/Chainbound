@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: bean_sip
   displayName: Bean Sip
-  description: Priority sip. Heal 8% MaxHP and raise Speed +1.
+  description: Priority sip. Heal 8% MaxHP, raise Speed +1, and gain +1 AP. Recharges
+    for 1 turn.
   category: 2
   baseType: 9
   rarity: 1
@@ -41,7 +42,28 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 3
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: bean_sip
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 4
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -133,4 +155,6 @@ MonoBehaviour:
   travelSound: {fileID: 0}
   impactAccentSound: {fileID: 0}
   designNotes: Cofi Lootwak charge-up. RechargeTurns 2 skips the next turn after
-    EOT tick so Utility AI leads with sip, then Bean Beam.
+    the granting end tick, and the log says 1 turn. Also grants +1 AP. The encounter
+    kit is bean_sip plus civet_beam (Bean Beam, power 12). No 6 AP threshold and
+    no stronger Bean Beam exist in the kit or Utility AI.
