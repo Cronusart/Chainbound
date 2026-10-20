@@ -90,5 +90,7 @@ namespace Chainbound.Combat
         ValidationError,
         InitiativeResolved,
         SpeedTieResolved,
+        BuffBlocked,
+        BossTell,
     }
 }

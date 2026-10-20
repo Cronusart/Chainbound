@@ -93,7 +93,11 @@ namespace Chainbound.Combat
                     case CombatEventType.HPDotDamage:
                     case CombatEventType.HPRecoilDamage:
                         if (evt.intValue > 0 && !string.IsNullOrEmpty(evt.targetId))
+                        {
                             AddDamage(damageByTarget, damageTargetOrder, evt);
+                            if (evt.eventType == CombatEventType.HPDotDamage && StartsNamedTick(evt.message))
+                                primarySentences.Add(NormalizeSentence(evt.message));
+                        }
                         else if (!string.IsNullOrWhiteSpace(evt.message))
                             primarySentences.Add(NormalizeSentence(evt.message));
                         break;
@@ -165,13 +169,24 @@ namespace Chainbound.Combat
                         break;
 
                     case CombatEventType.ModifierTriggered:
-                        consequenceSentences.Add(Format(Get(profile, p => p.ModifierTemplate, "A combat modifier changed the outcome."),
-                            evt, log, 0, 0));
+                    {
+                        if (TrySetupFeedSentence(evt, out string setupFeedSentence))
+                            consequenceSentences.Add(setupFeedSentence);
+                        else
+                            consequenceSentences.Add(Format(Get(profile, p => p.ModifierTemplate, "A combat modifier changed the outcome."),
+                                evt, log, 0, 0));
                         break;
+                    }
 
                     case CombatEventType.APGainBlocked:
                         consequenceSentences.Add(Format(Get(profile, p => p.ApBlockedTemplate, "{target} could not gain AP."),
                             evt, log, evt.intValue, 0));
+                        break;
+
+                    case CombatEventType.BuffBlocked:
+                    case CombatEventType.BossTell:
+                        if (!string.IsNullOrWhiteSpace(evt.message))
+                            consequenceSentences.Add(evt.message);
                         break;
 
                     case CombatEventType.APStolen:
@@ -669,6 +684,29 @@ namespace Chainbound.Combat
             }
 
             return builder.ToString();
+        }
+
+        private static bool StartsNamedTick(string message)
+        {
+            return !string.IsNullOrEmpty(message) &&
+                   (message.StartsWith("Kindled burns ", StringComparison.Ordinal) ||
+                    message.StartsWith("Rugged scorches ", StringComparison.Ordinal) ||
+                    message.StartsWith("Leaked taxes ", StringComparison.Ordinal));
+        }
+
+        private static bool TrySetupFeedSentence(CombatEvent evt, out string sentence)
+        {
+            sentence = null;
+            if (!ModifierOutcomePayload.TryFromEvent(evt, out ModifierOutcomePayload payload))
+                return false;
+            if (!string.Equals(payload.sectionId, "7.2-c", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (string.IsNullOrWhiteSpace(payload.reason) ||
+                !payload.reason.StartsWith("Setup Feed", StringComparison.Ordinal))
+                return false;
+
+            sentence = NormalizeSentence(payload.reason);
+            return !string.IsNullOrWhiteSpace(sentence);
         }
 
         private static string NormalizeSentence(string text)

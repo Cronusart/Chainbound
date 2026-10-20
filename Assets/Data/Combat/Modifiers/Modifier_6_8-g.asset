@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.8-g
   displayName: Spotlight
-  effectDescription: "On use: ally +{n}% accuracy for the rest of this turn"
+  effectDescription: 'On use: ally +{n}% accuracy for the rest of this turn'
   category: 5
   scope: 0
   minimumRarity: 1

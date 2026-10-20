@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Barrier ally for 2 turns; attackers lose 1 AP when they hit it.
   category: 3
   baseType: 5
-  rarity: 2
+  rarity: 4
   targeting: 2
   contactType: 2
   power: 0
@@ -87,6 +87,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -14,12 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.1-d
   displayName: Siphon Soft
-  effectDescription: Heal 3-8% of damage dealt as HP
+  effectDescription: Heal 5-8% of damage dealt as HP
   category: 5
   scope: 0
-  minimumRarity: 1
-  effectMin: 3
+  minimumRarity: 0
+  effectMin: 5
   effectMax: 8
+  weight: 1
   allowedCategories: 0000000001000000
   forbiddenCombinations: []
   slotCostIncrease: 0

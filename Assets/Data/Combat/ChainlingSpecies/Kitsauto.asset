@@ -28,7 +28,7 @@ MonoBehaviour:
   offTypeMoveExceptions: []
   learnableMoves:
   - {fileID: 11400000, guid: 2a8c589a963abad4d9f996800f8e0d52, type: 2}
-  - {fileID: 11400000, guid: 64d94731a0731234586f5f3aeebadf0f, type: 2}
+  - {fileID: 11400000, guid: bf07e5eb5201c6447bba19bf69a97ce4, type: 2}
   - {fileID: 11400000, guid: f2e0cb374bd69b040be9b60a51e8b393, type: 2}
   learnLevels: 010000000100000001000000
   exclusiveMoves:
@@ -36,7 +36,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: da9d01c710e386c41973a262f445ae30, type: 2}
   flagshipMove: {fileID: 11400000, guid: 78209bc3e3da4274ea5f34e3271fd94b, type: 2}
   initialMoves:
-  - {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
+  - {fileID: 11400000, guid: da9d01c710e386c41973a262f445ae30, type: 2}
   progressionMovePool:
   - move: {fileID: 11400000, guid: 2a8c589a963abad4d9f996800f8e0d52, type: 2}
     weight: 23
@@ -47,7 +47,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 64d94731a0731234586f5f3aeebadf0f, type: 2}
+  - move: {fileID: 11400000, guid: bf07e5eb5201c6447bba19bf69a97ce4, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23

@@ -74,6 +74,7 @@ namespace Chainbound.Combat
         [SerializeField] private TMP_Text footerPromptText;
         [SerializeField] private RectTransform detailsRoot;
         [SerializeField] private CanvasGroup detailsCanvasGroup;
+        [SerializeField] private CombatMoveLibraryCardView libraryCardView;
 
         [Header("Rest Action")]
         [Tooltip("Type-icon sprite shown on the Rest move row and in Rest details.")]
@@ -161,6 +162,7 @@ namespace Chainbound.Combat
         private readonly List<CombatModifierOverviewRowUGUI> _modifierRows = new List<CombatModifierOverviewRowUGUI>(4);
         private Tween _typewriterDelayTween;
         private Tween _detailsPopTween;
+        private RectTransform _detailsPopTarget;
         private bool _isRevealing;
         private int _lastSelectedIndex = -1;
         private bool _pendingDetailsPop;
@@ -261,6 +263,7 @@ namespace Chainbound.Combat
             if (visible)
             {
                 _isRevealing = true;
+                ApplyDetailsPresentationMode();
                 try
                 {
                     if (effect != null)
@@ -323,7 +326,10 @@ namespace Chainbound.Combat
                 Debug.Log($"[CombatMoveSelectPanelUGUI] ScheduleTypewriters: scheduling {list.Count} typewriter(s) after {typewriterDelay}s delay.");
 
             foreach (var tw in list)
-                if (tw != null) tw.ResetToHidden();
+            {
+                if (tw != null && tw.gameObject.activeInHierarchy)
+                    tw.ResetToHidden();
+            }
 
             _typewriterDelayTween = DOVirtual.DelayedCall(typewriterDelay, PlayTypewriters, true);
         }
@@ -334,16 +340,20 @@ namespace Chainbound.Combat
             if (typewriters != null)
             {
                 foreach (var tw in typewriters)
-                    if (tw != null) list.Add(tw);
+                    if (IsPanelTypewriter(tw) && !list.Contains(tw)) list.Add(tw);
             }
             if (list.Count == 0 && root != null)
             {
                 var found = root.GetComponentsInChildren<TMPTypewriterReveal>(true);
                 if (found != null && found.Length > 0)
                 {
-                    list.AddRange(found);
+                    for (int i = 0; i < found.Length; i++)
+                    {
+                        if (IsPanelTypewriter(found[i]))
+                            list.Add(found[i]);
+                    }
                     if (debugTypewriter)
-                        Debug.Log($"[CombatMoveSelectPanelUGUI] ResolveTypewriters: auto-found {found.Length} TMPTypewriterReveal in children.");
+                        Debug.Log($"[CombatMoveSelectPanelUGUI] ResolveTypewriters: auto-found {list.Count} TMPTypewriterReveal in children.");
                 }
             }
             return list;
@@ -359,7 +369,15 @@ namespace Chainbound.Combat
                 Debug.Log($"[CombatMoveSelectPanelUGUI] PlayTypewriters: playing {list.Count} typewriter(s).");
 
             foreach (var tw in list)
-                if (tw != null) tw.Play();
+            {
+                if (tw != null && tw.gameObject.activeInHierarchy)
+                    tw.Play();
+            }
+        }
+
+        private static bool IsPanelTypewriter(TMPTypewriterReveal typewriter)
+        {
+            return typewriter != null && typewriter.GetComponentInParent<CombatMoveLibraryCardView>(true) == null;
         }
 
         private void KillTypewriterDelay()
@@ -436,15 +454,12 @@ namespace Chainbound.Combat
         {
             EnsureBuilt();
             EnsureAuthoringColorsCached();
+            ApplyDetailsPresentationMode();
 
             if (details.isRestAction)
             {
                 ApplyRestDetails(details);
-                if (_pendingDetailsPop)
-                {
-                    _pendingDetailsPop = false;
-                    PlayDetailsPopAnimation();
-                }
+                PlayDetailsPopIfLegacyPanelIsShowing();
                 return;
             }
 
@@ -520,11 +535,15 @@ namespace Chainbound.Combat
                 selectedTypeIconImage.color = iconColor;
             }
 
-            if (_pendingDetailsPop)
-            {
-                _pendingDetailsPop = false;
-                PlayDetailsPopAnimation();
-            }
+            PlayDetailsPopIfLegacyPanelIsShowing();
+        }
+
+        public void SetLibraryCard(CombatMoveLibraryCardView.Presentation presentation)
+        {
+            ApplyDetailsPresentationMode();
+            ResolveLibraryCard();
+            if (libraryCardView != null)
+                libraryCardView.Show(presentation);
         }
 
         public void PlayUnavailableMoveFeedback()
@@ -634,21 +653,51 @@ namespace Chainbound.Combat
                 selectedModifierText.color = detailsMutedTextColor;
         }
 
-        private void PlayDetailsPopAnimation()
+        private void ApplyDetailsPresentationMode()
         {
             EnsureDetailsReferences();
             if (detailsRoot == null)
                 return;
 
+            Transform legacy = detailsRoot.Find("Details1");
+            Transform library = detailsRoot.Find("Details2");
+            if (legacy != null)
+                legacy.gameObject.SetActive(false);
+            if (library != null)
+                library.gameObject.SetActive(true);
+        }
+
+        private void PlayDetailsPopIfLegacyPanelIsShowing()
+        {
+            if (!_pendingDetailsPop)
+                return;
+
+            _pendingDetailsPop = false;
+            EnsureDetailsReferences();
+            Transform legacy = detailsRoot != null ? detailsRoot.Find("Details1") : null;
+            if (legacy == null || !legacy.gameObject.activeSelf)
+                return;
+
+            PlayDetailsPopAnimation(legacy as RectTransform);
+        }
+
+        private void PlayDetailsPopAnimation(RectTransform target)
+        {
+            if (target == null)
+                return;
+
             KillDetailsPopTween();
-            detailsRoot.localScale = Vector3.one;
+            target.localScale = Vector3.one;
             if (detailsCanvasGroup != null)
                 detailsCanvasGroup.alpha = 1f;
 
+            _detailsPopTarget = target;
             _detailsPopTween = DOTween.Sequence()
                 .SetUpdate(true)
-                .Append(detailsRoot.DOScale(detailsPopScale, detailsPopDuration * 0.55f).SetEase(detailsPopEaseOut))
-                .Append(detailsRoot.DOScale(1f, detailsPopDuration * 0.45f).SetEase(detailsPopEaseIn));
+                .Append(target.DOScale(detailsPopScale, detailsPopDuration * 0.55f).SetEase(detailsPopEaseOut))
+                .Append(target.DOScale(1f, detailsPopDuration * 0.45f).SetEase(detailsPopEaseIn))
+                .OnComplete(ResetDetailsPopTarget)
+                .OnKill(ResetDetailsPopTarget);
         }
 
         private void EnsureDetailsReferences()
@@ -664,16 +713,36 @@ namespace Chainbound.Combat
                 detailsCanvasGroup = detailsRoot.GetComponent<CanvasGroup>();
         }
 
+        private void ResolveLibraryCard()
+        {
+            if (libraryCardView != null)
+                return;
+
+            EnsureDetailsReferences();
+            if (detailsRoot != null)
+                libraryCardView = detailsRoot.GetComponentInChildren<CombatMoveLibraryCardView>(true);
+        }
+
         private void KillDetailsPopTween()
         {
             if (_detailsPopTween != null)
             {
-                _detailsPopTween.Kill();
+                Tween active = _detailsPopTween;
                 _detailsPopTween = null;
+                active.Kill(false);
             }
 
-            if (detailsRoot != null)
-                detailsRoot.DOKill();
+            ResetDetailsPopTarget();
+        }
+
+        private void ResetDetailsPopTarget()
+        {
+            if (_detailsPopTarget == null)
+                return;
+
+            RectTransform target = _detailsPopTarget;
+            _detailsPopTarget = null;
+            target.localScale = Vector3.one;
         }
 
         private void ApplyRestDetails(MoveDetailData details)
@@ -1129,6 +1198,7 @@ namespace Chainbound.Combat
                     fitter = moveListRoot.gameObject.AddComponent<ContentSizeFitter>();
                 fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
                 fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                HonorAuthoredMoveRowHeight();
             }
 
             bool shouldScroll = rowCount > Mathf.Max(1, visibleMoveRowsBeforeScroll);
@@ -1146,6 +1216,24 @@ namespace Chainbound.Combat
 
             if (!shouldScroll)
                 ResetMoveListScroll();
+        }
+
+        private void HonorAuthoredMoveRowHeight()
+        {
+            if (moveListRoot == null)
+                return;
+
+            // childControlHeight off makes the group use sizeDelta. The prefab rect is 0
+            // while the row LayoutElement preferred height is the authored 58.
+            VerticalLayoutGroup vertical = moveListRoot.GetComponent<VerticalLayoutGroup>();
+            if (vertical != null)
+                vertical.childControlHeight = true;
+
+            // A layout element on the content object outranks the vertical group and
+            // locks the scroller to a single row. Row heights live on the rows.
+            LayoutElement contentLayout = moveListRoot.GetComponent<LayoutElement>();
+            if (contentLayout != null)
+                contentLayout.ignoreLayout = true;
         }
 
         private void EnsureAuthoringColorsCached()

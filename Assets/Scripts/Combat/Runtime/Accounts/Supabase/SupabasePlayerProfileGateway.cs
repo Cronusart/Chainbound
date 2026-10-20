@@ -276,17 +276,7 @@ namespace Chainbound.Combat
 
         private Task<SupabaseClient.Response> AuthenticatedPostAsync(string functionName, string json)
         {
-            string accessToken = SupabaseAuthSessionContext.AccessToken;
-            if (string.IsNullOrWhiteSpace(accessToken))
-            {
-                return Task.FromResult(new SupabaseClient.Response
-                {
-                    statusCode = 0,
-                    body = "Authenticated Supabase session is unavailable."
-                });
-            }
-
-            return SupabaseClient.PostJsonAsync(supabaseConfig, functionName, json, accessToken);
+            return SupabaseClient.PostJsonAsync(supabaseConfig, functionName, json);
         }
 
         private void ResolveDefaultConfigIfNeeded()

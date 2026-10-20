@@ -1359,10 +1359,25 @@ namespace Chainbound.Combat.Editor
                 if (string.IsNullOrEmpty(trimmed)) continue;
                 string[] parts = trimmed.Split(':');
                 if (parts.Length < 2) continue;
-                if (!Enum.TryParse<CoreStat>(parts[0].Trim(), true, out var stat)) continue;
                 if (!int.TryParse(parts[1].Trim(), out var stages)) continue;
                 bool applyOnce = parts.Length < 3 || !bool.TryParse(parts[2].Trim(), out var ao) || ao;
-                results.Add(new StatusStageEffect { stat = stat, stages = stages, applyOnce = applyOnce });
+                if (Enum.TryParse<CoreStat>(parts[0].Trim(), true, out var stat))
+                {
+                    results.Add(new StatusStageEffect { stat = stat, stages = stages, applyOnce = applyOnce });
+                    continue;
+                }
+
+                if (Enum.TryParse(parts[0].Trim(), true, out CombatStageStat combatStage) &&
+                    (combatStage == CombatStageStat.Accuracy || combatStage == CombatStageStat.Evasion))
+                {
+                    results.Add(new StatusStageEffect
+                    {
+                        usesCombatStage = true,
+                        combatStage = combatStage,
+                        stages = stages,
+                        applyOnce = applyOnce,
+                    });
+                }
             }
             return results.ToArray();
         }
@@ -1742,6 +1757,51 @@ namespace Chainbound.Combat.Editor
                         effect.stackKey = p4;
                         break;
 
+                    case UtilityEffectType.ApplyChemistryStatus:
+                        effect.statusId = ParseEnum(p1, StatusId.None);
+                        effect.statusDuration = ParseInt(p2, 1);
+                        effect.chance = string.IsNullOrWhiteSpace(p3) ? 1f : ParsePercentOrFloat(p3);
+                        effect.targetOverride = string.IsNullOrWhiteSpace(p4)
+                            ? MoveTargeting.SingleEnemy
+                            : ParseEnum(p4, MoveTargeting.SingleEnemy);
+                        effect.stackKey = parts.Length > 5 ? parts[5].Trim() : string.Empty;
+                        break;
+
+                    case UtilityEffectType.StripBuffs:
+                        effect.magnitude = ParseInt(p1, 1);
+                        effect.chance = string.IsNullOrWhiteSpace(p2) ? 1f : ParsePercentOrFloat(p2);
+                        effect.targetOverride = string.IsNullOrWhiteSpace(p3)
+                            ? MoveTargeting.SingleEnemy
+                            : ParseEnum(p3, MoveTargeting.SingleEnemy);
+                        effect.stackKey = p4;
+                        break;
+
+                    case UtilityEffectType.StripAllStatuses:
+                        effect.chance = string.IsNullOrWhiteSpace(p1) ? 1f : ParsePercentOrFloat(p1);
+                        effect.targetOverride = string.IsNullOrWhiteSpace(p2)
+                            ? MoveTargeting.SingleEnemy
+                            : ParseEnum(p2, MoveTargeting.SingleEnemy);
+                        effect.stackKey = p3;
+                        break;
+
+                    case UtilityEffectType.StripBuffsThenStage:
+                        effect.magnitude = ParseInt(p1, 1);
+                        effect.chance = string.IsNullOrWhiteSpace(p2) ? 1f : ParsePercentOrFloat(p2);
+                        effect.targetOverride = string.IsNullOrWhiteSpace(p3)
+                            ? MoveTargeting.SingleEnemy
+                            : ParseEnum(p3, MoveTargeting.SingleEnemy);
+                        effect.stageStat = ParseEnum(p4, CombatStageStat.MeleeAtk);
+                        effect.stageAmount = parts.Length > 5 ? ParseInt(parts[5].Trim(), 1) : 1;
+                        effect.stackKey = parts.Length > 6 ? parts[6].Trim() : string.Empty;
+                        break;
+
+                    case UtilityEffectType.HealSelfPerTargetDebuff:
+                        effect.magnitude = ParsePercentOrFloat(p1);
+                        effect.chance = string.IsNullOrWhiteSpace(p2) ? 1f : ParsePercentOrFloat(p2);
+                        effect.targetOverride = MoveTargeting.SingleEnemy;
+                        effect.stackKey = p3;
+                        break;
+
                     case UtilityEffectType.BonusHealPercentIfSpeedHigher:
                         effect.magnitude = ParsePercentOrFloat(p1);
                         effect.targetOverride = string.IsNullOrWhiteSpace(p2)
@@ -1843,6 +1903,16 @@ namespace Chainbound.Combat.Editor
                             : ParseEnum(p4, MoveTargeting.Self);
                         effect.stackKey = parts.Length > 5 ? parts[5].Trim() : string.Empty;
                         break;
+
+                    case UtilityEffectType.ExtendBuff:
+                        effect.stackKey = p1;
+                        effect.targetOverride = MoveTargeting.SingleAlly;
+                        break;
+
+                    case UtilityEffectType.RaiseLowestStage:
+                        effect.stackKey = p1;
+                        effect.affectAllAllies = true;
+                        break;
                 }
 
                 list.Add(effect);
@@ -1873,7 +1943,10 @@ namespace Chainbound.Combat.Editor
                     MoveConditionalEffectPolicy.LegacyAndResolveConditions),
                 resolveConditions = ParseResolveConditions(columns.Get(fields, "ResolveConditions")),
                 requireAllResolveConditions = string.IsNullOrWhiteSpace(requireAllRaw) || ParseBool(requireAllRaw, true),
+                moveEffectsOncePerTarget = ParseBool(columns.Get(fields, "MoveEffectsOncePerTarget")),
             };
+
+            ParseAccuracyTuning(columns.Get(fields, "AccuracyTuning"), profile.accuracy);
 
             profile.damage.powerMultiplier = ParseFloat(columns.Get(fields, "DamagePowerMultiplier"), 1f);
             profile.damage.preMitigationDamageMultiplier = ParseFloat(columns.Get(fields, "DamagePreMitigationMultiplier"), 1f);
@@ -1899,6 +1972,43 @@ namespace Chainbound.Combat.Editor
                 ParseFloatList(columns.Get(fields, "RandomDamageMultipliers"));
             MoveResolveProfileUtility.EnsureNestedDefaults(profile);
             return profile;
+        }
+
+        private static void ParseAccuracyTuning(string raw, MoveAccuracyTuning tuning)
+        {
+            if (tuning == null || string.IsNullOrWhiteSpace(raw))
+                return;
+
+            string[] tokens = raw.Split('|');
+            for (int i = 0; i < tokens.Length; i++)
+            {
+                string token = tokens[i].Trim();
+                if (string.IsNullOrEmpty(token))
+                    continue;
+                if (string.Equals(token, "SureHit", StringComparison.OrdinalIgnoreCase))
+                {
+                    tuning.ignoreEvasionStages = Math.Max(tuning.ignoreEvasionStages, 6);
+                    tuning.minHitChance = Math.Max(tuning.minHitChance, 0.95f);
+                    continue;
+                }
+                if (string.Equals(token, "ForceHit", StringComparison.OrdinalIgnoreCase))
+                {
+                    tuning.forceHit = true;
+                    continue;
+                }
+
+                string[] parts = token.Split(':');
+                string key = parts[0].Trim();
+                string value = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+                if (string.Equals(key, "Bonus", StringComparison.OrdinalIgnoreCase))
+                    tuning.accuracyBonusPercent = ParseFloat(value);
+                else if (string.Equals(key, "IgnoreEva", StringComparison.OrdinalIgnoreCase))
+                    tuning.ignoreEvasionStages = ParseInt(value);
+                else if (string.Equals(key, "MinHit", StringComparison.OrdinalIgnoreCase))
+                    tuning.minHitChance = ParsePercentOrFloat(value);
+                else if (string.Equals(key, "MaxHit", StringComparison.OrdinalIgnoreCase))
+                    tuning.maxHitChance = ParsePercentOrFloat(value);
+            }
         }
 
         private static List<MoveResolveCondition> ParseResolveConditions(string raw)
@@ -2488,6 +2598,12 @@ namespace Chainbound.Combat.Editor
             var moveLookup = BuildMoveLookup(moveDb);
             int imported = 0;
 
+            if (!ValidateSpeciesPoolRows(lines, moveLookup))
+            {
+                _logOutput += "\nERROR: Species pool import aborted; no species assets were changed.\n";
+                return;
+            }
+
             for (int row = 1; row < lines.Length; row++)
             {
                 string line = lines[row].Trim();
@@ -2589,6 +2705,57 @@ namespace Chainbound.Combat.Editor
 
             if (!_dryRun) { AssetDatabase.SaveAssets(); AssetDatabase.Refresh(); }
             _logOutput += $"\n{(_dryRun ? "[DRY RUN] " : "")}Imported {imported} species pools.\n";
+        }
+
+        private bool ValidateSpeciesPoolRows(
+            string[] lines,
+            Dictionary<string, MoveDefinitionSO> moveLookup)
+        {
+            bool valid = true;
+            for (int row = 1; row < lines.Length; row++)
+            {
+                string line = lines[row].Trim();
+                if (string.IsNullOrEmpty(line) || line.StartsWith("#", StringComparison.Ordinal))
+                    continue;
+
+                string[] fields = ParseCSVLine(line);
+                string speciesId = GetField(fields, 0);
+                var poolIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string id in SplitPipe(GetField(fields, 1)))
+                    poolIds.Add(id.Trim());
+                foreach (string id in SplitPipe(GetField(fields, 2)))
+                    poolIds.Add(id.Trim());
+
+                for (int column = 1; column <= 5; column++)
+                {
+                    foreach (string rawId in SplitPipe(GetField(fields, column)))
+                    {
+                        string moveId = rawId.Trim();
+                        MoveDefinitionSO move = FindMoveById(moveLookup, moveId);
+                        if (move != null && MoveAvailability.IsBossOnly(move))
+                        {
+                            _logOutput += $"  ERROR: {speciesId} references boss-only move '{moveId}' in column {column + 1}.\n";
+                            valid = false;
+                        }
+                    }
+                }
+
+                foreach (string rawId in SplitPipe(GetField(fields, 4)))
+                {
+                    string moveId = rawId.Trim();
+                    if (!moveLookup.ContainsKey(moveId))
+                    {
+                        _logOutput += $"  ERROR: Initial move '{moveId}' was not found for {speciesId}.\n";
+                        valid = false;
+                    }
+                    else if (!poolIds.Contains(moveId))
+                    {
+                        _logOutput += $"  ERROR: Initial move '{moveId}' is not in {speciesId}'s learnable or exclusive pool.\n";
+                        valid = false;
+                    }
+                }
+            }
+            return valid;
         }
 
         // ———— Import All From Data ————

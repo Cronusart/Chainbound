@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Move one General debuff from ally to self; cleanse if none.
   category: 3
   baseType: 0
-  rarity: 0
+  rarity: 1
   targeting: 2
   contactType: 2
   power: 0
@@ -43,6 +43,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

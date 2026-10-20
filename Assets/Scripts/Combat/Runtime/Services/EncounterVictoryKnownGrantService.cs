@@ -6,10 +6,14 @@ namespace Chainbound.Combat
     public sealed class EncounterVictoryKnownGrantService
     {
         private readonly IEncounterVictoryKnownGrantPersistence _persistence;
+        private readonly MoveDatabaseSO _moveDatabase;
 
-        public EncounterVictoryKnownGrantService(IEncounterVictoryKnownGrantPersistence persistence)
+        public EncounterVictoryKnownGrantService(
+            IEncounterVictoryKnownGrantPersistence persistence,
+            MoveDatabaseSO moveDatabase = null)
         {
             _persistence = persistence;
+            _moveDatabase = moveDatabase;
         }
 
         public async Task<List<EncounterVictoryKnownGrantResult>> ApplyGrantsAsync(
@@ -43,12 +47,23 @@ namespace Chainbound.Combat
                 EncounterVictoryKnownGrant grant = result.pendingVictoryKnownGrants[i];
                 if (string.IsNullOrWhiteSpace(grant.moveId))
                     continue;
+                string moveId = grant.moveId.Trim();
+                if (MoveAvailability.IsBossOnly(moveId, _moveDatabase))
+                {
+                    grants.Add(new EncounterVictoryKnownGrantResult
+                    {
+                        moveId = moveId,
+                        success = false,
+                        error = "boss_only_move_not_grantable",
+                    });
+                    continue;
+                }
 
                 var request = new EncounterVictoryKnownGrantRequest
                 {
                     playerProfileId = playerProfileId,
                     narrativeEncounterId = encounterId,
-                    moveId = grant.moveId.Trim(),
+                    moveId = moveId,
                     idempotencyKey = grant.ResolveIdempotencyKey(encounterId),
                     battleSeed = result.seed,
                 };

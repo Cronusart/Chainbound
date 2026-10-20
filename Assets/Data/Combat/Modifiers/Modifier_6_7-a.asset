@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.7-a
   displayName: Afterguard
-  effectDescription: After hit: grant a 1-hit barrier for 2 turns
+  effectDescription: 'After hit: grant a 1-hit barrier for 2 turns'
   category: 5
   scope: 0
   minimumRarity: 1

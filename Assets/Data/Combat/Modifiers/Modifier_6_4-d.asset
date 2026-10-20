@@ -14,18 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.4-d
   displayName: Cover Ally
-  effectDescription: On swap in, an ally gains 8-12% mitigation for the rest of this turn
+  effectDescription: On swap in
   category: 5
   scope: 1
   minimumRarity: 1
   effectMin: 8
   effectMax: 12
+  weight: 1
   allowedCategories: 03000000
   forbiddenCombinations: []
   slotCostIncrease: 0
   powerCap: 0
   apCostCap: 0
-  forbiddenTags: []
+  forbiddenTags:
+  - 0
   slotType: 0
   isTypeInfusion: 0
   isStatSubstitution: 0

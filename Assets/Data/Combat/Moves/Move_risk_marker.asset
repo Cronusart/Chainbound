@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: risk_marker
   displayName: Risk Marker
-  description: Apply Overleveraged so heavy hits make target take recoil.
+  description: The target's next move costs +1 AP.
   category: 2
   baseType: 10
-  rarity: 0
+  rarity: 2
   targeting: 0
   contactType: 2
   power: 0
@@ -26,20 +26,35 @@ MonoBehaviour:
   hitCountMin: 1
   hitCountMax: 1
   rechargeTurns: 0
-  statusEffects:
-  - statusId: 208
-    duration: 2
-    chance: 1
-    overrideTargeting: 0
-    targetOverride: 0
-    parameterType: 0
+  statusEffects: []
   stageChanges: []
   tags:
   - UTIL
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 8
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: risk_marker
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 0
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -49,6 +64,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

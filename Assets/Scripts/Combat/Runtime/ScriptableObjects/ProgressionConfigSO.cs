@@ -14,12 +14,12 @@ namespace Chainbound.Combat
         private static readonly int[] DefaultRebirthRamCosts = { 1000, 1500, 2000, 2500, 3000 };
         private static readonly float[] DefaultMoveLearnRarityWeights =
         {
-            1f, // Common
-            1f, // Uncommon
-            1f, // Rare
-            1f, // Epic
-            1f, // Legendary
-            1f, // Mythic
+            1.00f, // Common
+            0.72f, // Uncommon
+            0.48f, // Rare
+            0.28f, // Epic
+            0.14f, // Legendary
+            0.06f, // Mythic
         };
 
         [Header("Identity")]
@@ -48,8 +48,8 @@ namespace Chainbound.Combat
         [Range(0f, 1f)] public float cyclePickHpPercent = CombatConstants.CYCLE_PICK_HP_PERCENT;
 
         [Header("Move-Learn Rarity Weights (per RarityTier index)")]
-        [Tooltip("Multiplies SpeciesProgressionMoveEntry.weight by this factor for the move's rarity.")]
-        public float[] moveLearnRarityWeights = { 1f, 1f, 1f, 1f, 1f, 1f };
+        [Tooltip("Multiplies SpeciesProgressionMoveEntry.weight by this factor for the move's rarity. Common 1.00, Uncommon 0.72, Rare 0.48, Epic 0.28, Legendary 0.14, Mythic 0.06.")]
+        public float[] moveLearnRarityWeights = { 1.00f, 0.72f, 0.48f, 0.28f, 0.14f, 0.06f };
 
         public int GetRebirthRamCost(int currentRebirthCount)
         {

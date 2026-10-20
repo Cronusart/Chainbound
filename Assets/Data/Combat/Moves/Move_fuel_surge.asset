@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Gain +3 AP; also gain Atk +2 and Def -2 for 2 turns.
   category: 2
   baseType: 2
-  rarity: 0
+  rarity: 5
   targeting: 4
   contactType: 2
   power: 0
@@ -71,6 +71,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -170,6 +170,8 @@ namespace Chainbound.Combat
                 case CombatEventType.APStolen:
                 case CombatEventType.MoveRecharging:
                 case CombatEventType.BonusActionGranted:
+                case CombatEventType.BuffBlocked:
+                case CombatEventType.BossTell:
                     return CombatNarrationDelivery.OutcomeSummary;
 
                 case CombatEventType.StatusExpired:

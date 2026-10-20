@@ -268,6 +268,16 @@ namespace Chainbound.Combat
                 return;
             }
 
+            if (!BuffGate.AllowsBuffStatus(recipient, statusDef, attackerId, turn))
+            {
+                _log.LogMessage(
+                    CombatEventType.BuffBlocked,
+                    $"Cipher Lock blocked {statusDef.displayName} on {recipient.displayName}.",
+                    turn);
+                BlockDecision(decision, forensicPayload, "CipherLocked");
+                return;
+            }
+
             // Every matrix cell applies exactly one reaction.
             if (output.statusId == StatusId.TypeCoating || output.statusId == StatusId.HypedTypeCoating)
             {
@@ -389,21 +399,7 @@ namespace Chainbound.Combat
                     new List<string> { recipient.instanceId },
                     turn);
 
-                if (statusDef.stageEffects != null)
-                {
-                    for (int e = 0; e < statusDef.stageEffects.Length; e++)
-                    {
-                        var eff = statusDef.stageEffects[e];
-                        if (!eff.applyOnce)
-                            continue;
-                        int appliedDelta = instance.ApplyOwnedStage(recipient, eff.stat, eff.stages);
-                        if (appliedDelta != 0)
-                        {
-                            _log.LogStageChange(turn, recipient.instanceId, eff.stat,
-                                appliedDelta, recipient.GetStage(eff.stat));
-                        }
-                    }
-                }
+                StatusProcessor.ApplyApplyOnceStages(recipient, instance, statusDef, _log, turn);
             }
 
             if (output.statusId == StatusId.Firewall && !refreshed)
@@ -554,7 +550,7 @@ namespace Chainbound.Combat
                     }
                     if (triggered)
                     {
-                        // Cascade Failure: KO on 3rd apply
+                        // Cascade Failure: the third application deals 25% MaxHP and can KO only if HP reaches 0.
                         if (id == StatusId.CascadeFailure)
                         {
                             int damage = Math.Max(1, (int)(defender.EffectiveMaxHP * _resolverConfig.cascadeFailureMaxHpDamage));

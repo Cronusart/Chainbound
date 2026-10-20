@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: fee_collector
   displayName: Fee Collector
-  description: Passive - foes with more AP lose 1 AP at your turn start.
+  description: Passive - the foe who acts first loses 1 AP if they have more AP than
+    you.
   category: 4
   baseType: 2
   rarity: 2
@@ -30,48 +31,21 @@ MonoBehaviour:
   stageChanges: []
   tags:
   - PAS
-  - TRIG
   - APMAN
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects:
-  - effectType: 4
-    magnitude: 0
-    turnBudget: 0
-    hitBudget: 0
-    apGain: 1
-    stackKey: fee_collector
-    statusId: 0
-    statusDuration: 0
-    targetOverride: 1
-    chance: 1
-    reflectPercent: 0
-    stageStat: 0
-    stageAmount: 0
-    stageAmountMax: 0
-    stageCap: 0
-    threshold: 0
-    armedTrigger: 0
-    healPercentMaxHP: 0
-    counterDamagePercentMaxHP: 0
-    affectAllAllies: 0
-    contactFilter: 0
+  utilityEffects: []
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
     conditionalEffectPolicy: 0
-    resolveConditions:
-    - subject: 0
-      conditionType: 22
-      threshold: 0
-      statusId: 0
-      stat: 1
-      comparisonStat: 1
+    resolveConditions: []
     requireAllResolveConditions: 1
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0
@@ -137,7 +111,7 @@ MonoBehaviour:
       bonusMultiplierPerCount: 0
       maxMultiplier: 0
       randomMultipliers: []
-  triggerCondition: 7
+  triggerCondition: 0
   hpThresholdPercent: 0
   triggerOncePerBattle: 0
   healPercentMaxHP: 0

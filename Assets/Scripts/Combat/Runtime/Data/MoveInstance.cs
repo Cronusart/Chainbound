@@ -122,6 +122,12 @@ namespace Chainbound.Combat
         // â”€â”€ Tier-Specific Fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /// <summary>
+        /// How this copy was acquired (<c>progression_learn</c>, <c>candy_roll</c>, or <c>event_grant</c>).
+        /// Empty reads as a candy roll. Stamp does not change it.
+        /// </summary>
+        public string acquisition;
+
+        /// <summary>
         /// Modifier 1 section ID. Required for Stamped and empty for Known.
         /// </summary>
         public string modifier1SectionId;

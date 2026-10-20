@@ -150,7 +150,12 @@ namespace Chainbound.Combat
                 int authoredWeight = source.weight;
                 if (starIndex >= CombatConstants.STAR_MAX && source.useWeightAtStarFive)
                     authoredWeight = source.weightAtStarFive;
-                int weight = Mathf.Max(0, Mathf.RoundToInt(authoredWeight * rarityWeight));
+                int weight = 0;
+                if (authoredWeight > 0 && rarityWeight > 0f)
+                {
+                    // RoundToInt(8 * 0.06) is 0. A positive product stays in the pool at weight 1.
+                    weight = Mathf.Max(1, Mathf.RoundToInt(authoredWeight * rarityWeight));
+                }
                 if (weight <= 0)
                     continue;
 
@@ -208,6 +213,8 @@ namespace Chainbound.Combat
             HashSet<string> ownedMoveIds)
         {
             if (entry == null || entry.move == null || string.IsNullOrWhiteSpace(entry.move.moveId))
+                return false;
+            if (!MoveAvailability.IsPlayerObtainable(entry.move))
                 return false;
 
             int minStar = Mathf.Clamp(entry.minStar, 0, CombatConstants.STAR_MAX);

@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Give an ally 20% mitigation for 2 turns.
   category: 3
   baseType: 5
-  rarity: 0
+  rarity: 1
   targeting: 2
   contactType: 2
   power: 0
@@ -37,7 +37,7 @@ MonoBehaviour:
   - effectType: 0
     magnitude: 0.2
     turnBudget: 2
-    hitBudget: 0
+    hitBudget: -1
     apGain: 0
     stackKey: wall_ash
     statusId: 0
@@ -64,6 +64,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -65,6 +65,7 @@ namespace Chainbound.Combat
         private TeamState _actingTeam;
         private TeamState _opposingTeam;
         private ChainlingInstance _actor;
+        private int _projectedGiftAp;
         private int _actingTeamIndex;
 
         private readonly List<MoveEntry> _moves = new List<MoveEntry>(10);
@@ -79,6 +80,7 @@ namespace Chainbound.Combat
         private int _moveCursor;
         private int _swapCursor;
         private int _targetCursor;
+        private int _libraryCardDirection;
 
         private Action<CombatAction> _commitAction;
         private Action _cancelToWallet;
@@ -140,12 +142,20 @@ namespace Chainbound.Combat
             HidePanels();
         }
 
-        public bool BeginMoveSelection(CombatState state, int teamIndex, int slotIndex, ChainlingInstance actor, Action<CombatAction> onCommit, Action onCancel)
+        public bool BeginMoveSelection(
+            CombatState state,
+            int teamIndex,
+            int slotIndex,
+            ChainlingInstance actor,
+            Action<CombatAction> onCommit,
+            Action onCancel,
+            int projectedGiftAp = 0)
         {
             ResolveFallbacks();
             if (state == null || actor == null || hudController == null || moveSelectPanel == null)
                 return false;
 
+            _projectedGiftAp = Math.Max(0, projectedGiftAp);
             SetContext(state, teamIndex, slotIndex, actor, onCommit, onCancel);
             _reservedSwapBenchIndices.Clear();
             BuildMoveEntries();
@@ -194,7 +204,8 @@ namespace Chainbound.Combat
 
         /// <summary>
         /// Opens the combat-native slot targeter for a non-move command. Eligible instance IDs
-        /// keep command-specific rules outside the shared presentation layer.
+        /// keep command-specific rules outside the shared presentation layer. The move-select
+        /// frame stays closed; capture uses the battlefield targeter only.
         /// </summary>
         public bool BeginTargetSelection(
             CombatState state,
@@ -203,8 +214,7 @@ namespace Chainbound.Combat
             ChainlingInstance actor,
             IReadOnlyCollection<string> eligibleInstanceIds,
             Action<string> onConfirm,
-            Action onCancel,
-            string prompt = null)
+            Action onCancel)
         {
             ResolveFallbacks();
             if (state == null || hudController == null || onConfirm == null || eligibleInstanceIds == null)
@@ -238,11 +248,12 @@ namespace Chainbound.Combat
             }
 
             _targetCursor = 0;
-            _activeTargetingPromptMessage = string.IsNullOrWhiteSpace(prompt) ? null : prompt;
+            _activeTargetingPromptMessage = null;
             _mode = Mode.ExternalTargetSelect;
+            HideTargetingPrompt();
+            moveSelectPanel?.SetVisible(false);
             swapSelectPanel?.SetVisible(false);
             moveInfoPanel?.SetVisible(false);
-            ShowTargetingPrompt();
             RefreshPreviewTargets();
             return true;
         }
@@ -259,6 +270,7 @@ namespace Chainbound.Combat
 
             if (_mode == Mode.MoveSelect && GetMoveListRowCount() > 0)
             {
+                _libraryCardDirection = step;
                 _moveCursor = Wrap(_moveCursor + step, GetMoveListRowCount());
                 RefreshMoveUI();
                 RefreshPreviewTargets();
@@ -479,6 +491,12 @@ namespace Chainbound.Combat
             hudController?.SetSelectionActiveSlot(teamIndex, slotIndex);
         }
 
+        private int ProjectedCurrentAp()
+        {
+            int current = _actor != null ? _actor.currentAP : 0;
+            return current + Math.Max(0, _projectedGiftAp);
+        }
+
         private void BuildMoveEntries()
         {
             _moves.Clear();
@@ -493,7 +511,7 @@ namespace Chainbound.Combat
                 bool isPassive = move.category == MoveCategory.Passive;
                 MoveSelectionEvaluation evaluation = isPassive
                     ? new MoveSelectionEvaluation(false, true, "PassiveMove")
-                    : _eligibilityService.EvaluateMoveSelection(_actor, move, _state);
+                    : _eligibilityService.EvaluateMoveSelection(_actor, move, _state, extraAvailableAp: _projectedGiftAp);
                 _moves.Add(new MoveEntry
                 {
                     move = move,
@@ -552,6 +570,7 @@ namespace Chainbound.Combat
             moveSelectPanel.SetTitle(_mode == Mode.TargetSelect ? "Target Select" : "Move Select");
             moveSelectPanel.SetMoveRows(rows, _moveCursor);
             moveSelectPanel.SetSelectedDetails(BuildMoveDetailData());
+            moveSelectPanel.SetLibraryCard(BuildLibraryCardPresentation());
             moveSelectPanel.SetFooterPrompt(_mode == Mode.TargetSelect
                 ? "Navigate=Target   Confirm=Commit   Cancel=Back   Info=Details"
                 : "Navigate=Move   Confirm=Choose   Cancel=Back   Info=Details");
@@ -610,7 +629,7 @@ namespace Chainbound.Combat
                 moveName = move.displayName,
                 apText = move.category == MoveCategory.Passive
                     ? $"Passive {entry.passiveState.ToString().ToUpperInvariant()}"
-                    : MoveSelectDisplayUtility.FormatApCostLine(move.apCost, _actor.currentAP),
+                    : MoveSelectDisplayUtility.FormatApCostLine(move.apCost, ProjectedCurrentAp()),
                 powerText = MoveSelectDisplayUtility.FormatPowerOrEffectLabel(move),
                 accuracyText = MoveSelectDisplayUtility.FormatAccuracyLine(move),
                 targetingText = MoveSelectDisplayUtility.FormatTargetingLine(move.targeting),
@@ -627,6 +646,86 @@ namespace Chainbound.Combat
                 shortDescription = shortDesc,
                 typeIcon = ResolveMoveIconByType(resolvedType),
             };
+        }
+
+        private CombatMoveLibraryCardView.Presentation BuildLibraryCardPresentation()
+        {
+            int direction = ConsumeLibraryCardDirection();
+            if (IsRestRowSelected() || (_mode != Mode.ExternalTargetSelect && !IndexValid(_moveCursor, _moves.Count)))
+            {
+                CombatMoveLibraryCardView.Presentation blank = CombatMoveLibraryCardView.Presentation.Blank();
+                blank.direction = direction;
+                blank.roleLabel = IsRestRowSelected() ? "Rest" : string.Empty;
+                return blank;
+            }
+
+            MoveInstance move = _moves[_moveCursor].move;
+            if (move == null)
+            {
+                CombatMoveLibraryCardView.Presentation blank = CombatMoveLibraryCardView.Presentation.Blank();
+                blank.direction = direction;
+                return blank;
+            }
+
+            MoveDefinitionSO definition = FindDefinition(move);
+            var presentation = new CombatMoveLibraryCardView.Presentation
+            {
+                hasMove = true,
+                learnedFace = LibraryCardFaces.IsLearned(move.acquisition),
+                moveName = move.displayName,
+                statsInk = definition != null
+                    ? LibraryCardLayout.FormatStatsInk(definition, definition.description)
+                    : string.Empty,
+                typeIcon = ResolveMoveIconByType(ResolveMoveType(move)),
+                moveRarity = move.rarity,
+                apCost = move.apCost,
+                currentAp = ProjectedCurrentAp(),
+                roleLabel = MoveSelectDisplayUtility.FormatRoleLabel(move.category),
+                direction = direction,
+            };
+
+            var sectionIds = MoveSelectDisplayUtility.CollectAttachedModifierSectionIds(move);
+            if (sectionIds.Count > 0)
+                FillLibraryCardMod(ref presentation, move, sectionIds[0], first: true);
+            if (sectionIds.Count > 1)
+                FillLibraryCardMod(ref presentation, move, sectionIds[1], first: false);
+            return presentation;
+        }
+
+        private int ConsumeLibraryCardDirection()
+        {
+            int direction = _libraryCardDirection;
+            _libraryCardDirection = 0;
+            return direction;
+        }
+
+        private void FillLibraryCardMod(
+            ref CombatMoveLibraryCardView.Presentation presentation,
+            MoveInstance move,
+            string sectionId,
+            bool first)
+        {
+            ModifierInstance runtime = MoveSelectDisplayUtility.FindRuntimeModifier(move, sectionId);
+            ModifierDefinitionSO definition = modifierCatalog != null
+                ? modifierCatalog.GetBySectionId(sectionId)
+                : null;
+            string name = definition != null ? definition.GetDisplayName() : sectionId;
+            string effect = definition != null ? definition.effectDescription : string.Empty;
+            RarityTier rarity = MoveSelectDisplayUtility.ResolveModifierDisplayRarity(runtime, definition);
+            if (first)
+            {
+                presentation.hasMod1 = !string.IsNullOrWhiteSpace(name);
+                presentation.mod1Name = name;
+                presentation.mod1Effect = effect;
+                presentation.mod1Rarity = rarity;
+            }
+            else
+            {
+                presentation.hasMod2 = !string.IsNullOrWhiteSpace(name);
+                presentation.mod2Name = name;
+                presentation.mod2Effect = effect;
+                presentation.mod2Rarity = rarity;
+            }
         }
 
         private IReadOnlyList<CombatMoveSelectPanelUGUI.ModifierOverviewRowData> BuildModifierOverviewRows(MoveInstance move)

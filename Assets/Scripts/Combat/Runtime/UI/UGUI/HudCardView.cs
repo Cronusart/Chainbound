@@ -23,6 +23,9 @@ namespace Chainbound.Combat
         [SerializeField] private RectTransform apPipRoot;
         [SerializeField] private Image apPipTemplate;
         [SerializeField] private RectTransform starBarRoot;
+        [SerializeField] private CompactStarRatingDisplay compactStarRating;
+        [SerializeField] private CycleIconDisplay cycleIconDisplay;
+        [SerializeField] private CycleIconPaletteSO cycleIconPalette;
         [SerializeField] private RectTransform statusIconRoot;
         [SerializeField] private TMP_Text emptyLabel;
         [SerializeField] private Image activeTurnOutline;
@@ -48,6 +51,10 @@ namespace Chainbound.Combat
         [SerializeField] private Sprite apPipActiveSprite;
         [Tooltip("Sprite for dormant/inactive AP cells. If null, falls back to apPipOffColor tint.")]
         [SerializeField] private Sprite apPipInactiveSprite;
+
+        public Sprite ActiveApPipSprite => apPipActiveSprite;
+        public Sprite InactiveApPipSprite => apPipInactiveSprite;
+
         [Tooltip("Spacing between AP pip centers in layout units.")]
         [SerializeField] private float apPipSpacing = 16f;
         [Tooltip("Width of each AP pip in layout units. Use for pixel alignment with other UI.")]
@@ -269,12 +276,6 @@ namespace Chainbound.Combat
             EnsureBuilt();
         }
 
-        private void OnValidate()
-        {
-            if (!Application.isPlaying && autoBuildIfMissing)
-                EnsureBuilt();
-        }
-
         public void BindChainling(ChainlingInstance instance)
         {
             string nextId = instance != null ? instance.instanceId : string.Empty;
@@ -294,7 +295,9 @@ namespace Chainbound.Combat
             if (nameText != null)
                 nameText.text = string.IsNullOrEmpty(instance.displayName) ? "--" : instance.displayName;
 
-            UpdateStarBar(Mathf.Clamp(instance.stars, 0, CombatConstants.STAR_MAX));
+            int stars = Mathf.Clamp(instance.stars, 0, CombatConstants.STAR_MAX);
+            UpdateStarBar(stars);
+            BindAuthoredProgression(stars, instance.rebirthCount, visible: true);
             UpdateVitals(instance.displayHP, instance.EffectiveMaxHP, instance.displayAP, CombatConstants.AP_CAP);
             SetKO(!instance.isAlive);
         }
@@ -449,6 +452,7 @@ namespace Chainbound.Combat
                 KillApGrantTweens();
                 if (nameText != null) nameText.text = "EMPTY";
                 UpdateStarBar(0);
+                BindAuthoredProgression(0, 0, visible: false);
                 if (hpText != null) hpText.text = "--";
                 if (typeIconImage != null) typeIconImage.enabled = false;
                 SetHpBarImmediate(0f);
@@ -816,7 +820,16 @@ namespace Chainbound.Combat
             if (statusIconRoot == null)
                 statusIconRoot = FindRect("StatusIconRow");
 
-            EnsureStarBar();
+            CacheAuthoredProgression();
+            if (compactStarRating != null)
+            {
+                if (starBarRoot != null)
+                    starBarRoot.gameObject.SetActive(false);
+            }
+            else if (starBarRoot != null)
+            {
+                EnsureStarBar();
+            }
             EnsureHpBarReferences();
             ConfigureAnimatorTargets();
         }
@@ -943,10 +956,68 @@ namespace Chainbound.Combat
             }
         }
 
+        private void CacheAuthoredProgression()
+        {
+            if (compactStarRating == null)
+                compactStarRating = GetComponentInChildren<CompactStarRatingDisplay>(true);
+
+            if (cycleIconDisplay == null)
+            {
+                CycleIconDisplay[] displays = GetComponentsInChildren<CycleIconDisplay>(true);
+                for (int i = 0; i < displays.Length; i++)
+                {
+                    if (displays[i] != null && displays[i].name == "CycleIcon")
+                    {
+                        cycleIconDisplay = displays[i];
+                        break;
+                    }
+                }
+            }
+
+            if (cycleIconDisplay != null || cycleIconPalette == null)
+                return;
+
+            Transform[] transforms = GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform child = transforms[i];
+                if (child == null || child.name != "CycleIcon")
+                    continue;
+
+                cycleIconDisplay = child.GetComponent<CycleIconDisplay>();
+                if (cycleIconDisplay == null)
+                    cycleIconDisplay = child.gameObject.AddComponent<CycleIconDisplay>();
+                cycleIconDisplay.Configure(cycleIconPalette);
+                break;
+            }
+        }
+
+        private void BindAuthoredProgression(int stars, int rebirthCount, bool visible)
+        {
+            if (compactStarRating == null || cycleIconDisplay == null)
+                CacheAuthoredProgression();
+
+            if (compactStarRating != null)
+                compactStarRating.SetRating(stars, visible, false);
+
+            if (cycleIconDisplay == null)
+                return;
+
+            if (cycleIconPalette != null)
+                cycleIconDisplay.Configure(cycleIconPalette);
+            cycleIconDisplay.SetCycleFromRebirthCount(rebirthCount, visible);
+        }
+
         private void EnsureStarBar()
         {
+            if (compactStarRating != null)
+                return;
+
             var root = RectTransform;
             if (root == null)
+                return;
+
+            if (starBarRoot == null && !autoBuildIfMissing)
                 return;
 
             if (starBarRoot == null)

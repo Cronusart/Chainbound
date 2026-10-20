@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.8-e
   displayName: Sparse Ward
-  effectDescription: "+{n}% mitigation per empty bench slot for the rest of this turn"
+  effectDescription: +{n}% mitigation per empty bench slot for the rest of this turn
   category: 5
   scope: 0
   minimumRarity: 1

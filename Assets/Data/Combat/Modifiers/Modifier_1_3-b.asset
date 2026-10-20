@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 1.3-b
   displayName: Quiet Priority
-  effectDescription: "{n}% priority chance (utility-only)"
+  effectDescription: '{n}% priority chance (utility-only)'
   category: 2
   scope: 0
   minimumRarity: 0
@@ -22,7 +22,7 @@ MonoBehaviour:
   effectMax: 8
   weight: 1
   allowedCategories: 02000000
-  forbiddenCombinations: 
+  forbiddenCombinations:
   - 1.1-a
   - 1.2-a
   - 1.3-a
@@ -31,7 +31,7 @@ MonoBehaviour:
   slotCostIncrease: 0
   powerCap: 0
   apCostCap: 0
-  forbiddenTags: 
+  forbiddenTags:
   - PRIOR
   slotType: 1
   isTypeInfusion: 0

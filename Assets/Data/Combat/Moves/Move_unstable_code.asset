@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Passive - turn start can raise a random stat by +1 or +2.
   category: 4
   baseType: 12
-  rarity: 0
+  rarity: 2
   targeting: 4
   contactType: 2
   power: 0
@@ -65,6 +65,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

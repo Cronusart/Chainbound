@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Randomly gain +2 AP or lose 1 AP; always gain +1 random stat.
   category: 2
   baseType: 14
-  rarity: 0
+  rarity: 5
   targeting: 4
   contactType: 2
   power: 0
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -14,18 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.4-g
   displayName: Fade Guard
-  effectDescription: On swap out, the replacement gains 5-10% mitigation for the rest of this turn
+  effectDescription: On swap out
   category: 5
   scope: 1
   minimumRarity: 1
   effectMin: 5
   effectMax: 10
+  weight: 1
   allowedCategories: 
   forbiddenCombinations: []
   slotCostIncrease: 0
   powerCap: 0
   apCostCap: 0
-  forbiddenTags: []
+  forbiddenTags:
+  - 0
   slotType: 0
   isTypeInfusion: 0
   isStatSubstitution: 0

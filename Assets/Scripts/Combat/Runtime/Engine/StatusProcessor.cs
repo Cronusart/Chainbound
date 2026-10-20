@@ -29,11 +29,71 @@ namespace Chainbound.Combat
         }
 
         /// <summary>
+        /// Deals one end-of-turn percent. Returns false when the Chainling is knocked out.
+        /// </summary>
+        private bool ApplyEndOfTurnDamage(
+            ChainlingInstance chainling,
+            StatusInstance status,
+            float damagePercent,
+            int turn,
+            List<TurnEndStatusTickEntry> forensicTicks,
+            string verb)
+        {
+            int hpBefore = chainling.currentHP;
+            int dot = Math.Max(1, (int)(chainling.EffectiveMaxHP * damagePercent));
+            chainling.currentHP -= dot;
+            _log.Log(new CombatEvent
+            {
+                eventType = CombatEventType.HPDotDamage,
+                turn = turn,
+                sourceId = chainling.instanceId,
+                targetId = chainling.instanceId,
+                intValue = dot,
+                message = $"{verb} {chainling.displayName} for {dot}",
+            });
+            if (forensicTicks != null)
+            {
+                forensicTicks.Add(new TurnEndStatusTickEntry
+                {
+                    targetDisplayName = chainling.displayName,
+                    targetRef = _log.ResolveEntityRef(chainling.instanceId),
+                    tickType = "dot",
+                    source = status.statusId.ToString(),
+                    amount = -dot,
+                    hpBefore = hpBefore,
+                    hpAfter = Math.Max(0, chainling.currentHP),
+                    apBefore = chainling.currentAP,
+                    apAfter = chainling.currentAP,
+                });
+            }
+
+            if (chainling.currentHP <= 0)
+            {
+                chainling.currentHP = 0;
+                chainling.isAlive = false;
+                _log.LogKO(turn, chainling.instanceId);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Process End-of-Turn effects for a Chainling.
         /// Per 02A Â§3: DoT/regen, status AP changes, decrement durations.
         /// </summary>
         public void ProcessEndOfTurn(ChainlingInstance chainling, int turn, List<TurnEndStatusTickEntry> forensicTicks = null)
         {
+            // Passive and move burns land before chemistry and other status ticks.
+            for (int i = 0; i < chainling.statuses.Count; i++)
+            {
+                StatusInstance kindled = chainling.statuses[i];
+                if (kindled.IsExpired || kindled.statusId != StatusId.Kindled)
+                    continue;
+                if (!ApplyEndOfTurnDamage(chainling, kindled, 0.06f, turn, forensicTicks, "Kindled burns"))
+                    return;
+            }
+
             // Process effects BEFORE decrementing durations
             for (int i = 0; i < chainling.statuses.Count; i++)
             {
@@ -43,8 +103,10 @@ namespace Chainbound.Combat
                 var def = _catalog.Get(status.statusId);
                 if (def == null) continue;
 
-                // End-of-Turn damage (Rugged, FOMO, etc.)
-                if (def.hasEndOfTurnDamage && def.endOfTurnDamagePercent > 0)
+                // End-of-Turn damage (Rugged, FOMO, etc.). Kindled and Leaked are not this loop.
+                if (status.statusId != StatusId.Kindled &&
+                    status.statusId != StatusId.Leaked &&
+                    def.hasEndOfTurnDamage && def.endOfTurnDamagePercent > 0)
                 {
                     int hpBefore = chainling.currentHP;
                     float damagePercent = def.endOfTurnDamagePercent;
@@ -59,8 +121,24 @@ namespace Chainbound.Combat
                     }
                     int dot = Math.Max(1, (int)(chainling.EffectiveMaxHP * damagePercent));
                     chainling.currentHP -= dot;
-                    _log.LogMessage(CombatEventType.HPDotDamage,
-                        $"{chainling.instanceId} took {dot} DoT from {status.statusId}", turn);
+                    string dotVerb = status.statusId == StatusId.Rugged ? "Rugged scorches" : null;
+                    if (dotVerb != null)
+                    {
+                        _log.Log(new CombatEvent
+                        {
+                            eventType = CombatEventType.HPDotDamage,
+                            turn = turn,
+                            sourceId = chainling.instanceId,
+                            targetId = chainling.instanceId,
+                            intValue = dot,
+                            message = $"{dotVerb} {chainling.displayName} for {dot}",
+                        });
+                    }
+                    else
+                    {
+                        _log.LogMessage(CombatEventType.HPDotDamage,
+                            $"{chainling.instanceId} took {dot} DoT from {status.statusId}", turn);
+                    }
                     if (forensicTicks != null)
                     {
                         forensicTicks.Add(new TurnEndStatusTickEntry
@@ -147,7 +225,11 @@ namespace Chainbound.Combat
                         var eff = def.stageEffects[e];
                         if (!eff.applyOnce)
                         {
-                            int applied = status.ApplyOwnedStage(chainling, eff.stat, eff.stages);
+                            int requested = BuffGate.FilterPositiveStage(
+                                chainling, eff.stat, eff.stages, status.sourceId, turn);
+                            int applied = status.ApplyOwnedStage(chainling, eff.stat, requested);
+                            if (eff.stages > 0 && requested == 0)
+                                LogBuffStageBlocked(chainling, eff.stat, eff.stages, turn);
                             if (applied != 0)
                             {
                                 _log.LogStageChange(turn, chainling.instanceId, eff.stat,
@@ -164,7 +246,11 @@ namespace Chainbound.Combat
                     int currentDef = chainling.GetStage(CoreStat.MeleeDef);
                     if (currentDef < 3)
                     {
-                        int applied = status.ApplyOwnedStage(chainling, CoreStat.MeleeDef, 1);
+                        int requested = BuffGate.FilterPositiveStage(
+                            chainling, CoreStat.MeleeDef, 1, status.sourceId, turn);
+                        int applied = status.ApplyOwnedStage(chainling, CoreStat.MeleeDef, requested);
+                        if (requested == 0)
+                            LogBuffStageBlocked(chainling, CoreStat.MeleeDef, 1, turn);
                         if (applied != 0)
                         {
                             _log.LogStageChange(turn, chainling.instanceId, CoreStat.MeleeDef,
@@ -193,6 +279,9 @@ namespace Chainbound.Combat
                             $"Move {status.rechargingMoveId} finished recharging",
                             turn);
                     }
+
+                    if (status.statusId == StatusId.ThreadLock)
+                        chainling.threadLockBlockedUntilTurn = turn + 2;
 
                     // Handle coating expiry
                     if (status.statusId == StatusId.TypeCoating || status.statusId == StatusId.HypedTypeCoating)
@@ -243,6 +332,7 @@ namespace Chainbound.Combat
             StatusDefinitionSO definition,
             int turn)
         {
+            bool revertedOwned = false;
             if (status.ownedStageDeltas != null && status.ownedStageDeltas.Count > 0)
             {
                 for (int i = 0; i < status.ownedStageDeltas.Count; i++)
@@ -254,8 +344,26 @@ namespace Chainbound.Combat
                         chainling.GetStage(owned.stat) - before,
                         chainling.GetStage(owned.stat));
                 }
-                return;
+                revertedOwned = true;
             }
+
+            if (status.ownedCombatStageDeltas != null && status.ownedCombatStageDeltas.Count > 0)
+            {
+                for (int i = 0; i < status.ownedCombatStageDeltas.Count; i++)
+                {
+                    OwnedCombatStageDelta owned = status.ownedCombatStageDeltas[i];
+                    int before = chainling.GetCombatStage(owned.stat);
+                    chainling.SetCombatStage(owned.stat, before - owned.delta);
+                    _log.LogMessage(
+                        CombatEventType.StageChanged,
+                        $"{chainling.displayName} {owned.stat} stage returned by {-owned.delta}.",
+                        turn);
+                }
+                revertedOwned = true;
+            }
+
+            if (revertedOwned)
+                return;
 
             if (status.hasTemporaryStageDelta)
             {
@@ -392,7 +500,7 @@ namespace Chainbound.Combat
                     {
                         targetDisplayName = target.displayName,
                         statusId = statusId.ToString(),
-                        origin = StatusOrigin.General.ToString(),
+                        origin = def.origin.ToString(),
                         durationBefore = 0,
                         durationAfter = 0,
                         blockReason = "ChemistryOnlyGuard",
@@ -400,6 +508,16 @@ namespace Chainbound.Combat
                     },
                     sourceId,
                     new List<string> { target.instanceId },
+                    turn);
+                return false;
+            }
+
+            // Check for immunity (Encrypted Seal)
+            if (!BuffGate.AllowsBuffStatus(target, def, sourceId, turn))
+            {
+                _log.LogMessage(
+                    CombatEventType.BuffBlocked,
+                    $"Cipher Lock blocked {def.displayName} on {target.displayName}.",
                     turn);
                 return false;
             }
@@ -419,7 +537,7 @@ namespace Chainbound.Combat
                             {
                                 targetDisplayName = target.displayName,
                                 statusId = statusId.ToString(),
-                                origin = StatusOrigin.General.ToString(),
+                                origin = def.origin.ToString(),
                                 durationBefore = 0,
                                 durationAfter = 0,
                                 blockReason = "EncryptedSeal",
@@ -434,6 +552,28 @@ namespace Chainbound.Combat
             }
 
             // Check for existing status â€” refresh duration
+            if (statusId == StatusId.ThreadLock && IsThreadLockReapplyBlocked(target, turn))
+            {
+                _log.LogMessage(CombatEventType.SystemMessage,
+                    $"{target.displayName} cannot be Thread Locked again yet.", turn);
+                _log.LogForensic(
+                    CombatForensicEventType.StatusBlocked,
+                    new StatusEventPayload
+                    {
+                        targetDisplayName = target.displayName,
+                        statusId = statusId.ToString(),
+                        origin = def.origin.ToString(),
+                        durationBefore = 0,
+                        durationAfter = 0,
+                        blockReason = "ThreadLockReapplyGap",
+                        sourceId = sourceId,
+                    },
+                    sourceId,
+                    new List<string> { target.instanceId },
+                    turn);
+                return false;
+            }
+
             for (int i = 0; i < target.statuses.Count; i++)
             {
                 if (target.statuses[i].statusId == statusId && !target.statuses[i].IsExpired)
@@ -450,7 +590,7 @@ namespace Chainbound.Combat
                         {
                             targetDisplayName = target.displayName,
                             statusId = statusId.ToString(),
-                            origin = StatusOrigin.General.ToString(),
+                            origin = def.origin.ToString(),
                             durationBefore = before,
                             durationAfter = target.statuses[i].turnsRemaining,
                             blockReason = string.Empty,
@@ -464,7 +604,7 @@ namespace Chainbound.Combat
             }
 
             // Apply new status
-            var instance = new StatusInstance(statusId, def.statusClass, StatusOrigin.General, duration, sourceId);
+            var instance = new StatusInstance(statusId, def.statusClass, def.origin, duration, sourceId);
             if (StatusInstance.IsNextActionStatus(statusId))
                 instance.HoldThroughGrantTurn(turn);
             target.statuses.Add(instance);
@@ -476,7 +616,7 @@ namespace Chainbound.Combat
                 {
                     targetDisplayName = target.displayName,
                     statusId = statusId.ToString(),
-                    origin = StatusOrigin.General.ToString(),
+                    origin = def.origin.ToString(),
                     durationBefore = 0,
                     durationAfter = duration,
                     blockReason = string.Empty,
@@ -486,31 +626,266 @@ namespace Chainbound.Combat
                 new List<string> { target.instanceId },
                 turn);
 
-            // Apply-once stages are owned by this instance. Refresh (above) does not
-            // re-apply them, so a second application extends duration without stacking.
-            // Expiry reverts the clamped delta once.
-            if (def.stageEffects != null)
+            ApplyApplyOnceStages(target, instance, def, _log, turn);
+            return true;
+        }
+
+        private static bool IsThreadLockReapplyBlocked(ChainlingInstance target, int turn)
+        {
+            if (target == null)
+                return false;
+            if (turn < target.threadLockBlockedUntilTurn)
+                return true;
+            if (target.statuses == null)
+                return false;
+
+            for (int i = 0; i < target.statuses.Count; i++)
             {
-                for (int e = 0; e < def.stageEffects.Length; e++)
+                StatusInstance existing = target.statuses[i];
+                if (existing != null && existing.statusId == StatusId.ThreadLock && !existing.IsExpired)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static void ApplyApplyOnceStages(
+            ChainlingInstance target,
+            StatusInstance instance,
+            StatusDefinitionSO def,
+            CombatEventLog log,
+            int turn)
+        {
+            if (target == null || instance == null || def?.stageEffects == null)
+                return;
+
+            for (int e = 0; e < def.stageEffects.Length; e++)
+            {
+                StatusStageEffect eff = def.stageEffects[e];
+                if (!eff.applyOnce)
+                    continue;
+
+                if (eff.usesCombatStage)
                 {
-                    var eff = def.stageEffects[e];
-                    if (!eff.applyOnce)
-                        continue;
-                    int appliedDelta = instance.ApplyOwnedStage(target, eff.stat, eff.stages);
-                    if (appliedDelta != 0)
+                    int oldCombat = target.GetCombatStage(eff.combatStage);
+                    int requested = BuffGate.FilterPositiveStage(
+                        target, eff.combatStage, eff.stages, instance.sourceId, turn);
+                    target.SetCombatStage(eff.combatStage, oldCombat + requested);
+                    int combatDelta = target.GetCombatStage(eff.combatStage) - oldCombat;
+                    instance.AddOwnedCombatStage(eff.combatStage, combatDelta);
+                    if (combatDelta != 0 && log != null)
                     {
-                        _log.LogStageChange(turn, target.instanceId, eff.stat,
-                            appliedDelta, target.GetStage(eff.stat));
+                        log.LogMessage(
+                            CombatEventType.StageChanged,
+                            $"{target.displayName} {eff.combatStage} {combatDelta:+#;-#;0}.",
+                            turn);
                     }
+                    continue;
+                }
+
+                // Apply-once stages are owned by this instance (shared PR #9 helper).
+                // Refresh does not re-apply them, so a second application extends
+                // duration without stacking. Expiry reverts the clamped delta once.
+                // FOMO keeps its temporary delta so Defueled cleanse can still revert it.
+                int appliedDelta;
+                int requestedStages = BuffGate.FilterPositiveStage(
+                    target, eff.stat, eff.stages, instance.sourceId, turn);
+                if (instance.statusId == StatusId.FOMO)
+                {
+                    int oldStage = target.GetStage(eff.stat);
+                    target.SetStage(eff.stat, oldStage + requestedStages);
+                    appliedDelta = target.GetStage(eff.stat) - oldStage;
+                    instance.hasTemporaryStageDelta = true;
+                    instance.temporaryStageStat = eff.stat;
+                    instance.temporaryStageDelta = appliedDelta;
+                }
+                else
+                {
+                    appliedDelta = instance.ApplyOwnedStage(target, eff.stat, requestedStages);
+                }
+
+                log?.LogStageChange(turn, target.instanceId, eff.stat, appliedDelta, target.GetStage(eff.stat));
+            }
+        }
+
+        public bool TryExtendShortestBuff(ChainlingInstance target, int turn, string sourceId)
+        {
+            if (target?.statuses == null)
+                return false;
+            if (BuffGate.IsCipherLocked(target))
+            {
+                _log.LogMessage(
+                    CombatEventType.BuffBlocked,
+                    $"Cipher Lock blocked buff extension on {target.displayName}.",
+                    turn);
+                return false;
+            }
+
+            int bestIndex = -1;
+            int bestTurns = int.MaxValue;
+            for (int i = 0; i < target.statuses.Count; i++)
+            {
+                StatusInstance status = target.statuses[i];
+                if (status == null || status.IsExpired || status.statusClass != StatusClass.Duration)
+                    continue;
+                StatusDefinitionSO def = _catalog != null ? _catalog.Get(status.statusId) : null;
+                if (def == null || !def.isBuff || def.origin != StatusOrigin.General || def.isDebuff)
+                    continue;
+                if (status.turnsRemaining < bestTurns)
+                {
+                    bestTurns = status.turnsRemaining;
+                    bestIndex = i;
                 }
             }
 
+            if (bestIndex < 0)
+            {
+                _log.LogMessage(
+                    CombatEventType.SystemMessage,
+                    $"{target.displayName} has no buff to extend.",
+                    turn);
+                return false;
+            }
+
+            StatusInstance chosen = target.statuses[bestIndex];
+            chosen.turnsRemaining += 1;
+            _log.LogMessage(
+                CombatEventType.SystemMessage,
+                $"Extend Protocol adds 1 turn to {target.displayName}'s {chosen.statusId}.",
+                turn);
+            _log.LogStatus(turn, CombatEventType.StatusRefreshed, target.instanceId, chosen.statusId, chosen.turnsRemaining, sourceId);
+            return true;
+        }
+
+        private void LogBuffStageBlocked(ChainlingInstance target, CoreStat stat, int amount, int turn)
+        {
+            _log.LogMessage(
+                CombatEventType.BuffBlocked,
+                $"Cipher Lock blocked {target.displayName}'s {stat} +{amount}.",
+                turn);
+        }
+
+        public bool ApplySlowedForTurns(ChainlingInstance target, int duration, string sourceId, int turn)
+        {
+            if (target == null)
+                return false;
+
+            bool already = false;
+            for (int i = 0; i < target.statuses.Count; i++)
+            {
+                if (target.statuses[i].statusId == StatusId.Slowed && !target.statuses[i].IsExpired)
+                {
+                    already = true;
+                    break;
+                }
+            }
+
+            bool applied = ApplyStatus(target, StatusId.Slowed, Math.Max(1, duration), sourceId, turn, true);
+            if (!applied || already)
+                return applied;
+
+            StatusInstance instance = null;
+            for (int i = 0; i < target.statuses.Count; i++)
+            {
+                if (target.statuses[i].statusId == StatusId.Slowed && !target.statuses[i].IsExpired)
+                    instance = target.statuses[i];
+            }
+
+            int oldSpeed = target.GetStage(CoreStat.Speed);
+            int requested = _resolverConfig != null ? _resolverConfig.slowedSpeedStages : -2;
+            target.SetStage(CoreStat.Speed, oldSpeed + requested);
+            int delta = target.GetStage(CoreStat.Speed) - oldSpeed;
+            if (instance != null)
+            {
+                instance.hasTemporaryStageDelta = true;
+                instance.temporaryStageStat = CoreStat.Speed;
+                instance.temporaryStageDelta = delta;
+            }
+            _log.LogStageChange(turn, target.instanceId, CoreStat.Speed, delta, target.GetStage(CoreStat.Speed));
             return true;
         }
 
         /// <summary>
         /// Cleanse debuffs from a Chainling (General only by default). Per 02A Â§4.
         /// </summary>
+        public int CountGeneralDebuffs(ChainlingInstance target)
+        {
+            if (target?.statuses == null || _catalog == null)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < target.statuses.Count; i++)
+            {
+                StatusInstance status = target.statuses[i];
+                StatusDefinitionSO def = status != null ? _catalog.Get(status.statusId) : null;
+                if (status != null && !status.IsExpired && status.origin == StatusOrigin.General &&
+                    def != null && def.isDebuff)
+                    count++;
+            }
+            return count;
+        }
+
+        public int StripBuffs(ChainlingInstance target, int maxCount, int turn)
+        {
+            if (target?.statuses == null || _catalog == null || maxCount <= 0)
+                return 0;
+
+            int removed = 0;
+            while (removed < maxCount)
+            {
+                int bestIndex = -1;
+                int shortest = int.MaxValue;
+                for (int i = 0; i < target.statuses.Count; i++)
+                {
+                    StatusInstance status = target.statuses[i];
+                    StatusDefinitionSO def = status != null ? _catalog.Get(status.statusId) : null;
+                    if (status == null || status.IsExpired || status.origin != StatusOrigin.General ||
+                        def == null || !def.isBuff || def.isDebuff)
+                        continue;
+                    if (status.turnsRemaining < shortest)
+                    {
+                        shortest = status.turnsRemaining;
+                        bestIndex = i;
+                    }
+                }
+
+                if (bestIndex < 0)
+                    break;
+
+                StatusInstance chosen = target.statuses[bestIndex];
+                StatusDefinitionSO chosenDef = _catalog.Get(chosen.statusId);
+                RevertChemistryStageEffects(target, chosen, chosenDef, turn);
+                _log.LogStatus(turn, CombatEventType.StatusCleansed, target.instanceId, chosen.statusId, 0);
+                target.statuses.RemoveAt(bestIndex);
+                removed++;
+            }
+            return removed;
+        }
+
+        public int StripAllGeneralStatuses(ChainlingInstance target, int turn)
+        {
+            if (target?.statuses == null || _catalog == null)
+                return 0;
+
+            int removed = 0;
+            for (int i = target.statuses.Count - 1; i >= 0; i--)
+            {
+                StatusInstance status = target.statuses[i];
+                StatusDefinitionSO def = status != null ? _catalog.Get(status.statusId) : null;
+                if (status == null || status.origin != StatusOrigin.General || def == null ||
+                    (!def.isBuff && !def.isDebuff))
+                    continue;
+
+                RevertChemistryStageEffects(target, status, def, turn);
+                if (status.statusId == StatusId.ThreadLock)
+                    target.threadLockBlockedUntilTurn = 0;
+                _log.LogStatus(turn, CombatEventType.StatusCleansed, target.instanceId, status.statusId, 0);
+                target.statuses.RemoveAt(i);
+                removed++;
+            }
+            return removed;
+        }
+
         public int Cleanse(ChainlingInstance target, int maxCleanse, int turn)
         {
             int cleansed = 0;
@@ -520,6 +895,9 @@ namespace Chainbound.Combat
                 var def = _catalog.Get(status.statusId);
                 if (def != null && def.isDebuff && status.origin == StatusOrigin.General)
                 {
+                    RevertChemistryStageEffects(target, status, def, turn);
+                    if (status.statusId == StatusId.ThreadLock)
+                        target.threadLockBlockedUntilTurn = 0;
                     _log.LogStatus(turn, CombatEventType.StatusCleansed,
                         target.instanceId, status.statusId, 0);
                     target.statuses.RemoveAt(i);

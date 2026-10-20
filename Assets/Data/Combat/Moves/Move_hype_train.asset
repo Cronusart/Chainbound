@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: hype_train
   displayName: Hype Train
-  description: Consecutive hits gain +20% damage; cap +100%; miss resets.
+  description: Heavy ranged hit.
   category: 1
   baseType: 14
-  rarity: 2
+  rarity: 4
   targeting: 0
   contactType: 1
   power: 52
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

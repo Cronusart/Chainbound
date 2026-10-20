@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fcb8d46bbf829b4da3c5ad37b49e8dc, type: 3}
-  m_Name: StatusDef_ForkedChain
+  m_Name: StatusDef_CipherLocked
   m_EditorClassIdentifier: 
-  statusId: 210
-  displayName: Forked Chain
-  effectSummary: Copy self-debuffs to ally
+  statusId: 312
+  displayName: Cipher Lock
+  effectSummary: Cannot receive buffs
   statusClass: 0
   origin: 1
   defaultDuration: 2

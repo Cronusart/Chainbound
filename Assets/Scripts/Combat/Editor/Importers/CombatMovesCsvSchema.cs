@@ -60,6 +60,8 @@ namespace Chainbound.Combat.Editor
             "ConditionalDamageBonusPerCount",
             "ConditionalDamageMaxMultiplier",
             "RandomDamageMultipliers",
+            "AccuracyTuning",
+            "MoveEffectsOncePerTarget",
             "DesignNotes",
         };
 

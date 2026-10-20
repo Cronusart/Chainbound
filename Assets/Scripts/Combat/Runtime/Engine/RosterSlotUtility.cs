@@ -195,6 +195,7 @@ namespace Chainbound.Combat
                 return null;
 
             ApplySnapshotModifierSectionIds(instance, snapshot);
+            ApplySnapshotMoveAcquisitions(instance, snapshot);
             PassiveMaxHpUtility.ApplyToInstance(instance, modifierCatalog);
             instance.battleRuleset = ruleset;
 
@@ -306,6 +307,7 @@ namespace Chainbound.Combat
                     continue;
 
                 target.moveIds = CopyIds(source.moveIds);
+                target.moveAcquisitions = CopyIds(source.moveAcquisitions);
                 target.modifier1SectionIds = CopyIds(source.modifier1SectionIds);
                 target.modifier2SectionIds = CopyIds(source.modifier2SectionIds);
             }
@@ -402,6 +404,35 @@ namespace Chainbound.Combat
 
                 TryAttachSwapModifierRuntimeStub(move, mod1);
                 TryAttachSwapModifierRuntimeStub(move, mod2);
+            }
+        }
+
+        private static void ApplySnapshotMoveAcquisitions(ChainlingInstance chainling, ChainlingSnapshot snapshot)
+        {
+            if (chainling?.moves == null || chainling.moves.Count == 0 || snapshot?.moveIds == null)
+                return;
+
+            int moveIndex = 0;
+            var equippedIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < snapshot.moveIds.Count && moveIndex < chainling.moves.Count; i++)
+            {
+                string moveId = snapshot.moveIds[i];
+                if (string.IsNullOrWhiteSpace(moveId))
+                    continue;
+
+                moveId = moveId.Trim();
+                if (!equippedIds.Add(moveId))
+                    continue;
+
+                MoveInstance move = chainling.moves[moveIndex];
+                if (move == null || !string.Equals(move.definitionId, moveId, StringComparison.Ordinal))
+                {
+                    equippedIds.Remove(moveId);
+                    continue;
+                }
+
+                move.acquisition = GetAlignedSectionId(snapshot.moveAcquisitions, i) ?? string.Empty;
+                moveIndex++;
             }
         }
 

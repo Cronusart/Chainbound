@@ -26,18 +26,18 @@ MonoBehaviour:
   maxEvolutionStages: 1
   offTypeMoveExceptions: []
   learnableMoves:
-  - {fileID: 11400000, guid: db2f9f514dc9a8a4f9812b2ee22ebf9a, type: 2}
   - {fileID: 11400000, guid: 5ea95e1205143b243b9cb4a6ee58ed04, type: 2}
-  - {fileID: 11400000, guid: cbff9949485987845aded72d55b25c0a, type: 2}
+  - {fileID: 11400000, guid: 29d5aa11e2a0fff4891529f9694a6c89, type: 2}
   - {fileID: 11400000, guid: 217e26e36e09d174fa4c865174fe41e5, type: 2}
-  - {fileID: 11400000, guid: a05d33e4c37329c4cb6bb6751da8c052, type: 2}
+  - {fileID: 11400000, guid: a37b560f161e79246b479694bc22c0be, type: 2}
+  - {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
   learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
-  flagshipMove: {fileID: 11400000, guid: db2f9f514dc9a8a4f9812b2ee22ebf9a, type: 2}
+  flagshipMove: {fileID: 11400000, guid: 5ea95e1205143b243b9cb4a6ee58ed04, type: 2}
   initialMoves:
   - {fileID: 11400000, guid: 5ea95e1205143b243b9cb4a6ee58ed04, type: 2}
   progressionMovePool:
-  - move: {fileID: 11400000, guid: db2f9f514dc9a8a4f9812b2ee22ebf9a, type: 2}
+  - move: {fileID: 11400000, guid: 5ea95e1205143b243b9cb4a6ee58ed04, type: 2}
     weight: 8
     useWeightAtStarFive: 1
     weightAtStarFive: 24
@@ -46,16 +46,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 5ea95e1205143b243b9cb4a6ee58ed04, type: 2}
-    weight: 23
-    useWeightAtStarFive: 0
-    weightAtStarFive: 23
-    isSignature: 0
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: cbff9949485987845aded72d55b25c0a, type: 2}
+  - move: {fileID: 11400000, guid: 29d5aa11e2a0fff4891529f9694a6c89, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -73,7 +64,16 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: a05d33e4c37329c4cb6bb6751da8c052, type: 2}
+  - move: {fileID: 11400000, guid: a37b560f161e79246b479694bc22c0be, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23

@@ -17,10 +17,10 @@ MonoBehaviour:
   description: Ranged hit with 25% chance to lower Def.
   category: 1
   baseType: 5
-  rarity: 0
+  rarity: 2
   targeting: 0
   contactType: 1
-  power: 64
+  power: 52
   apCost: 2
   accuracy: 95
   hitCountMin: 1
@@ -47,6 +47,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

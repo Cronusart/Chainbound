@@ -27,18 +27,18 @@ MonoBehaviour:
   offTypeMoveExceptions:
   - {fileID: 11400000, guid: 267d5232cfb255542b11d9806d989e6f, type: 2}
   learnableMoves:
-  - {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
   - {fileID: 11400000, guid: eb74129d74ee4f742aa2541e3279ca82, type: 2}
-  - {fileID: 11400000, guid: ede028aacaa70d147b9667d09957fd14, type: 2}
+  - {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
   - {fileID: 11400000, guid: b3aef408d024b3044a13114c16c961d8, type: 2}
   - {fileID: 11400000, guid: 267d5232cfb255542b11d9806d989e6f, type: 2}
+  - {fileID: 11400000, guid: af3d31d6c616fef469678b35c05358fc, type: 2}
   learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
-  flagshipMove: {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
+  flagshipMove: {fileID: 11400000, guid: eb74129d74ee4f742aa2541e3279ca82, type: 2}
   initialMoves:
   - {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
   progressionMovePool:
-  - move: {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
+  - move: {fileID: 11400000, guid: eb74129d74ee4f742aa2541e3279ca82, type: 2}
     weight: 8
     useWeightAtStarFive: 1
     weightAtStarFive: 24
@@ -47,16 +47,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: eb74129d74ee4f742aa2541e3279ca82, type: 2}
-    weight: 23
-    useWeightAtStarFive: 0
-    weightAtStarFive: 23
-    isSignature: 0
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: ede028aacaa70d147b9667d09957fd14, type: 2}
+  - move: {fileID: 11400000, guid: 7e8eb46e00b8e884b886e94f628255b2, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -83,11 +74,20 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: af3d31d6c616fef469678b35c05358fc, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
   isStarter: 0
   defaultCaptureProfile: 1
   rarity: 1
   combatRoleOverride: 3
   designNotes: Uncommon Shard ranged striker. Net 376. Bow 78, speed 64, defense
-    floor 42/44. Single-target, not a spreader. Signature is Partition Shot.
-    Progression pool is that shot, Field Split, Shattered Armor, Isolation Tool,
-    and off-type Precision Strike.
+    floor 42/44. Single-target, not a spreader. Signature is Partition Shot. Progression
+    pool is that shot, Field Split, Shattered Armor, Isolation Tool, and off-type
+    Precision Strike.

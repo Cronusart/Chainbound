@@ -17,7 +17,7 @@ MonoBehaviour:
   description: All foes lose Acc -1 and Eva -1.
   category: 2
   baseType: 2
-  rarity: 0
+  rarity: 3
   targeting: 1
   contactType: 2
   power: 0
@@ -34,7 +34,49 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 15
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 0
+    stackKey: gas_cloud_acc
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 0
+    chance: 1
+    reflectPercent: 0
+    stageStat: 5
+    stageAmount: -1
+    stageAmountMax: 0
+    stageCap: -6
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
+  - effectType: 15
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 0
+    stackKey: gas_cloud_eva
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 0
+    chance: 1
+    reflectPercent: 0
+    stageStat: 6
+    stageAmount: -1
+    stageAmountMax: 0
+    stageCap: -6
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -44,6 +86,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

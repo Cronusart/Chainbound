@@ -10,21 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fcb8d46bbf829b4da3c5ad37b49e8dc, type: 3}
-  m_Name: StatusDef_DustStorm
+  m_Name: StatusDef_Kindled
   m_EditorClassIdentifier: 
-  statusId: 207
-  displayName: Dust Storm
-  effectSummary: Field eva down on apply
+  statusId: 311
+  displayName: Kindled
+  effectSummary: 6% MaxHP at end of turn
   statusClass: 0
   origin: 1
-  defaultDuration: 2
+  defaultDuration: 1
   counterThreshold: 0
   stageEffects: []
   isParameterized: 0
   isDebuff: 1
   isBuff: 0
   preventsAction: 0
-  hasEndOfTurnDamage: 0
-  endOfTurnDamagePercent: 0
+  hasEndOfTurnDamage: 1
+  endOfTurnDamagePercent: 0.06
   hasEndOfTurnAP: 0
   endOfTurnAPChange: 0

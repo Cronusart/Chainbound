@@ -9,6 +9,7 @@ namespace Chainbound.Combat
         public TeamState targetTeam;
         public TurnActionLedger ledger;
         public int damageDealt;
+        public int lastStatusStripCount;
     }
 
     /// <summary>
@@ -43,6 +44,9 @@ namespace Chainbound.Combat
                 return;
             if (move.utilityEffects == null || move.utilityEffects.Count == 0)
                 return;
+
+            if (context != null)
+                context.lastStatusStripCount = 0;
 
             for (int i = 0; i < move.utilityEffects.Count; i++)
             {
@@ -106,6 +110,26 @@ namespace Chainbound.Combat
                         ApplyCleanse(source, target, move, effect, turn);
                         break;
 
+                    case UtilityEffectType.ApplyChemistryStatus:
+                        ApplyChemistryStatus(source, target, move, effect, turn, context);
+                        break;
+
+                    case UtilityEffectType.StripBuffs:
+                        ApplyStripBuffs(source, target, move, effect, turn, context);
+                        break;
+
+                    case UtilityEffectType.StripAllStatuses:
+                        ApplyStripAllStatuses(source, target, move, effect, turn, context);
+                        break;
+
+                    case UtilityEffectType.StripBuffsThenStage:
+                        ApplyStripBuffsThenStage(source, target, move, effect, turn, context);
+                        break;
+
+                    case UtilityEffectType.HealSelfPerTargetDebuff:
+                        ApplyHealSelfPerTargetDebuff(source, target, move, effect, turn, context);
+                        break;
+
                     case UtilityEffectType.BonusHealPercentIfSpeedHigher:
                         ApplyBonusHealIfFaster(source, target, move, effect, turn, opposingTeam);
                         break;
@@ -142,11 +166,99 @@ namespace Chainbound.Combat
                         ApplyStageThresholdHeal(source, target, move, effect, turn, rng, context);
                         break;
 
+                    case UtilityEffectType.ExtendBuff:
+                        _statusProcessor?.TryExtendShortestBuff(
+                            ResolveUtilityTarget(source, target, effect, rng, context),
+                            turn,
+                            move != null ? move.instanceId : string.Empty);
+                        break;
+
+                    case UtilityEffectType.RaiseLowestStage:
+                        ApplyRaiseLowestStage(source, turn, context);
+                        break;
+
                     case UtilityEffectType.IncomingDamageMitigation:
                     case UtilityEffectType.MoveAPDiscountWhileHPAbove:
                         // Always-on passive metadata consumed by the damage/eligibility paths.
                         break;
                 }
+            }
+        }
+
+        private void ApplyRaiseLowestStage(ChainlingInstance source, int turn, UtilityEffectExecutionContext context)
+        {
+            TeamState team = context != null ? context.sourceTeam : null;
+            if (source == null || team == null)
+                return;
+
+            TurnActionLedger ledger = context.state != null ? context.state.turnActionLedger : null;
+            int serial = ledger != null ? ledger.actionSerial : 0;
+            if (ledger != null && ledger.raiseLowestStageActionSerial == serial)
+                return;
+            if (ledger != null)
+                ledger.raiseLowestStageActionSerial = serial;
+
+            var allies = team.GetActiveChainlings();
+            var order = new[]
+            {
+                CoreStat.MeleeAtk,
+                CoreStat.MeleeDef,
+                CoreStat.RangedAtk,
+                CoreStat.RangedDef,
+                CoreStat.Speed,
+            };
+            for (int i = 0; i < allies.Count; i++)
+            {
+                ChainlingInstance ally = allies[i];
+                if (ally == null || !ally.isAlive)
+                    continue;
+
+                bool found = false;
+                int lowest = int.MaxValue;
+                CoreStat chosen = CoreStat.MeleeAtk;
+                for (int s = 0; s < order.Length; s++)
+                {
+                    int value = ally.GetStage(order[s]);
+                    if (value >= 6)
+                        continue;
+                    if (!found || value < lowest)
+                    {
+                        found = true;
+                        lowest = value;
+                        chosen = order[s];
+                    }
+                }
+
+                if (!found)
+                {
+                    _log?.LogMessage(
+                        CombatEventType.SystemMessage,
+                        $"{ally.displayName}'s stages are already at +6.",
+                        turn);
+                    continue;
+                }
+
+                int before = ally.GetStage(chosen);
+                int requested = BuffGate.FilterPositiveStage(ally, chosen, 1, "RaiseLowestStage", turn);
+                ally.SetStage(chosen, before + requested);
+                int actual = ally.GetStage(chosen) - before;
+                if (requested == 0)
+                {
+                    _log?.LogMessage(
+                        CombatEventType.BuffBlocked,
+                        $"Cipher Lock blocked {ally.displayName}'s {chosen} +1.",
+                        turn);
+                }
+                if (actual == 0)
+                    continue;
+
+                _log?.LogStageChange(turn, ally.instanceId, chosen, actual, ally.GetStage(chosen));
+                _log?.LogMessage(
+                    CombatEventType.SystemMessage,
+                    $"Network Sync raises {ally.displayName}'s {chosen} by {actual}.",
+                    turn);
+                if (ally != source)
+                    ledger?.NoteUplinkAlly(source.instanceId, ally.instanceId);
             }
         }
 
@@ -163,12 +275,12 @@ namespace Chainbound.Combat
             {
                 var allies = context.sourceTeam.GetActiveChainlings();
                 for (int i = 0; i < allies.Count; i++)
-                    ApplyStageDelta(source, allies[i], move, effect, turn);
+                    ApplyStageDelta(source, allies[i], move, effect, turn, context);
                 return;
             }
 
             ChainlingInstance stageTarget = ResolveUtilityTarget(source, target, effect, rng, context);
-            ApplyStageDelta(source, stageTarget, move, effect, turn);
+            ApplyStageDelta(source, stageTarget, move, effect, turn, context);
         }
 
         private void ApplyRandomStageChange(
@@ -200,7 +312,7 @@ namespace Chainbound.Combat
                 stageAmount = amount,
                 stageCap = effect.stageCap,
             };
-            ApplyStageDelta(source, stageTarget, move, rolled, turn);
+            ApplyStageDelta(source, stageTarget, move, rolled, turn, context);
             _log?.LogForensic(
                 CombatForensicEventType.ProcRoll,
                 new ProcRollPayload
@@ -220,16 +332,27 @@ namespace Chainbound.Combat
             ChainlingInstance stageTarget,
             MoveInstance move,
             UtilityEffectPayload effect,
-            int turn)
+            int turn,
+            UtilityEffectExecutionContext context = null)
         {
             if (stageTarget == null || effect.stageAmount == 0)
                 return;
 
             int before = stageTarget.GetCombatStage(effect.stageStat);
-            int desired = before + effect.stageAmount;
+            int requested = BuffGate.FilterPositiveStage(
+                stageTarget, effect.stageStat, effect.stageAmount, move.instanceId, turn);
+            if (effect.stageAmount > 0 && requested == 0)
+            {
+                _log?.LogMessage(
+                    CombatEventType.BuffBlocked,
+                    $"Cipher Lock blocked {stageTarget.displayName}'s {effect.stageStat} +{effect.stageAmount}.",
+                    turn);
+                return;
+            }
+            int desired = before + requested;
             if (effect.stageCap != 0)
             {
-                desired = effect.stageAmount > 0
+                desired = requested > 0
                     ? Math.Min(effect.stageCap, desired)
                     : Math.Max(effect.stageCap, desired);
             }
@@ -237,6 +360,9 @@ namespace Chainbound.Combat
             int actual = stageTarget.GetCombatStage(effect.stageStat) - before;
             if (actual == 0)
                 return;
+
+            if (actual > 0 && effect.stageAmount > 0 && stageTarget != source && context?.state?.turnActionLedger != null)
+                context.state.turnActionLedger.NoteUplinkAlly(source != null ? source.instanceId : null, stageTarget.instanceId);
 
             if (TryCoreStat(effect.stageStat, out CoreStat coreStat))
             {
@@ -339,7 +465,9 @@ namespace Chainbound.Combat
             if (source == null || context?.ledger == null)
                 return;
             int threshold = effect.threshold > 0 ? effect.threshold : 2;
-            int count = context.ledger.CountDistinctTargetsHitThisTurn(source.instanceId);
+            int count = context.sourceTeam != null
+                ? context.ledger.CountDistinctTargetsHitThisTurnByTeam(context.sourceTeam.teamIndex)
+                : context.ledger.CountDistinctTargetsHitThisTurn(source.instanceId);
             if (count < threshold)
                 return;
             _apService?.Gain(source, effect.apGain > 0 ? effect.apGain : 1, turn, move.definitionId);
@@ -877,12 +1005,140 @@ namespace Chainbound.Combat
                         continue;
                     if (higherApOnly && foe.currentAP <= source.currentAP)
                         continue;
-                    _apService.Drain(foe, amount, turn, move.definitionId);
+                    int drained = _apService.Drain(foe, amount, turn, move.definitionId);
+                    LogDrain(source, foe, move, drained, turn);
                 }
                 return;
             }
 
-            _apService.Drain(ResolveUtilityTarget(source, target, effect), amount, turn, move.definitionId);
+            ChainlingInstance resolvedTarget = ResolveUtilityTarget(source, target, effect);
+            int resolvedDrain = _apService.Drain(resolvedTarget, amount, turn, move.definitionId);
+            LogDrain(source, resolvedTarget, move, resolvedDrain, turn);
+        }
+
+        private void ApplyChemistryStatus(
+            ChainlingInstance source,
+            ChainlingInstance target,
+            MoveInstance move,
+            UtilityEffectPayload effect,
+            int turn,
+            UtilityEffectExecutionContext context)
+        {
+            if (_statusProcessor == null || effect.statusId == StatusId.None)
+                return;
+            ChainlingInstance statusTarget = ResolveUtilityTarget(source, target, effect, null, context);
+            if (statusTarget == null)
+                return;
+            _statusProcessor.ApplyStatus(
+                statusTarget,
+                effect.statusId,
+                Math.Max(1, effect.statusDuration),
+                move.definitionId ?? move.displayName,
+                turn,
+                bypassChemistryCheck: true);
+        }
+
+        private void ApplyStripBuffs(
+            ChainlingInstance source,
+            ChainlingInstance target,
+            MoveInstance move,
+            UtilityEffectPayload effect,
+            int turn,
+            UtilityEffectExecutionContext context)
+        {
+            if (_statusProcessor == null)
+                return;
+            ChainlingInstance stripTarget = ResolveUtilityTarget(source, target, effect, null, context);
+            int maxCount = Math.Max(1, (int)Math.Round(effect.magnitude));
+            int removed = _statusProcessor.StripBuffs(stripTarget, maxCount, turn);
+            if (context != null)
+                context.lastStatusStripCount = removed;
+            if (removed > 0)
+                _log?.LogMessage(CombatEventType.SystemMessage,
+                    $"{move.displayName} stripped {removed} buff{(removed == 1 ? string.Empty : "s")}.", turn);
+        }
+
+        private void ApplyStripAllStatuses(
+            ChainlingInstance source,
+            ChainlingInstance target,
+            MoveInstance move,
+            UtilityEffectPayload effect,
+            int turn,
+            UtilityEffectExecutionContext context)
+        {
+            if (_statusProcessor == null)
+                return;
+            ChainlingInstance stripTarget = ResolveUtilityTarget(source, target, effect, null, context);
+            int removed = _statusProcessor.StripAllGeneralStatuses(stripTarget, turn);
+            if (context != null)
+                context.lastStatusStripCount = removed;
+            if (removed > 0)
+                _log?.LogMessage(CombatEventType.SystemMessage,
+                    $"{move.displayName} stripped {removed} status{(removed == 1 ? string.Empty : "es")}.", turn);
+        }
+
+        private void ApplyStripBuffsThenStage(
+            ChainlingInstance source,
+            ChainlingInstance target,
+            MoveInstance move,
+            UtilityEffectPayload effect,
+            int turn,
+            UtilityEffectExecutionContext context)
+        {
+            if (_statusProcessor == null)
+                return;
+            ChainlingInstance stripTarget = ResolveUtilityTarget(source, target, effect, null, context);
+            int maxCount = Math.Max(1, (int)Math.Round(effect.magnitude));
+            int removed = _statusProcessor.StripBuffs(stripTarget, maxCount, turn);
+            if (context != null)
+                context.lastStatusStripCount = removed;
+            if (removed <= 0)
+                return;
+
+            var stageEffect = new UtilityEffectPayload
+            {
+                stageStat = effect.stageStat,
+                stageAmount = effect.stageAmount * removed,
+                stageCap = 6,
+            };
+            ApplyStageDelta(source, source, move, stageEffect, turn);
+            _log?.LogMessage(CombatEventType.SystemMessage,
+                $"{move.displayName} stripped {removed} buff{(removed == 1 ? string.Empty : "s")} and raised {effect.stageStat} by {effect.stageAmount * removed}.",
+                turn);
+        }
+
+        private void ApplyHealSelfPerTargetDebuff(
+            ChainlingInstance source,
+            ChainlingInstance target,
+            MoveInstance move,
+            UtilityEffectPayload effect,
+            int turn,
+            UtilityEffectExecutionContext context)
+        {
+            if (_statusProcessor == null || source == null)
+                return;
+            ChainlingInstance debuffedTarget = ResolveUtilityTarget(source, target, effect, null, context);
+            int count = _statusProcessor.CountGeneralDebuffs(debuffedTarget);
+            if (count <= 0)
+                return;
+            HealPercent(source, source, effect.magnitude * count, move.definitionId, turn);
+        }
+
+        private void LogDrain(
+            ChainlingInstance source,
+            ChainlingInstance target,
+            MoveInstance move,
+            int drained,
+            int turn)
+        {
+            if (drained <= 0 || target == null)
+                return;
+            target.lastApDrainSourceName = source != null ? source.displayName : move?.displayName ?? "an AP drain";
+            target.lastApDrainTurn = turn;
+            _log?.LogMessage(
+                CombatEventType.APSpent,
+                $"{(source != null ? source.displayName : move?.displayName ?? "The effect")} drained {drained} AP from {target.displayName}.",
+                turn);
         }
 
         private static int ResolveApAmount(UtilityEffectPayload effect)

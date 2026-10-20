@@ -421,6 +421,11 @@ namespace Chainbound.Combat.Editor
 
         private static StatusCatalogSO LoadStatusCatalog()
         {
+            const string canonicalPath = "Assets/Data/Combat/StatusDef/Catalog/StatusCatalog.asset";
+            var canonical = AssetDatabase.LoadAssetAtPath<StatusCatalogSO>(canonicalPath);
+            if (canonical != null)
+                return canonical;
+
             string[] guids = AssetDatabase.FindAssets("t:StatusCatalogSO");
             for (int i = 0; i < guids.Length; i++)
             {

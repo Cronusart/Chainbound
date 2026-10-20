@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 1.3-a
   displayName: First Dibs
-  effectDescription: "{n}% chance to act first within speed tier"
+  effectDescription: '{n}% chance to act first within speed tier'
   category: 2
   scope: 0
   minimumRarity: 1
@@ -22,7 +22,7 @@ MonoBehaviour:
   effectMax: 12
   weight: 1
   allowedCategories: 020000000300000004000000
-  forbiddenCombinations: 
+  forbiddenCombinations:
   - 1.1-a
   - 1.2-a
   - 1.3-b
@@ -31,7 +31,7 @@ MonoBehaviour:
   slotCostIncrease: 0
   powerCap: 0
   apCostCap: 0
-  forbiddenTags: 
+  forbiddenTags:
   - PRIOR
   slotType: 1
   isTypeInfusion: 0

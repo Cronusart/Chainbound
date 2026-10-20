@@ -92,6 +92,16 @@ namespace Chainbound.Combat
         public int currentAP;
         public bool isAlive;
 
+        /// <summary>
+        /// Thread Lock cannot be applied again until this turn number.
+        /// Set when a Thread Lock expires, so the following turn is still blocked.
+        /// </summary>
+        public int threadLockBlockedUntilTurn;
+
+        /// <summary>Most recent combatant that drained AP, used to explain same-turn affordability failures.</summary>
+        public string lastApDrainSourceName;
+        public int lastApDrainTurn = -1;
+
         // ── Display Vitals (HUD snapshot) ───────────────────────────────
         /// <summary>HP shown on the HUD. Updated by the presenter at impact time.</summary>
         public int displayHP;

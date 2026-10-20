@@ -300,6 +300,22 @@ namespace Chainbound.Combat
                 : ProgressionGrantEventType.StarUp;
         }
 
+        public static ChainlingProgressionResolvedPool ResolvePreviewPool(
+            SpeciesDefinitionSO species,
+            int currentStars,
+            bool isEntangled,
+            ChainlingProgressionEventCatalogSO eventCatalog)
+        {
+            int stars = ChainlingProgressionUtility.NormalizeStars(currentStars);
+            int starIndex = ResolvePoolStarIndex(stars, ResolvePreviewEventType(stars));
+            return ChainlingProgressionPoolResolver.Resolve(
+                species,
+                starIndex,
+                isEntangled,
+                null,
+                eventCatalog);
+        }
+
         public static string FormatPercent(float percent)
         {
             if (percent <= 0f)

@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Piercing thrust with 25% chance to apply Def -1.
   category: 0
   baseType: 0
-  rarity: 2
+  rarity: 1
   targeting: 0
   contactType: 0
   power: 34
@@ -47,6 +47,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -18,7 +18,7 @@ MonoBehaviour:
     faster, gain +1 AP when hit.
   category: 3
   baseType: 6
-  rarity: 0
+  rarity: 1
   targeting: 2
   contactType: 2
   power: 0
@@ -40,7 +40,7 @@ MonoBehaviour:
   - effectType: 0
     magnitude: 0.25
     turnBudget: 1
-    hitBudget: 0
+    hitBudget: -1
     apGain: 0
     stackKey: wall_ice
     statusId: 0
@@ -88,6 +88,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

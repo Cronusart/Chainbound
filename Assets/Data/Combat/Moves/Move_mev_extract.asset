@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: mev_extract
   displayName: MEV Extract
-  description: Apply MEV Extracted; steal 1 AP per turn for 2 turns.
+  description: Apply MEV Extracted; drain 1 AP per turn for 2 turns.
   category: 2
   baseType: 11
-  rarity: 0
+  rarity: 2
   targeting: 0
   contactType: 2
   power: 0
@@ -50,6 +50,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

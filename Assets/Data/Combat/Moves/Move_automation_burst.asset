@@ -17,11 +17,11 @@ MonoBehaviour:
   description: Hit all foes; each has 25% chance to lose a random stat.
   category: 1
   baseType: 11
-  rarity: 0
+  rarity: 1
   targeting: 1
   contactType: 1
   power: 38
-  apCost: 3
+  apCost: 4
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
@@ -65,6 +65,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

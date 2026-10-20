@@ -28,6 +28,9 @@ namespace Chainbound.Combat
         [Tooltip("Species database used to resolve star/mastery progression move pools.")]
         [SerializeField] private SpeciesDatabaseSO speciesDatabase;
 
+        [Tooltip("Move database used to reject encounter-only moves from player grants.")]
+        [SerializeField] private MoveDatabaseSO moveDatabase;
+
         [Tooltip("Gate percent tables for star/mastery progression Known grants.")]
         [SerializeField] private ChainlingProgressionRewardTablesSO progressionRewardTables;
 
@@ -166,7 +169,15 @@ namespace Chainbound.Combat
                 progressionEventCatalog,
                 _progressionGrantPersistence);
             _victoryKnownGrantPersistence = ResolveVictoryKnownGrantPersistence();
-            _victoryKnownGrantService = new EncounterVictoryKnownGrantService(_victoryKnownGrantPersistence);
+            MoveDatabaseSO resolvedMoveDatabase = moveDatabase;
+            if (resolvedMoveDatabase == null)
+            {
+                CombatBattleController battle = FindFirstObjectByType<CombatBattleController>(FindObjectsInactive.Include);
+                resolvedMoveDatabase = battle != null ? battle.MoveDatabase : null;
+            }
+            _victoryKnownGrantService = new EncounterVictoryKnownGrantService(
+                _victoryKnownGrantPersistence,
+                resolvedMoveDatabase);
         }
 
         public void RouteToRewards(BattleResult result)
@@ -510,6 +521,7 @@ namespace Chainbound.Combat
                     sceneName = homeSceneName,
                     spawnId = homeSpawnId,
                     useExactPosition = false,
+                    returnContextMissing = true,
                 });
             }
 

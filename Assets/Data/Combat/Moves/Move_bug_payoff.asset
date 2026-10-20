@@ -17,10 +17,10 @@ MonoBehaviour:
   description: Deal +50% damage if target has 2+ debuffs.
   category: 0
   baseType: 12
-  rarity: 0
+  rarity: 3
   targeting: 0
   contactType: 0
-  power: 64
+  power: 52
   apCost: 2
   accuracy: 95
   hitCountMin: 1
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

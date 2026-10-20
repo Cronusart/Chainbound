@@ -465,6 +465,7 @@ namespace Chainbound.Combat
                 predicted.IsInsideBand = state.IsInsideBand;
                 predicted.IsHeld = state.IsHeld;
                 predicted.Outcome = state.Outcome;
+                CaptureSimulation.RebuildTraceRegimeAfterSnapshot(predicted, challenge.Parameters);
             }
             PresentCrossing(entered, left, state.SpikeOccurred);
         }

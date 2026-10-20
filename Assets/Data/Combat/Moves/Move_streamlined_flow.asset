@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Passive - above 70% HP moves cost -1 AP but Def falls -1.
   category: 4
   baseType: 10
-  rarity: 2
+  rarity: 4
   targeting: 4
   contactType: 2
   power: 0
@@ -27,11 +27,7 @@ MonoBehaviour:
   hitCountMax: 1
   rechargeTurns: 0
   statusEffects: []
-  stageChanges:
-  - stat: 2
-    stages: -1
-    chance: 1
-    targetsSelf: 1
+  stageChanges: []
   tags:
   - PAS
   - TRIG
@@ -97,6 +93,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

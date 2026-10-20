@@ -14,12 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 10.2-b
   displayName: Anniversary Mark
-  effectDescription: Unique visual + 3-5% all stats (Anniversary)
+  effectDescription: Retired combat effect. Reserved for server-wide event grants.
   category: 0
   scope: 0
   minimumRarity: 2
-  effectMin: 3
-  effectMax: 5
+  effectMin: 0
+  effectMax: 0
+  weight: 0
   allowedCategories: 
   forbiddenCombinations: []
   slotCostIncrease: 0

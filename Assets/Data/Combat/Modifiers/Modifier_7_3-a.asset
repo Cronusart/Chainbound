@@ -22,7 +22,7 @@ MonoBehaviour:
   effectMax: 0
   weight: 1
   allowedCategories: 0200000003000000
-  forbiddenCombinations: 
+  forbiddenCombinations:
   - 7.1-d
   slotCostIncrease: 0
   powerCap: 0

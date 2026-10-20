@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: cipher_burst
   displayName: Cipher Burst
-  description: 2-3 hits; each has 25% chance to erase one target buff.
+  description: 2-3 ranged hits.
   category: 1
   baseType: 4
-  rarity: 2
+  rarity: 0
   targeting: 0
   contactType: 1
-  power: 22
+  power: 17
   apCost: 3
   accuracy: 95
   hitCountMin: 2
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

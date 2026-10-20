@@ -575,6 +575,11 @@ namespace Chainbound.Combat
                         ? _pendingSlots[_pendingSlotCursor]
                         : 0;
 
+                    int projectedGiftAp = _eligibilityService.ResolveCommittedFasterGiftAp(
+                        ControlledTeam(),
+                        actor,
+                        slotIndex,
+                        _queuedActionsBySlot);
                     bool opened = selectionCoordinator != null
                         && selectionCoordinator.BeginMoveSelection(
                             _pendingState,
@@ -582,7 +587,8 @@ namespace Chainbound.Combat
                             slotIndex,
                             actor,
                             HandlePanelActionCommitted,
-                            HandlePanelSelectionCanceled);
+                            HandlePanelSelectionCanceled,
+                            projectedGiftAp);
 
                     if (!opened)
                     {
@@ -988,7 +994,16 @@ namespace Chainbound.Combat
             for (int i = 0; i < actor.moves.Count; i++)
             {
                 var move = actor.moves[i];
-                MoveSelectionEvaluation evaluation = _eligibilityService.EvaluateMoveSelection(actor, move, _pendingState);
+                int projectedGiftAp = _eligibilityService.ResolveCommittedFasterGiftAp(
+                    ControlledTeam(),
+                    actor,
+                    GetCurrentSlotIndex(),
+                    _queuedActionsBySlot);
+                MoveSelectionEvaluation evaluation = _eligibilityService.EvaluateMoveSelection(
+                    actor,
+                    move,
+                    _pendingState,
+                    extraAvailableAp: projectedGiftAp);
                 if (!evaluation.canSelect)
                     continue;
 

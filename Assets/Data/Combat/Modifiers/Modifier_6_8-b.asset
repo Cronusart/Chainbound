@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.8-b
   displayName: Pre-Emptive
-  effectDescription: "{n}% chance to cast this move at battle start"
+  effectDescription: '{n}% chance to cast this move at battle start'
   category: 5
   scope: 0
   minimumRarity: 2
@@ -22,7 +22,7 @@ MonoBehaviour:
   effectMax: 12
   weight: 1
   allowedCategories: 020000000300000004000000
-  forbiddenCombinations: 
+  forbiddenCombinations:
   - 6.8-c
   slotCostIncrease: 0
   powerCap: 0

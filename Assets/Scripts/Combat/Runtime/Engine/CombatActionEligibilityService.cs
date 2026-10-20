@@ -23,7 +23,12 @@ namespace Chainbound.Combat
     /// </summary>
     public sealed class CombatActionEligibilityService
     {
-        public MoveSelectionEvaluation EvaluateMoveSelection(ChainlingInstance actor, MoveInstance move, CombatState state, bool skipHpCostCheck = false)
+        public MoveSelectionEvaluation EvaluateMoveSelection(
+            ChainlingInstance actor,
+            MoveInstance move,
+            CombatState state,
+            bool skipHpCostCheck = false,
+            int extraAvailableAp = 0)
         {
             if (actor == null)
                 return new MoveSelectionEvaluation(false, false, "ActorMissing");
@@ -36,7 +41,8 @@ namespace Chainbound.Combat
             if (move.triggerOncePerBattle && actor.triggeredPassiveIds != null &&
                 actor.triggeredPassiveIds.Contains(move.instanceId))
                 return new MoveSelectionEvaluation(false, false, "MoveAlreadyUsedThisBattle");
-            if (GetEffectiveApCost(actor, move) > actor.currentAP)
+            int availableAp = actor.currentAP + Math.Max(0, extraAvailableAp);
+            if (GetEffectiveApCost(actor, move) > availableAp)
                 return new MoveSelectionEvaluation(false, false, "InsufficientAP");
             if (!skipHpCostCheck && IsFullAbsorbBarrierWithHpCost(move) && !HasEnoughHpForBarrierCost(actor, move))
                 return new MoveSelectionEvaluation(false, false, "InsufficientHP");
@@ -99,6 +105,88 @@ namespace Chainbound.Combat
             return PassiveDisplayState.Armed;
         }
 
+        /// <summary>
+        /// AP a faster ally has already committed to this fighter via AP Donation or AP Router.
+        /// The menu can spend it. A slower ally's gift is not included.
+        /// </summary>
+        public int ResolveCommittedFasterGiftAp(
+            TeamState team,
+            ChainlingInstance recipient,
+            int recipientSlot,
+            IReadOnlyDictionary<int, CombatAction> queuedBySlot)
+        {
+            if (team == null || recipient == null || queuedBySlot == null || team.activeIndices == null)
+                return 0;
+
+            int otherLivingAllies = 0;
+            for (int slot = 0; slot < team.activeIndices.Count; slot++)
+            {
+                ChainlingInstance ally = team.GetActiveInSlot(slot);
+                if (ally != null && ally.isAlive && !ReferenceEquals(ally, recipient))
+                    otherLivingAllies++;
+            }
+
+            int recipientSpeed = recipient.GetStatBreakdown(CoreStat.Speed).finalInt;
+            int gift = 0;
+            foreach (KeyValuePair<int, CombatAction> pair in queuedBySlot)
+            {
+                if (pair.Key == recipientSlot)
+                    continue;
+
+                CombatAction action = pair.Value;
+                if (action == null || action.actionType != CombatActionType.UseMove)
+                    continue;
+
+                ChainlingInstance giver = team.GetActiveInSlot(pair.Key);
+                if (giver == null || !giver.isAlive || giver.moves == null)
+                    continue;
+                if (action.moveIndex < 0 || action.moveIndex >= giver.moves.Count)
+                    continue;
+
+                MoveInstance move = giver.moves[action.moveIndex];
+                if (!IsCommittedGiftMove(move))
+                    continue;
+                if (giver.GetStatBreakdown(CoreStat.Speed).finalInt <= recipientSpeed)
+                    continue;
+                if (!GiftTargetsRecipient(action, team, recipientSlot, otherLivingAllies))
+                    continue;
+
+                int cost = GetEffectiveApCost(giver, move);
+                if (cost <= 0 || giver.currentAP < cost)
+                    continue;
+                gift += cost;
+            }
+
+            return gift;
+        }
+
+        private static bool IsCommittedGiftMove(MoveInstance move)
+        {
+            if (move == null)
+                return false;
+            if (IsMoveId(move.definitionId, "ap_donation") || IsMoveId(move.definitionId, "ap_router"))
+                return true;
+            return IsMoveId(move.instanceId, "ap_donation") || IsMoveId(move.instanceId, "ap_router");
+        }
+
+        private static bool IsMoveId(string value, string id)
+        {
+            return !string.IsNullOrEmpty(value) &&
+                   value.IndexOf(id, StringComparison.Ordinal) >= 0;
+        }
+
+        private static bool GiftTargetsRecipient(
+            CombatAction action,
+            TeamState team,
+            int recipientSlot,
+            int otherLivingAllies)
+        {
+            bool explicitTarget = action.targetTeamIndex >= 0 && action.targetSlotIndex >= 0;
+            if (explicitTarget)
+                return action.targetTeamIndex == team.teamIndex && action.targetSlotIndex == recipientSlot;
+            return otherLivingAllies == 1;
+        }
+
         public int GetEffectiveApCost(ChainlingInstance actor, MoveInstance move)
         {
             if (move == null)
@@ -106,7 +194,8 @@ namespace Chainbound.Combat
 
             int surcharge = actor != null ? Math.Max(0, actor.nextMoveApSurcharge) : 0;
             int discount = ResolvePassiveApDiscount(actor);
-            return Math.Max(0, move.apCost + surcharge - discount);
+            int adjusted = move.apCost + surcharge - discount;
+            return move.apCost <= 0 ? Math.Max(0, adjusted) : Math.Max(1, adjusted);
         }
 
         private static int ResolvePassiveApDiscount(ChainlingInstance actor)

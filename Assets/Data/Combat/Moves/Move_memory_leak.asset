@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Target loses 2 AP next turn; user gains Speed +2.
   category: 2
   baseType: 4
-  rarity: 2
+  rarity: 4
   targeting: 0
   contactType: 2
   power: 0
@@ -69,6 +69,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

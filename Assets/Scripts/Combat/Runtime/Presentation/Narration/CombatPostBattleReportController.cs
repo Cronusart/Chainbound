@@ -117,6 +117,9 @@ namespace Chainbound.Combat
         private bool _latchedCancel;
         private bool _latchedConfirm;
         private GameObject _lastFocusedButton;
+        private Vector2 _previousReportStick;
+        private Vector2 _previousMobileReportStick;
+        private Button _reportFocus;
         private Image _logOverflowFade;
         private Image _rewardsIntroPlate;
         private Image _rewardsSpoilsPlate;
@@ -326,7 +329,7 @@ namespace Chainbound.Combat
                 else if (page == FlowPage.Report)
                 {
                     EnablePageInteraction(_reportGroup);
-                    FocusButton(_continueButton);
+                    FocusReportDefault();
                 }
 
                 if (page == FlowPage.Banner)
@@ -364,7 +367,10 @@ namespace Chainbound.Combat
                     else
                     {
                         if (page == FlowPage.Report)
+                        {
+                            TickReportNavigation();
                             TickReportScroll();
+                        }
                         else if (page == FlowPage.Rewards)
                             TickRewardsScroll();
                         SyncFocusedButtonVisual();
@@ -417,6 +423,7 @@ namespace Chainbound.Combat
                     CacheMenuPanelRest(_reportSurface, ref _reportGroup, ref _reportRestScale, ref _reportRestCached);
                     RefreshContent();
                     ConfigureAdvanceNavigation();
+                    FocusReportDefault();
                     CombatMenuPanelReveal.ApplyClosedState(
                         _reportSurface != null ? _reportSurface.transform as RectTransform : null,
                         _reportRestScale,
@@ -1662,13 +1669,13 @@ namespace Chainbound.Combat
             if (_summaryTab != null)
             {
                 _summaryTab.onClick.RemoveAllListeners();
-                _summaryTab.onClick.AddListener(() => SetTab(false));
+                _summaryTab.gameObject.SetActive(false);
             }
 
             if (_logTab != null)
             {
                 _logTab.onClick.RemoveAllListeners();
-                _logTab.onClick.AddListener(() => SetTab(true));
+                _logTab.onClick.AddListener(ToggleBattleLog);
             }
 
             if (_continueButton != null)
@@ -1918,8 +1925,7 @@ namespace Chainbound.Combat
             if (_title != null)
                 _title.text = _outcome.ReportTitle;
             _content.text = _showingLog ? BuildBattleLog() : BuildSummary();
-            SetButtonSelected(_summaryTab, !_showingLog);
-            SetButtonSelected(_logTab, _showingLog);
+            RefreshLogButtonLabel();
             Canvas.ForceUpdateCanvases();
             if (_scroll != null)
                 _scroll.verticalNormalizedPosition = 1f;
@@ -2037,9 +2043,9 @@ namespace Chainbound.Combat
             if (focused == null || !focused.IsInteractable() || !focused.gameObject.activeInHierarchy)
                 return true;
 
-            if (page == FlowPage.Report && (focused == _summaryTab || focused == _logTab))
+            if (page == FlowPage.Report && focused == _logTab)
             {
-                FocusButton(_continueButton);
+                focused.onClick.Invoke();
                 return false;
             }
 
@@ -2072,29 +2078,120 @@ namespace Chainbound.Combat
 
         private void ConfigureAdvanceNavigation()
         {
-            Button tabUp = _showingLog && _logTab != null ? _logTab : _summaryTab;
-            SetExplicitNavigation(_summaryTab, _logTab, _logTab, null, _continueButton);
-            SetExplicitNavigation(_logTab, _summaryTab, _summaryTab, null, _continueButton);
-            SetExplicitNavigation(_continueButton, null, null, tabUp, null);
-            if (_rewardsContinue != null)
-            {
-                _rewardsContinue.navigation = new Navigation { mode = Navigation.Mode.None };
-            }
+            DisableNavigation(_summaryTab);
+            DisableNavigation(_logTab);
+            DisableNavigation(_continueButton);
+            DisableNavigation(_rewardsContinue);
         }
 
-        private static void SetExplicitNavigation(Button button, Button left, Button right, Button up, Button down)
+        private static void DisableNavigation(Button button)
         {
             if (button == null)
                 return;
 
-            button.navigation = new Navigation
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
+        }
+
+        private void ToggleBattleLog()
+        {
+            SetTab(!_showingLog);
+        }
+
+        private void RefreshLogButtonLabel()
+        {
+            if (_logTab == null)
+                return;
+
+            TMP_Text label = _logTab.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+                label.text = _showingLog ? "SUMMARY" : "BATTLE LOG";
+        }
+
+        private void FocusReportDefault()
+        {
+            _previousReportStick = Gamepad.current != null ? Gamepad.current.leftStick.ReadValue() : Vector2.zero;
+            _previousMobileReportStick = _mobileInput != null ? _mobileInput.GetMovementInput() : Vector2.zero;
+            _reportFocus = _continueButton != null ? _continueButton : _logTab;
+            FocusButton(_reportFocus);
+        }
+
+        private void TickReportNavigation()
+        {
+            if (_reportFocus == null || !_reportFocus.gameObject.activeInHierarchy)
+                _reportFocus = _continueButton != null ? _continueButton : _logTab;
+
+            if (CurrentFocusedButton() != _reportFocus)
+                FocusButton(_reportFocus);
+
+            int direction = ReadReportMove();
+            if (direction == 0)
+                return;
+
+            Button target = null;
+            if (direction < 0 && _reportFocus == _continueButton && _logTab != null && _logTab.gameObject.activeInHierarchy)
+                target = _logTab;
+            else if (direction > 0 && _reportFocus == _logTab && _continueButton != null)
+                target = _continueButton;
+
+            if (target == null || target == _reportFocus)
+                return;
+
+            _reportFocus = target;
+            FocusButton(target);
+        }
+
+        private int ReadReportMove()
+        {
+            int digital = 0;
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null)
             {
-                mode = Navigation.Mode.Explicit,
-                selectOnLeft = left,
-                selectOnRight = right,
-                selectOnUp = up,
-                selectOnDown = down,
-            };
+                if (keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame)
+                    digital = -1;
+                else if (keyboard.downArrowKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame)
+                    digital = 1;
+            }
+
+            Gamepad pad = Gamepad.current;
+            Vector2 stick = pad != null ? pad.leftStick.ReadValue() : Vector2.zero;
+            if (pad != null)
+            {
+                if (pad.dpad.up.wasPressedThisFrame)
+                    digital = -1;
+                else if (pad.dpad.down.wasPressedThisFrame)
+                    digital = 1;
+            }
+
+            int stickEdge = ReadStickEdge(stick, ref _previousReportStick);
+            if (digital == 0)
+                digital = stickEdge;
+
+            if (_mobileInput != null)
+            {
+                Vector2 mobile = _mobileInput.GetMovementInput();
+                int mobileEdge = ReadStickEdge(mobile, ref _previousMobileReportStick);
+                if (digital == 0)
+                    digital = mobileEdge;
+            }
+
+            return digital;
+        }
+
+        private static int ReadStickEdge(Vector2 value, ref Vector2 previous)
+        {
+            int direction = StickDirection(value);
+            int prior = StickDirection(previous);
+            previous = value;
+            return direction != 0 && direction != prior ? direction : 0;
+        }
+
+        private static int StickDirection(Vector2 value)
+        {
+            if (value.y > 0.55f)
+                return -1;
+            if (value.y < -0.55f)
+                return 1;
+            return 0;
         }
 
         private static void EnablePageInteraction(CanvasGroup group)
@@ -2140,23 +2237,11 @@ namespace Chainbound.Combat
 
             _lastFocusedButton = focusedObject;
             Button focused = focusedObject != null ? focusedObject.GetComponent<Button>() : null;
-            if (focused == _summaryTab || focused == _logTab)
-                SetTab(focused == _logTab);
-            if (_continueButton != null)
-                SetButtonSelected(_continueButton, focused == null || focused == _continueButton);
-            if (focused == _summaryTab || focused == _logTab)
-            {
-                SetButtonSelected(_summaryTab, focused == _summaryTab);
-                SetButtonSelected(_logTab, focused == _logTab);
-            }
-            else
-            {
-                SetButtonSelected(_summaryTab, !_showingLog);
-                SetButtonSelected(_logTab, _showingLog);
-            }
-
-            if (_rewardsContinue != null)
-                SetButtonSelected(_rewardsContinue, focused == null || focused == _rewardsContinue);
+            bool rewardsOpen = _rewardsSurface != null && _rewardsSurface.activeInHierarchy;
+            SetButtonSelected(_summaryTab, false);
+            SetButtonSelected(_logTab, focused == _logTab);
+            SetButtonSelected(_continueButton, !rewardsOpen && (focused == _continueButton || focused == null));
+            SetButtonSelected(_rewardsContinue, rewardsOpen && (focused == _rewardsContinue || focused == null));
         }
 
         private static void EnsureUiInputReady()

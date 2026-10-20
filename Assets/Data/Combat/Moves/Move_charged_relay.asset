@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Heal 5%; if you hit 2+ targets this turn gain +2 AP.
   category: 2
   baseType: 7
-  rarity: 2
+  rarity: 3
   targeting: 4
   contactType: 2
   power: 0
@@ -66,6 +66,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

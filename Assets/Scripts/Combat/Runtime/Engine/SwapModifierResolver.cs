@@ -257,11 +257,18 @@ namespace Chainbound.Combat
                 int idx = rng.NextInt(0, StageStats.Length - 1, out roll);
                 CoreStat stat = StageStats[idx];
                 int oldStage = target.GetStage(stat);
-                target.SetStage(stat, oldStage + 1);
+                int requested = BuffGate.FilterPositiveStage(
+                    target, stat, 1, $"SwapModifier.{modRef.sectionId}", turn);
+                target.SetStage(stat, oldStage + requested);
                 int newStage = target.GetStage(stat);
                 int delta = newStage - oldStage;
                 if (delta != 0)
                     log.LogStageChange(turn, target.instanceId, stat, delta, newStage);
+                else if (requested == 0)
+                    log.LogMessage(
+                        CombatEventType.BuffBlocked,
+                        $"Cipher Lock blocked {target.displayName}'s {stat} +1.",
+                        turn);
 
                 log.LogForensic(
                     CombatForensicEventType.ProcRoll,
@@ -275,7 +282,7 @@ namespace Chainbound.Combat
                     source != null ? source.instanceId : string.Empty,
                     new List<string> { target.instanceId },
                     turn);
-                applied = true;
+                applied = delta != 0;
             }
             else if (IsAccuracyBoost(modRef))
             {

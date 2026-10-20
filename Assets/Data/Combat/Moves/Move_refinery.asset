@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Gain Def +1 and +1 AP at turn end for 2 turns.
   category: 2
   baseType: 8
-  rarity: 0
+  rarity: 2
   targeting: 4
   contactType: 2
   power: 0
@@ -26,7 +26,13 @@ MonoBehaviour:
   hitCountMin: 1
   hitCountMax: 1
   rechargeTurns: 0
-  statusEffects: []
+  statusEffects:
+  - statusId: 303
+    duration: 2
+    chance: 1
+    overrideTargeting: 1
+    targetOverride: 4
+    parameterType: 0
   stageChanges:
   - stat: 2
     stages: 1
@@ -48,6 +54,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

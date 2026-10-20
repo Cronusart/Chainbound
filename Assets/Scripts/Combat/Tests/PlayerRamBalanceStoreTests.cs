@@ -1,5 +1,6 @@
 using Chainbound.Combat.Core;
 using NUnit.Framework;
+using SignalJam.UI.MenuNavigation;
 
 namespace Chainbound.Combat.Tests
 {
@@ -103,6 +104,15 @@ namespace Chainbound.Combat.Tests
             Assert.IsFalse(PlayerRamBalanceStore.TryApplyAuthoritative("profile-a", 5, 29));
             Assert.IsTrue(PlayerRamBalanceStore.TryGet("profile-a", out long balance));
             Assert.AreEqual(80, balance);
+        }
+
+        [Test]
+        public void CandyMachineDisplayUsesCanonicalProfileBalance()
+        {
+            Assert.IsTrue(PlayerRamBalanceStore.TryApplyAuthoritative("profile-a", 65, 4));
+
+            Assert.AreEqual(65, CandyMachineScreen.ResolveDisplayRamBalance("profile-a", 0));
+            Assert.AreEqual(12, CandyMachineScreen.ResolveDisplayRamBalance("profile-b", 12));
         }
     }
 }

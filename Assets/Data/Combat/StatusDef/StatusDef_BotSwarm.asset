@@ -23,9 +23,13 @@ MonoBehaviour:
   - stat: 1
     stages: -1
     applyOnce: 1
+    usesCombatStage: 0
+    combatStage: 0
   - stat: 2
     stages: -1
     applyOnce: 1
+    usesCombatStage: 0
+    combatStage: 0
   isParameterized: 0
   isDebuff: 1
   isBuff: 0

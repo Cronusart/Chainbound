@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Heal a target ally for 25% MaxHP.
   category: 3
   baseType: 9
-  rarity: 0
+  rarity: 1
   targeting: 2
   contactType: 2
   power: 0
@@ -43,6 +43,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

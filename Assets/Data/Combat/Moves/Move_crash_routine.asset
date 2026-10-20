@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: crash_routine
   displayName: Crash Routine
-  description: Below 50% target HP deal 15% MaxHP damage; otherwise lower Atk.
+  description: Lower target Atk by 1.
   category: 2
   baseType: 12
-  rarity: 0
+  rarity: 4
   targeting: 0
   contactType: 2
   power: 0
@@ -49,6 +49,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -17,10 +17,10 @@ MonoBehaviour:
   description: Damage scales from your Def; doubles below 30% target HP.
   category: 0
   baseType: 13
-  rarity: 2
+  rarity: 3
   targeting: 0
   contactType: 0
-  power: 0
+  power: 44
   apCost: 2
   accuracy: 95
   hitCountMin: 1
@@ -45,6 +45,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0
@@ -91,13 +92,19 @@ MonoBehaviour:
       surgingDamageMultiplier: 1.25
       amplifiedDamageMultiplier: 2
       exploitMarkDamageMultiplier: 1.15
-      overrideAttackStat: 0
-      attackStatOverride: 1
+      overrideAttackStat: 1
+      attackStatOverride: 2
       overrideDefenseStat: 0
       defenseStatOverride: 2
     conditionalDamage:
-      multiplier: 1
-      conditions: []
+      multiplier: 2
+      conditions:
+      - subject: 1
+        conditionType: 1
+        threshold: 30
+        statusId: 0
+        stat: 1
+        comparisonStat: 1
       requireAllConditions: 1
       useScalingCondition: 0
       scalingCondition:
@@ -108,7 +115,7 @@ MonoBehaviour:
         stat: 0
         comparisonStat: 0
       bonusMultiplierPerCount: 0
-      maxMultiplier: 0
+      maxMultiplier: 2
       randomMultipliers: []
   triggerCondition: 0
   hpThresholdPercent: 0

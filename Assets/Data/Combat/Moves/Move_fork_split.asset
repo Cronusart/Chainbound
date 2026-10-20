@@ -17,11 +17,11 @@ MonoBehaviour:
   description: Ranged attack that hits all foes.
   category: 1
   baseType: 7
-  rarity: 0
+  rarity: 4
   targeting: 1
   contactType: 1
-  power: 46
-  apCost: 3
+  power: 56
+  apCost: 4
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0
