@@ -16,6 +16,9 @@ Player-facing name for every granted move in this flow: **Known** (`MOVE_TIER_PL
 - Global gate tables: `Assets/Data/Combat/ChainlingProgressionRewardTables.asset`
 - Per-species weighted pools: `SpeciesDefinitionSO.progressionMovePool`
 - Each pool entry has `weight`. Enable `useWeightAtStarFive` and set `weightAtStarFive` when the 5-star odd should differ. `isSignature` marks the signature move; it does not change the odd by itself.
+- A wild playable pool is five moves: three at the species rarity or lower, one at that rarity or one step higher, and one signature that is strictly the rarest move in the pool. Starters keep a unique top-rarity signature and are not held to that band. Ghost and Cofi Lootwak stay outside it.
+- `Docs/Specs/Combat/Data/SpeciesMovePools.csv` is the source of truth for pool membership. Every move reachable from it or an encounter move pool must have a reviewed `LivePoolPayloadReview.csv` row; EditMode guards reject live attacks with zero power and live utility/support cards with no payload.
+- Effective weight is the authored weight times `ProgressionConfigSO.moveLearnRarityWeights`: Common 1.00, Uncommon 0.72, Rare 0.48, Epic 0.28, Legendary 0.14, Mythic 0.06. A positive authored weight times a positive multiplier floors at 1, so an 8-weight Mythic stays eligible at weight 1 before five stars. At five stars and mastery the signature uses weight 24, which still resolves to 1 at the Mythic multiplier. Nothing forces the signature.
 - Event overlays: `Assets/Data/Combat/ProgressionEvents/ChainlingProgressionEventCatalog.asset`
 
 Legacy `learnableMoves` and `exclusiveMoves` remain for equip fallback. `SpeciesDefinitionSO.OnValidate` seeds `progressionMovePool` from those lists when the pool is empty.
@@ -41,7 +44,7 @@ The combat router prepares one authoritative `BattleRewardSummary` before the re
 
 Owned moves stay in the weighted denominator by default. Probability and ownership are independent (`12% · Owned ×2`) because repeatable copies are intentional. `excludeIfOwned` defaults to false and is reserved for explicitly authored one-time/event grants.
 
-The Chainlings tab uses `Next-star folio chance: N%` below five stars and `Five-star mastery folio chance: N%` at five stars. Starter-exclusive moves remain eligible in their species pool and can be learned repeatedly. They equip only on that species.
+The Chainlings tab uses `Next-star folio chance: N%` below five stars and `Five-star mastery folio chance: N%` at five stars. The dossier Learn page shows that same gate on its own (`Next-star folio N%` or `Five-star mastery folio N%`) and each move's share of a passed folio (`effectiveWeight / total`, via `FormatPercent`). Starter-exclusive moves remain eligible in their species pool and can be learned repeatedly. They equip only on that species.
 
 ## Capture Known Move
 

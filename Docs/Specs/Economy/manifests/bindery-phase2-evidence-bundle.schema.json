@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chainbound.local/schemas/bindery-phase2-evidence-bundle-v1.json",
+  "title": "Bindery Phase 2 Devnet Evidence Bundle v1",
+  "description": "Evidence contract for a future authorized Bindery Phase 2 Devnet proof. Empty groundwork bundles contain no claimed live observations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "bundle_status",
+    "target",
+    "phase1_inspection_checkpoint",
+    "execution_authorization",
+    "baseline",
+    "cases",
+    "redaction"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "artifact_kind": { "const": "bindery_phase2_evidence_bundle" },
+    "bundle_status": {
+      "enum": ["empty_groundwork", "collecting", "complete", "invalid"]
+    },
+    "created_at": { "$ref": "#/$defs/nullableDateTime" },
+    "completed_at": { "$ref": "#/$defs/nullableDateTime" },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cluster", "program_id", "supabase_project_ref", "expected_migration"],
+      "properties": {
+        "cluster": { "const": "devnet" },
+        "program_id": { "const": "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ" },
+        "supabase_project_ref": { "const": "jhzqcbrzkausrrtcavuu" },
+        "expected_migration": { "const": "20261016045210_bindery_phase1_foundation.sql" }
+      }
+    },
+    "phase1_inspection_checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "live_inspection_run",
+        "source_id",
+        "inspected_at",
+        "inspection_digest",
+        "selection_trusted",
+        "source_enabled",
+        "prepare_eligible",
+        "reasons"
+      ],
+      "properties": {
+        "live_inspection_run": { "type": "boolean" },
+        "source_id": { "$ref": "#/$defs/nullableString" },
+        "inspected_at": { "$ref": "#/$defs/nullableDateTime" },
+        "inspection_digest": { "$ref": "#/$defs/nullableString" },
+        "selection_trusted": { "$ref": "#/$defs/nullableBoolean" },
+        "source_enabled": { "$ref": "#/$defs/nullableBoolean" },
+        "prepare_eligible": {
+          "const": false,
+          "description": "The required Phase 1 checkpoint is captured while the source is still disabled."
+        },
+        "reasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "live_inspection_run": { "const": true } },
+            "required": ["live_inspection_run"]
+          },
+          "then": {
+            "properties": {
+              "source_id": { "type": "string", "minLength": 1 },
+              "inspected_at": { "type": "string", "format": "date-time" },
+              "inspection_digest": { "type": "string", "minLength": 1 },
+              "selection_trusted": { "const": true },
+              "source_enabled": { "const": false },
+              "prepare_eligible": { "const": false }
+            }
+          }
+        }
+      ]
+    },
+    "execution_authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved", "approval_reference", "live_flag_used", "source_enablement_reference"],
+      "properties": {
+        "approved": { "type": "boolean" },
+        "approval_reference": { "$ref": "#/$defs/nullableString" },
+        "live_flag_used": { "type": "boolean" },
+        "source_enablement_reference": { "$ref": "#/$defs/nullableString" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "approved": { "const": true } },
+            "required": ["approved"]
+          },
+          "then": {
+            "properties": {
+              "approval_reference": { "type": "string", "minLength": 1 },
+              "live_flag_used": { "const": true },
+              "source_enablement_reference": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      ]
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "captured_at",
+        "cluster_genesis_hash",
+        "program_executable_slot",
+        "program_binary_sha256",
+        "idl_sha256",
+        "migration_parity",
+        "deployed_function_versions",
+        "game_config",
+        "ownership_config",
+        "collections"
+      ],
+      "properties": {
+        "captured_at": { "$ref": "#/$defs/nullableDateTime" },
+        "cluster_genesis_hash": { "$ref": "#/$defs/nullableString" },
+        "program_executable_slot": { "$ref": "#/$defs/nullableInteger" },
+        "program_binary_sha256": { "$ref": "#/$defs/nullableString" },
+        "idl_sha256": { "$ref": "#/$defs/nullableString" },
+        "migration_parity": { "$ref": "#/$defs/nullableString" },
+        "deployed_function_versions": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "null"] }
+        },
+        "game_config": { "$ref": "#/$defs/nullableSnapshot" },
+        "ownership_config": { "$ref": "#/$defs/nullableSnapshot" },
+        "collections": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chainlings", "covers", "stamped_moves", "cosmetics", "archives"],
+          "properties": {
+            "chainlings": { "$ref": "#/$defs/nullableSnapshot" },
+            "covers": { "$ref": "#/$defs/nullableSnapshot" },
+            "stamped_moves": { "$ref": "#/$defs/nullableSnapshot" },
+            "cosmetics": { "$ref": "#/$defs/nullableSnapshot" },
+            "archives": { "$ref": "#/$defs/nullableSnapshot" }
+          }
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": { "$ref": "#/$defs/caseEvidence" }
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secrets_included", "redacted_fields", "notes"],
+      "properties": {
+        "secrets_included": { "const": false },
+        "redacted_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "$ref": "#/$defs/nullableString" }
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": { "type": ["string", "null"] },
+    "nullableInteger": { "type": ["integer", "null"] },
+    "nullableBoolean": { "type": ["boolean", "null"] },
+    "nullableDateTime": {
+      "anyOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "nullableSnapshot": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["address", "data_sha256", "observed_at"],
+          "properties": {
+            "address": { "$ref": "#/$defs/nullableString" },
+            "data_sha256": { "$ref": "#/$defs/nullableString" },
+            "observed_at": { "$ref": "#/$defs/nullableDateTime" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "caseEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "component_kind", "status"],
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "enum": ["collecting", "passed", "failed", "inconclusive"] } },
+            "required": ["status"]
+          },
+          "then": {
+            "required": [
+              "started_at",
+              "completed_at",
+              "authorization_reference",
+              "inputs",
+              "execution",
+              "terminal_state",
+              "assertions",
+              "artifacts"
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "case_id": {
+          "enum": [
+            "P2-BIND-001A", "P2-BIND-001B", "P2-BIND-002", "P2-BIND-003",
+            "P2-BIND-004", "P2-BIND-005", "P2-BIND-006", "P2-BIND-007",
+            "P2-BIND-008", "P2-BIND-009", "P2-BIND-010", "P2-BIND-011",
+            "P2-BIND-012", "P2-BIND-013", "P2-BIND-014", "P2-BIND-015",
+            "P2-BIND-016", "P2-BIND-017", "P2-BIND-018", "P2-BIND-019"
+          ]
+        },
+        "component_kind": { "type": ["integer", "null"], "enum": [0, 1, null] },
+        "status": {
+          "enum": ["not_run", "blocked", "collecting", "passed", "failed", "inconclusive"]
+        },
+        "started_at": { "$ref": "#/$defs/nullableDateTime" },
+        "completed_at": { "$ref": "#/$defs/nullableDateTime" },
+        "authorization_reference": { "$ref": "#/$defs/nullableString" },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "wallet", "profile_pda", "chainling_id", "chainling_pda", "source_id",
+            "cover_asset", "component_asset", "idempotency_key_hash", "operation_id",
+            "reservation_id", "reservation_pda", "archive_pda", "receipt_pda",
+            "archive_name", "archive_uri", "archive_metadata_sha256"
+          ],
+          "properties": {
+            "wallet": { "$ref": "#/$defs/nullableString" },
+            "profile_pda": { "$ref": "#/$defs/nullableString" },
+            "chainling_id": { "$ref": "#/$defs/nullableInteger" },
+            "chainling_pda": { "$ref": "#/$defs/nullableString" },
+            "source_id": { "$ref": "#/$defs/nullableString" },
+            "cover_asset": { "$ref": "#/$defs/nullableString" },
+            "component_asset": { "$ref": "#/$defs/nullableString" },
+            "idempotency_key_hash": { "$ref": "#/$defs/nullableString" },
+            "operation_id": { "$ref": "#/$defs/nullableString" },
+            "reservation_id": { "$ref": "#/$defs/nullableInteger" },
+            "reservation_pda": { "$ref": "#/$defs/nullableString" },
+            "archive_pda": { "$ref": "#/$defs/nullableString" },
+            "receipt_pda": { "$ref": "#/$defs/nullableString" },
+            "archive_name": { "$ref": "#/$defs/nullableString" },
+            "archive_uri": { "$ref": "#/$defs/nullableString" },
+            "archive_metadata_sha256": { "$ref": "#/$defs/nullableString" }
+          }
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "prepare_response", "simulation", "transaction_message_sha256", "signature",
+            "submitted_slot", "finalized_slot", "confirmation_status", "transaction_error",
+            "program_logs", "confirm_responses", "reconcile_responses"
+          ],
+          "properties": {
+            "prepare_response": { "type": ["object", "null"], "additionalProperties": true },
+            "simulation": { "type": ["object", "null"], "additionalProperties": true },
+            "transaction_message_sha256": { "$ref": "#/$defs/nullableString" },
+            "signature": { "$ref": "#/$defs/nullableString" },
+            "submitted_slot": { "$ref": "#/$defs/nullableInteger" },
+            "finalized_slot": { "$ref": "#/$defs/nullableInteger" },
+            "confirmation_status": { "$ref": "#/$defs/nullableString" },
+            "transaction_error": { "type": ["object", "string", "null"] },
+            "program_logs": { "type": "array", "items": { "type": "string" } },
+            "confirm_responses": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+            "reconcile_responses": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+          }
+        },
+        "terminal_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "observed_result", "receipt", "archive", "chainling", "cover", "component",
+            "ram_reservation", "player_profile", "bind_operation", "bind_source", "binding",
+            "ram_ledger_rows", "audit_rows"
+          ],
+          "properties": {
+            "observed_result": { "$ref": "#/$defs/nullableString" },
+            "receipt": { "$ref": "#/$defs/nullableSnapshot" },
+            "archive": { "$ref": "#/$defs/nullableSnapshot" },
+            "chainling": { "$ref": "#/$defs/nullableSnapshot" },
+            "cover": { "$ref": "#/$defs/nullableSnapshot" },
+            "component": { "$ref": "#/$defs/nullableSnapshot" },
+            "ram_reservation": { "$ref": "#/$defs/nullableSnapshot" },
+            "player_profile": { "$ref": "#/$defs/nullableSnapshot" },
+            "bind_operation": { "type": ["object", "null"], "additionalProperties": true },
+            "bind_source": { "type": ["object", "null"], "additionalProperties": true },
+            "binding": { "type": ["object", "null"], "additionalProperties": true },
+            "ram_ledger_rows": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+            "audit_rows": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+          }
+        },
+        "assertions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "expected", "actual", "passed"],
+            "properties": {
+              "name": { "type": "string" },
+              "expected": {},
+              "actual": {},
+              "passed": { "$ref": "#/$defs/nullableBoolean" }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "sha256", "content_type", "redacted"],
+            "properties": {
+              "path": { "type": "string" },
+              "sha256": { "type": "string" },
+              "content_type": { "type": "string" },
+              "redacted": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

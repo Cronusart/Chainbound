@@ -1,0 +1,81 @@
+MoveId,ExpectedTokens,TextOnly,Reviewer,Note
+accuracy_focus,ChangeStage,false,Cronus,Reviewed against authoritative payload
+ap_reserve,BankAPUntilNextTurn,false,Cronus,Reviewed against authoritative payload
+barrier_wall,MitigationWindow,false,Cronus,Reviewed against authoritative payload
+baseline_blast,Damage,false,Cronus,Reviewed against authoritative payload
+baseline_jab,Damage,false,Cronus,Reviewed against authoritative payload
+baseline_shot,Damage,false,Cronus,Reviewed against authoritative payload
+baseline_slam,Damage,false,Cronus,Reviewed against authoritative payload
+baseline_snipe,Damage,false,Cronus,Reviewed against authoritative payload
+baseline_striker,Damage,false,Cronus,Reviewed against authoritative payload
+baseline_thrust,Damage|MeleeDef,false,Cronus,Reviewed against authoritative payload
+baseline_volley,Damage,false,Cronus,Reviewed against authoritative payload
+bean_sip,Speed|GainAP|Heal|Recharge,false,Cronus,Reviewed against authoritative payload
+blade_flurry,Damage,false,Cronus,Reviewed against authoritative payload
+blockade,MitigationWindow,false,Cronus,Reviewed against authoritative payload
+bug_fix,Staggered|Cleanse|Heal,false,Cronus,Reviewed against authoritative payload
+bulwark_blow,Damage,false,Cronus,Reviewed against authoritative payload
+chain_fork,Damage,false,Cronus,Reviewed against authoritative payload
+chaos_strike,Damage,false,Cronus,Reviewed against authoritative payload
+chilling_retort,ArmUtilityWindow,false,Cronus,Reviewed against authoritative payload
+cinder_burst,Damage|MeleeAtk,false,Cronus,Reviewed against authoritative payload
+cipher_burst,Damage,false,Cronus,Reviewed against authoritative payload
+cipher_shot,Damage|CipherLocked,false,Cronus,Reviewed against authoritative payload
+civet_beam,Damage|Speed,false,Cronus,Reviewed against authoritative payload
+cold_snap,Speed,false,Cronus,Reviewed against authoritative payload
+compound_guard,MeleeDef|MitigationWindow,false,Cronus,Reviewed against authoritative payload
+compression_trade,MeleeAtk|Speed,false,Cronus,Reviewed against authoritative payload
+cryo_ray,Damage|Speed,false,Cronus,Reviewed against authoritative payload
+crystal_extraction,HealSelfPerTargetDebuff|Cleanse,false,Cronus,Reviewed against authoritative payload
+debuff_script,MeleeAtk|MeleeDef,false,Cronus,Reviewed against authoritative payload
+deep_dig,Damage,false,Cronus,Reviewed against authoritative payload
+deep_reap,Damage|LifestealPercent,false,Cronus,Reviewed against authoritative payload
+defense_corrupt,MeleeDef,false,Cronus,Reviewed against authoritative payload
+ember_wall,FullAbsorbBarrier|WallHitRetaliation,false,Cronus,Reviewed against authoritative payload
+error_correction,Cleanse|Heal,false,Cronus,Reviewed against authoritative payload
+exploit_window,ExploitMark,false,Cronus,Reviewed against authoritative payload
+field_split,FieldEntryStageChange,false,Cronus,Reviewed against authoritative payload
+fork_split,Damage,false,Cronus,Reviewed against authoritative payload
+fox_feint,ArmUtilityWindow|Recharge,false,Cronus,Reviewed against authoritative payload
+frost_shards,Damage|Speed,false,Cronus,Reviewed against authoritative payload
+frost_shot,Damage|Speed,false,Cronus,Reviewed against authoritative payload
+fuel_surge,GasSpike|GainAP,false,Cronus,Reviewed against authoritative payload
+gas_bump,Damage,false,Cronus,Reviewed against authoritative payload
+hammer_sync,Damage,false,Cronus,Reviewed against authoritative payload
+hub_heal,Heal,false,Cronus,Reviewed against authoritative payload
+hype_burst,StripBuffs|MeleeAtk,false,Cronus,Compound opcode strips buffs then stages the user
+ice_wall,MitigationWindow|GainApOnDamageIfSpeedHigher,false,Cronus,Reviewed against authoritative payload
+immovable_stance,Immovable,false,Cronus,Reviewed against authoritative payload
+immutable_ledger,PassiveHandler,false,Cronus,Passive handler reviewed against resolver allowlist
+isolation_tool,ApplyChemistryStatus|Anchored,false,Cronus,Reviewed against authoritative payload
+key_rotation,MeleeDef|ChangeStage,false,Cronus,Reviewed against authoritative payload
+kindling,PassiveHandler,false,Cronus,Passive handler reviewed against resolver allowlist
+lean_hit,Damage,false,Cronus,Reviewed against authoritative payload
+memory_leak,Speed|ArmUtilityWindow,false,Cronus,Reviewed against authoritative payload
+multi_thread_shot,Damage|GainAP,false,Cronus,Reviewed against authoritative payload
+ore_strike,Damage,false,Cronus,Reviewed against authoritative payload
+pack_rally,MeleeAtk|Speed,false,Cronus,Reviewed against authoritative payload
+packet_skim,DrainAP,false,Cronus,Reviewed against authoritative payload
+parallel_passive,ChangeStage,false,Cronus,Passive handler reviewed against resolver allowlist
+partition_shot,Damage|FrozenAssets,false,Cronus,Reviewed against authoritative payload
+patience_passive,ChangeStage,false,Cronus,Passive handler reviewed against resolver allowlist
+pickaxe_flurry,Damage|ChangeStage,false,Cronus,Reviewed against authoritative payload
+precision_strike,Damage,false,Cronus,Reviewed against authoritative payload
+rapid_strike,Damage,false,Cronus,Reviewed against authoritative payload
+recoil_strike,Damage|Cleanse,false,Cronus,Reviewed against authoritative payload
+refined_shot,Damage,false,Cronus,Reviewed against authoritative payload
+seam_cut,Damage,false,Cronus,Reviewed against authoritative payload
+shard_partition,ShardPartition,false,Cronus,Reviewed against authoritative payload
+slipstream,Speed|MeleeDef,false,Cronus,Reviewed against authoritative payload
+solid_strike,Damage|Speed,false,Cronus,Reviewed against authoritative payload
+speed_boost,Speed,false,Cronus,Reviewed against authoritative payload
+stake_heal,Heal,false,Cronus,Reviewed against authoritative payload
+stake_strike,Damage,false,Cronus,Reviewed against authoritative payload
+stone_barrage,Damage|Speed,false,Cronus,Reviewed against authoritative payload
+streamlined_flow,MoveAPDiscountWhileHPAbove|ChangeStage,false,Cronus,Passive handler reviewed against resolver allowlist
+system_reset,StripAllStatuses|Recharge,false,Cronus,Reviewed against authoritative payload
+transaction_tax,StealAP,false,Cronus,Reviewed against authoritative payload
+uplink,PassiveHandler,false,Cronus,Passive handler reviewed against resolver allowlist
+volatile_shot,Damage|NextMoveAPSurcharge,false,Cronus,Reviewed against authoritative payload
+yield_spike,Damage,false,Cronus,Reviewed against authoritative payload
+zipped_strikes,Damage|Speed,false,Cronus,Reviewed against authoritative payload

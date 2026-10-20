@@ -3,11 +3,11 @@ Pumped,Pumped,ChemistryOnly,Duration,3,0,+1 AP at End of Turn,,false,false,true,
 Drained,Drained,ChemistryOnly,Duration,3,0,-1 AP at End of Turn,,false,true,false,false,0,-1
 Rugged,Rugged,ChemistryOnly,Duration,3,0,Escalating MaxHP DoT at End of Turn,,false,true,false,false,0.0625,0
 Overclocked,Overclocked [Deprecated],ChemistryOnly,Duration,3,0,Legacy Forked recoil reaction; no longer authored,,false,false,false,false,0,0
-Leaked,Leaked,ChemistryOnly,Duration,3,0,On action: 1/10 HP to all,,false,true,false,false,0.1,0
+Leaked,Leaked,ChemistryOnly,Duration,3,0,On action: 10% own MaxHP while the side is leaked,,false,true,false,false,0,0
 Defueled,Defueled,ChemistryOnly,Instant,0,0,Remove one harmful chemistry status from self,,false,false,false,false,0,0
 Bridged,Bridged [Deprecated],ChemistryOnly,Consumed,3,0,Legacy spread marker; no longer authored,,false,false,true,false,0,0
 Firewalled,Firewalled [Deprecated],ChemistryOnly,Duration,2,0,Legacy projectile immunity; no longer authored,,false,false,true,false,0,0
-Jammed,Jammed,ChemistryOnly,Duration,2,0,Accuracy down (Acc -2),,false,true,false,false,0,0
+Jammed,Jammed,ChemistryOnly,Duration,2,0,Accuracy -1 for 2 turns,Accuracy:-1,false,true,false,false,0,0
 Halted,Halted [Deprecated],ChemistryOnly,Duration,1,0,Legacy guaranteed action skip; no longer authored,,false,true,false,false,0,0
 Crashed,Crashed [Deprecated],ChemistryOnly,Instant,0,0,Legacy 50% current HP hit; no longer authored,,false,true,false,false,0,0
 FOMO,FOMO,ChemistryOnly,Duration,3,0,Atk +1 and self DoT,MeleeAtk:1,false,false,true,false,0.0625,0
@@ -15,12 +15,11 @@ Siphoned,Siphoned,ChemistryOnly,Duration,3,0,Heal 25% damage dealt,,false,false,
 Evasive,Evasive [Deprecated],ChemistryOnly,Duration,3,0,Legacy evasion spike; no longer authored,,false,false,true,false,0,0
 Anchored,Anchored,ChemistryOnly,Consumed,3,0,Next move must be single-target,,false,true,false,false,0,0
 Amplified,Amplified,ChemistryOnly,Consumed,1,0,Next move x2 power. Holds through the next turn if unused.,,false,false,true,false,0,0
-Dusted,Dusted,ChemistryOnly,Duration,2,0,Eva -3 and Spd -3,Speed:-3,false,true,false,false,0,0
+Dusted,Dusted,ChemistryOnly,Duration,2,0,Eva -3 and Spd -3,Speed:-3|Evasion:-3,false,true,false,false,0,0
 Narrowcast,Narrowcast [Deprecated],ChemistryOnly,Consumed,3,0,Legacy duplicate of Anchored; no longer authored,,false,true,false,false,0,0
-BacklashType,Backlash[Type],ChemistryOnly,Duration,3,0,Contact adds typed DoT,,true,true,false,false,0,0
+BacklashType,Backlash[Type],ChemistryOnly,Duration,3,0,Token. No contact damage.,,true,true,false,false,0,0
 Corroded,Corroded,ChemistryOnly,Duration,2,0,Def -1 at End of Turn,MeleeDef:-1:false,false,true,false,false,0,0
 LiquidityPump,Liquidity Pump [Deprecated],ChemistryOnly,Duration,3,0,Legacy bulk heal; no longer authored,,false,false,true,false,0,0
-Reinforced,Reinforced,ChemistryOnly,Duration,3,0,Defense up (Def +3),MeleeDef:3,false,false,true,false,0,0
 TypeCoating,[Type] Coating,ChemistryOnly,Duration,3,0,Override to mono-type,,true,false,false,false,0,0
 HypedTypeCoating,Hyped [Type] Coating,ChemistryOnly,Duration,3,0,Universal type override,,true,false,false,false,0,0
 CascadeFailure,Cascade Failure,ChemistryOnly,Counter,0,3,At 3 counters deal 25% MaxHP damage; resets on swap,,false,true,false,false,0,0
@@ -30,25 +29,19 @@ Slowed,Slowed,ChemistryOnly,Duration,2,0,Speed -2,,false,true,false,false,0,0
 Shattered,Shattered,ChemistryOnly,Instant,0,0,Chip 8% current HP and Def -1,,false,true,false,false,0,0
 Drip,Drip,ChemistryOnly,Duration,3,0,Heal 6% MaxHP at End of Turn,,false,false,true,false,0,0
 Splinter,Splinter,ChemistryOnly,Consumed,1,0,Next damaging move spreads at 65% power; one foe takes more. Holds through the next turn if unused.,,false,false,true,false,0,0
-Rekt,Rekt,General,Duration,2,0,25% chance to lose action,,false,true,false,false,0,0
-Offline,Offline,General,Duration,2,0,Sleep; wakes on damage,,false,true,false,true,0,0
+Rekt,Rekt [Deprecated],General,Duration,2,0,Deprecated; no producer.,,false,true,false,false,0,0
+Offline,Offline [Deprecated],General,Duration,2,0,Deprecated; no producer.,,false,true,false,true,0,0
 GlitchedMind,Glitched Mind,General,Duration,2,0,50% chance to mis-act,,false,true,false,false,0,0
 FUD,FUD,General,Duration,2,0,Broad stat pressure,MeleeAtk:-1|MeleeDef:-1|Speed:-1,false,true,false,false,0,0
 HODLed,HODLed,General,Duration,3,0,Immune to stat drops; Def ramps +1/turn,MeleeDef:1:false,false,false,true,false,0,0
 FiftyOnePercentAttacked,51% Attacked,General,Duration,1,0,Speed down for the rest of this turn,Speed:-1,false,true,false,false,0,0
-MEVExtracted,MEV Extracted,General,Duration,2,0,Steal 1 AP per turn,,false,true,false,false,0,-1
-DustStorm,Dust Storm,General,Duration,2,0,Field eva down on apply,,false,true,false,false,0,0
-Overleveraged,Overleveraged,General,Consumed,2,0,Next heavy hit causes recoil,,false,true,false,false,0,0
-BridgedOut,Bridged Out,General,Instant,0,0,Swap with ally,,false,false,false,false,0,0
-ForkedChain,Forked Chain,General,Duration,2,0,Copy self-debuffs to ally,,false,true,false,false,0,0
-CompressedData,Compressed Data,General,Duration,3,0,Eva +2 and Spd -1,Speed:-1,false,false,false,false,0,0
+MEVExtracted,MEV Extracted,General,Duration,2,0,Drain 1 AP per turn,,false,true,false,false,0,-1
+Overleveraged,Overleveraged,General,Consumed,2,0,Shelved; not applied by any move.,,false,true,false,false,0,0
 BotSwarm,Bot Swarm,General,Duration,1,0,Atk and Def down for the rest of this turn,MeleeAtk:-1|MeleeDef:-1,false,true,false,false,0,0
-MemeSurge,Meme Surge,General,Duration,1,0,Random stat +1,,false,false,true,false,0,0
 ShardPartition,Shard Partition,General,Duration,2,0,Team speed +1,Speed:1,false,false,true,false,0,0
 EncryptedSeal,Encrypted Seal,General,Duration,1,0,Debuff immunity,,false,false,true,false,0,0
-BurnedTokens,Burned Tokens,General,Duration,2,0,Enemy DoT heals user,,false,false,false,false,0,0
+BurnedTokens,Burned Tokens,General,Duration,2,0,Enemy DoT heals user. No granted producer.,,false,false,false,false,0,0
 FrozenAssets,Frozen Assets,General,Duration,1,0,Prevent switches,,false,true,false,false,0,0
-NodeRelay,Node Relay,General,Instant,0,0,Redirect healing,,false,false,false,false,0,0
 GasSpike,Gas Spike,General,Duration,2,0,Atk +2 and Def -2,MeleeAtk:2|MeleeDef:-2,false,false,false,false,0,0
 ThreadLock,Thread Lock,General,Duration,1,0,Target cannot gain AP,,false,true,false,false,0,0
 ExploitMark,Exploit Mark,General,Duration,2,0,Allies deal +15% dmg to target,,false,true,false,false,0,0
@@ -58,7 +51,9 @@ Immovable,Immovable,General,Duration,2,0,Immune to forced swap; Def +2 while act
 Staggered,Staggered,General,Consumed,1,0,Next move deals -10% power. Holds through the next turn if unused.,,false,true,false,false,0,0
 Surging,Surging,General,Consumed,1,0,Next move deals +25% power. Holds through the next turn if unused.,,false,false,true,false,0,0
 Unsealed,Unsealed,General,Duration,2,0,50% chance to bypass single-hit barriers per hit,,false,false,true,false,0,0
-Relay,Relay,General,Consumed,1,0,Full barrier bypass for next hit,,false,false,true,false,0,0
+Relay,Relay [Deprecated],General,Consumed,1,0,Deprecated; no producer.,,false,false,true,false,0,0
 DamageIntercept,Damage Intercept,General,Consumed,1,0,Redirect the next single-target hit. Holds through the next turn if unused.,,false,false,true,false,0,0
 Recharging,Recharging,General,Consumed,0,0,Move recharge timer,,false,false,false,false,0,0
 SearField,Sear Field,General,Duration,1,0,Atk -1 for the rest of this turn,MeleeAtk:-1,false,true,false,false,0,0
+Kindled,Kindled,General,Duration,1,0,6% MaxHP at end of turn,,false,true,false,false,0.06,0
+CipherLocked,Cipher Lock,General,Duration,2,0,Cannot receive buffs,,false,true,false,false,0,0

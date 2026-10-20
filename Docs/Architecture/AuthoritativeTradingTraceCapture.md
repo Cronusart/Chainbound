@@ -10,6 +10,10 @@ The capture minigame is split into three layers:
 
 Production clients predict the same 30 Hz integer simulation for responsiveness. Only the service result is committed. The WebSocket returns authoritative corrections at 10 Hz. Disconnecting retains the last input for 250 ms and then releases it; the capture deadline continues.
 
+The target trace is a deterministic rest-and-dart state machine. Consolidation keeps the price in a narrow range around its current anchor with small integer-only wicks; impulses choose a seeded interior target and move directly toward it until arrival or a bounded impulse timer expires. Spike rolls start an impulse, sharpen it, or retarget it in the opposite direction. Edge contact rejects toward a new interior target instead of bouncing into a smooth arc. The existing motion profile multipliers remain authoritative: trace acceleration controls consolidation dwell and micro-movement, maximum speed controls impulse travel, and spike chance/amplitude controls mid-flight changes. The serialized mean-reversion and trace-edge-bounce fields remain contract-compatible but are not used by this regime path.
+
+`CaptureSimulationState` carries the local regime, dwell/impulse timer, consolidation anchor, and impulse target so server checkpoints resume exactly. The compact WebSocket correction remains unchanged. When `CaptureChallengeController` applies a positional correction, it discards local impulse velocity and re-anchors consolidation at the corrected price so a stale client dart cannot continue after the snap.
+
 ## Resume semantics
 
 Resume is phase-driven and the battle service is the authority for the transition:
@@ -42,9 +46,9 @@ Server-side target overrides remain in `capture_balance_profiles`, `capture_prof
 
 Use `Tools > Chainbound > Combat > Capture Balance Simulator` for repeatable Monte Carlo comparisons. The tool runs the same Core simulation with configurable HP, non-HP IVs, Alertness, Orb, profile, and a reaction-limited bot. With the initial seed and competence model, the current calibration is approximately:
 
-- Standard low-HP baseline: 60–75% Lock.
-- Extreme low-HP baseline: 5–15% Lock.
-- Extreme with the Scanner V + Wideband two-slot hunter loadout: 25–40% Lock.
+- Standard low-HP baseline: 20–35% Lock.
+- Extreme low-HP baseline: 3–10% Lock.
+- Extreme with the Scanner V + Wideband two-slot hunter loadout: 12–22% Lock.
 - Full-HP, perfect-IV Extreme combinations remain intentionally below that range; the content rules allow these rare traits to stack.
 
 Timeout is a failed attempt: the Orb is consumed and battle resumes with the targeted Chainling still in the fight. An empty lock meter is the flee outcome (no KO); other living wilds stay. Alertness is not used as a retry lever after a timeout.

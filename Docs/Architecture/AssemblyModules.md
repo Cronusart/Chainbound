@@ -67,7 +67,7 @@ Do not assume all files under `UI_VisualFX/` share one assembly.
 |---|---|---|---|
 | **Assembly-CSharp-Editor** | *(default — no asmdef)* | `Assets/Scripts/Editor/**` and other `Editor/` folders without their own asmdef | n/a |
 | **Chainbound.Combat.Editor** | `Combat/Editor/Chainbound.Combat.Editor.asmdef` | `Combat/Editor/**` | yes |
-| **Chainbound.Combat.Tests** | `Combat/Tests/Chainbound.Combat.Tests.asmdef` | `Combat/Tests/**` | **no** (test-only, Editor platform, listed under Edit Mode) |
+| **Chainbound.Combat.Tests** | `Combat/Tests/Chainbound.Combat.Tests.asmdef` | `Combat/Tests/**` | **no** (test-only, Editor platform, listed under Edit Mode). References include `Unity.TextMeshPro` so card-view tests can call stamp-font APIs. |
 | **SignalJam.UI.MenuNavigation.Editor** | `UI/MenuNavigation/Editor/SignalJam.UI.MenuNavigation.Editor.asmdef` | `UI/MenuNavigation/Editor/**` | **no** |
 
 `Chainbound.Combat.Editor` references both Combat.Runtime and Combat.Core so manifest exporters can serialize the same deterministic capture DTO values consumed by the service.

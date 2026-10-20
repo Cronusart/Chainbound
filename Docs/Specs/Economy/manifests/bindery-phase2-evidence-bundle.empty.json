@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "bindery_phase2_evidence_bundle",
+  "bundle_status": "empty_groundwork",
+  "created_at": null,
+  "completed_at": null,
+  "target": {
+    "cluster": "devnet",
+    "program_id": "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ",
+    "supabase_project_ref": "jhzqcbrzkausrrtcavuu",
+    "expected_migration": "20261016045210_bindery_phase1_foundation.sql"
+  },
+  "phase1_inspection_checkpoint": {
+    "live_inspection_run": false,
+    "source_id": null,
+    "inspected_at": null,
+    "inspection_digest": null,
+    "selection_trusted": null,
+    "source_enabled": null,
+    "prepare_eligible": false,
+    "reasons": []
+  },
+  "execution_authorization": {
+    "approved": false,
+    "approval_reference": null,
+    "live_flag_used": false,
+    "source_enablement_reference": null
+  },
+  "baseline": {
+    "captured_at": null,
+    "cluster_genesis_hash": null,
+    "program_executable_slot": null,
+    "program_binary_sha256": null,
+    "idl_sha256": null,
+    "migration_parity": null,
+    "deployed_function_versions": {},
+    "game_config": null,
+    "ownership_config": null,
+    "collections": {
+      "chainlings": null,
+      "covers": null,
+      "stamped_moves": null,
+      "cosmetics": null,
+      "archives": null
+    }
+  },
+  "cases": [
+    { "case_id": "P2-BIND-001A", "component_kind": 0, "status": "blocked" },
+    { "case_id": "P2-BIND-001B", "component_kind": 1, "status": "blocked" },
+    { "case_id": "P2-BIND-002", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-003", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-004", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-005", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-006", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-007", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-008", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-009", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-010", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-011", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-012", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-013", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-014", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-015", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-016", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-017", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-018", "component_kind": null, "status": "blocked" },
+    { "case_id": "P2-BIND-019", "component_kind": null, "status": "blocked" }
+  ],
+  "redaction": {
+    "secrets_included": false,
+    "redacted_fields": [],
+    "notes": null
+  }
+}
