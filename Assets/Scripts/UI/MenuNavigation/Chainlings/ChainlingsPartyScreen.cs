@@ -54,6 +54,7 @@ namespace SignalJam.UI.MenuNavigation
         [Header("Navigation")]
         [SerializeField] private MenuScreenStack screenStack;
         [SerializeField] private ChainlingDetailScreen detailScreen;
+        [SerializeField] private ChainlingDetailScreen detailViewPrefab;
 
         [Header("Audio")]
         [SerializeField] private MonoBehaviour sfxPlayerBehaviour;
@@ -148,6 +149,14 @@ namespace SignalJam.UI.MenuNavigation
             if (shellPrefab != null)
                 columnShellPrefab = shellPrefab;
         }
+
+        public void WireDetailViewPrefab(ChainlingDetailScreen prefab)
+        {
+            if (prefab != null)
+                detailViewPrefab = prefab;
+        }
+
+        public ChainlingDetailScreen DetailViewPrefab => detailViewPrefab;
 
         public void BuildDefaultLayoutForEditor()
         {
@@ -321,6 +330,8 @@ namespace SignalJam.UI.MenuNavigation
                 navigationController?.ResetToPartySection(true);
             }
             base.Show();
+            if (activeInputContext != null)
+                RefreshInputNavigation();
 
             TryAdoptStoredRoster();
 
@@ -1276,9 +1287,17 @@ namespace SignalJam.UI.MenuNavigation
             OpenDetail(entry);
         }
 
+        private void HandleDetailClosed()
+        {
+            if (activeInputContext != null)
+                ConfigureInputContext(activeInputContext);
+        }
+
         private void OpenDetail(PlayerRosterEntry rosterEntry)
         {
             EnsureBuilt();
+            EnsureServiceBehaviours();
+            EnsureDetailInstance();
             ConfigureDetailScreen();
             if (detailScreen == null)
             {
@@ -1289,6 +1308,8 @@ namespace SignalJam.UI.MenuNavigation
 
             CombatVisualProfileSO profile = ResolveProfile(rosterEntry);
             PlaySfxCue(PlayerMenuSfxCue.ChainlingSelect, profile != null ? profile.spawnSound : null);
+            detailScreen.Closed -= HandleDetailClosed;
+            detailScreen.Closed += HandleDetailClosed;
             detailScreen.Open(rosterEntry, rosterCache);
             MenuScreenStack stack = ResolveScreenStack();
             if (stack != null)
@@ -1300,6 +1321,8 @@ namespace SignalJam.UI.MenuNavigation
             else
             {
                 detailScreen.Show();
+                if (activeInputContext != null)
+                    detailScreen.ConfigureInputContext(activeInputContext);
             }
         }
 
@@ -1647,6 +1670,20 @@ namespace SignalJam.UI.MenuNavigation
 
             screenStack = FindObjectOfType<MenuScreenStack>(true);
             return screenStack;
+        }
+
+        private void EnsureDetailInstance()
+        {
+            if (detailScreen != null || detailViewPrefab == null || !Application.isPlaying)
+                return;
+
+            MenuScreenStack stack = ResolveScreenStack();
+            Transform parent = stack != null ? stack.transform : transform.parent != null ? transform.parent : transform;
+            detailScreen = Instantiate(detailViewPrefab, parent);
+            detailScreen.name = "ChainlingDetailView";
+            if (detailScreen.transform is RectTransform rect)
+                PlayerMenuUiFactory.Stretch(rect);
+            detailScreen.Hide();
         }
 
         private void ConfigureDetailScreen()

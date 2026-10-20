@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 208ea3bf44d5aad4387db7eda9cb120f, type: 3}
   m_Name: CycleIconPalette
   m_EditorClassIdentifier: 
-  cycleI: {fileID: 0}
-  cycleII: {fileID: 0}
-  cycleIII: {fileID: 0}
-  cycleIV: {fileID: 0}
-  cycleV: {fileID: 0}
-  cycleMax: {fileID: 0}
-  fallbackIcon: {fileID: 0}
+  cycleI: {fileID: 21300000, guid: 424ad95b51827ea4996ed459b3b67f3f, type: 3}
+  cycleII: {fileID: 21300000, guid: d818c9cef774bfc4d8671472cbe007f4, type: 3}
+  cycleIII: {fileID: 21300000, guid: 34e6befe4ef337245b450f64d70745b7, type: 3}
+  cycleIV: {fileID: 21300000, guid: ad8fb8f63d897c44c9c19f0ba1ee563a, type: 3}
+  cycleV: {fileID: 21300000, guid: 3da2fd035e2b2b649a048ebe522ad945, type: 3}
+  cycleMax: {fileID: 21300000, guid: 3da2fd035e2b2b649a048ebe522ad945, type: 3}
+  fallbackIcon: {fileID: 21300000, guid: 424ad95b51827ea4996ed459b3b67f3f, type: 3}

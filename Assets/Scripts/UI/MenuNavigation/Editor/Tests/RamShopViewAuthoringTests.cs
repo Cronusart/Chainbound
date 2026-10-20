@@ -9,16 +9,19 @@ namespace SignalJam.UI.MenuNavigation.Editor.Tests
     public sealed class RamShopViewAuthoringTests
     {
         [Test]
-        public void PlayerMenuRoot_HasSixthEmbeddedRamShopInsideExactPrimaryCenter()
+        public void PlayerMenuRoot_KeepsTheEmbeddedRamShopWithoutAMenuButton()
         {
             GameObject root = PrefabUtility.LoadPrefabContents("Assets/Prefabs/UI/PlayerMenu/PlayerMenuRoot.prefab");
             try
             {
                 PlayerMenuController controller = root.GetComponent<PlayerMenuController>();
                 Assert.NotNull(controller);
-                Assert.AreEqual(7, controller.GetTabDefinitions().Length);
-                Assert.AreEqual(7, controller.GetTabScreenCount());
-                Assert.IsTrue(controller.GetTabDefinitions().Any(definition => definition != null && definition.TabId == "ram_shop"));
+                Assert.AreEqual(5, controller.GetTabDefinitions().Length);
+                Assert.AreEqual(5, controller.GetTabScreenCount());
+                Assert.IsFalse(controller.GetTabDefinitions().Any(definition =>
+                    definition != null && (definition.TabId == "ram_shop" || definition.TabId == "colosseum")));
+                Assert.IsNull(root.GetComponentsInChildren<Transform>(true)
+                    .FirstOrDefault(item => item.name == "RamShopTabButton" || item.name == "colosseumTabButton"));
 
                 RamShopScreen shop = root.GetComponentsInChildren<RamShopScreen>(true).Single();
                 Assert.AreEqual("ram_shop", shop.ScreenId);
@@ -63,6 +66,15 @@ namespace SignalJam.UI.MenuNavigation.Editor.Tests
             SerializedObject serialized = new SerializedObject(card);
             Assert.AreEqual(ramAmount, serialized.FindProperty("ramAmount").intValue);
             Assert.AreEqual(1.03f, serialized.FindProperty("pulseScale").floatValue, 0.0001f);
+            Assert.NotNull(serialized.FindProperty("revealRoot").objectReferenceValue, name);
+            Assert.NotNull(serialized.FindProperty("revealGroup").objectReferenceValue, name);
+            Assert.NotNull(serialized.FindProperty("selectionGlow").objectReferenceValue, name);
+            TMPro.TMP_Text price = serialized.FindProperty("priceLabel").objectReferenceValue as TMPro.TMP_Text;
+            Assert.NotNull(price, name);
+            Assert.AreEqual("QUOTE IN SOL", price.text, name);
+            TMPro.TMP_Text amount = card.GetComponentsInChildren<TMPro.TMP_Text>(true)
+                .Single(item => item.name == "RamAmountLabel");
+            StringAssert.Contains(ramAmount.ToString("N0"), amount.text, name);
             SerializedProperty frames = serialized.FindProperty("frames");
             Assert.AreEqual(8, frames.arraySize);
             for (int i = 0; i < frames.arraySize; i++)
@@ -85,6 +97,37 @@ namespace SignalJam.UI.MenuNavigation.Editor.Tests
 
             Assert.NotNull(ribbonTransform, name);
             Assert.AreEqual(ribbon, ribbonTransform.GetComponentInChildren<TMPro.TMP_Text>(true).text);
+        }
+
+        [Test]
+        public void PlayerMenuRoot_RamIconTracksTheValueWidth()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents("Assets/Prefabs/UI/PlayerMenu/PlayerMenuRoot.prefab");
+            try
+            {
+                Transform value = root.GetComponentsInChildren<Transform>(true).Single(item => item.name == "RamValue");
+                Transform icon = root.GetComponentsInChildren<Transform>(true).Single(item => item.name == "RamIcon");
+                Assert.AreEqual(value.parent, icon.parent);
+                Assert.Greater(icon.GetSiblingIndex(), value.GetSiblingIndex());
+
+                HorizontalLayoutGroup row = value.parent.GetComponent<HorizontalLayoutGroup>();
+                Assert.NotNull(row);
+                Assert.IsTrue(row.childControlWidth);
+                Assert.IsFalse(row.childForceExpandWidth);
+
+                LayoutElement iconLayout = icon.GetComponent<LayoutElement>();
+                Assert.NotNull(iconLayout);
+                Assert.AreEqual(0f, iconLayout.flexibleWidth);
+                Assert.Greater(iconLayout.preferredWidth, 0f);
+
+                PlayerMenuOverviewPanel overview = root.GetComponentInChildren<PlayerMenuOverviewPanel>(true);
+                SerializedObject serialized = new SerializedObject(overview);
+                Assert.AreEqual(value.GetComponent<TMPro.TMP_Text>(), serialized.FindProperty("ramValueLabel").objectReferenceValue);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         [TestCase("1", 9, "0.000000001")]

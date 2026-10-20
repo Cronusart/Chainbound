@@ -5,6 +5,7 @@ using Chainbound.Combat;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace SignalJam.UI.MenuNavigation
 {
@@ -20,6 +21,7 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private TMP_Text dateTimeLabel;
         [SerializeField] private TMP_Text segmentLabel;
         [SerializeField] private TMP_Text ramLabel;
+        [SerializeField] private TMP_Text ramValueLabel;
 
         [Header("Services")]
         [Tooltip("Optional MonoBehaviour implementing IPlayerMenuLocationProvider.")]
@@ -177,8 +179,16 @@ namespace SignalJam.UI.MenuNavigation
 
         private void SetRam(long value)
         {
+            string amount = Math.Max(0, value).ToString("N0");
+            if (ramValueLabel != null)
+            {
+                ramValueLabel.text = amount;
+                RefreshRamAmountLayout();
+                return;
+            }
+
             if (ramLabel != null)
-                ramLabel.text = $"RAM {Math.Max(0, value):N0}";
+                ramLabel.text = $"RAM {amount}";
         }
 
         private void HandleRamBalanceChanged(string playerProfileId, long balance)
@@ -197,8 +207,25 @@ namespace SignalJam.UI.MenuNavigation
                 return;
             }
 
+            if (ramValueLabel != null)
+            {
+                ramValueLabel.text = "----";
+                RefreshRamAmountLayout();
+                return;
+            }
+
             if (ramLabel != null)
                 ramLabel.text = ramUnavailableText;
+        }
+
+        private void RefreshRamAmountLayout()
+        {
+            if (ramValueLabel == null)
+                return;
+
+            ramValueLabel.ForceMeshUpdate();
+            if (ramValueLabel.rectTransform != null)
+                LayoutRebuilder.MarkLayoutForRebuild(ramValueLabel.rectTransform);
         }
 
         private IPlayerMenuLocationProvider ResolveLocationProvider()

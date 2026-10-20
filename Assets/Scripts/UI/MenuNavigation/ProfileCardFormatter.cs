@@ -3,7 +3,7 @@ using System;
 namespace SignalJam.UI.MenuNavigation
 {
     /// <summary>
-    /// Pure formatters for the landscape profile ID card and share copy.
+    /// Pure formatters for the profile career sheet and share copy.
     /// </summary>
     public static class ProfileCardFormatter
     {
@@ -26,27 +26,29 @@ namespace SignalJam.UI.MenuNavigation
             return isGuestSession ? GuestChip : SecuredChip;
         }
 
-        public static string FormatUniqueSpecies(int uniqueSpeciesCaptured)
+        public static readonly string[] CareerLabels =
         {
-            return $"{Math.Max(0, uniqueSpeciesCaptured)} species";
+            "UNIQUE SPECIES",
+            "CAPTURES",
+            "ENTANGLED",
+            "WINS",
+            "LOSSES",
+            "KOS",
+            "KO'D",
+            "RAM EARNED",
+            "RAM SPENT",
+            "REBIRTHS",
+            "STAR UPS"
+        };
+
+        public static string FormatCount(int value)
+        {
+            return Math.Max(0, value).ToString("N0");
         }
 
-        public static string FormatCaptures(int totalCaptures, int entangledCaptures)
+        public static string FormatRam(long value)
         {
-            return $"{Math.Max(0, totalCaptures)} captured   {Math.Max(0, entangledCaptures)} entangled";
-        }
-
-        public static string FormatStampedMoves(int movesCreated)
-        {
-            return $"{Math.Max(0, movesCreated)} stamped";
-        }
-
-        public static string FormatRecord(int battlesWon, int battlesLost)
-        {
-            if (battlesWon <= 0 && battlesLost <= 0)
-                return "";
-
-            return $"{Math.Max(0, battlesWon)}W-{Math.Max(0, battlesLost)}L";
+            return Math.Max(0L, value).ToString("N0");
         }
 
         public static string FormatShareCopy(string template, string displayName)
