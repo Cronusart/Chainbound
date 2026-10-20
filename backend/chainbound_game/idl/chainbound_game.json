@@ -1953,6 +1953,166 @@
       ]
     },
     {
+      "name": "prepare_profile_stamp_ticket",
+      "docs": [
+        "Records a Stamp ticket for a profile-owned Known move. The Known exists",
+        "only in the authenticated Postgres profile until this wallet-signed",
+        "transaction creates the Core asset; no wallet MoveVault row is required."
+      ],
+      "discriminator": [
+        14,
+        195,
+        234,
+        21,
+        25,
+        158,
+        57,
+        144
+      ],
+      "accounts": [
+        {
+          "name": "ticket",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  95,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "known_reference",
+          "type": "u64"
+        },
+        {
+          "name": "move_id",
+          "type": "u16"
+        },
+        {
+          "name": "modifier_ids",
+          "type": {
+            "vec": "string"
+          }
+        },
+        {
+          "name": "rarity",
+          "type": "u8"
+        },
+        {
+          "name": "asset_name",
+          "type": "string"
+        },
+        {
+          "name": "asset_uri",
+          "type": "string"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
       "name": "prepare_stamp_ticket",
       "docs": [
         "Result-authority/VRF crank records the immutable modifier result. The owner wallet",
@@ -3177,6 +3337,175 @@
       ]
     },
     {
+      "name": "stamp_profile_known_move",
+      "docs": [
+        "Atomically turns a profile-owned Known into a wallet-owned Core asset.",
+        "Postgres is the canonical RAM ledger for this path, so the program only",
+        "requires the wallet signature and the result-authority-issued ticket."
+      ],
+      "discriminator": [
+        158,
+        107,
+        90,
+        125,
+        109,
+        128,
+        171,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "ticket",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  95,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "core_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  114,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "stamped_asset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  101,
+                  100,
+                  95,
+                  97,
+                  115,
+                  115,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moves_collection",
+          "writable": true
+        },
+        {
+          "name": "core_program",
+          "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "update_game_config",
       "discriminator": [
         180,
@@ -3931,96 +4260,101 @@
     },
     {
       "code": 6017,
+      "name": "InvalidKnownReference",
+      "msg": "The profile-owned Known reference is invalid."
+    },
+    {
+      "code": 6018,
       "name": "KnownMoveMismatch",
       "msg": "The ticket move no longer matches the selected Known instance."
     },
     {
-      "code": 6018,
+      "code": 6019,
       "name": "InvalidModifierCount",
       "msg": "Stamped moves require exactly one or two modifiers."
     },
     {
-      "code": 6019,
+      "code": 6020,
       "name": "InvalidModifier",
       "msg": "Modifier identifiers must be non-empty."
     },
     {
-      "code": 6020,
+      "code": 6021,
       "name": "DuplicateModifier",
       "msg": "Stamped modifier identifiers must be distinct."
     },
     {
-      "code": 6021,
+      "code": 6022,
       "name": "StaleConfiguration",
       "msg": "The ticket was produced for a different ownership configuration."
     },
     {
-      "code": 6022,
+      "code": 6023,
       "name": "TicketExpired",
       "msg": "This ticket has expired."
     },
     {
-      "code": 6023,
+      "code": 6024,
       "name": "TicketAlreadyConsumed",
       "msg": "This ticket was already consumed."
     },
     {
-      "code": 6024,
+      "code": 6025,
       "name": "IdempotencyMismatch",
       "msg": "The idempotency key does not match this receipt or ticket."
     },
     {
-      "code": 6025,
+      "code": 6026,
       "name": "WrongCollection",
       "msg": "The supplied Core collection is not the configured trusted collection."
     },
     {
-      "code": 6026,
+      "code": 6027,
       "name": "InvalidCollectionAuthority",
       "msg": "The supplied Core collection is not controlled by the program authority PDA."
     },
     {
-      "code": 6027,
+      "code": 6028,
       "name": "AssetOwnerMismatch",
       "msg": "The supplied Core asset is not owned by the signing wallet."
     },
     {
-      "code": 6028,
+      "code": 6029,
       "name": "InvalidCoreAccount",
       "msg": "The supplied Metaplex Core account could not be decoded."
     },
     {
-      "code": 6029,
+      "code": 6030,
       "name": "InvalidComponentKind",
       "msg": "Bind component kind must be a Stamped move or cosmetic skin."
     },
     {
-      "code": 6030,
+      "code": 6031,
       "name": "DuplicateComponent",
       "msg": "The cover and selected third component must be different assets."
     },
     {
-      "code": 6031,
+      "code": 6032,
       "name": "ChainlingMismatch",
       "msg": "The Chainling does not match the requested Bind."
     },
     {
-      "code": 6032,
+      "code": 6033,
       "name": "AlreadyBound",
       "msg": "This Chainling is already Bound."
     },
     {
-      "code": 6033,
+      "code": 6034,
       "name": "TooManyMutations",
       "msg": "Capture supplied too many mutation IDs."
     },
     {
-      "code": 6034,
+      "code": 6035,
       "name": "TooManyKnownMoves",
       "msg": "Capture supplied too many Known move IDs."
     },
     {
-      "code": 6035,
+      "code": 6036,
       "name": "InvalidEncounterStatus",
       "msg": "Encounter randomness is not in the required lifecycle state."
     }
