@@ -212,11 +212,6 @@ public class EncounterTransitionBridge : MonoBehaviour
             yield break;
         }
 
-        bool authorityReady = false;
-        yield return EnsureAuthoritativeBattleSession(request, ready => authorityReady = ready);
-        if (!authorityReady)
-            yield break;
-
         isTransitionActive = true;
         lastTransitionIssuedLoad = false;
         pendingBattleSceneLaunchTicket = string.Empty;
@@ -250,21 +245,31 @@ public class EncounterTransitionBridge : MonoBehaviour
                     playerMovement.SetFrozen(true, preservePhysics: false);
             }
 
+            // Own movement and interaction from the instant the encounter is accepted.
+            // Authority availability/start can take several seconds on mobile; allowing
+            // movement during that round trip lets the player leave the trigger while
+            // the eventual response still launches its battle.
+            bool authorityReady = false;
+            yield return EnsureAuthoritativeBattleSession(request, ready => authorityReady = ready);
+            if (!authorityReady)
+                yield break;
+
             string returnSpawnId = ResolveReturnSpawnId(request.returnSpawnId);
             // Always move dynamic encounter_return spawn before battle; snapshot position may come from an earlier step.
             ConfigureReturnSpawnIfNeeded(returnSpawnId, playerRoot);
+            string safeReturnSpawnId = ResolveSafeReturnSpawnId(returnSpawnId, playerTransform);
 
             if (!request.skipSaveReturnContext)
             {
-                SaveReturnContext(playerTransform, returnSpawnId);
+                SaveReturnContext(playerTransform, safeReturnSpawnId);
             }
             else
             {
-                MergeReturnSpawnIdOnly(returnSpawnId);
+                MergeReturnSpawnIdOnly(safeReturnSpawnId);
                 if (enableDebugLogs)
                 {
                     Debug.Log(
-                        "[EncounterTransitionBridge] skipSaveReturnContext: merged returnSpawnId only; " +
+                        "[EncounterTransitionBridge] skipSaveReturnContext: merged safe return spawn only; " +
                         "position/rotation left from prior snapshot.");
                 }
             }
@@ -758,6 +763,41 @@ public class EncounterTransitionBridge : MonoBehaviour
             return requestReturnSpawnId.Trim();
 
         return encounterReturnSpawnId;
+    }
+
+    /// <summary>
+    /// Captures a scene-authored respawn point alongside the exact encounter
+    /// snapshot. The default <c>encounter_return</c> point is runtime-aligned
+    /// to the player and lives in DontDestroyOnLoad, so it must never be saved
+    /// as a durable safety fallback after an app restart.
+    /// </summary>
+    private string ResolveSafeReturnSpawnId(string requestedReturnSpawnId, Transform playerTransform)
+    {
+        SpawnService spawnService = SpawnService.Instance;
+        if (spawnService == null)
+            return string.Empty;
+
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (!string.IsNullOrWhiteSpace(requestedReturnSpawnId) &&
+            !string.Equals(requestedReturnSpawnId, encounterReturnSpawnId, StringComparison.OrdinalIgnoreCase))
+        {
+            SpawnPoint requestedSpawn = spawnService.GetSpawnPoint(requestedReturnSpawnId);
+            if (requestedSpawn != null && requestedSpawn.gameObject.scene == activeScene)
+                return requestedSpawn.SpawnId;
+        }
+
+        Vector3 origin = playerTransform != null ? playerTransform.position : Vector3.zero;
+        SpawnPoint nearest = spawnService.GetNearestSpawnPointInActiveScene(origin);
+        string safeSpawnId = nearest != null ? nearest.SpawnId : string.Empty;
+
+        if (enableDebugLogs)
+        {
+            Debug.Log(
+                $"[EncounterTransitionBridge] Resolved safe return spawn '{safeSpawnId}' " +
+                $"for scene '{activeScene.name}' at {origin}.");
+        }
+
+        return safeSpawnId;
     }
 
     private bool ResolveIsIndoor()

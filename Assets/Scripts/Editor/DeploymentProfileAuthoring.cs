@@ -137,6 +137,8 @@ public static class DeploymentProfileAuthoring
         config.expectedGenesisHash = OwnershipDeploymentProfileRules.MainnetGenesisHash;
         config.coreMovesCollectionId = "";
         config.coreMovesUpdateAuthority = "";
+        config.coreArchivesCollectionId = "";
+        config.coreCoversCollectionId = "";
         config.dasRpcEndpoint = "";
         config.coreCosmeticsCollectionId = "";
         config.mwaIdentityUri = identitySource.mwaIdentityUri;

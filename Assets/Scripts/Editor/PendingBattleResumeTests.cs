@@ -174,6 +174,62 @@ public sealed class PendingBattleResumeTests
     }
 
     [Test]
+    public void TimedOutPromptConfirmsContinueWhenKeyboardFocusWasCleared()
+    {
+        var root = new GameObject("Prompt");
+        var primaryObject = new GameObject("Continue");
+        var foreignObject = new GameObject("Play");
+        primaryObject.transform.SetParent(root.transform);
+        foreignObject.transform.SetParent(root.transform);
+        Button primary = primaryObject.AddComponent<Button>();
+        Button foreign = foreignObject.AddComponent<Button>();
+
+        try
+        {
+            Assert.AreSame(primary, PendingBattleResumePresenter.ResolveConfirmTarget(primary, null, null));
+            Assert.AreSame(
+                primary,
+                PendingBattleResumePresenter.ResolveConfirmTarget(primary, null, foreignObject));
+            Assert.AreSame(
+                primary,
+                PendingBattleResumePresenter.ResolveConfirmTarget(primary, foreign, primaryObject));
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
+    public void OpenPromptConfirmsTheFocusedChoice()
+    {
+        var root = new GameObject("Prompt");
+        var rejoinObject = new GameObject("Rejoin");
+        var forfeitObject = new GameObject("Forfeit");
+        rejoinObject.transform.SetParent(root.transform);
+        forfeitObject.transform.SetParent(root.transform);
+        Button rejoin = rejoinObject.AddComponent<Button>();
+        Button forfeit = forfeitObject.AddComponent<Button>();
+
+        try
+        {
+            Assert.AreSame(
+                rejoin,
+                PendingBattleResumePresenter.ResolveConfirmTarget(rejoin, forfeit, rejoinObject));
+            Assert.AreSame(
+                forfeit,
+                PendingBattleResumePresenter.ResolveConfirmTarget(rejoin, forfeit, forfeitObject));
+            Assert.AreSame(
+                rejoin,
+                PendingBattleResumePresenter.ResolveConfirmTarget(rejoin, forfeit, null));
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+        }
+    }
+
+    [Test]
     public void UnansweredBattleProbeContinuesWhileAKnownSessionStillStops()
     {
         Assert.IsTrue(PendingBattleRouteUtility.ShouldContinueAfterProbe(

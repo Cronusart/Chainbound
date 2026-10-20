@@ -178,7 +178,8 @@ namespace Chainbound.Combat
                 string.Join(" | ", logParts) +
                 $" | resolved: {table.debugResolvedSummary}";
 
-            Debug.Log($"[EncounterRoll] HIT: {logLine}");
+            Debug.Log(
+                $"[EncounterPreviewRoll] HIT (local preview only; battle authority selects the live encounter): {logLine}");
 
             result = new ZoneEncounterResult
             {

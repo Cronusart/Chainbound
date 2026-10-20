@@ -153,17 +153,22 @@ public class WaterPatchGrid : MonoBehaviour
     {
         tileSubdivisions = Mathf.Max(1, tileSubdivisions);
 
-        // Only auto-regenerate in edit mode if enabled
-        if (generateInEditMode && !Application.isPlaying)
+        if (!generateInEditMode || Application.isPlaying)
+            return;
+
+        // The comparison cache is not saved. A domain reload would otherwise look like
+        // every grid setting changed and write another TilesRoot into the scene.
+        if (!hasCachedParameters)
         {
-            // Check if any relevant field changed
-            if (HasGridParametersChanged())
-            {
-                // Delay regeneration slightly to avoid constant rebuilding while typing
-                #if UNITY_EDITOR
-                QueueDelayedRegenerate();
-                #endif
-            }
+            CacheGridParameters();
+            return;
+        }
+
+        if (HasGridParametersChanged())
+        {
+            #if UNITY_EDITOR
+            QueueDelayedRegenerate();
+            #endif
         }
     }
     
@@ -199,7 +204,7 @@ public class WaterPatchGrid : MonoBehaviour
         isRegenerateQueued = false;
         
         // Callback can outlive the component if it's deleted in edit mode.
-        if (this == null)
+        if (this == null || Application.isPlaying)
         {
             return;
         }
@@ -219,6 +224,23 @@ public class WaterPatchGrid : MonoBehaviour
     }
     #endif
     
+    private bool hasCachedParameters;
+
+    private void CacheGridParameters()
+    {
+        lastWidthTiles = widthTiles;
+        lastHeightTiles = heightTiles;
+        lastTileWorldSize = tileWorldSize;
+        lastPixelScale = pixelScale;
+        lastTileSubdivisions = tileSubdivisions;
+        lastOriginOffset = originOffset;
+        lastPlaneAxis = planeAxis;
+        lastAnchor = anchor;
+        lastTwoSided = twoSided;
+        lastUseSpriteAnimation = useSpriteAnimation;
+        hasCachedParameters = true;
+    }
+
     private bool HasGridParametersChanged()
     {
         bool changed = 
@@ -234,18 +256,7 @@ public class WaterPatchGrid : MonoBehaviour
             useSpriteAnimation != lastUseSpriteAnimation;
         
         if (changed)
-        {
-            lastWidthTiles = widthTiles;
-            lastHeightTiles = heightTiles;
-            lastTileWorldSize = tileWorldSize;
-            lastPixelScale = pixelScale;
-            lastTileSubdivisions = tileSubdivisions;
-            lastOriginOffset = originOffset;
-            lastPlaneAxis = planeAxis;
-            lastAnchor = anchor;
-            lastTwoSided = twoSided;
-            lastUseSpriteAnimation = useSpriteAnimation;
-        }
+            CacheGridParameters();
         
         return changed;
     }
@@ -478,22 +489,16 @@ public class WaterPatchGrid : MonoBehaviour
             return;
         }
         
-        // Find and destroy the tiles root
-        Transform tilesRoot = selfTransform.Find(TILES_ROOT_NAME);
-        if (tilesRoot != null)
+        for (int i = selfTransform.childCount - 1; i >= 0; i--)
         {
+            Transform child = selfTransform.GetChild(i);
+            if (child.name != TILES_ROOT_NAME)
+                continue;
+
             if (Application.isPlaying)
-            {
-                Destroy(tilesRoot.gameObject);
-            }
+                Destroy(child.gameObject);
             else
-            {
-                #if UNITY_EDITOR
-                DestroyImmediate(tilesRoot.gameObject);
-                #else
-                DestroyImmediate(tilesRoot.gameObject);
-                #endif
-            }
+                DestroyImmediate(child.gameObject);
         }
     }
     

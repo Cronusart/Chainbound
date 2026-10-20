@@ -173,7 +173,8 @@ public static class CombatNarrationUiPrefabAuthoring
             tabLayout.spacing = 12f;
             tabLayout.childForceExpandWidth = true;
             tabLayout.childForceExpandHeight = true;
-            CreateButton("SummaryTab", tabs.transform, "SUMMARY");
+            Button summaryTab = CreateButton("SummaryTab", tabs.transform, "SUMMARY");
+            summaryTab.gameObject.SetActive(false);
             CreateButton("BattleLogTab", tabs.transform, "BATTLE LOG");
 
             GameObject viewport = NewUiObject("Viewport", reportRect, typeof(Image), typeof(Mask), typeof(ScrollRect));
@@ -350,13 +351,23 @@ public static class CombatNarrationUiPrefabAuthoring
 
         try
         {
-            EnsureBannerSurface(root);
+            bool needsBanner = FindDeep(root.transform, "BannerSurface") == null;
+            bool needsRewards = FindDeep(root.transform, "RewardsSurface") == null;
             if (FindDeep(root.transform, "ReportSurface") == null)
                 report.Add("WARNING: ReportSurface missing on CombatPostBattleReport prefab");
-            EnsureRewardsSurface(root);
-            PolishPostBattleVisuals(root);
-            PrefabUtility.SaveAsPrefabAsset(root, ReportPrefabPath);
-            report.Add($"Upgraded report prefab pages: {ReportPrefabPath}");
+            if (needsBanner)
+                EnsureBannerSurface(root);
+            if (needsRewards)
+                EnsureRewardsSurface(root);
+            if (needsBanner || needsRewards)
+            {
+                PrefabUtility.SaveAsPrefabAsset(root, ReportPrefabPath);
+                report.Add($"Added missing report surfaces: {ReportPrefabPath}");
+            }
+            else
+            {
+                report.Add($"Left authored report prefab unchanged: {ReportPrefabPath}");
+            }
         }
         finally
         {
@@ -367,8 +378,10 @@ public static class CombatNarrationUiPrefabAuthoring
     private static void EnsureBannerSurface(GameObject overlayRoot)
     {
         Transform existing = FindDeep(overlayRoot.transform, "BannerSurface");
-        GameObject banner = existing != null ? existing.gameObject : NewUiObject("BannerSurface", overlayRoot.transform);
-        Stretch((RectTransform)banner.transform, Vector2.zero, Vector2.zero);
+        bool created = existing == null;
+        GameObject banner = created ? NewUiObject("BannerSurface", overlayRoot.transform) : existing.gameObject;
+        if (created)
+            Stretch((RectTransform)banner.transform, Vector2.zero, Vector2.zero);
 
         if (FindDeep(banner.transform, "BannerTitle") == null)
         {
@@ -435,11 +448,11 @@ public static class CombatNarrationUiPrefabAuthoring
 
         Transform report = FindDeep(overlayRoot.transform, "ReportSurface");
         if (report != null)
-            PolishMenuSurface(report.gameObject);
+            PolishMenuSurface(report.gameObject, new Vector2(1f, 0.66f));
 
         Transform rewards = FindDeep(overlayRoot.transform, "RewardsSurface");
         if (rewards != null)
-            PolishMenuSurface(rewards.gameObject);
+            PolishMenuSurface(rewards.gameObject, new Vector2(1f, 0.66f));
 
         PolishAllButtons(overlayRoot);
         PolishXpRowsLayout(overlayRoot);
@@ -478,7 +491,7 @@ public static class CombatNarrationUiPrefabAuthoring
         ReparentIfNeeded(banner.transform, contents.transform, "BannerContinueButton");
     }
 
-    private static void PolishMenuSurface(GameObject surface)
+    private static void PolishMenuSurface(GameObject surface, Vector2? scanlineTiling = null)
     {
         Image plate = surface.GetComponent<Image>() ?? surface.AddComponent<Image>();
         plate.color = new Color(0.96f, 0.94f, 0.82f, 1f);
@@ -493,7 +506,7 @@ public static class CombatNarrationUiPrefabAuthoring
             enabled: true,
             texture: scanlineTexture,
             color: new Color(1f, 1f, 1f, 0.45f),
-            tiling: new Vector2(1f, 0.333f),
+            tiling: scanlineTiling ?? new Vector2(1f, 0.333f),
             scrollDirection: Vector2.down,
             uvSpeed: 0.05f);
         EditorUtility.SetDirty(scanlines);

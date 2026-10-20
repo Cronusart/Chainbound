@@ -125,6 +125,54 @@ public sealed class StarterSelectionUiPrefabTests
     }
 
     [Test]
+    public void PortraitChrome_ShowsTheStarterPanelPlateAndScanlines()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        Assert.That(prefab, Is.Not.Null);
+        GameObject instance = UnityEngine.Object.Instantiate(prefab);
+        Assert.That(instance, Is.Not.Null);
+
+        try
+        {
+            StarterSelectionUI ui = instance.GetComponent<StarterSelectionUI>();
+            Assert.That(ui, Is.Not.Null);
+            Transform container = FindChild(instance.transform, "PreviewContainer");
+            Assert.That(container, Is.Not.Null);
+            Image plate = container.GetComponent<Image>();
+            Assert.That(plate, Is.Not.Null);
+            Color authored = plate.color;
+
+            InvokePrivate(ui, "PreparePortraitChrome", "Kitsauto");
+
+            Assert.That(plate.color.a, Is.GreaterThan(0.5f));
+            Transform scanline = container.Find("ScanlineOverlay");
+            Assert.That(scanline, Is.Not.Null);
+            Assert.That(scanline.gameObject.activeSelf, Is.True);
+            RawImage scanlineImage = scanline.GetComponent<RawImage>();
+            Assert.That(scanlineImage, Is.Not.Null);
+            Assert.That(scanlineImage.texture, Is.Not.Null);
+            Assert.That(scanlineImage.color.a, Is.GreaterThan(0.4f));
+            Assert.That(scanline.GetSiblingIndex(), Is.EqualTo(0));
+
+            InvokePrivate(ui, "ResetNamingPresentation");
+            Assert.That(plate.color, Is.EqualTo(authored));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(instance);
+        }
+    }
+
+    private static void InvokePrivate(object target, string methodName, params object[] args)
+    {
+        MethodInfo method = target.GetType().GetMethod(
+            methodName,
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null, methodName);
+        method.Invoke(target, args);
+    }
+
+    [Test]
     public void Prefab_StarterPreviewGlitchScaleSettlesAtOne()
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
