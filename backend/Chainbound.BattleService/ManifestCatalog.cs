@@ -51,13 +51,23 @@ public sealed class ManifestCatalog
         return row != null && row.BattleKind == AuthoritativeBattleKind.Scripted;
     }
 
-    public ManifestEncounter ResolveEncounter(string zoneId, string narrativeEncounterId, uint seed)
+    public ManifestEncounter ResolveEncounter(
+        string zoneId,
+        string narrativeEncounterId,
+        uint seed,
+        long authorityUnixMilliseconds)
     {
         IEnumerable<ManifestEncounter> candidates = _manifest.Encounters;
         if (!string.IsNullOrWhiteSpace(narrativeEncounterId))
             candidates = candidates.Where(x => string.Equals(x.EncounterId, narrativeEncounterId, StringComparison.Ordinal));
         else
-            candidates = candidates.Where(x => string.Equals(x.ZoneId, zoneId, StringComparison.Ordinal));
+        {
+            string segment = ResolveTimeSegment(authorityUnixMilliseconds);
+            candidates = candidates.Where(x =>
+                string.Equals(x.ZoneId, zoneId, StringComparison.Ordinal) &&
+                (string.IsNullOrWhiteSpace(x.TimeSegment) ||
+                 string.Equals(x.TimeSegment, segment, StringComparison.OrdinalIgnoreCase)));
+        }
 
         List<ManifestEncounter> rows = candidates.Where(x => x.Targets.Count > 0 && x.Weight > 0).ToList();
         if (rows.Count == 0)
@@ -73,6 +83,23 @@ public sealed class ManifestCatalog
                 return rows[i];
         }
         return rows[^1];
+    }
+
+    /// <summary>
+    /// Mirrors the live client's Solana CST presentation clock. Gameplay uses a
+    /// fixed UTC-6 day (not daylight-saving local time), with the authored default
+    /// thresholds: Night 00:00-04:48/19:12-24:00, Dawn 04:48-07:12,
+    /// Day 07:12-16:48, and Dusk 16:48-19:12.
+    /// </summary>
+    public static string ResolveTimeSegment(long authorityUnixMilliseconds)
+    {
+        DateTimeOffset utc = DateTimeOffset.FromUnixTimeMilliseconds(authorityUnixMilliseconds);
+        DateTimeOffset cst = utc.AddHours(-6);
+        int minute = cst.Hour * 60 + cst.Minute;
+        if (minute < 288 || minute >= 1152) return "night";
+        if (minute < 432) return "dawn";
+        if (minute < 1008) return "day";
+        return "dusk";
     }
 
     private (BattleRewardsManifest Manifest, string Hash) LoadRewards(string path)
