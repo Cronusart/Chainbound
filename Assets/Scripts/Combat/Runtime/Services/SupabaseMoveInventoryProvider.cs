@@ -57,7 +57,7 @@ namespace Chainbound.Combat
                     playerProfileId = payload.player_profile_id,
                 };
 
-                Dictionary<string, MenuMoveLoadoutSlot> equippedByMoveItemId = new Dictionary<string, MenuMoveLoadoutSlot>(StringComparer.Ordinal);
+                Dictionary<string, LoadoutPayload> equippedByMoveItemId = new Dictionary<string, LoadoutPayload>(StringComparer.Ordinal);
                 List<LoadoutPayload> loadouts = payload.loadouts ?? new List<LoadoutPayload>();
                 for (int i = 0; i < loadouts.Count; i++)
                 {
@@ -72,7 +72,7 @@ namespace Chainbound.Combat
                         moveItemId = loadout.move_item_id,
                     };
                     snapshot.loadouts.Add(slot);
-                    equippedByMoveItemId[slot.moveItemId] = slot;
+                    equippedByMoveItemId[slot.moveItemId] = loadout;
                 }
 
                 List<MoveItemPayload> moves = payload.moves ?? new List<MoveItemPayload>();
@@ -83,7 +83,7 @@ namespace Chainbound.Combat
                         continue;
 
                     string moveItemId = payloadMove.move_item_id;
-                    equippedByMoveItemId.TryGetValue(moveItemId ?? "", out MenuMoveLoadoutSlot equippedSlot);
+                    equippedByMoveItemId.TryGetValue(moveItemId ?? "", out LoadoutPayload equippedSlot);
 
                     snapshot.moves.Add(new MenuMoveItem
                     {
@@ -97,10 +97,23 @@ namespace Chainbound.Combat
                         modifier2SectionId = payloadMove.modifier2_id,
                         modifier2EffectValue = payloadMove.modifier2_effect_value,
                         modifier2EffectValueLocked = payloadMove.modifier2_effect_value_locked,
+                        knownInstanceId = payloadMove.known_instance_id,
+                        stampOperationId = payloadMove.stamp_operation_id,
+                        acquisition = payloadMove.acquisition,
+                        escrowLocked = payloadMove.escrow_locked || payloadMove.locked,
                         locked = payloadMove.locked,
+                        bindSealed = payloadMove.bind_sealed,
+                        bindOperationId = payloadMove.bind_operation_id,
                         exportedAssetId = payloadMove.exported_asset_id,
-                        equippedChainlingId = equippedSlot != null ? equippedSlot.chainlingId : "",
-                        equippedSlot = equippedSlot != null ? equippedSlot.slot : -1,
+                        equippedChainlingId = !string.IsNullOrWhiteSpace(payloadMove.equipped_chainling_id)
+                            ? payloadMove.equipped_chainling_id
+                            : (equippedSlot != null ? equippedSlot.chainling_id : ""),
+                        equippedSlot = payloadMove.equipped_slot >= 0
+                            ? payloadMove.equipped_slot
+                            : (equippedSlot != null ? equippedSlot.slot : -1),
+                        equippedChainlingName = !string.IsNullOrWhiteSpace(payloadMove.equipped_chainling_name)
+                            ? payloadMove.equipped_chainling_name
+                            : (equippedSlot != null ? equippedSlot.chainling_name : ""),
                     });
                 }
 
@@ -152,7 +165,16 @@ namespace Chainbound.Combat
             public float modifier2_effect_value;
             public bool modifier2_effect_value_locked;
             public bool locked;
+            public bool escrow_locked;
+            public bool bind_sealed;
+            public string bind_operation_id;
+            public string known_instance_id;
+            public string stamp_operation_id;
+            public string acquisition;
             public string exported_asset_id;
+            public string equipped_chainling_id;
+            public int equipped_slot = -1;
+            public string equipped_chainling_name;
         }
 
         [Serializable]
@@ -161,6 +183,7 @@ namespace Chainbound.Combat
             public string chainling_id;
             public int slot;
             public string move_item_id;
+            public string chainling_name;
         }
     }
 }

@@ -10,17 +10,20 @@ public sealed class AmbientNpcPrefabAuthoringTests
         "Assets/Prefabs/NPC/Fisher-Ape.prefab",
         "fisher_ape",
         "Assets/Scripts/NPC/Interaction/Ambient/FisherApe/fisher_ape_chatter_profile.asset",
-        false)]
+        false,
+        3)]
     [TestCase(
         "Assets/Prefabs/NPC/Crayon-Eater.prefab",
         "crayon_eater",
         "Assets/Scripts/NPC/Interaction/Ambient/CrayonEater/crayon_eater_chatter_profile.asset",
-        true)]
+        true,
+        1)]
     public void Prefab_HasCompleteDirectionalVisualsAndDialogue(
         string prefabPath,
         string expectedNpcId,
         string profilePath,
-        bool expectsBlinkSprites)
+        bool expectsBlinkSprites,
+        int expectedLineCount)
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
         Assert.That(prefab, Is.Not.Null, prefabPath);
@@ -53,7 +56,7 @@ public sealed class AmbientNpcPrefabAuthoringTests
         Assert.That(profile.InactiveDialogue, Is.Not.Null);
         Assert.That(profile.ActiveFallbackDialogue, Is.SameAs(profile.InactiveDialogue));
         Assert.That(profile.InactiveDialogue.SpeakerNpcId, Is.EqualTo(expectedNpcId));
-        Assert.That(profile.InactiveDialogue.LineCount, Is.EqualTo(1));
+        Assert.That(profile.InactiveDialogue.LineCount, Is.EqualTo(expectedLineCount));
         Assert.That(profile.InactiveDialogue.GetLine(0).portraitSprite, Is.Not.Null);
 
         InteractableObject interactable = prefab.GetComponentInChildren<InteractableObject>(true);
@@ -68,12 +71,14 @@ public sealed class AmbientNpcPrefabAuthoringTests
     }
 
     [Test]
-    public void FisherApeDialogue_WarnsAboutTheStreamEncounter()
+    public void FisherApeDialogue_WarnsAboutTheStreamWithoutStartingAQuest()
     {
         DialogueSequenceSO dialogue = AssetDatabase.LoadAssetAtPath<DialogueSequenceSO>(
             "Assets/Scripts/NPC/Interaction/Ambient/FisherApe/Dial_FisherApe_StreamWarning.asset");
-        Assert.That(dialogue.GetLine(0).text, Is.EqualTo(
-            "That stream nearly took my arm. Watch for Chainlings when you cross."));
+        Assert.That(dialogue.LineCount, Is.EqualTo(3));
+        Assert.That(dialogue.GetLine(0).text, Is.EqualTo("The stream up ahead is rough today. Be careful."));
+        Assert.That(dialogue.GetLine(1).text, Is.EqualTo("A lot of crazed Chainlings are biting today."));
+        Assert.That(dialogue.GetLine(2).text, Does.Contain("lucky crayon"));
         Assert.That(dialogue.GetLine(0).speakerName, Is.EqualTo("Fisher-Ape"));
     }
 

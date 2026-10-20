@@ -115,6 +115,7 @@ namespace Chainbound.Combat
                 Def("coffee_beans", "Coffee Beans", "Zeb's recovered bean bag. Reynard brews these for Toby.", PlayerItemCategory.Quest, PlayerItemEffectFamily.None, maxStack: 1),
                 Def("cold_beer", "Cold Beer", "A cold beer from Momo. Toby wants it with his coffee, still hot.", PlayerItemCategory.Quest, PlayerItemEffectFamily.None, maxStack: 1),
                 Def("tobys_delivery", "Toby's Delivery", "Two brewed blacks and a cold beer, packed for Professor Toby.", PlayerItemCategory.Quest, PlayerItemEffectFamily.None, maxStack: 1),
+                Def("lucky_crayon", "Lucky Crayon", "Fisher-Ape's lucky crayon. He says it catches the strong ones.", PlayerItemCategory.Quest, PlayerItemEffectFamily.None, maxStack: 1),
             };
         }
 

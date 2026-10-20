@@ -16,14 +16,38 @@ MonoBehaviour:
   playerFacingPolicy: 1
   lines:
   - speakerName: Fisher-Ape
-    text: That stream nearly took my arm. Watch for Chainlings when you cross.
+    text: The stream up ahead is rough today. Be careful.
     typeSpeed: 48
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 21300000, guid: a9f4994f863bfce409d9f64e3eea8d48, type: 3}
     portraitTint: {r: 1, g: 1, b: 1, a: 1}
     camera:
       shotPreset: {fileID: 0}
-      targetSource: 5
+      targetSource: 0
+      npcId: 
+      targetTag: 
+    choices: []
+  - speakerName: Fisher-Ape
+    text: A lot of crazed Chainlings are biting today.
+    typeSpeed: 48
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 21300000, guid: a9f4994f863bfce409d9f64e3eea8d48, type: 3}
+    portraitTint: {r: 1, g: 1, b: 1, a: 1}
+    camera:
+      shotPreset: {fileID: 0}
+      targetSource: 0
+      npcId: 
+      targetTag: 
+    choices: []
+  - speakerName: Fisher-Ape
+    text: If only I had my lucky crayon. Then I could catch a strong one.
+    typeSpeed: 48
+    soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
+    portraitSprite: {fileID: 21300000, guid: a9f4994f863bfce409d9f64e3eea8d48, type: 3}
+    portraitTint: {r: 1, g: 1, b: 1, a: 1}
+    camera:
+      shotPreset: {fileID: 0}
+      targetSource: 0
       npcId: 
       targetTag: 
     choices: []

@@ -401,6 +401,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   offset: {x: 0, y: 1.5, z: 0}
   scale: 1
+  scaleMultiplier: {x: 1, y: 1, z: 1}
   bubbleMesh: {fileID: 1793899524748515959}
   keyText: {fileID: 0}
   interactActionRef: {fileID: 0}
@@ -725,6 +726,7 @@ GameObject:
   - component: {fileID: 7782676068437853701}
   - component: {fileID: 1368533000114031029}
   - component: {fileID: 2362552534609401156}
+  - component: {fileID: 3832537009382767662}
   m_Layer: 13
   m_Name: Fisher-Ape
   m_TagString: NPC
@@ -892,3 +894,21 @@ MonoBehaviour:
   deprecatedInactiveTriggerId: 
   deprecatedActiveFallbackDialogue: {fileID: 0}
   deprecatedActiveFallbackTriggerId: 
+--- !u!114 &3832537009382767662
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9218399150587678070}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f41170582d533a040bd22186819c3824, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  triggerId: fisher_ape_lucky_crayon
+  sequence: {fileID: 11400000, guid: 9b8cb4cb4a392f24a93ebe0e6d62d6e6, type: 2}
+  trackId: fisher_ape_lucky_crayon
+  trackType: 2
+  contextMode: 1
+  cancelPolicy: 2

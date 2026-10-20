@@ -52,3 +52,15 @@ MonoBehaviour:
     fallbackTint: {r: 0, g: 0, b: 0, a: 0}
     accentColor: {r: 0, g: 0, b: 0, a: 0}
     displayNameOverride: Toby's Delivery
+  - itemId: lucky_crayon
+    rowIcon: {fileID: 21300000, guid: 5d0fbb46258f168438ca285eb66caced, type: 3}
+    detailPortrait: {fileID: 21300000, guid: 5d0fbb46258f168438ca285eb66caced, type: 3}
+    fallbackTint: {r: 0, g: 0, b: 0, a: 0}
+    accentColor: {r: 0, g: 0, b: 0, a: 0}
+    displayNameOverride: Lucky Crayon
+  - itemId: ram
+    rowIcon: {fileID: 21300000, guid: 1a04c5d5c2efcbd4aa2280fab50e1ef9, type: 3}
+    detailPortrait: {fileID: 21300000, guid: 1a04c5d5c2efcbd4aa2280fab50e1ef9, type: 3}
+    fallbackTint: {r: 0, g: 0, b: 0, a: 0}
+    accentColor: {r: 0, g: 0, b: 0, a: 0}
+    displayNameOverride: RAM

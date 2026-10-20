@@ -203,7 +203,7 @@ namespace Chainbound.Combat
 
         /// <summary>
         /// Check whether a move can be unequipped.
-        /// Escrowed Stamped moves cannot be removed.
+        /// Escrowed moves cannot be removed, and every Chainling keeps one move.
         /// </summary>
         public LoadoutValidationResult CanUnequip(MoveInstance move)
         {
@@ -228,12 +228,16 @@ namespace Chainbound.Combat
                 return LoadoutValidationResult.Fail(LoadoutValidationError.DuplicateMove,
                     "Move is not currently equipped.");
 
+            if (equipped.Count <= 1)
+                return LoadoutValidationResult.Fail(LoadoutValidationError.LastMoveRequired,
+                    "A Chainling must keep at least one move equipped.");
+
             return LoadoutValidationResult.Valid;
         }
 
         /// <summary>
         /// Unequip a move after validation. Returns the validation result.
-        /// If invalid (e.g., escrowed), the move is NOT removed.
+        /// If invalid (e.g., escrowed or last equipped), the move is NOT removed.
         /// </summary>
         public LoadoutValidationResult Unequip(MoveInstance move)
         {

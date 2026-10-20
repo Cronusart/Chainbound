@@ -94,10 +94,20 @@ namespace Chainbound.Combat
         public string modifier2SectionId;
         public float modifier2EffectValue;
         public bool modifier2EffectValueLocked;
+        /// <summary>Optional provenance record. Empty only for legacy/unlinked moves.</summary>
+        public string knownInstanceId;
+        public string stampOperationId;
+        public string acquisition;
+        /// <summary>Existing PvP escrow lock. Kept separate from Bind sealing.</summary>
+        public bool escrowLocked;
         public bool locked;
+        /// <summary>True only when a confirmed Bind consumed this stamped asset.</summary>
+        public bool bindSealed;
+        public string bindOperationId;
         public string exportedAssetId;
         public string equippedChainlingId;
         public int equippedSlot = -1;
+        public string equippedChainlingName;
 
         public MoveInstance ToMoveInstance(MoveDatabaseSO moveDatabase)
         {
@@ -116,7 +126,7 @@ namespace Chainbound.Combat
             AddLockedModifier(instance, modifier1SectionId, modifier1EffectValue, modifier1EffectValueLocked);
             AddLockedModifier(instance, modifier2SectionId, modifier2EffectValue, modifier2EffectValueLocked);
             instance.mintAddress = exportedAssetId;
-            instance.lockState = locked ? MoveLockState.Escrowed : MoveLockState.Unlocked;
+            instance.lockState = (escrowLocked || locked) ? MoveLockState.Escrowed : MoveLockState.Unlocked;
             instance.modifierIds = BuildModifierIds(modifier1SectionId, modifier2SectionId);
             return instance;
         }

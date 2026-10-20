@@ -72,10 +72,12 @@ public static class AmbientNpcPrefabAuthoring
         for (int i = 0; i < specs.Length; i++)
             AuthorNpc(specs[i]);
 
+        FisherApeLuckyCrayonAuthoring.Apply();
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        string result = "Authored Fisher-Ape and Crayon-Eater prefabs with directional visuals and repeatable one-line dialogue; Crayon-Eater blink sprites are assigned.";
+        string result = "Authored Fisher-Ape and Crayon-Eater prefabs. Fisher-Ape Lucky Crayon dialogue and reward sequence were authored after the prefab pass.";
         Debug.Log("[AmbientNpcPrefabAuthoring] " + result);
         return result;
     }

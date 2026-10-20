@@ -37,6 +37,13 @@ namespace Chainbound.Combat.Tests
             Assert.AreEqual(PlayerItemCategory.Quest, beer.category);
             Assert.IsTrue(PlayerItemCatalogSeed.TryGet("tobys_delivery", out PlayerItemDefinition delivery));
             Assert.AreEqual("Toby's Delivery", delivery.displayName);
+
+            Assert.IsTrue(PlayerItemCatalogSeed.TryGet("lucky_crayon", out PlayerItemDefinition crayon));
+            Assert.AreEqual(PlayerItemCategory.Quest, crayon.category);
+            Assert.AreEqual(PlayerItemEffectFamily.None, crayon.effectFamily);
+            Assert.AreEqual(1, crayon.maxStack);
+            Assert.IsFalse(crayon.usableInMenu);
+            Assert.IsFalse(PlayerItemCatalogSeed.TryGet("ram", out _));
         }
 
         [Test]

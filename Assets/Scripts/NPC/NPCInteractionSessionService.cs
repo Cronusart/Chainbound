@@ -10,7 +10,8 @@ public class NPCInteractionSessionService : MonoBehaviour
     private enum SessionPhase
     {
         PendingDialogueClaim,
-        ClaimedByDialogue
+        ClaimedByDialogue,
+        Held
     }
 
     private sealed class SessionState
@@ -25,6 +26,7 @@ public class NPCInteractionSessionService : MonoBehaviour
         public SessionPhase Phase;
         public bool TrackingPlayer;
         public bool RestoreIdleFacingOnRelease;
+        public int RetentionCount;
         public ExplorationSpritePresentationPresenter OwnedPresentationPresenter;
         public int OwnedPresentationPlaybackId;
     }
@@ -139,14 +141,25 @@ public class NPCInteractionSessionService : MonoBehaviour
         if (activeSession.Phase == SessionPhase.PendingDialogueClaim)
         {
             if (Time.unscaledTime >= activeSession.PendingExpiryTime)
-                ReleaseSession("no downstream dialogue claimed the interaction session");
+            {
+                if (activeSession.RetentionCount > 0)
+                    EnterHeld("claim grace elapsed while the interaction is retained");
+                else
+                    ReleaseSession("no downstream dialogue claimed the interaction session");
+            }
 
             return;
         }
 
+        if (activeSession.Phase == SessionPhase.Held)
+            return;
+
         if (dialogueService == null || !dialogueService.IsPlaying)
         {
-            ReleaseSession("claimed dialogue ended unexpectedly");
+            if (activeSession.RetentionCount > 0)
+                EnterHeld("claimed dialogue ended while the interaction is retained");
+            else
+                ReleaseSession("claimed dialogue ended unexpectedly");
             return;
         }
 
@@ -216,6 +229,33 @@ public class NPCInteractionSessionService : MonoBehaviour
         ReleaseSession(reason);
     }
 
+    /// <summary>
+    /// Keeps the current interaction session through gaps where dialogue is not playing,
+    /// such as an item-obtain panel between two lines.
+    /// </summary>
+    public void RetainActiveSession()
+    {
+        if (activeSession == null)
+            return;
+
+        activeSession.RetentionCount++;
+        LogDebug($"Retained interaction session {activeSession.SessionId} ({activeSession.RetentionCount}).");
+    }
+
+    /// <summary>
+    /// Drops one retention. The session ends when the last retention is released.
+    /// </summary>
+    public void ReleaseActiveSessionRetention()
+    {
+        if (activeSession == null || activeSession.RetentionCount <= 0)
+            return;
+
+        activeSession.RetentionCount--;
+        LogDebug($"Released interaction retention on session {activeSession.SessionId} ({activeSession.RetentionCount}).");
+        if (activeSession.RetentionCount == 0)
+            ReleaseSession("interaction retention released");
+    }
+
     public void TryBindPresentationOwnership(
         NPCController npc,
         ExplorationSpritePresentationPresenter presenter,
@@ -245,10 +285,10 @@ public class NPCInteractionSessionService : MonoBehaviour
             return;
         }
 
-        if (activeSession.Phase == SessionPhase.ClaimedByDialogue)
+        if (activeSession.Phase == SessionPhase.ClaimedByDialogue ||
+            activeSession.Phase == SessionPhase.Held)
         {
-            // Keep the same interaction session alive across immediate dialogue handoffs
-            // while the current normal interaction session is already active.
+            activeSession.Phase = SessionPhase.ClaimedByDialogue;
             activeSession.ClaimedPlaybackId = playback.PlaybackId;
             ApplyTrackingForPlayback(activeSession, playback);
             LogDebug($"Transferred interaction session {activeSession.SessionId} to dialogue playback {playback.PlaybackId}.");
@@ -263,7 +303,27 @@ public class NPCInteractionSessionService : MonoBehaviour
         if (activeSession.ClaimedPlaybackId != playback.PlaybackId)
             return;
 
+        if (activeSession.RetentionCount > 0)
+        {
+            EnterHeld($"dialogue playback {playback.PlaybackId} completed while the interaction is retained");
+            return;
+        }
+
         ReleaseSession($"dialogue playback {playback.PlaybackId} completed");
+    }
+
+    private void EnterHeld(string reason)
+    {
+        if (activeSession == null || activeSession.Phase == SessionPhase.Held)
+            return;
+
+        activeSession.Phase = SessionPhase.Held;
+        activeSession.TrackingPlayer = false;
+        activeSession.ClaimedPlaybackId = 0;
+        if (activeSession.PlayerTransform != null)
+            activeSession.Npc?.SnapFaceTarget(activeSession.PlayerTransform);
+
+        LogDebug($"Held interaction session {activeSession.SessionId}: {reason}.");
     }
 
     private void ClaimPendingSession(DialoguePlaybackContext playback)
