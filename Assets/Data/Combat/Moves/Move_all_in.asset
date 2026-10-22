@@ -14,24 +14,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: all_in
   displayName: All-In
-  description: Spend all AP for huge contact hit; recoil on hit or miss; +1 AP on
-    KO.
+  description: Spends all your AP (min 4). Can't use All-In again next turn.
   category: 0
   baseType: 14
-  rarity: 0
+  rarity: 3
   targeting: 0
   contactType: 0
   power: 98
-  apCost: 0
+  apCost: 4
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
-  rechargeTurns: 0
+  rechargeTurns: 2
   statusEffects: []
   stageChanges: []
   tags:
   - DMG
   - APMAN
+  - SpendRemainingAp
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
@@ -45,6 +45,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

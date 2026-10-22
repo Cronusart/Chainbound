@@ -1,128 +1,129 @@
 SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCategories,ForbiddenCombos,SlotCost,IsTypeInfusion,IsStatSub,SubStat,TriggerCondition,TriggerChance,EffectDescription,PowerCap,APCostCap,ForbiddenTags,SlotType,Weight
 # Section 2 ? Potency (POT)
 # 2.1 Power
-2.1-a,Overclock,POT,Active,Common,5,8,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+5-8% base power,0,0,,None
-2.1-b,Hot Rod,POT,Active,Uncommon,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+8-12% base power,0,0,,None
-2.1-c,Redline,POT,Active,Rare,12,18,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+12-18% base power,0,0,,None
-2.1-d,Meltdown,POT,Active,Epic,18,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+18-25% base power,0,0,,None
-2.1-e,Critical Mass,POT,Active,Legendary,25,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+25% base power +5% crit chance,0,0,,None
+2.1-a,Overclock,POT,Active,Common,5,8,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+5-8% base power,0,0,,None,
+2.1-b,Hot Rod,POT,Active,Uncommon,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+8-12% base power,0,0,,None,
+2.1-c,Redline,POT,Active,Rare,12,18,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+12-18% base power,0,0,,None,
+2.1-d,Meltdown,POT,Active,Epic,18,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+18-25% base power,0,0,,None,
+2.1-e,Critical Mass,POT,Active,Legendary,25,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+25% base power +5% crit chance,0,0,,None,
 # 2.2 Accuracy
-2.2-a,Deadeye,POT,Active,Common,5,7,,,0,false,false,MeleeAtk,None,0,+5-7% accuracy,0,0,,None
-2.2-b,Lock-On,POT,Active,Uncommon,7,10,,,0,false,false,MeleeAtk,None,0,+7-10% accuracy,0,0,,None
-2.2-c,True Sight,POT,Active,Rare,10,15,,,0,false,false,MeleeAtk,None,0,+10-15% accuracy,0,0,,None
-2.2-d,Piercing Gaze,POT,Active,Epic,15,15,,,0,false,false,MeleeAtk,None,0,+15% accuracy; ignore 1 Eva stage,0,0,,None
+2.2-a,Deadeye,POT,Active,Common,5,7,,,0,false,false,MeleeAtk,None,0,+5-7% accuracy,0,0,,None,
+2.2-b,Lock-On,POT,Active,Uncommon,7,10,,,0,false,false,MeleeAtk,None,0,+7-10% accuracy,0,0,,None,
+2.2-c,True Sight,POT,Active,Rare,10,15,,,0,false,false,MeleeAtk,None,0,+10-15% accuracy,0,0,,None,
+2.2-d,Piercing Gaze,POT,Active,Epic,15,15,,,0,false,false,MeleeAtk,None,0,+15% accuracy; ignore 1 Eva stage,0,0,,None,
 # 2.3 Critical Hit
-2.3-a,Lucky Chip,POT,Active,Common,3,5,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+3-5% crit chance,0,0,,None
-2.3-b,Sharp Edge,POT,Active,Uncommon,5,7,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+5-7% crit chance,0,0,,None
-2.3-c,Fracture,POT,Active,Rare,7,10,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+7-10% crit chance,0,0,,None
-2.3-d,Glass Cannon,POT,Active,Epic,10,15,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+10-15% crit chance,0,0,,None
-2.3-e,Jackpot,POT,Active,Legendary,15,15,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+15% crit +0.25x crit multiplier,0,0,,None
+2.3-a,Lucky Chip,POT,Active,Common,3,5,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+3-5% crit chance,0,0,,None,
+2.3-b,Sharp Edge,POT,Active,Uncommon,5,7,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+5-7% crit chance,0,0,,None,
+2.3-c,Fracture,POT,Active,Rare,7,10,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+7-10% crit chance,0,0,,None,
+2.3-d,Glass Cannon,POT,Active,Epic,10,15,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+10-15% crit chance,0,0,,None,
+2.3-e,Jackpot,POT,Active,Legendary,15,15,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+15% crit +0.25x crit multiplier,0,0,,None,
 # Section 3 ? Efficiency (EFF)
 # 3.1 AP Refund
-3.1-a,Spare Change,EFF,Active,Common,5,10,,,0,false,false,MeleeAtk,None,0,5-10% chance to refund 1 AP,0,0,,None
-3.1-b,Rebate,EFF,Active,Uncommon,10,15,,,0,false,false,MeleeAtk,None,0,10-15% chance to refund 1 AP,0,0,,None
-3.1-c,Full Refund,EFF,Active,Rare,15,20,,,0,false,false,MeleeAtk,None,0,15-20% chance to refund 1 AP,0,0,,None
+3.1-a,Spare Change,EFF,Active,Common,5,10,,,0,false,false,MeleeAtk,None,0,5-10% chance to refund 1 AP,0,0,,None,
+3.1-b,Rebate,EFF,Active,Uncommon,10,15,,,0,false,false,MeleeAtk,None,0,10-15% chance to refund 1 AP,0,0,,None,
+3.1-c,Full Refund,EFF,Active,Rare,15,20,,,0,false,false,MeleeAtk,None,0,15-20% chance to refund 1 AP,0,0,,None,
 # 3.2 Bonus Action
-3.2-a,Echo,EFF,Active,Rare,8,12,DamagingMelee|DamagingRanged|StatusUtility,,0,false,false,MeleeAtk,None,0,8-12% chance to repeat this move (no AP cost),80,2,MULTI|PRIOR,ActionEconomy
-3.2-b,Side Quest,EFF,Active,Epic,15,20,,,0,false,false,MeleeAtk,None,0,15-20% chance to auto-use random Common/Uncommon typeless move at end of turn,0,0,,None
-3.2-c,After Hours,EFF,Active,Legendary,12,15,,,0,false,false,MeleeAtk,None,0,12-15% chance to auto-use random equipped move at end of turn,0,0,,None
+3.2-a,Echo,EFF,Active,Rare,8,12,DamagingMelee|DamagingRanged|StatusUtility,,0,false,false,MeleeAtk,None,0,8-12% chance to repeat this move (no AP cost),80,2,MULTI|PRIOR,ActionEconomy,
+3.2-b,Side Quest,EFF,Active,Epic,0,0,,,0,false,false,MeleeAtk,None,0,Retired. No combat effect.,0,0,,None,0
+3.2-c,After Hours,EFF,Active,Legendary,0,0,,,0,false,false,MeleeAtk,None,0,Retired. No combat effect.,0,0,,None,0
 # Section 4 ? Augmentation (AUG)
-4.1-a,Extra Hit,AUG,Active,Rare,1,1,,,0,false,false,MeleeAtk,None,0,+1 guaranteed extra hit (MULTI moves only),0,0,,None
-4.2-a,Ricochet,AUG,Active,Epic,50,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Hit bounces to 1 adjacent target at -50% power (single-target DMG only),0,0,,None
-4.3-a,Jump the Queue,INIT,Active,Epic,10,10,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Gain priority; -10% power (1-2 AP DMG moves),0,0,PRIOR,INIT
-4.3-b,Wallbreaker,INIT,Active,Legendary,0,0,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Priority + bypass barriers first hit (1-2 AP DMG moves),0,0,PRIOR,INIT
+4.1-a,Extra Hit,AUG,Active,Rare,1,1,,,0,false,false,MeleeAtk,None,0,+1 guaranteed extra hit (MULTI moves only),0,0,,None,
+4.2-a,Ricochet,AUG,Active,Epic,50,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Hit bounces to 1 adjacent target at -50% power (single-target DMG only),0,0,,None,
+4.3-a,Jump the Queue,INIT,Active,Epic,10,10,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Gain priority; -10% power (1-2 AP DMG moves),0,0,PRIOR,INIT,
+4.3-b,Wallbreaker,INIT,Active,Legendary,0,0,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Priority + bypass barriers first hit (1-2 AP DMG moves),0,0,PRIOR,INIT,
 # Section 5 ? Transmutation (TRX)
 # 5.1 Type Infusion (1 entry x 14 types)
-5.1-a,Type Infusion,TRX,Active,Rare,0,0,DamagingMelee|DamagingRanged,,0,true,false,MeleeAtk,None,0,Change move type to chosen Type (Damaging only),0,0,,None
+5.1-a,Type Infusion,TRX,Active,Rare,0,0,DamagingMelee|DamagingRanged,,0,true,false,MeleeAtk,None,0,Change move type to chosen Type (Damaging only),0,0,,None,
 # 5.2 Stat Substitution
-5.2-a,Iron Fist,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,MeleeDef,None,0,Damage scales with MeleeDef instead of MeleeAtk,0,0,,None
-5.2-b,Fleet Strike,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,Speed,None,0,Damage scales with Speed instead of MeleeAtk,0,0,,None
-5.2-c,Crosswire,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,RangedAtk,None,0,Damage scales with RangedAtk for melee moves,0,0,,None
-5.2-d,Soft Hands,TRX,Active,Mythic,0,0,DamagingMelee|DamagingRanged,,0,false,true,MeleeAtk,None,0,Damage scales inversely with Atk (higher Atk = lower damage),0,0,,None
+5.2-a,Iron Fist,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,MeleeDef,None,0,Damage scales with MeleeDef instead of MeleeAtk,0,0,,None,
+5.2-b,Fleet Strike,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,Speed,None,0,Damage scales with Speed instead of MeleeAtk,0,0,,None,
+5.2-c,Crosswire,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,RangedAtk,None,0,Damage scales with RangedAtk for melee moves,0,0,,None,
+5.2-d,Soft Hands,TRX,Active,Mythic,0,0,DamagingMelee|DamagingRanged,,0,false,true,MeleeAtk,None,0,Damage scales inversely with Atk (higher Atk = lower damage),0,0,,None,
 # Section 6 ? Trigger (TRG)
 # 6.1 On-Hit
-6.1-a,Leech,TRG,Active,Rare,12,16,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 12-16% of damage dealt,0,0,,None
-6.1-b,AP Siphon,TRG,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,0.2,15-25% chance to drain 1 AP on hit,0,0,,None
-6.1-c,Suppress,TRG,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,0.2,15-25% chance: target's next move deals -10% power. Holds through next turn if they already acted.,0,0,,None
-6.1-d,Siphon Soft,TRG,Active,Common,5,8,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 5-8% of damage dealt as HP,0,0,,None
-6.1-e,Steady Leech,TRG,Active,Uncommon,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 8-12% of damage dealt as HP,0,0,,None
-6.1-f,Heavy Leech,TRG,Active,Epic,16,20,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 16-20% of damage dealt as HP,0,0,,None
+6.1-a,Leech,TRG,Active,Rare,12,16,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 12-16% of damage dealt,0,0,,None,
+6.1-b,AP Siphon,TRG,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,0.2,15-25% chance to drain 1 AP on hit,0,0,,None,
+6.1-c,Suppress,TRG,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,0.2,15-25% chance: target's next move deals -10% power. Holds through next turn if they already acted.,0,0,,None,
+6.1-d,Siphon Soft,TRG,Active,Common,5,8,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 5-8% of damage dealt as HP,0,0,,None,
+6.1-e,Steady Leech,TRG,Active,Uncommon,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 8-12% of damage dealt as HP,0,0,,None,
+6.1-f,Heavy Leech,TRG,Active,Epic,16,20,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 16-20% of damage dealt as HP,0,0,,None,
 # 6.2 On-Crit
-6.2-a,Crit Wallet,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: gain +1 AP,0,0,,None
-6.2-b,Crit Shatter,TRG,Active,Epic,2,2,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: target -2 Def stages,0,0,,None
-6.2-c,Crit Feed,TRG,Active,Legendary,25,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: your next move deals +25% power. Holds through next turn.,0,0,,None
+6.2-a,Crit Wallet,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: gain +1 AP,0,0,,None,
+6.2-b,Crit Shatter,TRG,Active,Epic,2,2,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: target -2 Def stages,0,0,,None,
+6.2-c,Crit Feed,TRG,Active,Legendary,25,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnCrit,1.0,On crit: your next move deals +25% power. Holds through next turn.,0,0,,None,
 # 6.3 Conditional
-6.3-a,Execute,TRG,Active,Rare,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,+25-35% damage if target HP < 50%,0,0,,None
-6.3-b,Underdog,TRG,Active,Rare,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,+25-35% damage if your HP < target,0,0,,None
-6.3-c,Grit Guard,TRG,Active,Rare,15,25,,,0,false,false,MeleeAtk,OnHPBelow30,1.0,When HP < 30%: gain 15-25% mitigation for the rest of this turn,0,0,,None
+6.3-a,Execute,TRG,Active,Rare,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,+25-35% damage if target HP < 50%,0,0,,None,
+6.3-b,Underdog,TRG,Active,Rare,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,+25-35% damage if your HP < target,0,0,,None,
+6.3-c,Grit Guard,TRG,Active,Rare,15,25,,,0,false,false,MeleeAtk,OnHPBelow30,1.0,When HP < 30%: gain 15-25% mitigation for the rest of this turn,0,0,,None,
 6.3-d,Revenge Spark,TRG,Active,Epic,20,30,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnAllyKO,1.0,After an ally is knocked out, your later moves this turn deal +20-30% power,0,0,,None
-6.3-e,Punish Miss,TRG,Active,Rare,20,20,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,If target missed last turn: +20% accuracy +15% power,0,0,,None
+6.3-e,Punish Miss,TRG,Active,Rare,20,20,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,If target missed last turn: +20% accuracy +15% power,0,0,,None,
 # 6.4 Swap-In
 6.4-a,Brace,TRG,Passive,Common,10,15,,,0,false,false,MeleeAtk,OnSwapIn,1.0,On swap in, gain 10-15% mitigation for the rest of this turn,0,0,,None
-6.4-b,Warm Welcome,TRG,Passive,Uncommon,1,1,,,0,false,false,MeleeAtk,OnSwapIn,1.0,Self gains +1 AP on swap in,0,0,,None
-6.4-c,Flex In,TRG,Passive,Rare,1,1,,,0,false,false,MeleeAtk,OnSwapIn,1.0,Self gains +1 random stat stage,0,0,,None
+6.4-b,Warm Welcome,TRG,Passive,Uncommon,1,1,,,0,false,false,MeleeAtk,OnSwapIn,1.0,Self gains +1 AP on swap in,0,0,,None,
+6.4-c,Flex In,TRG,Passive,Rare,1,1,,,0,false,false,MeleeAtk,OnSwapIn,1.0,Self gains +1 random stat stage,0,0,,None,
 6.4-d,Cover Ally,TRG,Passive,Uncommon,8,12,Support,,0,false,false,MeleeAtk,OnSwapIn,1.0,On swap in, an ally gains 8-12% mitigation for the rest of this turn,0,0,,None
-6.4-e,Hand-Off,TRG,Passive,Epic,1,1,Support,,0,false,false,MeleeAtk,OnSwapIn,1.0,Ally gains +1 AP on your swap in,0,0,,None
+6.4-e,Hand-Off,TRG,Passive,Epic,1,1,Support,,0,false,false,MeleeAtk,OnSwapIn,1.0,Ally gains +1 AP on your swap in,0,0,,None,
 # 6.4 Swap-Out
-6.4-f,Parting Gift,TRG,Passive,Common,1,1,,,0,false,false,MeleeAtk,OnSwapOut,1.0,Self gains +1 AP on swap out,0,0,,None
+6.4-f,Parting Gift,TRG,Passive,Common,1,1,,,0,false,false,MeleeAtk,OnSwapOut,1.0,Self gains +1 AP on swap out,0,0,,None,
 6.4-g,Fade Guard,TRG,Passive,Uncommon,5,10,,,0,false,false,MeleeAtk,OnSwapOut,1.0,On swap out, the replacement gains 5-10% mitigation for the rest of this turn,0,0,,None
 6.4-h,Spotter,TRG,Passive,Rare,5,10,Support,,0,false,false,MeleeAtk,OnSwapOut,1.0,On swap out, an ally gains 5-10% accuracy for the rest of this turn,0,0,,None
-6.4-i,Cheer,TRG,Passive,Epic,1,1,Support,,0,false,false,MeleeAtk,OnSwapOut,1.0,Ally gains +1 random stat stage,0,0,,None
+6.4-i,Cheer,TRG,Passive,Epic,1,1,Support,,0,false,false,MeleeAtk,OnSwapOut,1.0,Ally gains +1 random stat stage,0,0,,None,
 # Section 7 ? Synergy (SYN)
 # 7.1 Team
-7.1-a,Duo Boost,SYN,Active,Uncommon,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+8-12% power per buffed partner,0,0,,None
+7.1-a,Duo Boost,SYN,Active,Uncommon,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+8-12% power per buffed partner,0,0,,None,
 7.1-b,Shield Link,SYN,Active,Rare,12,18,Support,,0,false,false,MeleeAtk,None,0,On use, an ally gains 12-18% mitigation for the rest of this turn,0,0,,None
-7.1-c,Hype Pass,SYN,Active,Rare,1,1,Support,,0,false,false,MeleeAtk,None,0,Ally gains +1 random stat stage when move used,0,0,,None
-7.1-d,Mind-Meld,SYN,Active,Epic,0,0,StatusUtility,,0,false,false,MeleeAtk,None,0,Effect also applies to partner (self-buff only),0,0,,None
+7.1-c,Hype Pass,SYN,Active,Rare,1,1,Support,,0,false,false,MeleeAtk,None,0,Ally gains +1 random stat stage when move used,0,0,,None,
+7.1-d,Mind-Meld,SYN,Active,Epic,0,0,StatusUtility,,0,false,false,MeleeAtk,None,0,Effect also applies to partner (self-buff only),0,0,,None,
 # 7.2 Combo
-7.2-a,Tag Team,SYN,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,If ally attacked this turn: +15-25% power,0,0,,None
-7.2-b,Pile-On,SYN,Active,Epic,40,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+40-50% power if target was hit this turn,0,0,,None
-7.2-c,Setup Feed,SYN,Active,Uncommon,10,15,StatusUtility,,0,false,false,MeleeAtk,None,0,Next ally move: +10-15% power,0,0,,None
+7.2-a,Tag Team,SYN,Active,Rare,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,If ally attacked this turn: +15-25% power,0,0,,None,
+7.2-b,Pile-On,SYN,Active,Epic,40,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+40-50% power if target was hit this turn,0,0,,None,
+7.2-c,Setup Feed,SYN,Active,Uncommon,12,12,StatusUtility,,0,false,false,MeleeAtk,None,0,Next ally action gains 12% power. A non-power action wastes it.,0,0,,None,1
 # Section 10 ? Special
 # 10.1 Entangled-Exclusive
-10.1-a,Equalizer,TRG,Active,Rare,0,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Crit chance = 50% minus current crit% (inversely scales),0,0,,None
-10.1-b,Glass Overclock,POT,Active,Epic,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+25-35% power; -15% accuracy,0,0,,None
-10.1-c,Volatile,POT,Active,Legendary,20,30,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Random +/- 20-30% power per use,0,0,,None
-10.1-d,All-Stat Burn,POT,Passive,Mythic,3,4,Passive,,0,false,false,MeleeAtk,None,0,+3 to +4 stages to all 5 stats; self-damage 5% MaxHP per turn,0,0,,None
+10.1-a,Equalizer,TRG,Active,Rare,0,50,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Crit chance = 50% minus current crit% (inversely scales),0,0,,None,
+10.1-b,Glass Overclock,POT,Active,Epic,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,+25-35% power; -15% accuracy,0,0,,None,
+10.1-c,Volatile,POT,Active,Legendary,20,30,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Random +/- 20-30% power per use,0,0,,None,
+10.1-d,All-Stat Burn,POT,Passive,Mythic,0,0,Passive,,0,false,false,MeleeAtk,None,0,Retired combat effect. Reserved for entangled-only grants.,0,0,,None,0
 # 10.2 Event-Exclusive
-10.2-a,Seasonal Skin,POT,Active,Rare,3,5,,,0,false,false,MeleeAtk,None,0,Cosmetic effect + 3-5% power bonus (Seasonal),0,0,,None
-10.2-b,Anniversary Mark,POT,Active,Rare,3,5,,,0,false,false,MeleeAtk,None,0,Unique visual + 3-5% all stats (Anniversary),0,0,,None
-10.2-c,Tournament Badge,POT,Active,Rare,0,0,,,0,false,false,MeleeAtk,None,0,Badge display + ranked bonus (Tournament),0,0,,None
+10.2-a,Seasonal Skin,POT,Active,Rare,3,5,,,0,false,false,MeleeAtk,None,0,Cosmetic effect + 3-5% power bonus (Seasonal),0,0,,None,
+10.2-b,Anniversary Mark,POT,Active,Rare,0,0,,,0,false,false,MeleeAtk,None,0,Retired combat effect. Reserved for server-wide event grants.,0,0,,None,0
+10.2-c,Tournament Badge,POT,Active,Rare,0,0,,,0,false,false,MeleeAtk,None,0,Retired combat effect. Reserved for PvP tournament-win grants.,0,0,,None,0
+
 # Section 1 ? Initiative (INIT)
-1.1-a,Hair Trigger,INIT,Active,Rare,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,8-12% chance to gain priority within speed tier,0,0,PRIOR,INIT
-1.2-a,Last Gasp,INIT,Active,Epic,30,30,DamagingMelee|DamagingRanged,1.1-a|4.3-a|4.3-b,0,false,false,MeleeAtk,OnLowHP,1.0,When HP below 30% this move may act first (once-per-battle intent),0,0,,INIT
+1.1-a,Hair Trigger,INIT,Active,Rare,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,8-12% chance to gain priority within speed tier,0,0,PRIOR,INIT,
+1.2-a,Last Gasp,INIT,Active,Epic,30,30,DamagingMelee|DamagingRanged,1.1-a|4.3-a|4.3-b,0,false,false,MeleeAtk,OnLowHP,1.0,When HP below 30% this move may act first (once-per-battle intent),0,0,,INIT,
 # Section 2 ? Potency/Status Expansion
-2.4-a,Sticky Notes,POT,Active,Rare,10,20,StatusUtility|Support,,0,false,false,MeleeAtk,None,0,+10-20% status application chance (multiplicative),0,0,,None
-2.5-a,Long Bind,TRG,Active,Rare,1,1,StatusUtility|Support,,0,false,false,MeleeAtk,OnStatusApplied,1.0,+1 turn to statuses applied by this move,0,0,,None
-2.5-b,Encore Status,TRG,Active,Rare,25,40,StatusUtility|Support,,0,false,false,MeleeAtk,OnStatusApplied,1.0,25-40% chance to extend applied status by 1 turn,0,0,,None
-2.6-a,Chemistry Crit,POT,Active,Rare,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,When chemistry is advantageous gain +8-12% crit chance,0,0,,None
+2.4-a,Sticky Notes,POT,Active,Rare,10,20,StatusUtility|Support,,0,false,false,MeleeAtk,None,0,+10-20% status application chance (multiplicative),0,0,,None,
+2.5-a,Long Bind,TRG,Active,Rare,1,1,StatusUtility|Support,,0,false,false,MeleeAtk,OnStatusApplied,1.0,+1 turn to statuses applied by this move,0,0,,None,
+2.5-b,Encore Status,TRG,Active,Rare,25,40,StatusUtility|Support,,0,false,false,MeleeAtk,OnStatusApplied,1.0,25-40% chance to extend applied status by 1 turn,0,0,,None,
+2.6-a,Chemistry Crit,POT,Active,Rare,8,12,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,When chemistry is advantageous gain +8-12% crit chance,0,0,,None,
 # Section 3 ? Action Economy Extension
-3.3-a,Bonus Strike,EFF,Active,Epic,10,15,DamagingMelee|DamagingRanged|StatusUtility,3.2-a|4.3-a,0,false,false,MeleeAtk,None,0,10-15% chance to fire a typeless bonus strike after move,0,0,,ActionEconomy
+3.3-a,Bonus Strike,EFF,Active,Epic,10,15,DamagingMelee|DamagingRanged|StatusUtility,3.2-a|4.3-a,0,false,false,MeleeAtk,None,0,10-15% chance to fire a typeless bonus strike after move,0,0,,ActionEconomy,
 # Section 4 ? Targeting/Barrier Expansion
-4.4-a,Crowd Control,AUG,Active,Epic,30,40,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Single-target enemy move hits all enemies at 30-40% reduced power,0,0,MULTI,Targeting
+4.4-a,Crowd Control,AUG,Active,Epic,30,40,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,Single-target enemy move hits all enemies at 30-40% reduced power,0,0,MULTI,Targeting,
 4.5-a,Group Hug,AUG,Active,Epic,1,1,Support,,0,false,false,MeleeAtk,None,0,"After this support move resolves, each active ally gains +1 AP.",0,0,,Targeting,
-4.6-a,Slipstream,AUG,Active,Rare,20,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,20-35% chance to bypass barrier on first hit,0,0,,None
-4.7-a,Bleedthrough,AUG,Active,Epic,20,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,20-35% of damage penetrates barrier absorption,0,0,,None
+4.6-a,Slipstream,AUG,Active,Rare,20,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,20-35% chance to bypass barrier on first hit,0,0,,None,
+4.7-a,Bleedthrough,AUG,Active,Epic,20,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,20-35% of damage penetrates barrier absorption,0,0,,None,
 # Section 5 ? Stat Interaction Extension
-5.2-e,Speed Check,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,Speed,None,0,Use Speed instead of MeleeAtk when Speed is higher,0,0,,None
-5.2-f,Ranged Rewrite,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,RangedAtk,None,0,Use RangedAtk instead of MeleeAtk for melee moves,0,0,,None
-5.2-g,Guard Convert,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,MeleeDef,None,0,Conditional MeleeDef substitution variant,0,0,,None
+5.2-e,Speed Check,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,Speed,None,0,Use Speed instead of MeleeAtk when Speed is higher,0,0,,None,
+5.2-f,Ranged Rewrite,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,RangedAtk,None,0,Use RangedAtk instead of MeleeAtk for melee moves,0,0,,None,
+5.2-g,Guard Convert,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,MeleeDef,None,0,Conditional MeleeDef substitution variant,0,0,,None,
 # Section 6 ? Tactical Trigger Extension
-6.5-a,Finisher Fee,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnKO,1.0,On KO restore 1 AP,0,0,,None
-6.5-b,Momentum,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnKO,1.0,On KO gain +1 Speed stage,0,0,,None
-6.6-a,Tripwire,TRG,Passive,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnEscape,1.0,On Escape apply Slow for 1 turn to fleeing target,0,0,,None
-6.6-b,Parting Shot,TRG,Passive,Epic,5,10,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnEscape,1.0,On Escape deal 5-10% MaxHP chip damage to fleeing target,0,0,,None
+6.5-a,Finisher Fee,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnKO,1.0,On KO restore 1 AP,0,0,,None,
+6.5-b,Momentum,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnKO,1.0,On KO gain +1 Speed stage,0,0,,None,
+6.6-a,Tripwire,TRG,Passive,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnEscape,1.0,On Escape apply Slow for 1 turn to fleeing target,0,0,,None,
+6.6-b,Parting Shot,TRG,Passive,Epic,5,10,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnEscape,1.0,On Escape deal 5-10% MaxHP chip damage to fleeing target,0,0,,None,
 # 6.7 Post-Cast Barrier
-6.7-a,Afterguard,TRG,Active,Uncommon,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,After hit: grant a 1-hit barrier for 2 turns,0,0,,Barrier
-6.7-b,Double Guard,TRG,Active,Rare,2,2,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,After hit: grant a 2-hit barrier for 3 turns,0,0,,Barrier
-6.7-c,Threshold Guard,TRG,Active,Epic,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,After hit: grant a damage-threshold barrier (15-25% MaxHP) for 2 turns,0,0,,Barrier
+6.7-a,Afterguard,TRG,Active,Uncommon,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,After hit: grant a 1-hit barrier for 2 turns,0,0,,Barrier,
+6.7-b,Double Guard,TRG,Active,Rare,2,2,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,After hit: grant a 2-hit barrier for 3 turns,0,0,,Barrier,
+6.7-c,Threshold Guard,TRG,Active,Epic,15,25,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,After hit: grant a damage-threshold barrier (15-25% MaxHP) for 2 turns,0,0,,Barrier,
 # Section 8 ? Durability (DUR)
 # 8.1 Passive MaxHP%
-8.1-a,Spare Heart,DUR,Passive,Common,5,8,Passive,,0,false,false,MeleeAtk,None,0,+5-8% MaxHP while equipped,0,0,,Durability
-8.1-b,Stout Frame,DUR,Passive,Uncommon,8,12,Passive,,0,false,false,MeleeAtk,None,0,+8-12% MaxHP while equipped,0,0,,Durability
-8.1-c,Iron Hide,DUR,Passive,Rare,12,18,Passive,,0,false,false,MeleeAtk,None,0,+12-18% MaxHP while equipped,0,0,,Durability
-8.1-d,Oak Frame,DUR,Passive,Epic,18,25,Passive,,0,false,false,MeleeAtk,None,0,+18-25% MaxHP while equipped,0,0,,Durability
-8.1-e,Titan Heart,DUR,Passive,Legendary,25,33,Passive,,0,false,false,MeleeAtk,None,0,+25-33% MaxHP while equipped,0,0,,Durability
+8.1-a,Spare Heart,DUR,Passive,Common,5,8,Passive,,0,false,false,MeleeAtk,None,0,+5-8% MaxHP while equipped,0,0,,Durability,
+8.1-b,Stout Frame,DUR,Passive,Uncommon,8,12,Passive,,0,false,false,MeleeAtk,None,0,+8-12% MaxHP while equipped,0,0,,Durability,
+8.1-c,Iron Hide,DUR,Passive,Rare,12,18,Passive,,0,false,false,MeleeAtk,None,0,+12-18% MaxHP while equipped,0,0,,Durability,
+8.1-d,Oak Frame,DUR,Passive,Epic,18,25,Passive,,0,false,false,MeleeAtk,None,0,+18-25% MaxHP while equipped,0,0,,Durability,
+8.1-e,Titan Heart,DUR,Passive,Legendary,25,33,Passive,,0,false,false,MeleeAtk,None,0,+25-33% MaxHP while equipped,0,0,,Durability,
 # Pass A — Util/Sup/Pas gated initiative, triggers, sparse bench, barriers, synergy
 1.3-a,First Dibs,INIT,Active,Uncommon,5,12,StatusUtility|Support|Passive,1.1-a|1.2-a|1.3-b|4.3-a|4.3-b,0,false,false,MeleeAtk,None,0,{n}% chance to act first within speed tier,0,0,PRIOR,INIT,1
 1.3-b,Quiet Priority,INIT,Active,Common,5,8,StatusUtility,1.1-a|1.2-a|1.3-a|4.3-a|4.3-b,0,false,false,MeleeAtk,None,0,{n}% priority chance (utility-only),0,0,PRIOR,INIT,1

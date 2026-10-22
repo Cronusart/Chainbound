@@ -24,7 +24,8 @@ namespace Chainbound.Combat
 
         [SerializeField] private CompactStarRatingArtSO art;
         [SerializeField] private RectTransform layoutRoot;
-        [SerializeField] private bool applyArtLayoutOverrides = true;
+        [SerializeField, Tooltip("Copies spacing and cell size from the art asset on SetRating. Leave off when the star row is laid out on the prefab.")]
+        private bool applyArtLayoutOverrides = true;
 
         private readonly StarSlot[] slots = new StarSlot[CombatConstants.STAR_MAX];
         private bool slotsBound;
@@ -264,8 +265,10 @@ namespace Chainbound.Combat
                 return;
 
             layoutRoot = transform.Find("StarRowLayout") as RectTransform;
+            bool created = false;
             if (layoutRoot == null)
             {
+                created = true;
                 GameObject go = new GameObject("StarRowLayout", typeof(RectTransform), typeof(HorizontalLayoutGroup));
                 go.transform.SetParent(transform, false);
                 layoutRoot = go.GetComponent<RectTransform>();
@@ -277,7 +280,13 @@ namespace Chainbound.Combat
 
             HorizontalLayoutGroup row = layoutRoot.GetComponent<HorizontalLayoutGroup>();
             if (row == null)
+            {
+                created = true;
                 row = layoutRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+            }
+
+            if (!created)
+                return;
 
             bool rtl = art == null || art.FillRightToLeft;
             row.spacing = art != null ? art.Spacing : 2f;
@@ -339,19 +348,21 @@ namespace Chainbound.Combat
 
         private void ApplyEmpty(StarSlot slot)
         {
-            Sprite sprite = art != null ? art.EmptyStar : null;
-            slot.emptyImage.sprite = sprite;
-            slot.emptyImage.color = art != null ? art.EmptyTint : new Color(1f, 1f, 1f, 0.35f);
-            slot.emptyImage.enabled = sprite != null;
+            if (art != null && art.EmptyStar != null)
+                slot.emptyImage.sprite = art.EmptyStar;
+            if (art != null)
+                slot.emptyImage.color = art.EmptyTint;
+            slot.emptyImage.enabled = slot.emptyImage.sprite != null;
             slot.emptyImage.preserveAspect = true;
         }
 
         private void ApplyFilled(StarSlot slot)
         {
-            Sprite sprite = art != null ? art.FilledStar : null;
-            slot.filledImage.sprite = sprite;
-            slot.filledImage.color = art != null ? art.FilledTint : Color.white;
-            slot.filledImage.enabled = sprite != null;
+            if (art != null && art.FilledStar != null)
+                slot.filledImage.sprite = art.FilledStar;
+            if (art != null)
+                slot.filledImage.color = art.FilledTint;
+            slot.filledImage.enabled = slot.filledImage.sprite != null;
             slot.filledImage.preserveAspect = true;
             CaptureBase(slot);
             slot.filledRect.localScale = slot.baseScale;
@@ -362,7 +373,6 @@ namespace Chainbound.Combat
             if (slot?.filledImage == null)
                 return;
             slot.filledImage.enabled = false;
-            slot.filledImage.sprite = null;
         }
 
         private void PlayFilledPresentation(int filledCount)
@@ -412,8 +422,8 @@ namespace Chainbound.Combat
                 {
                     CaptureBase(slot);
                     slot.filledRect.localScale = slot.baseScale;
-                    if (slot.filledImage != null && slot.filledImage.enabled)
-                        slot.filledImage.color = art != null ? art.FilledTint : Color.white;
+                    if (slot.filledImage != null && slot.filledImage.enabled && art != null)
+                        slot.filledImage.color = art.FilledTint;
                 }
             }
 

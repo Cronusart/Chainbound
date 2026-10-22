@@ -46,10 +46,10 @@ Moves have fixed:
 - Targeting
 - Base type (if typed)
 
-Rarity affects availability/complexity only, not raw scaling.
+Rarity tracks both power and availability. Within comparable roles and costs, higher-rarity moves should offer stronger output or a stronger rider.
 
 6.1 Rarity Semantics (Clarified)
-Rarity tiers indicate complexity and availability, NOT power:
+Rarity tiers indicate expected power and availability as well as complexity:
 
 Common: Single-purpose, straightforward execution
 - Example: "Deal damage" or "Buff self +1 stage"
@@ -69,7 +69,7 @@ Legendary: Rule exceptions with constraints
 Mythic: Unique behaviors with meaningful downsides
 - Example: "Deal massive damage but skip your next turn"
 
-Key principle: A Common move at max evolution should remain competitive with Epic moves in raw output. Epic moves offer flexibility, not superiority.
+Key principle: typed moves beat comparable typeless moves. A Rare typeless move should line up around a typed Common after accuracy, hit count, AP cost, and riders are considered; it should not leapfrog same-role typed moves at higher rarity.
 
 7. Logging Requirement
 All moves and passive triggers must be deterministic and fully loggable.

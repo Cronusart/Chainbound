@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "bindery-devnet-2026-10-15-v1",
+  "status": "phase0_frozen_non_player",
+  "contractPath": "Docs/Specs/Economy/BINDERY_PROTOCOL_CONTRACT_v1.md",
+  "sourceControl": {
+    "capturedBaseCommit": "03641b3b3aaf5d804bdb53f29c8474b49a5a9f0d",
+    "capturedBranch": "backend/quest-move-inventory",
+    "releaseInputsClean": false,
+    "releaseInputChanges": [
+      " M Assets/Scripts/Solana/Programs/Generated/ChainboundGameProgramContract.Generated.cs",
+      " M Supabase/functions/_shared/ownership_spine.ts",
+      " M backend/chainbound_game/idl/chainbound_game.json",
+      " M backend/chainbound_game/programs/chainbound_game/src/lib.rs",
+      "?? Docs/Specs/Economy/BINDERY_PROTOCOL_CONTRACT_v1.md"
+    ],
+    "note": "The base commit identifies the parent revision. Exact release-input bytes are authoritative when the capture is dirty."
+  },
+  "cluster": {
+    "name": "devnet",
+    "genesisHash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG"
+  },
+  "program": {
+    "programId": "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ",
+    "programData": "5wqBqX7qubopQnteX5RPTwBJrSFA6xnMs9Zbwz2BHfzD",
+    "loader": "BPFLoaderUpgradeab1e11111111111111111111111",
+    "upgradeAuthority": "DkFmzzzF89tYZu2JWR1uq3H13U5np9NU6MHF4E61gJmG",
+    "lastDeploymentSlot": 511286785,
+    "observedAtUtc": "2026-10-15T08:20:47Z",
+    "payloadBytes": 899312,
+    "payloadCapacityBytes": 899312,
+    "upgradeHeadroomBytes": 0,
+    "payloadSha256": "a79a218bcfd88b5430893de135d0ffea1306f2082e2beebe466e98237852c8fe",
+    "localArtifactExactByteMatch": true
+  },
+  "buildToolchain": {
+    "anchorCli": "0.32.1",
+    "rust": "1.89.0",
+    "solanaCliUsedForAudit": "2.3.0",
+    "artifactProfile": "release with overflow checks, fat LTO, one codegen unit"
+  },
+  "metaplexCore": {
+    "programId": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d",
+    "authorityPda": "FNRyxJLpcGuWwEUXYiXqjJMDsHAAs1gU8CnkjjBRL3ys"
+  },
+  "ownershipConfig": {
+    "address": "6Gj8af5cnLSKFWcdfFLr7fihhNmp97BdPRt76zWemPPZ",
+    "schemaVersion": 1,
+    "movesCollection": "AUQuvgpFDUekeVh2GHri99A59G4YY5LUWdGw9fKTB9wC",
+    "archivesCollection": "DP3rTx145BPfunueM9SHjYJXBDCK5GmrdwZjpCvgf6U",
+    "coversCollection": "6wPnru8RDTsnCyujzPMq8v9U8pD6ynRa8es3ZXcesbNs",
+    "cosmeticsCollection": "76aVsw9xScewNG4wkiE75asdM5bbZaHS5CG78263yMcV",
+    "stampRamCost": 75,
+    "bindRamCost": 250,
+    "generatorVersion": 1,
+    "poolHashHex": "6cea5ce56944a88486cafbb568a628b5aa5664c3db652a79cd90016427aaa4b4"
+  },
+  "metadataContract": {
+    "archiveKind": "chainling_archive",
+    "stampedComponentKind": "stamped_move",
+    "cosmeticComponentKind": "cosmetic",
+    "retiredArchiveKind": "bound_chainling",
+    "retiredCosmeticComponentKind": "cosmetic_skin",
+    "boundMoveTierExists": false,
+    "pressChargeRequired": false
+  },
+  "stateAuthority": {
+    "model": "hybrid_with_explicit_reconciliation",
+    "chainlingAndCapture": "BattleService and Postgres; result-authority-attested on-chain Bind projection",
+    "ram": "Postgres canonical ledger; on-chain v1 reservation/profile is an execution guard and reconciled mirror",
+    "coreComponentsAndArchive": "Metaplex Core accounts plus chainbound_game validation",
+    "offchainProjection": "receipt-verified Supabase confirm/reconcile settlement"
+  },
+  "unityConfig": {
+    "path": "Assets/Data/Solana/SolanaConfig.asset",
+    "gameProgramId": "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ",
+    "coreProgramId": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d",
+    "cluster": "devnet",
+    "expectedGenesisHash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+    "movesCollection": "AUQuvgpFDUekeVh2GHri99A59G4YY5LUWdGw9fKTB9wC",
+    "coreAuthority": "FNRyxJLpcGuWwEUXYiXqjJMDsHAAs1gU8CnkjjBRL3ys",
+    "cosmeticsCollection": "",
+    "archivesCollectionFieldPresent": false,
+    "coversCollectionFieldPresent": false,
+    "binderyConfigurationComplete": false
+  },
+  "releaseInputs": [
+    {
+      "path": "Docs/Specs/Economy/BINDERY_PROTOCOL_CONTRACT_v1.md",
+      "role": "frozen Bindery protocol contract",
+      "bytes": 11404,
+      "sha256": "8c67c44defb87049d93a91f9eb4a194a5216fa5f3e19115d1e81cac506994e9e"
+    },
+    {
+      "path": "backend/chainbound_game/programs/chainbound_game/src/lib.rs",
+      "role": "Anchor program source",
+      "bytes": 105769,
+      "sha256": "b151666104863014e6eb1ea0ff536b8e27909e1d8501288c180af586ab5bce85"
+    },
+    {
+      "path": "backend/chainbound_game/programs/chainbound_game/Cargo.toml",
+      "role": "Anchor program dependency contract",
+      "bytes": 766,
+      "sha256": "32003cc50b3edaea928aa8aef62e8ff652710c23394f15150c65c91c174fe0ce"
+    },
+    {
+      "path": "backend/chainbound_game/Cargo.toml",
+      "role": "Anchor workspace build profile",
+      "bytes": 285,
+      "sha256": "5ce139c1d099878b4b1ac0dbab5797c83fd074e319f79ce7265663949b45e168"
+    },
+    {
+      "path": "backend/chainbound_game/Cargo.lock",
+      "role": "locked Rust dependency graph",
+      "bytes": 102905,
+      "sha256": "17f06abacd43dce4d2235a9c1185bdfc746cd4b3ea71783f84e7b151b41c2209"
+    },
+    {
+      "path": "backend/chainbound_game/rust-toolchain.toml",
+      "role": "pinned Rust toolchain",
+      "bytes": 89,
+      "sha256": "aeed2297f0d3d1723cc04012e1c1bf32b52dec7793f2bf4744b4bb178983c073"
+    },
+    {
+      "path": "backend/chainbound_game/Anchor.toml",
+      "role": "pinned Anchor toolchain and program registry",
+      "bytes": 617,
+      "sha256": "732a19441570da63c2a2dd6e33cb6ebf07e691a7dd0d8556e59ab1fbbdb5e3aa"
+    },
+    {
+      "path": "backend/chainbound_game/target/deploy/chainbound_game.so",
+      "role": "local deploy artifact",
+      "bytes": 899312,
+      "sha256": "a79a218bcfd88b5430893de135d0ffea1306f2082e2beebe466e98237852c8fe"
+    },
+    {
+      "path": "backend/chainbound_game/idl/chainbound_game.json",
+      "role": "canonical Anchor IDL",
+      "bytes": 113465,
+      "sha256": "010b7da489f59bd0b2699d1cb2ed02d9f7e571d4fc87778d282e70f0143909ec"
+    },
+    {
+      "path": "Assets/Scripts/Solana/Programs/Generated/ChainboundGameProgramContract.Generated.cs",
+      "role": "generated Unity contract",
+      "bytes": 20510,
+      "sha256": "b776faad080f9a33ac6275d930c262891076e0c90db7a9e7cc5615c2bb3c46c3"
+    },
+    {
+      "path": "Assets/Data/Solana/SolanaConfig.asset",
+      "role": "Unity Devnet configuration",
+      "bytes": 1491,
+      "sha256": "f4bd8fa1b08359c8e1df041adfc935f4b5837253c05ae802cc1e3c117baae79e"
+    }
+  ],
+  "edge": {
+    "canonicalSourceRoot": "Supabase/functions",
+    "excludedSourceRoot": "Supabase/supabase/functions",
+    "hashAlgorithm": "sha256(path-utf8 + NUL + exact-file-bytes + NUL), paths sorted ordinal",
+    "bundleSha256": "bbdf894b29fade7257c22db7572be73d3725edf95b9096bdc65d9287fed49a52",
+    "files": [
+      {
+        "path": "Supabase/functions/_shared/account_helpers.ts",
+        "role": "canonical Bind Edge bundle input",
+        "bytes": 14003,
+        "sha256": "dbaaab91f280385770f4306c88862ecfa85973cbb592ece5015b22a4451fc28a"
+      },
+      {
+        "path": "Supabase/functions/_shared/modifier_pool.generated.ts",
+        "role": "canonical Bind Edge bundle input",
+        "bytes": 10644,
+        "sha256": "e712d9c8c782c5b9268cc73e8f7751dd493fc17a22ca81cdd0ec435801e5fa96"
+      },
+      {
+        "path": "Supabase/functions/_shared/ownership_bind.ts",
+        "role": "canonical Bind Edge bundle input",
+        "bytes": 6608,
+        "sha256": "5f6c34ab2af33505a45642291de78f027be3a4033ac63c974f136ae64b7af588"
+      },
+      {
+        "path": "Supabase/functions/_shared/ownership_das_proxy.ts",
+        "role": "canonical Bind Edge bundle input",
+        "bytes": 5654,
+        "sha256": "d118619feadbd053e8bff6e8d2e6a07fed9fa06d9ffa01d44fefc3ed80da2cd7"
+      },
+      {
+        "path": "Supabase/functions/_shared/ownership_spine.ts",
+        "role": "canonical Bind Edge bundle input",
+        "bytes": 101253,
+        "sha256": "414d14a0c407408005888fac5799ec3934cfd7234b0ebbddf26ca51ccaa6a3ba"
+      },
+      {
+        "path": "Supabase/functions/ownership_confirm_bind/index.ts",
+        "role": "canonical Bind Edge bundle input",
+        "bytes": 2772,
+        "sha256": "dd7213f10ebba573b457fbe3dea8bfe289fba84f94f584e65bd4b912e04cc66a"
+      },
+      {
+        "path": "Supabase/functions/ownership_prepare_bind/index.ts",
+        "role": "canonical Bind Edge bundle input",
+        "bytes": 8610,
+        "sha256": "b4eb17f5815618ccdc26b6dc36a81604c0aeeccf79c55754479ae97e419ba8a1"
+      },
+      {
+        "path": "Supabase/functions/ownership_reconcile_bind/index.ts",
+        "role": "canonical Bind Edge bundle input",
+        "bytes": 2742,
+        "sha256": "90d3db92182a50380ac4105e9563611563a13ee4e72b0b743e260e64bfe03aca"
+      }
+    ],
+    "remoteDeploymentRevisionVerified": false
+  },
+  "migrations": {
+    "canonicalSourceRoot": "Supabase/migrations",
+    "latestLocalVersion": "20261015042331",
+    "localMigrationCount": 106,
+    "remoteHistoryVerified": false,
+    "files": [
+      {
+        "path": "Supabase/migrations/20260903010000_authoritative_trading_trace_capture.sql",
+        "role": "Bindery authority/migration input",
+        "bytes": 62271,
+        "sha256": "7cfdd33b04120f5d8d7868e5317747139671ab99ce6ae5571d0546f4c420d1ba"
+      },
+      {
+        "path": "Supabase/migrations/20261001190000_authoritative_capture_capacity_retirement.sql",
+        "role": "Bindery authority/migration input",
+        "bytes": 9467,
+        "sha256": "13f3d6b01a97da6088707c99f2c9a9af0784c6d7556f816acc26ca04502bf314"
+      },
+      {
+        "path": "Supabase/migrations/20261006110459_ram_spend_coordinator_settlement.sql",
+        "role": "Bindery authority/migration input",
+        "bytes": 24739,
+        "sha256": "2c1967bc704a2ca987906bc4e62f9ecc5169c5616e8fca9d48144f552742ea01"
+      },
+      {
+        "path": "Supabase/migrations/20261006110715_ownership_bind_coordination.sql",
+        "role": "Bindery authority/migration input",
+        "bytes": 21709,
+        "sha256": "828b05307746d077c43585e628370cb972f8805d61bbc7c9d6270aeb38e1f19f"
+      },
+      {
+        "path": "Supabase/migrations/20261008120337_retire_press_charge_catalog_row.sql",
+        "role": "Bindery authority/migration input",
+        "bytes": 769,
+        "sha256": "1a713662321daa20a6fb1a932b40321fc8b547d93c4e10ca3cb2ccf57685dc52"
+      },
+      {
+        "path": "Supabase/migrations/20261009010622_ram_v2_postgres_canonical_earn.sql",
+        "role": "Bindery authority/migration input",
+        "bytes": 13527,
+        "sha256": "592ec37d10755869cf072e86d1de1f458d0022d4d8a963f9c242de8f39524f69"
+      },
+      {
+        "path": "Supabase/migrations/20261013234258_unified_move_inventory.sql",
+        "role": "Bindery authority/migration input",
+        "bytes": 24943,
+        "sha256": "91a3232e06bff9f511f7a9ffce818d20625285f3ef0f04ff8d0946e16d502f55"
+      }
+    ]
+  },
+  "featureGates": {
+    "playerBindery": "disabled",
+    "bindSourceDefault": "disabled",
+    "deploymentAuthorizedByThisManifest": false,
+    "transactionAuthorizedByThisManifest": false
+  },
+  "knownDeltas": [
+    "The recorded program artifact emits bound_chainling/cosmetic_skin instead of the canonical chainling_archive/cosmetic metadata values.",
+    "Unity configuration lacks archive/cover collection fields and has an empty cosmetics collection.",
+    "Target Supabase Edge revisions and remote migration history are not verified by this local baseline.",
+    "Relevant release inputs were captured from a dirty worktree; use their exact hashes, not the base commit alone."
+  ]
+}

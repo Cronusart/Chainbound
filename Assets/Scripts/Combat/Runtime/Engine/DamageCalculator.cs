@@ -176,7 +176,15 @@ namespace Chainbound.Combat
                 baseDamage *= contextMultiplier;
             }
 
-            float mitigation = damageTuning.ignoreMitigation ? 0f : CalculateMitigation(defender, move.contactType, resolvedConfig);
+            float wallMitigation = 0f;
+            float mitigation = damageTuning.ignoreMitigation
+                ? 0f
+                : CalculateMitigation(
+                    defender,
+                    move.contactType,
+                    resolvedConfig,
+                    modifierContext?.bypassBlockMitigation == true,
+                    out wallMitigation);
             if (!damageTuning.ignoreMitigation && modifierContext != null && modifierContext.additionalMitigation > 0f)
             {
                 float extra = Math.Max(0f, Math.Min(resolvedConfig.mitigationSingleSourceCap, modifierContext.additionalMitigation));
@@ -220,6 +228,7 @@ namespace Chainbound.Combat
                 chemistry = chemMult,
                 crit = critMult,
                 mitigation = mitigation,
+                wallMitigation = wallMitigation,
                 mitigationFloor = mitigationFloor,
                 tuningMultiplier = tuningMult,
                 preMitigationDamage = preMitigationDamage,
@@ -441,8 +450,14 @@ namespace Chainbound.Combat
         /// Calculate total mitigation from defender's passive resistances.
         /// Multiplicative stacking per 02C section 8.1.
         /// </summary>
-        private static float CalculateMitigation(ChainlingInstance defender, ContactType contactType, CombatResolverConfigSO config)
+        private static float CalculateMitigation(
+            ChainlingInstance defender,
+            ContactType contactType,
+            CombatResolverConfigSO config,
+            bool bypassBlocks,
+            out float wallMitigation)
         {
+            wallMitigation = 0f;
             if (defender == null)
                 return 0f;
 
@@ -450,6 +465,7 @@ namespace Chainbound.Combat
                 ? config.mitigationSingleSourceCap
                 : CombatConstants.MITIGATION_SINGLE_SOURCE_CAP;
             float surviving = 1f;
+            float wallSurviving = 1f;
 
             if (defender.mitigationSources != null)
             {
@@ -459,12 +475,21 @@ namespace Chainbound.Combat
                     if (source == null || source.turnsRemaining <= 0 || source.hitsRemaining == 0 ||
                         !AppliesToContact(source, contactType))
                         continue;
+                    if (bypassBlocks && source.blockKind != BlockKind.None)
+                        continue;
 
                     float capped = Math.Max(0f, Math.Min(sourceCap, source.mitigation));
                     surviving *= 1f - capped;
+                    if (source.blockKind != BlockKind.None ||
+                        CombatWallStateUtility.IsWallTag(source.sourceTag) ||
+                        CombatWallStateUtility.IsWallTag(source.stackKey))
+                    {
+                        wallSurviving *= 1f - capped;
+                    }
                 }
             }
 
+            wallMitigation = 1f - wallSurviving;
             return 1f - surviving;
         }
 

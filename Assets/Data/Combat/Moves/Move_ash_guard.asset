@@ -13,11 +13,15 @@ MonoBehaviour:
   m_Name: Move_ash_guard
   m_EditorClassIdentifier: 
   moveId: ash_guard
-  displayName: Ash Guard
-  description: Give an ally 20% mitigation for 2 turns.
+  displayName: Ash Barrier
+  description: "**Mid Barrier \xB7 2 AP \xB7 [PRIOR] \xB7 Recharge 1.** The next
+    ranged hit on an ally or yourself deals 35% less. Lasts until it blocks 1 hit
+    or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first
+    hit. Melee attacks are not blocked. The target also heals 5% of its max HP. Only
+    one Wall or Barrier can be on a Chainling at a time."
   category: 3
   baseType: 5
-  rarity: 0
+  rarity: 1
   targeting: 2
   contactType: 2
   power: 0
@@ -25,21 +29,22 @@ MonoBehaviour:
   accuracy: 0
   hitCountMin: 1
   hitCountMax: 1
-  rechargeTurns: 0
+  rechargeTurns: 2
   statusEffects: []
   stageChanges: []
   tags:
   - SUP
+  - PRIOR
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
   utilityEffects:
-  - effectType: 0
-    magnitude: 0.2
+  - effectType: 31
+    magnitude: 0.35
     turnBudget: 2
-    hitBudget: 0
+    hitBudget: 1
     apGain: 0
-    stackKey: wall_ash
+    stackKey: barrier_ash
     statusId: 0
     statusDuration: 0
     targetOverride: 0
@@ -54,7 +59,7 @@ MonoBehaviour:
     healPercentMaxHP: 0
     counterDamagePercentMaxHP: 0
     affectAllAllies: 0
-    contactFilter: 0
+    contactFilter: 2
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -64,6 +69,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

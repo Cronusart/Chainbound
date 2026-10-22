@@ -1,0 +1,254 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "bindery_phase2_case_catalog",
+  "status": "groundwork_only",
+  "live_execution_implemented": false,
+  "live_execution_flag": "--execute-live",
+  "target": {
+    "cluster": "devnet",
+    "program_id": "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ",
+    "supabase_project_ref": "jhzqcbrzkausrrtcavuu",
+    "migration_parity": "107/107",
+    "latest_migration": "20261016045210_bindery_phase1_foundation.sql"
+  },
+  "phase1_gate": {
+    "live_inspection_run": false,
+    "inspection_result": null,
+    "selection_trusted": null,
+    "source_enabled": null,
+    "prepare_eligible": false,
+    "live_cases_blocked": true,
+    "required_checkpoint": "A later disabled, expiring source inspection must return selection_trusted=true while source.enabled=false and prepare_eligible=false."
+  },
+  "component_paths": [
+    { "name": "stamped_move", "component_kind": 0 },
+    { "name": "cosmetic", "component_kind": 1 }
+  ],
+  "common_evidence_fields": [
+    "case_identity_and_timestamps",
+    "operator_approval_reference",
+    "cluster_genesis_hash",
+    "program_id_slot_and_binary_hash",
+    "idl_and_deployed_function_hashes",
+    "migration_and_config_snapshot",
+    "disposable_input_provenance",
+    "account_pda_and_asset_addresses",
+    "pre_and_post_account_data_hashes",
+    "pre_and_post_core_das_snapshots",
+    "simulation_and_transaction_outcome",
+    "redacted_edge_responses",
+    "operation_source_binding_and_audit_rows",
+    "ram_reservation_and_ledger_reconciliation",
+    "assertions_and_artifact_sha256"
+  ],
+  "hard_stops": [
+    "Do not run ownership_inspect_bind_source during groundwork.",
+    "Do not call any Bind source create/enable or Bind prepare/confirm/reconcile function against Devnet.",
+    "Do not mint, sign, submit, deploy, upgrade, or change Solana configuration, collections, or secrets.",
+    "Do not enable a player-facing Bind gate or allowlist.",
+    "Do not edit Unity, mobile, or APK artifacts.",
+    "Do not record fabricated observations or secret values."
+  ],
+  "cases": [
+    {
+      "id": "P2-BIND-001A",
+      "title": "Happy-path archive creation with Stamped move",
+      "component_paths": [0],
+      "targets": ["ownership_prepare_bind", "bind_chainling", "ownership_confirm_bind", "ownership_reconcile_bind"],
+      "required_disposable_inputs": ["trusted disabled-source checkpoint followed by separately approved enablement", "unbound Chainling", "wallet-owned Cover", "wallet-owned Stamped move", "exact live RAM reservation", "unused idempotency key and archive/receipt PDAs"],
+      "expected_terminal_state": "One finalized archive and completed receipt; both inputs burned; Chainling bound; source consumed; operation and 250 RAM debit settled exactly once.",
+      "evidence_fields": ["decoded receipt", "archive owner collection authorities attributes", "input burn state", "Chainling archive address", "RAM delta and reservation", "operation source binding rows"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-001B",
+      "title": "Happy-path archive creation with Cosmetic",
+      "component_paths": [1],
+      "targets": ["ownership_prepare_bind", "bind_chainling", "ownership_confirm_bind", "ownership_reconcile_bind"],
+      "required_disposable_inputs": ["trusted disabled-source checkpoint followed by separately approved enablement", "unbound Chainling", "wallet-owned Cover", "wallet-owned Cosmetic", "exact live RAM reservation", "unused idempotency key and archive/receipt PDAs"],
+      "expected_terminal_state": "One finalized archive and completed receipt; both inputs burned; Chainling bound; source consumed; operation and 250 RAM debit settled exactly once.",
+      "evidence_fields": ["decoded receipt", "archive owner collection authorities attributes", "observed component metadata vocabulary", "input burn state", "Chainling and RAM reconciliation"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-002",
+      "title": "Wrong asset owner",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "bind_chainling"],
+      "required_disposable_inputs": ["fresh otherwise-valid fixtures", "one input owned by a second disposable wallet"],
+      "expected_terminal_state": "Owner mismatch rejection with no receipt, archive, burn, Chainling mutation, settlement, or RAM debit.",
+      "evidence_fields": ["expected and observed owners", "AssetOwnerMismatch or Edge rejection", "zero-delta asset account and ledger hashes"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-003",
+      "title": "Wrong Core update authority",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "bind_chainling Anchor account constraints", "bind_chainling collection-authority validation"],
+      "required_disposable_inputs": ["subcase supplying a non-PDA Core-authority account", "subcase using a collection fixture with update authority other than the program Core-authority PDA"],
+      "expected_terminal_state": "Core-authority seed constraint, trust, or InvalidCollectionAuthority rejection with no on-chain or database settlement.",
+      "evidence_fields": ["supplied and expected Core-authority accounts", "expected and observed collection authorities", "constraint error InvalidCollectionAuthority or inspection reason", "full zero-delta hashes"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-004",
+      "title": "Wrong collection",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "bind_chainling"],
+      "required_disposable_inputs": ["wallet-owned disposable input assigned to a non-configured collection"],
+      "expected_terminal_state": "WrongCollection or trust rejection with no state mutation.",
+      "evidence_fields": ["expected and observed collection", "exact rejection", "source operation and zero-delta account evidence"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-005",
+      "title": "Invalid component kind",
+      "component_paths": [],
+      "targets": ["bind_chainling"],
+      "required_disposable_inputs": ["fresh otherwise-valid fixtures", "component_kind outside 0 and 1"],
+      "expected_terminal_state": "InvalidComponentKind with no receipt, archive, burn, binding, or RAM debit.",
+      "evidence_fields": ["encoded component_kind", "simulation or transaction error and logs", "all zero-delta account hashes"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-006",
+      "title": "Cover and component reuse",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "bind_chainling"],
+      "required_disposable_inputs": ["subcase supplying one disposable Core asset as both Cover and component", "subcase retrying an input consumed by a prior successful fixture"],
+      "expected_terminal_state": "DuplicateComponent or unavailable/reused-input rejection; no additional asset consumption, binding, settlement, or RAM debit.",
+      "evidence_fields": ["Cover and component addresses", "prior burn and receipt reference", "exact rejection", "asset existence hashes and aggregate counts before and after"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-007",
+      "title": "Low RAM",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "bind_chainling"],
+      "required_disposable_inputs": ["fresh fixtures", "profile RAM below configured bind cost", "no unrelated RAM grant"],
+      "expected_terminal_state": "Insufficient RAM rejection; no receipt, archive, burn, binding, reservation settlement, or debit.",
+      "evidence_fields": ["configured cost", "pre and post on-chain and Postgres balances", "InsufficientRam or Edge error", "unchanged ledgers"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-008",
+      "title": "Expired RAM reservation",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "bind_chainling", "ownership_reconcile_bind"],
+      "required_disposable_inputs": ["fresh fixtures", "exact reservation allowed to expire before simulation or submission"],
+      "expected_terminal_state": "ReservationExpired; operation released or failed once; RAM and assets unchanged.",
+      "evidence_fields": ["expiry and observed chain time", "reservation and operation transitions", "release audit", "zero asset and RAM deltas"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-009",
+      "title": "Replayed consumed RAM reservation",
+      "component_paths": [0, 1],
+      "targets": ["bind_chainling"],
+      "required_disposable_inputs": ["successful original operation", "its already-consumed disposable reservation", "fresh unused bind inputs for the replay attempt"],
+      "expected_terminal_state": "ReservationAlreadyConsumed; exactly one original receipt, binding, and debit; no replay mutation.",
+      "evidence_fields": ["original and replay signatures", "reservation state", "exact error", "receipt binding and ledger counts"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-010",
+      "title": "Mismatched RAM reservation",
+      "component_paths": [0, 1],
+      "targets": ["bind_chainling"],
+      "required_disposable_inputs": ["fresh fixtures", "one controlled mismatch per subcase: operation hash, amount, or reservation kind"],
+      "expected_terminal_state": "IdempotencyMismatch, ReservationAmountMismatch, or InvalidReservationKind with no state mutation.",
+      "evidence_fields": ["expected and observed hash amount kind", "exact error and logs", "unchanged account and ledger hashes"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-011",
+      "title": "Already-bound Chainling",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "bind_chainling"],
+      "required_disposable_inputs": ["disposable Chainling already bound by a completed fixture", "fresh unused inputs and reservation"],
+      "expected_terminal_state": "bind_already_exists or AlreadyBound; original archive remains; new inputs and RAM remain untouched.",
+      "evidence_fields": ["original and attempted ids", "Chainling state", "exact rejection", "binding receipt and debit counts"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-012",
+      "title": "Replayed idempotency key",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "ownership_confirm_bind", "ownership_reconcile_bind"],
+      "required_disposable_inputs": ["one existing operation", "its identical idempotency key", "conflict subcase with changed source or wallet"],
+      "expected_terminal_state": "Identical replay returns the same operation/result; conflict is rejected; no second reservation, signature, binding, or debit.",
+      "evidence_fields": ["request fingerprints", "operation ids and response codes", "signature equality", "row PDA and ledger counts"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-013",
+      "title": "Second Core burn failure with atomic rollback",
+      "component_paths": [0, 1],
+      "targets": ["bind_chainling", "Core BurnV1"],
+      "required_disposable_inputs": ["fresh valid fixtures", "reviewed disposable second input that deterministically fails Core burn after the first burn CPI would execute"],
+      "expected_terminal_state": "Failed transaction atomically restores both assets, reservation, RAM, Chainling, and receipt state; recovery releases the operation once.",
+      "evidence_fields": ["CPI order and Core error", "both asset snapshots", "receipt Chainling reservation and profile hashes", "recovery transitions"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-014",
+      "title": "Archive CreateV2 failure with atomic rollback",
+      "component_paths": [0, 1],
+      "targets": ["bind_chainling", "Core CreateV2"],
+      "required_disposable_inputs": ["fresh valid fixtures", "separately reviewed condition that reaches CreateV2 and fails without changing canonical configuration or collections"],
+      "expected_terminal_state": "Failed transaction atomically restores both would-be burns and all program writes; no archive, receipt, binding, or debit.",
+      "evidence_fields": ["proof both burns and CreateV2 were reached", "CreateV2 error and logs", "all Core and program account hashes", "operation recovery"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-015",
+      "title": "Receipt archive Chainling and RAM invariant verification",
+      "component_paths": [0, 1],
+      "targets": ["fetchAndVerifyBindReceipt", "ownership_archive_binding_projection_service"],
+      "required_disposable_inputs": ["reuse each P2-BIND-001 success artifact", "no additional transaction"],
+      "expected_terminal_state": "Read projection agrees with finalized chain state and proves exactly one binding and one 250 RAM debit.",
+      "evidence_fields": ["decoded receipt", "archive metadata collection owner and authorities", "Chainling state", "source operation binding and RAM reconciliation"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-016",
+      "title": "Current archive CreateV2 authority behavior",
+      "component_paths": [0, 1],
+      "targets": ["bind_chainling", "Core CreateV2"],
+      "required_disposable_inputs": ["fresh success fixture", "currently deployed program", "configured Archives collection"],
+      "expected_terminal_state": "Record actual deployed behavior; pass only if archive owner is wallet and update authority is program Core-authority PDA, otherwise preserve the exact failure as a finding.",
+      "evidence_fields": ["CreateV2 accounts and logs", "collection authority", "archive owner update and plugin authorities", "metadata vocabulary", "program slot and hash"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-017",
+      "title": "Retry and reconcile after client timeout",
+      "component_paths": [0, 1],
+      "targets": ["ownership_prepare_bind", "ownership_confirm_bind", "ownership_reconcile_bind", "advanceBindOperation"],
+      "required_disposable_inputs": ["fresh success fixture", "controlled response drop after submission without transaction resubmission"],
+      "expected_terminal_state": "One eventual settled result or one released failure with no duplicate transaction, binding, source consumption, or debit.",
+      "evidence_fields": ["drop boundary", "idempotency fingerprint", "discovered signature", "operation transitions", "final count assertions"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-018",
+      "title": "Retry and reconcile across finality delay",
+      "component_paths": [0, 1],
+      "targets": ["ownership_confirm_bind", "ownership_reconcile_bind", "advanceBindOperation"],
+      "required_disposable_inputs": ["fresh success fixture", "controlled observation before and after finality"],
+      "expected_terminal_state": "Pending without premature settlement, then exactly one settlement after a finalized verified receipt or one release after definitive failure or expiry.",
+      "evidence_fields": ["commitment and slots over time", "response sequence", "signature and receipt status", "ledger binding and source counts"],
+      "status": "blocked_phase1_inspection"
+    },
+    {
+      "id": "P2-BIND-019",
+      "title": "Retry and reconcile after server restart",
+      "component_paths": [0, 1],
+      "targets": ["ownership_reconcile_bind", "advanceBindOperation"],
+      "required_disposable_inputs": ["fresh prepared or submitted operation", "controlled Edge or server restart with durable database state"],
+      "expected_terminal_state": "Reconciliation discovers chain truth and reaches one terminal state without process-memory dependence or double settlement.",
+      "evidence_fields": ["restart boundary and instance ids", "durable row snapshots", "signature discovery", "transition timestamps", "final chain/database reconciliation"],
+      "status": "blocked_phase1_inspection"
+    }
+  ]
+}

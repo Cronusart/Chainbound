@@ -23,7 +23,13 @@ namespace Chainbound.Combat
         [SerializeField] private RectTransform apPipRoot;
         [SerializeField] private Image apPipTemplate;
         [SerializeField] private RectTransform starBarRoot;
+        [SerializeField] private CompactStarRatingDisplay compactStarRating;
+        [SerializeField] private CycleIconDisplay cycleIconDisplay;
+        [SerializeField] private CycleIconPaletteSO cycleIconPalette;
         [SerializeField] private RectTransform statusIconRoot;
+        [SerializeField] private TMP_Text blockStatusChipText;
+        [SerializeField] private Image selectionLockOverlay;
+        [SerializeField] private TMP_Text selectionLockText;
         [SerializeField] private TMP_Text emptyLabel;
         [SerializeField] private Image activeTurnOutline;
         [SerializeField] private Image targetOutline;
@@ -48,6 +54,10 @@ namespace Chainbound.Combat
         [SerializeField] private Sprite apPipActiveSprite;
         [Tooltip("Sprite for dormant/inactive AP cells. If null, falls back to apPipOffColor tint.")]
         [SerializeField] private Sprite apPipInactiveSprite;
+
+        public Sprite ActiveApPipSprite => apPipActiveSprite;
+        public Sprite InactiveApPipSprite => apPipInactiveSprite;
+
         [Tooltip("Spacing between AP pip centers in layout units.")]
         [SerializeField] private float apPipSpacing = 16f;
         [Tooltip("Width of each AP pip in layout units. Use for pixel alignment with other UI.")]
@@ -269,12 +279,6 @@ namespace Chainbound.Combat
             EnsureBuilt();
         }
 
-        private void OnValidate()
-        {
-            if (!Application.isPlaying && autoBuildIfMissing)
-                EnsureBuilt();
-        }
-
         public void BindChainling(ChainlingInstance instance)
         {
             string nextId = instance != null ? instance.instanceId : string.Empty;
@@ -294,8 +298,11 @@ namespace Chainbound.Combat
             if (nameText != null)
                 nameText.text = string.IsNullOrEmpty(instance.displayName) ? "--" : instance.displayName;
 
-            UpdateStarBar(Mathf.Clamp(instance.stars, 0, CombatConstants.STAR_MAX));
+            int stars = Mathf.Clamp(instance.stars, 0, CombatConstants.STAR_MAX);
+            UpdateStarBar(stars);
+            BindAuthoredProgression(stars, instance.rebirthCount, visible: true);
             UpdateVitals(instance.displayHP, instance.EffectiveMaxHP, instance.displayAP, CombatConstants.AP_CAP);
+            SetBlockStatusChip(CombatWallPopupLabelUtility.FormatHolderChip(instance));
             SetKO(!instance.isAlive);
         }
 
@@ -442,6 +449,7 @@ namespace Chainbound.Combat
 
             if (isEmpty)
             {
+                SetBlockStatusChip(string.Empty);
                 SetCaptureLowHpMarker(false, 0, false);
                 RestoreDefaultHudCardVariant();
                 _boundInstanceId = string.Empty;
@@ -449,6 +457,7 @@ namespace Chainbound.Combat
                 KillApGrantTweens();
                 if (nameText != null) nameText.text = "EMPTY";
                 UpdateStarBar(0);
+                BindAuthoredProgression(0, 0, visible: false);
                 if (hpText != null) hpText.text = "--";
                 if (typeIconImage != null) typeIconImage.enabled = false;
                 SetHpBarImmediate(0f);
@@ -486,6 +495,22 @@ namespace Chainbound.Combat
                 return;
 
             canvasGroup.alpha = isKo ? koAlpha : 1f;
+        }
+
+        public void SetSelectionLocked(bool locked, string label = "LOCKED")
+        {
+            EnsureSelectionLockVisual();
+            if (selectionLockOverlay != null)
+            {
+                selectionLockOverlay.enabled = locked;
+                if (locked)
+                    selectionLockOverlay.transform.SetAsLastSibling();
+            }
+            if (selectionLockText != null)
+            {
+                selectionLockText.text = string.IsNullOrWhiteSpace(label) ? "LOCKED" : label;
+                selectionLockText.enabled = locked;
+            }
         }
 
         public void SetHiddenInPlace(bool hidden)
@@ -752,6 +777,11 @@ namespace Chainbound.Combat
             apPipTemplate.raycastTarget = false;
 
             statusIconRoot = EnsureRect("StatusIconRow", root, 0.05f, 0.01f, 0.95f, 0.08f);
+            blockStatusChipText = EnsureText(
+                "BlockStatusChip", statusIconRoot, 0f, 0f, 1f, 1f, 13,
+                TextAlignmentOptions.Left, new Color(0.82f, 0.93f, 1f, 1f));
+            blockStatusChipText.raycastTarget = false;
+            blockStatusChipText.enabled = false;
 
             emptyLabel = EnsureText("EmptyLabel", root, 0f, 0f, 1f, 1f, 32, TextAlignmentOptions.Center, new Color(0.88f, 0.88f, 0.90f, 1f));
             emptyLabel.text = "EMPTY";
@@ -787,6 +817,8 @@ namespace Chainbound.Combat
                 hpText = FindText("HPText");
             if (emptyLabel == null)
                 emptyLabel = FindText("EmptyLabel");
+            if (blockStatusChipText == null)
+                blockStatusChipText = FindText("BlockStatusChip");
 
             if (typeIconImage == null)
                 typeIconImage = FindImage("TypeIcon");
@@ -816,9 +848,64 @@ namespace Chainbound.Combat
             if (statusIconRoot == null)
                 statusIconRoot = FindRect("StatusIconRow");
 
-            EnsureStarBar();
+            if (blockStatusChipText == null && statusIconRoot != null)
+            {
+                blockStatusChipText = EnsureText(
+                    "BlockStatusChip", statusIconRoot, 0f, 0f, 1f, 1f, 13,
+                    TextAlignmentOptions.Left, new Color(0.82f, 0.93f, 1f, 1f));
+                blockStatusChipText.raycastTarget = false;
+                blockStatusChipText.enabled = false;
+            }
+
+            CacheAuthoredProgression();
+            if (compactStarRating != null)
+            {
+                if (starBarRoot != null)
+                    starBarRoot.gameObject.SetActive(false);
+            }
+            else if (starBarRoot != null)
+            {
+                EnsureStarBar();
+            }
             EnsureHpBarReferences();
             ConfigureAnimatorTargets();
+        }
+
+        private void SetBlockStatusChip(string label)
+        {
+            if (blockStatusChipText == null)
+                return;
+            blockStatusChipText.text = label ?? string.Empty;
+            blockStatusChipText.enabled = !string.IsNullOrWhiteSpace(blockStatusChipText.text);
+        }
+
+        private void EnsureSelectionLockVisual()
+        {
+            if (selectionLockOverlay == null)
+                selectionLockOverlay = FindImage("SelectionLockOverlay");
+            if (selectionLockOverlay == null && RectTransform != null)
+            {
+                selectionLockOverlay = EnsureImage(
+                    "SelectionLockOverlay", RectTransform, 0f, 0f, 1f, 1f,
+                    new Color(0.12f, 0.15f, 0.18f, 0.62f));
+                selectionLockOverlay.raycastTarget = false;
+            }
+
+            if (selectionLockText == null)
+                selectionLockText = FindText("SelectionLockText");
+            if (selectionLockText == null && selectionLockOverlay != null)
+            {
+                selectionLockText = EnsureText(
+                    "SelectionLockText", selectionLockOverlay.rectTransform,
+                    0.52f, 0.05f, 0.98f, 0.30f, 15,
+                    TextAlignmentOptions.Right, new Color(0.92f, 0.95f, 1f, 1f));
+                selectionLockText.raycastTarget = false;
+            }
+
+            if (selectionLockOverlay != null)
+                selectionLockOverlay.enabled = false;
+            if (selectionLockText != null)
+                selectionLockText.enabled = false;
         }
 
         private void ConfigureAnimatorTargets()
@@ -943,10 +1030,68 @@ namespace Chainbound.Combat
             }
         }
 
+        private void CacheAuthoredProgression()
+        {
+            if (compactStarRating == null)
+                compactStarRating = GetComponentInChildren<CompactStarRatingDisplay>(true);
+
+            if (cycleIconDisplay == null)
+            {
+                CycleIconDisplay[] displays = GetComponentsInChildren<CycleIconDisplay>(true);
+                for (int i = 0; i < displays.Length; i++)
+                {
+                    if (displays[i] != null && displays[i].name == "CycleIcon")
+                    {
+                        cycleIconDisplay = displays[i];
+                        break;
+                    }
+                }
+            }
+
+            if (cycleIconDisplay != null || cycleIconPalette == null)
+                return;
+
+            Transform[] transforms = GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform child = transforms[i];
+                if (child == null || child.name != "CycleIcon")
+                    continue;
+
+                cycleIconDisplay = child.GetComponent<CycleIconDisplay>();
+                if (cycleIconDisplay == null)
+                    cycleIconDisplay = child.gameObject.AddComponent<CycleIconDisplay>();
+                cycleIconDisplay.Configure(cycleIconPalette);
+                break;
+            }
+        }
+
+        private void BindAuthoredProgression(int stars, int rebirthCount, bool visible)
+        {
+            if (compactStarRating == null || cycleIconDisplay == null)
+                CacheAuthoredProgression();
+
+            if (compactStarRating != null)
+                compactStarRating.SetRating(stars, visible, false);
+
+            if (cycleIconDisplay == null)
+                return;
+
+            if (cycleIconPalette != null)
+                cycleIconDisplay.Configure(cycleIconPalette);
+            cycleIconDisplay.SetCycleFromRebirthCount(rebirthCount, visible);
+        }
+
         private void EnsureStarBar()
         {
+            if (compactStarRating != null)
+                return;
+
             var root = RectTransform;
             if (root == null)
+                return;
+
+            if (starBarRoot == null && !autoBuildIfMissing)
                 return;
 
             if (starBarRoot == null)
@@ -1201,7 +1346,7 @@ namespace Chainbound.Combat
                 text.color = color;
             }
             text.raycastTarget = false;
-            text.enableWordWrapping = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.text = string.IsNullOrEmpty(text.text) ? "--" : text.text;
             return text;
         }

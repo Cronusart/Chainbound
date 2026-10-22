@@ -17,10 +17,10 @@ MonoBehaviour:
   description: If foe has 0 AP deal +30% damage and gain +1 AP.
   category: 1
   baseType: 5
-  rarity: 1
+  rarity: 3
   targeting: 0
   contactType: 1
-  power: 64
+  power: 52
   apCost: 2
   accuracy: 95
   hitCountMin: 1
@@ -72,6 +72,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

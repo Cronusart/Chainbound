@@ -103,6 +103,10 @@ namespace Chainbound.Combat.Tests
             Assert.AreSame(drainer, queue[0].actor);
             resolver.ExecuteActionStep(state, queue[0]);
             Assert.AreEqual(0, victim.currentAP);
+            Assert.IsTrue(resolver.Log.Events.Any(e =>
+                e.eventType == CombatEventType.APSpent &&
+                e.message != null &&
+                e.message.Contains("drained 2 AP from victim")));
 
             resolver.ExecuteActionStep(state, queue[1]);
 
@@ -110,7 +114,7 @@ namespace Chainbound.Combat.Tests
             Assert.IsTrue(resolver.Log.Events.Any(e =>
                 e.eventType == CombatEventType.ActionFailed &&
                 e.sourceId == victim.instanceId &&
-                e.message.Contains("NO AP")));
+                e.message.Contains("not enough AP after drainer drained it")));
         }
 
         [Test]
@@ -240,6 +244,35 @@ namespace Chainbound.Combat.Tests
             Assert.IsFalse(actor.statuses.Any(s => s.statusId == StatusId.Recharging));
             Assert.AreEqual(1, resolver.Log.Events.Count(e =>
                 e.eventType == CombatEventType.MoveRechargeComplete));
+        }
+
+        [Test]
+        public void BenchPausesNonRechargeStatusUntilSwapIn()
+        {
+            var resolver = CreateResolver();
+            var lead = CreateChainling("lead", 0, 20);
+            var partner = CreateChainling("partner", 0, 18);
+            var bench = CreateChainling("bench", 0, 15);
+            var enemy = CreateChainling("enemy", 0, 10);
+            bench.statuses.Add(new StatusInstance(
+                StatusId.Slowed,
+                StatusClass.Duration,
+                StatusOrigin.General,
+                2,
+                "bench_slow"));
+
+            TeamState allies = CreateTeam(0, lead, partner, bench);
+            CombatState state = resolver.InitializeBattle(allies, CreateTeam(1, enemy));
+            resolver.ExecuteTurn(state, CombatAction.Pass(0), CombatAction.Pass(1));
+
+            Assert.AreEqual(2, bench.statuses.Single().turnsRemaining);
+
+            allies.activeIndices[0] = 2;
+            lead.isActive = false;
+            bench.isActive = true;
+            resolver.ExecuteTurn(state, CombatAction.Pass(0), CombatAction.Pass(1));
+
+            Assert.AreEqual(1, bench.statuses.Single().turnsRemaining);
         }
 
         [Test]

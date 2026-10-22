@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 216
   displayName: Burned Tokens
-  effectSummary: Enemy DoT heals user
+  effectSummary: Enemy DoT heals user. No granted producer.
   statusClass: 0
   origin: 1
   defaultDuration: 2

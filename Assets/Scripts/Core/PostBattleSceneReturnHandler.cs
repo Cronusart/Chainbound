@@ -79,6 +79,44 @@ public class PostBattleSceneReturnHandler : MonoBehaviour
             return;
         }
 
+        // A rejoined battle can finish after the process that captured the
+        // overworld snapshot was interrupted. Do not trust the combat scene's
+        // generic home fallback in that case: use the last safe sanctuary
+        // destination instead.
+        if (PostBattleReturnSafetyPolicy.ShouldRouteToSanctuary(info))
+        {
+            OverworldReturnInfo sanctuaryInfo = info;
+            SanctuaryStateService sanctuary = SanctuaryStateService.Instance;
+            if (sanctuary != null)
+            {
+                sanctuary.GetWipeDestination(
+                    out string sceneId,
+                    out string spawnId,
+                    out bool _,
+                    out string[] residentChunkSceneIds);
+                sanctuaryInfo.sceneName = sceneId;
+                sanctuaryInfo.spawnId = spawnId;
+                sanctuaryInfo.preferredOverworldChunkSceneIds = residentChunkSceneIds;
+            }
+            else
+            {
+                sanctuaryInfo.sceneName = SanctuaryStateService.DefaultWipeSceneId;
+                sanctuaryInfo.spawnId = SanctuaryStateService.DefaultWipeSpawnId;
+                sanctuaryInfo.preferredOverworldChunkSceneIds = null;
+            }
+
+            sanctuaryInfo.useExactPosition = false;
+            sanctuaryInfo.returnSpawnId = "";
+            sanctuaryInfo.loadedChunkIds = null;
+            sanctuaryInfo.returnContextMissing = false;
+            SanctuarySpawnDirector.ClearPendingPresentation();
+            Debug.LogWarning(
+                $"[PostBattleSceneReturnHandler] Missing return context; routing to sanctuary " +
+                $"'{sanctuaryInfo.sceneName}' (spawn '{sanctuaryInfo.spawnId}').");
+            EncounterOverworldSceneLoader.LoadReturnScene(sanctuaryInfo);
+            return;
+        }
+
         if (mvpAlwaysReturnHome)
         {
             Debug.Log($"[PostBattleSceneReturnHandler] MVP override: returning to '{mvpHomeScene}' (spawn '{mvpHomeSpawnId}').");
@@ -87,5 +125,17 @@ public class PostBattleSceneReturnHandler : MonoBehaviour
         }
 
         EncounterOverworldSceneLoader.LoadReturnScene(info);
+    }
+}
+
+/// <summary>
+/// Keeps the post-battle recovery decision independent from scene loading so
+/// rejoin safety rules remain small and testable.
+/// </summary>
+public static class PostBattleReturnSafetyPolicy
+{
+    public static bool ShouldRouteToSanctuary(OverworldReturnInfo info)
+    {
+        return !info.isDefeatReturn && info.returnContextMissing;
     }
 }

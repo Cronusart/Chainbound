@@ -17,11 +17,11 @@ MonoBehaviour:
   description: Heavy ranged hit with 25% chance to lower Speed by 2.
   category: 1
   baseType: 6
-  rarity: 2
+  rarity: 4
   targeting: 0
   contactType: 1
-  power: 72
-  apCost: 2
+  power: 80
+  apCost: 4
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
@@ -47,6 +47,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

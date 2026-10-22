@@ -17,7 +17,7 @@ from PIL import Image, ImageSequence
 
 
 REPO = Path(__file__).resolve().parents[2]
-SPINE = REPO / "supabase/functions/_shared/ownership_spine.ts"
+KNOWN_POOL_SOURCE = REPO / "Supabase/functions/_shared/known_pool.generated.ts"
 MOVES = REPO / "Assets/Data/Combat/Moves"
 MODIFIERS = REPO / "Docs/Specs/Combat/Data/Modifiers.csv"
 BASE_CARD = REPO / "Assets/Sprites/UI/LibraryCards/librarycard_front.png"
@@ -138,8 +138,8 @@ def scalar(text: str, field: str, default: str = "") -> str:
     return match.group(1).strip() if match else default
 
 
-spine = SPINE.read_text(encoding="utf-8")
-pool_match = re.search(r"const KNOWN_POOL = \[(.*?)\] as const;", spine, re.DOTALL)
+known_pool_source = KNOWN_POOL_SOURCE.read_text(encoding="utf-8")
+pool_match = re.search(r"const KNOWN_POOL[^=]*= \[(.*?)\] as const;", known_pool_source, re.DOTALL)
 if not pool_match:
     raise RuntimeError("KNOWN_POOL was not found")
 move_ids = re.findall(r'moveId:\s*"([^"]+)"', pool_match.group(1))
@@ -191,11 +191,11 @@ def move_front(move_id: str, move: dict[str, object], face: str) -> str:
 
 
 move_cards = {move_id: move_front(move_id, move, "rolled") for move_id, move in moves.items()}
-learned_card_front = Image.open(LEARNED_BASE_CARD).convert("RGBA")
+learned_card_front = card_renderer.square_pad(Image.open(LEARNED_BASE_CARD).convert("RGBA"))
 learned_move_card_deltas = {
     move_id: cropped_layer(delta_overlay(
         learned_card_front,
-        card_renderer.render_front({
+        card_renderer.square_pad(card_renderer.render_front({
             "moveId": move_id,
             "moveName": move["displayName"],
             "typeId": move["typeId"],
@@ -205,7 +205,7 @@ learned_move_card_deltas = {
             "effectLine": effect_line(int(move["category"])),
             "mods": [],
             "moveRarity": "Common",
-        }, "learned"),
+        }, "learned")),
     ))
     for move_id, move in moves.items()
 }
@@ -229,6 +229,10 @@ for path in sorted(moves_dir.glob("Move_*.asset")):
     text = path.read_text(encoding="utf-8-sig")
     move_id = scalar(text, "moveId")
     if not move_id:
+        continue
+    tags_match = re.search(r"^  tags:\s*\n((?:  - .*\n)*)", text, re.MULTILINE)
+    tags = re.findall(r"^  -\s*(.+?)\s*$", tags_match.group(1), re.MULTILINE) if tags_match else []
+    if any(tag.upper() == "BOSS_ONLY" for tag in tags):
         continue
     authority[move_id] = {
         "element": int(scalar(text, "baseType", "0")),

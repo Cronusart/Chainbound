@@ -74,6 +74,7 @@ public sealed class WalletConnectionPromptService : MonoBehaviour
     private bool connecting;
     private bool listenersWired;
     private bool activationRequested;
+    private GameObject selectionBeforePrompt;
 
     public static WalletConnectionPromptService Instance { get; private set; }
     public bool IsConnecting => connecting;
@@ -392,6 +393,8 @@ public sealed class WalletConnectionPromptService : MonoBehaviour
         if (root == null)
             return;
 
+        CaptureSelectionBeforePrompt();
+
         // Activation is the only visual state controlled here. CanvasGroup,
         // transform, sibling order, sprites, and layout remain exactly as authored.
         activationRequested = true;
@@ -411,12 +414,36 @@ public sealed class WalletConnectionPromptService : MonoBehaviour
         if (root == null)
             return;
 
+        GameObject selectionToRestore = selectionBeforePrompt;
+        selectionBeforePrompt = null;
         root.SetActive(false);
         if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null &&
             EventSystem.current.currentSelectedGameObject.transform.IsChildOf(root.transform))
         {
             EventSystem.current.SetSelectedGameObject(null);
         }
+
+        RestoreSelection(selectionToRestore);
+    }
+
+    private void CaptureSelectionBeforePrompt()
+    {
+        if (EventSystem.current == null)
+            return;
+
+        GameObject selected = EventSystem.current.currentSelectedGameObject;
+        if (selected != null && (root == null || !selected.transform.IsChildOf(root.transform)))
+            selectionBeforePrompt = selected;
+    }
+
+    private static void RestoreSelection(GameObject selection)
+    {
+        if (selection == null || EventSystem.current == null || !selection.activeInHierarchy)
+            return;
+
+        Selectable selectable = selection.GetComponent<Selectable>();
+        if (selectable != null && selectable.IsActive() && selectable.IsInteractable())
+            EventSystem.current.SetSelectedGameObject(selection);
     }
 
     private bool EnsureUiReady()

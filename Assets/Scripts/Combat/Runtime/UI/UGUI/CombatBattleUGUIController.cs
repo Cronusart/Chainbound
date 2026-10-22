@@ -69,6 +69,7 @@ namespace Chainbound.Combat
         private readonly Dictionary<HudCardView, CardLayoutSnapshot> _authoredCardLayouts = new Dictionary<HudCardView, CardLayoutSnapshot>();
         private readonly List<HudCardView> _allCards = new List<HudCardView>(4);
         private readonly List<HudCardView> _targetedCards = new List<HudCardView>(4);
+        private readonly List<HudCardView> _selectionLockedCards = new List<HudCardView>(4);
         private float _nextPollTime;
         private bool _eventsSubscribed;
         private Coroutine _clearTargetsRoutine;
@@ -328,6 +329,27 @@ namespace Chainbound.Combat
         public void ClearPreviewTargets()
         {
             ClearTargetHighlights();
+        }
+
+        public void SetSelectionLockedTargets(List<CombatBattleController.HudSlotRef> targets)
+        {
+            for (int i = 0; i < _selectionLockedCards.Count; i++)
+            {
+                if (_selectionLockedCards[i] != null)
+                    _selectionLockedCards[i].SetSelectionLocked(false);
+            }
+            _selectionLockedCards.Clear();
+
+            if (targets == null)
+                return;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                HudCardView card = ResolveCardForSlot(targets[i]);
+                if (card == null || card.IsHiddenInPlace || _selectionLockedCards.Contains(card))
+                    continue;
+                card.SetSelectionLocked(true);
+                _selectionLockedCards.Add(card);
+            }
         }
 
         private void ResolveStateSource()
@@ -857,6 +879,7 @@ namespace Chainbound.Combat
         {
             ClearStoredActiveSlots();
             ClearTargetHighlights();
+            SetSelectionLockedTargets(null);
 
             for (int i = 0; i < _allCards.Count; i++)
             {

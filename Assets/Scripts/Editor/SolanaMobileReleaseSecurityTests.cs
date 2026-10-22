@@ -5,6 +5,7 @@ using NUnit.Framework;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public sealed class SolanaMobileReleaseSecurityTests
@@ -129,6 +130,9 @@ public sealed class SolanaMobileReleaseSecurityTests
         Assert.AreNotSame(devnet.SolanaConfig, mainnet.SolanaConfig);
         Assert.AreNotSame(devnet.SupabaseConfig, mainnet.SupabaseConfig);
         Assert.IsEmpty(OwnershipDeploymentProfileRules.Validate(devnet, requireComplete: true));
+        Assert.AreEqual("DP3rTx145BPfunueM9SHjYJXBDCK5GmrdwZjpCvgf6U", devnet.SolanaConfig.coreArchivesCollectionId);
+        Assert.AreEqual("6wPnru8RDTsnCyujzPMq8v9U8pD6ynRa8es3ZXcesbNs", devnet.SolanaConfig.coreCoversCollectionId);
+        Assert.AreEqual("76aVsw9xScewNG4wkiE75asdM5bbZaHS5CG78263yMcV", devnet.SolanaConfig.coreCosmeticsCollectionId);
         Assert.IsNotEmpty(OwnershipDeploymentProfileRules.Validate(mainnet, requireComplete: true),
             "Mainnet Smoke must remain non-buildable until its real isolated infrastructure is supplied.");
     }
@@ -275,6 +279,28 @@ public sealed class SolanaMobileReleaseSecurityTests
             promptPrefab.GetComponent<WalletConnectionPromptService>();
         Assert.NotNull(prefabPresenter);
         Assert.IsFalse(promptPrefab.activeSelf);
+        Transform authoredPanel = promptPrefab.transform.Find("Panel");
+        Assert.NotNull(authoredPanel, "The original wallet panel must remain authored.");
+        Assert.NotNull(authoredPanel.Find("Title"));
+        Assert.NotNull(authoredPanel.Find("Body"));
+        Assert.NotNull(authoredPanel.Find("Status"));
+        Assert.NotNull(authoredPanel.Find("WalletPromptConnectButton"));
+        Assert.NotNull(authoredPanel.Find("WalletPromptSkipButton"));
+        Assert.NotNull(authoredPanel.Find("WalletPromptRestoreButton"));
+
+        Transform theme = authoredPanel.Find("PanelThemeBackground");
+        Assert.NotNull(theme, "Wallet prompt should reuse the authored panel tint/scanline language.");
+        SignalJam.UI.MenuNavigation.PlayerMenuBackgroundController themeController =
+            theme.GetComponent<SignalJam.UI.MenuNavigation.PlayerMenuBackgroundController>();
+        Assert.NotNull(themeController);
+        Assert.IsTrue(themeController.RespectAuthoredPresentation);
+        Assert.IsTrue(themeController.ScanlinesEnabled);
+        Image themeTint = theme.Find("BaseTint")?.GetComponent<Image>();
+        RawImage themeScanlines = theme.Find("ScanlineOverlay")?.GetComponent<RawImage>();
+        Assert.NotNull(themeTint);
+        Assert.NotNull(themeScanlines);
+        Assert.IsFalse(themeTint.raycastTarget);
+        Assert.IsFalse(themeScanlines.raycastTarget);
         Canvas promptCanvas = promptPrefab.GetComponent<Canvas>();
         Assert.NotNull(promptCanvas);
         Assert.IsTrue(promptCanvas.overrideSorting);
@@ -393,6 +419,77 @@ public sealed class SolanaMobileReleaseSecurityTests
         {
             Object.DestroyImmediate(root);
         }
+    }
+
+    [Test]
+    public void WalletPrompt_CancelRestoresPreviousSelection()
+    {
+        GameObject eventSystemObject = new GameObject("WalletPromptEventSystem", typeof(EventSystem));
+        EventSystem eventSystem = eventSystemObject.GetComponent<EventSystem>();
+        GameObject returnTargetObject = new GameObject(
+            "ReturnTarget",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button));
+        GameObject root = new GameObject("WalletPromptTestRoot", typeof(RectTransform), typeof(CanvasGroup));
+        try
+        {
+            TextMeshProUGUI title = CreateText(root.transform, "Title");
+            TextMeshProUGUI body = CreateText(root.transform, "Body");
+            TextMeshProUGUI status = CreateText(root.transform, "Status");
+            Button connect = CreateButton(root.transform, "Connect");
+            Button offline = CreateButton(root.transform, "Offline");
+            Button retry = CreateButton(root.transform, "Retry");
+
+            root.SetActive(false);
+            WalletConnectionPromptService presenter = root.AddComponent<WalletConnectionPromptService>();
+            SerializedObject serializedPresenter = new SerializedObject(presenter);
+            serializedPresenter.FindProperty("root").objectReferenceValue = root;
+            serializedPresenter.FindProperty("titleText").objectReferenceValue = title;
+            serializedPresenter.FindProperty("bodyText").objectReferenceValue = body;
+            serializedPresenter.FindProperty("statusText").objectReferenceValue = status;
+            serializedPresenter.FindProperty("connectButton").objectReferenceValue = connect;
+            serializedPresenter.FindProperty("skipButton").objectReferenceValue = offline;
+            serializedPresenter.FindProperty("restoreButton").objectReferenceValue = retry;
+            serializedPresenter.ApplyModifiedPropertiesWithoutUndo();
+
+            System.Reflection.MethodInfo enableEventSystem = typeof(EventSystem).GetMethod(
+                "OnEnable",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(enableEventSystem);
+            enableEventSystem.Invoke(eventSystem, null);
+            EventSystem.current.SetSelectedGameObject(returnTargetObject);
+            var task = presenter.ShowAccessAsync(new WalletAccessPromptModel());
+            Assert.AreSame(connect.gameObject, EventSystem.current.currentSelectedGameObject);
+
+            Assert.IsTrue(presenter.TryCancel());
+            Assert.IsTrue(task.IsCompleted);
+            Assert.AreSame(returnTargetObject, EventSystem.current.currentSelectedGameObject);
+        }
+        finally
+        {
+            System.Reflection.MethodInfo disableEventSystem = typeof(EventSystem).GetMethod(
+                "OnDisable",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            disableEventSystem?.Invoke(eventSystem, null);
+            if (EventSystem.current == eventSystem)
+                EventSystem.current = null;
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(returnTargetObject);
+            Object.DestroyImmediate(eventSystemObject);
+        }
+    }
+
+    [Test]
+    public void CandyMachine_StampPromptExplainsWalletAndOperationErrorsRestoreFocus()
+    {
+        string source = File.ReadAllText(CandyMachinePath);
+        StringAssert.Contains("A LINKED WALLET IS REQUIRED; WE'LL PROMPT IF NEEDED.", source);
+        StringAssert.Contains("RestoreOperationFocus();", source);
+        StringAssert.Contains("FocusDetailPrimary();", source);
+        StringAssert.Contains("FocusSelectedRow();", source);
+        StringAssert.Contains("FocusModeTab();", source);
     }
 
     private static TextMeshProUGUI CreateText(Transform parent, string name)

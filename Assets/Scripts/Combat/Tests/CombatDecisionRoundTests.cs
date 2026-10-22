@@ -199,6 +199,60 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void CleanseRevertsOwnedDebuffStages()
+        {
+            StatusCatalogSO catalog = CreateCatalog(
+                StageStatus(StatusId.FUD, 2, true, false,
+                    Stage(CoreStat.MeleeAtk, -1),
+                    Stage(CoreStat.MeleeDef, -1),
+                    Stage(CoreStat.Speed, -1)));
+            StatusProcessor processor = new StatusProcessor(catalog, new CombatEventLog(33));
+            ChainlingInstance target = CreateChainling("target", 0, 10);
+
+            Assert.IsTrue(processor.ApplyStatus(target, StatusId.FUD, 2, "fud", 1));
+            Assert.AreEqual(-1, target.stageMeleeAtk);
+            Assert.AreEqual(-1, target.stageMeleeDef);
+            Assert.AreEqual(-1, target.stageSpeed);
+
+            Assert.AreEqual(1, processor.Cleanse(target, 1, 2));
+            Assert.AreEqual(0, target.stageMeleeAtk);
+            Assert.AreEqual(0, target.stageMeleeDef);
+            Assert.AreEqual(0, target.stageSpeed);
+            Assert.IsFalse(target.statuses.Any(s => s.statusId == StatusId.FUD));
+        }
+
+        [Test]
+        public void CipherLockBlocksNewBuffsAndPositiveStagesWithoutRemovingExistingBuffs()
+        {
+            StatusDefinitionSO cipherLock = StageStatus(StatusId.CipherLocked, 2, true, false);
+            StatusDefinitionSO existingBuff = StageStatus(
+                StatusId.Immovable, 3, false, true, Stage(CoreStat.MeleeDef, 2));
+            StatusDefinitionSO blockedBuff = StageStatus(
+                StatusId.HODLed, 2, false, true, Stage(CoreStat.Speed, 1));
+            StatusDefinitionSO allowedDebuff = StageStatus(
+                StatusId.FUD, 2, true, false, Stage(CoreStat.MeleeAtk, -1));
+            CombatEventLog log = new CombatEventLog(35);
+            StatusProcessor processor = new StatusProcessor(
+                CreateCatalog(cipherLock, existingBuff, blockedBuff, allowedDebuff), log);
+            ChainlingInstance target = CreateChainling("target", 0, 10);
+
+            Assert.IsTrue(processor.ApplyStatus(target, StatusId.Immovable, 3, "setup", 1));
+            Assert.AreEqual(2, target.stageMeleeDef);
+            Assert.IsTrue(processor.ApplyStatus(target, StatusId.CipherLocked, 2, "cipher_shot", 1));
+
+            Assert.IsFalse(processor.ApplyStatus(target, StatusId.HODLed, 2, "self_buff", 1));
+            Assert.AreEqual(0, target.stageSpeed);
+            Assert.AreEqual(0, BuffGate.FilterPositiveStage(target, CoreStat.Speed, 1, "random_buff", 1));
+            Assert.AreEqual(-1, BuffGate.FilterPositiveStage(target, CoreStat.Speed, -1, "debuff", 1));
+            Assert.IsTrue(processor.ApplyStatus(target, StatusId.FUD, 2, "debuff", 1));
+            Assert.AreEqual(-1, target.stageMeleeAtk);
+
+            Assert.IsTrue(target.statuses.Any(s => s.statusId == StatusId.Immovable));
+            Assert.AreEqual(2, target.stageMeleeDef);
+            Assert.IsTrue(log.Events.Any(e => e.eventType == CombatEventType.BuffBlocked));
+        }
+
+        [Test]
         public void ChemistryRefreshResetsDurationWithoutStackingStages()
         {
             CombatResolverConfigSO config = CreateAsset<CombatResolverConfigSO>();

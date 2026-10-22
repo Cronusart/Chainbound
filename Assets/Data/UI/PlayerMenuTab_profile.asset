@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tabId: profile
   displayName: Profile
-  description: Player ID card and share.
+  description: Career sheet and share.
   icon: {fileID: 0}
   lockRule: 0
   lockedLabel: Locked

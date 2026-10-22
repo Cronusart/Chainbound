@@ -97,6 +97,7 @@ namespace Chainbound.Combat
         Targeting,
         Barrier,
         Durability,
+        StatSubstitution,
     }
 
     /// <summary>
@@ -219,6 +220,7 @@ namespace Chainbound.Combat
         WasNotDamagedLastTurn,
         DidNotUseDamagingMoveThisTurn,
         AnyFoeAPGreaterThanSelf,
+        StageHigherThanOtherStage,
     }
 
     /// <summary>
@@ -296,6 +298,39 @@ namespace Chainbound.Combat
         LifestealPercent,
         /// <summary>Heal when a selected stage is at or above the authored threshold.</summary>
         HealPercentIfStageAtLeast,
+        /// <summary>Add 1 turn to the ally's shortest General duration buff. Params: stackKey.</summary>
+        ExtendBuff,
+        /// <summary>Raise each living ally's lowest core stage below +6 by 1. Params: stackKey.</summary>
+        RaiseLowestStage,
+        /// <summary>Apply a ChemistryOnly status from an explicitly authored utility. Params: statusId:turns:chance:target:stackKey.</summary>
+        ApplyChemistryStatus,
+        /// <summary>Remove up to N General buffs, shortest duration first. Params: maxCount:chance:target:stackKey.</summary>
+        StripBuffs,
+        /// <summary>Remove all General buffs and debuffs. Params: chance:target:stackKey.</summary>
+        StripAllStatuses,
+        /// <summary>Strip buffs and grant the source a stage per removed buff. Params: maxCount:chance:target:stat:amount:stackKey.</summary>
+        StripBuffsThenStage,
+        /// <summary>Heal the source for a percent of MaxHP per General debuff on the target. Params: percentPerDebuff:chance:stackKey.</summary>
+        HealSelfPerTargetDebuff,
+        /// <summary>One-hit Wall/Barrier mitigation. Params: percent:category:turns:stackKey.</summary>
+        BlockWindow,
+        /// <summary>Reflect a percent of damage prevented by the paired BlockWindow. Params: percent:stackKey.</summary>
+        BlockReflect,
+    }
+
+    public enum BlockKind
+    {
+        None,
+        Wall,
+        Barrier,
+    }
+
+    public enum BlockTier
+    {
+        None,
+        Lower,
+        Mid,
+        Greater,
     }
 
     public enum PassiveDisplayState

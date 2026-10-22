@@ -17,10 +17,10 @@ MonoBehaviour:
   description: 2-4 hits; each can raise Atk; cap +2.
   category: 0
   baseType: 8
-  rarity: 1
+  rarity: 0
   targeting: 0
   contactType: 0
-  power: 16
+  power: 14
   apCost: 3
   accuracy: 95
   hitCountMin: 2
@@ -34,16 +34,38 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 15
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 0
+    stackKey: pickaxe_flurry
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 4
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 1
+    stageAmountMax: 0
+    stageCap: 2
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
-    utilityExecutionTiming: 0
+    utilityExecutionTiming: 2
     conditionalEffectPolicy: 0
     resolveConditions: []
     requireAllResolveConditions: 1
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

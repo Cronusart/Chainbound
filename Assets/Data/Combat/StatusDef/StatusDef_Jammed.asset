@@ -14,12 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 108
   displayName: Jammed
-  effectSummary: Accuracy down (Acc -2)
+  effectSummary: Accuracy -1 for 2 turns
   statusClass: 0
   origin: 0
   defaultDuration: 2
   counterThreshold: 0
-  stageEffects: []
+  stageEffects:
+  - stat: 0
+    stages: -1
+    applyOnce: 1
+    usesCombatStage: 1
+    combatStage: 5
   isParameterized: 0
   isDebuff: 1
   isBuff: 0

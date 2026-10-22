@@ -91,7 +91,11 @@ public sealed class BattleSessionManager
         }
 
         uint seed = unchecked((uint)RandomNumberGenerator.GetInt32(1, int.MaxValue));
-        ManifestEncounter encounter = _catalog.ResolveEncounter(request.ZoneId, request.NarrativeEncounterId, seed);
+        ManifestEncounter encounter = _catalog.ResolveEncounter(
+            request.ZoneId,
+            request.NarrativeEncounterId,
+            seed,
+            now);
         bool rewardsDisabled = string.Equals(_options.BattleRewardMode, "off", StringComparison.Ordinal);
         bool rewardEligible = !rewardsDisabled &&
             await _gateway.IsNarrativeRewardEligibleAsync(owner.ProfileId, encounter, cancellationToken);
@@ -123,7 +127,7 @@ public sealed class BattleSessionManager
                 GearEffects = loadout.GearEffects,
                 AuthorityUnixMilliseconds = now,
             },
-            State = BuildInitialState(encounter, request.ZoneId, partyVitals),
+            State = BuildInitialState(encounter, request.ZoneId, partyVitals, seed),
         };
         JsonElement result = await _gateway.BeginBattleAsync(session, cancellationToken);
         if (!ReadOk(result))
@@ -1062,7 +1066,8 @@ public sealed class BattleSessionManager
     private static AuthoritativeBattleState BuildInitialState(
         ManifestEncounter encounter,
         string zoneId,
-        List<CombatVitalSnapshot> partyVitals)
+        List<CombatVitalSnapshot> partyVitals,
+        uint seed)
     {
         var state = new AuthoritativeBattleState
         {
@@ -1078,14 +1083,21 @@ public sealed class BattleSessionManager
         for (int i = 0; i < encounter.Targets.Count; i++)
         {
             ManifestTarget source = encounter.Targets[i];
-            int[] ivs = NormalizeIvs(source.Ivs);
+            int[] ivs = source.RollIvs
+                ? RollTargetIvs(source, seed, i)
+                : NormalizeIvs(source.Ivs);
+            int stars = RollTargetStars(source, seed, i);
+            int maxHp = Math.Max(1, source.MaxHp + (source.RollIvs ? ivs[0] : 0));
+            int currentHp = source.RollIvs && source.CurrentHp >= source.MaxHp
+                ? maxHp
+                : Math.Clamp(source.CurrentHp, 0, maxHp);
             state.Targets.Add(new AuthoritativeBattleTarget
             {
                 TargetId = string.IsNullOrWhiteSpace(source.TargetId) ? $"enemy-{i}" : source.TargetId,
                 DisplayName = source.DisplayName,
                 KnownMoveId = source.KnownMoveId,
                 RawIvs = ivs,
-                Stars = source.Stars,
+                Stars = stars,
                 Level = source.Level,
                 Mutated = source.Mutated,
                 IsActive = source.StartsActive,
@@ -1100,8 +1112,8 @@ public sealed class BattleSessionManager
                     AreaId = "",
                     ZoneId = zoneId,
                     DifficultyId = source.DifficultyId,
-                    CurrentHp = Math.Clamp(source.CurrentHp, 0, Math.Max(1, source.MaxHp)),
-                    MaxHp = Math.Max(1, source.MaxHp),
+                    CurrentHp = currentHp,
+                    MaxHp = maxHp,
                     LegacyBaseCaptureRate = source.LegacyBaseCaptureRate,
                     HasSpeciesCaptureProfile = true,
                     SpeciesCaptureProfile = ClampCaptureProfile(source.CaptureProfile),
@@ -1118,7 +1130,7 @@ public sealed class BattleSessionManager
                 EntityId = string.IsNullOrWhiteSpace(source.TargetId) ? $"enemy-{i}" : source.TargetId,
                 TeamIndex = 1,
                 RosterIndex = i,
-                CurrentHp = Math.Clamp(source.CurrentHp, 0, Math.Max(1, source.MaxHp)),
+                CurrentHp = currentHp,
                 CurrentAp = 0,
                 IsActive = source.StartsActive,
             });
@@ -1126,6 +1138,28 @@ public sealed class BattleSessionManager
         if (!state.Targets.Any(x => x.IsActive) && state.Targets.Count > 0)
             state.Targets[0].IsActive = true;
         return state;
+    }
+
+    private static int[] RollTargetIvs(ManifestTarget source, uint seed, int targetIndex)
+    {
+        int minimum = Math.Clamp(source.IvMin, -100, 100);
+        int maximum = Math.Clamp(source.IvMax, minimum, 100);
+        var rng = new DeterministicCaptureRng(
+            seed ^ DeterministicCaptureRng.StableSeed(source.TargetId, (uint)(targetIndex + 1)));
+        var result = new int[6];
+        for (int i = 0; i < result.Length; i++)
+            result[i] = rng.NextInt(minimum, maximum + 1);
+        return result;
+    }
+
+    private static int RollTargetStars(ManifestTarget source, uint seed, int targetIndex)
+    {
+        int variance = Math.Clamp(source.StarVariance, 0, 5);
+        if (variance == 0)
+            return Math.Clamp(source.Stars, 0, 5);
+        var rng = new DeterministicCaptureRng(
+            seed ^ DeterministicCaptureRng.StableSeed(source.TargetId, (uint)(0x51A7 + targetIndex)));
+        return Math.Clamp(source.Stars + rng.NextInt(-variance, variance + 1), 0, 5);
     }
 
     private static bool TryApplyVitals(

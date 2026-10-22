@@ -20,7 +20,7 @@ MonoBehaviour:
   rarity: 0
   targeting: 0
   contactType: 0
-  power: 22
+  power: 20
   apCost: 3
   accuracy: 95
   hitCountMin: 2
@@ -48,6 +48,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 1
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

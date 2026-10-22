@@ -73,6 +73,7 @@ namespace Chainbound.Combat
                     if (replaceExistingLoadout)
                     {
                         snapshot.moveIds = new List<string>();
+                        snapshot.moveAcquisitions = new List<string>();
                         snapshot.modifier1SectionIds = new List<string>();
                         snapshot.modifier2SectionIds = new List<string>();
                     }
@@ -172,6 +173,9 @@ namespace Chainbound.Combat
                 }
 
                 snapshot.moveIds.Add(def.moveId);
+                if (snapshot.moveAcquisitions == null)
+                    snapshot.moveAcquisitions = new List<string>();
+                snapshot.moveAcquisitions.Add(string.Empty);
                 snapshot.modifier1SectionIds.Add(string.Empty);
                 snapshot.modifier2SectionIds.Add(string.Empty);
             }

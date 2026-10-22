@@ -4,6 +4,8 @@ Generated from the 11 non-comment rows in `SpeciesMovePools.csv`, the 43-column 
 
 Regression baselines: `barrier_wall`, `ice_wall`, `fuel_surge`, `ap_boost`, `signal_redirect`, `damage_intercept`, `ap_router`, `cryo_ray`, `blade_flurry`, `hibernate`, and plain stage/heal moves.
 
+`GapType none` on a row whose utility cell is empty means the asset matches an empty CSV. It does not mean the card's sentence runs. Empty payloads stay open until a later fill. Rows filled by the combat-issues pass should not be read as gaps.
+
 | MoveId | SpeciesIds | IsFlagship | IsExclusive | CSV fields | UtilityEffects_CSV | UtilityEffects_Asset | DescClaimSummary | EncodedSupport | GapType | PrimaryTiming | Priority | FixClass |
 |---|---|---:|---:|---|---|---|---|---|---|---|---:|---|
 | accuracy_focus | ghosty | false | false | StatusUtility/None/Self; P=0; AP=1; tags=UTIL | — | empty | Raise own Acc +2 for risky or evasive targets. | full | none | resolve-time | P3 | csv_only |
@@ -56,7 +58,7 @@ Regression baselines: `barrier_wall`, `ice_wall`, `fuel_surge`, `ap_boost`, `sig
 | emergency_recovery | whale | false | false | Passive/None/Self; P=0; AP=0; tags=PAS\|TRIG | — | empty | Passive - below 25% HP heal 15% MaxHP once per battle. | hardcoded_defId | legacy hardcode | reactive | P2 | status_verify |
 | error_correction | kreechank | false | false | Support/Glitched/SingleAlly; P=0; AP=2; tags=SUP | Cleanse:1:0.5:SingleAlly | empty | Heal ally 15% MaxHP; 50% chance to cleanse 1 General debuff. | full | CSV/asset desync | resolve-time | P0 | reimport |
 | evasion_maneuver | snek | false | false | StatusUtility/None/Self; P=0; AP=1; tags=UTIL | — | empty | Raise own Eva +2 to dodge incoming attacks. | full | none | resolve-time | P3 | csv_only |
-| extend_protocol | validape | false | false | StatusUtility/Node/SingleAlly; P=0; AP=1; tags=UTIL | — | empty | Extend one ally buff by 1 turn; 3-turn recharge. | full | none | resolve-time | P3 | csv_only |
+| extend_protocol | validape | false | false | StatusUtility/Node/SingleAlly; P=0; AP=1; tags=UTIL | ExtendBuff:extend_protocol | ExtendBuff | Extend one ally buff by 1 turn; 2-turn recharge. | full | none | resolve-time | P3 | csv_only |
 | fee_collector | deghoul | false | false | Passive/Gas/Self; P=0; AP=0; tags=PAS\|TRIG\|APMAN | GainAP:1:100%:Self:fee_collector | empty | Passive - if a foe starts with more AP gain +1 AP. | full | passive pipeline | reactive | P1 | resolver_opcode |
 | field_split | lad | false | false | StatusUtility/Shard/Field; P=0; AP=2; tags=UTIL\|AOE | FieldEntryStageChange:Evasion:-1:2:100%:field_split | empty | For 2 turns foes entering field lose Eva -1. | full | field entry | reactive | P1 | resolver_opcode |
 | finish_burn | cinislug | false | false | DamagingRanged/Burned/SingleEnemy; P=85; AP=3; tags=DMG\|TRIG | — | empty | Ranged finisher deals +50% damage below 40% target HP. | full | conditional damage/effect | resolve-time | P1 | profile_condition |

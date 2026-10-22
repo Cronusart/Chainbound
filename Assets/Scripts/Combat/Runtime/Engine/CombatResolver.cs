@@ -29,6 +29,10 @@ namespace Chainbound.Combat
         private CombatState _currentState;
         private int _stepActionCursor = -1;
         private bool _passAReactiveCastInProgress;
+        private readonly HashSet<string> _blockTargetsAtTurnStart = new HashSet<string>(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _blockReservationOwnerByTarget =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+        private int _blockEligibilitySnapshotTurn = -1;
         private ConfigStampPayload _configStamp;
         // Granted during an action and ticked at the shared end of that turn.
         // Duration 1 is the rest of this turn: later actions can still use it, then it expires.
@@ -95,7 +99,7 @@ namespace Chainbound.Combat
         /// Each team must have up to ROSTER_SIZE (3) Chainlings.
         /// The first 2 are placed on the field; the 3rd sits on the bench.
         /// </summary>
-        public CombatState InitializeBattle(TeamState team0, TeamState team1)
+        public CombatState InitializeBattle(TeamState team0, TeamState team1, bool isBossBattle = false)
         {
             var state = new CombatState
             {
@@ -103,6 +107,7 @@ namespace Chainbound.Combat
                 team1 = team1,
                 seed = _rng.Seed,
                 isActive = true,
+                isBossBattle = isBossBattle,
                 currentTurn = 0,
                 currentPhase = TurnPhase.NotStarted,
             };
@@ -111,6 +116,9 @@ namespace Chainbound.Combat
             // Register all Chainling & move names so log messages are readable
             RegisterTeamNames(team0);
             RegisterTeamNames(team1);
+
+            ResetBattleLocalState(team0);
+            ResetBattleLocalState(team1);
 
             ActivateStartingLineup(team0);
             ActivateStartingLineup(team1);
@@ -130,6 +138,22 @@ namespace Chainbound.Combat
             ProcessBattleStartModifiers(state);
 
             return state;
+        }
+
+        private static void ResetBattleLocalState(TeamState team)
+        {
+            if (team?.chainlings == null)
+                return;
+            for (int i = 0; i < team.chainlings.Count; i++)
+            {
+                ChainlingInstance chainling = team.chainlings[i];
+                if (chainling != null)
+                {
+                    chainling.threadLockBlockedUntilTurn = 0;
+                    chainling.lastApDrainSourceName = string.Empty;
+                    chainling.lastApDrainTurn = -1;
+                }
+            }
         }
 
         private void StampAndLogConfig()
@@ -176,6 +200,35 @@ namespace Chainbound.Combat
             TurnActionLedger ledger = EnsureTurnActionLedger(state);
             if (ledger != null)
                 ledger.EndTurn(state.currentTurn);
+        }
+
+        private void CaptureBlockEligibilitySnapshot(CombatState state)
+        {
+            _blockTargetsAtTurnStart.Clear();
+            _blockReservationOwnerByTarget.Clear();
+            _blockEligibilitySnapshotTurn = state != null ? state.currentTurn : -1;
+            CaptureIntactBlockHolders(state?.team0);
+            CaptureIntactBlockHolders(state?.team1);
+        }
+
+        private void CaptureIntactBlockHolders(TeamState team)
+        {
+            if (team == null)
+                return;
+
+            List<ChainlingInstance> active = team.GetActiveChainlings();
+            for (int i = 0; i < active.Count; i++)
+            {
+                ChainlingInstance holder = active[i];
+                if (holder != null && holder.HasIntactBlock() && !string.IsNullOrEmpty(holder.instanceId))
+                    _blockTargetsAtTurnStart.Add(holder.instanceId);
+            }
+        }
+
+        private void EnsureBlockEligibilitySnapshot(CombatState state)
+        {
+            if (state == null || _blockEligibilitySnapshotTurn != state.currentTurn)
+                CaptureBlockEligibilitySnapshot(state);
         }
 
         private void RegisterTeamNames(TeamState team)
@@ -267,6 +320,7 @@ namespace Chainbound.Combat
             ProcessStartOfTurnForTeam(state.team1, state.currentTurn);
             ProcessStartOfTurnTriggersForTeam(state.team0, state.currentTurn);
             ProcessStartOfTurnTriggersForTeam(state.team1, state.currentTurn);
+            CaptureBlockEligibilitySnapshot(state);
 
             // NOW generate actions (AI sees correct AP)
             state.currentPhase = TurnPhase.ActionSelection;
@@ -307,6 +361,7 @@ namespace Chainbound.Combat
                 ProcessStartOfTurnForTeam(state.team1, state.currentTurn);
                 ProcessStartOfTurnTriggersForTeam(state.team0, state.currentTurn);
                 ProcessStartOfTurnTriggersForTeam(state.team1, state.currentTurn);
+                CaptureBlockEligibilitySnapshot(state);
             }
 
             // â”€â”€ Action Resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -449,11 +504,32 @@ namespace Chainbound.Combat
         {
             for (int s = 0; s < team.activeIndices.Count; s++)
             {
+                ChainlingInstance active = team.GetActiveInSlot(s);
+                if (active != null && active.isAlive)
+                    CheckPassiveTriggers(active, turn, PassiveTriggerPoint.EndOfTurn);
+            }
+
+            for (int s = 0; s < team.activeIndices.Count; s++)
+            {
                 var c = team.GetActiveInSlot(s);
                 if (c != null && c.isAlive)
                 {
+                    ProcessMitigationTimers(c, turn);
+                    ProcessBarrierTimers(c, turn);
                     int buffCountBefore = CountActiveBuffStatuses(c);
+                    int hpBeforeStatusTicks = c.currentHP;
+                    bool blockActiveDuringStatusTicks = c.HasIntactBlock();
                     _statusProcessor.ProcessEndOfTurn(c, turn, turnTicks);
+                    if (blockActiveDuringStatusTicks && c.currentHP < hpBeforeStatusTicks)
+                    {
+                        _log.Log(new CombatEvent
+                        {
+                            eventType = CombatEventType.BlockIgnoredDot,
+                            turn = turn,
+                            targetId = c.instanceId,
+                            message = $"{c.displayName}'s block did not stop damage over time.",
+                        });
+                    }
                     if (!c.isAlive)
                     {
                         HandleEndOfTurnKo(team, c, turn);
@@ -462,11 +538,8 @@ namespace Chainbound.Combat
                     int expiredBuffs = Math.Max(0, buffCountBefore - CountActiveBuffStatuses(c));
                     if (expiredBuffs > 0)
                         CheckPassiveTriggers(c, turn, PassiveTriggerPoint.OnBuffExpired, damage: expiredBuffs);
-                    CheckPassiveTriggers(c, turn, PassiveTriggerPoint.EndOfTurn);
-                    ProcessMitigationTimers(c, turn);
                     ProcessAccuracyTimers(c, turn);
                     ProcessReactiveApTimers(c, turn);
-                    ProcessBarrierTimers(c, turn);
                     TickArmedWindows(c, turn);
                     c.apDonationUsedThisTurn = false;
                 }
@@ -513,6 +586,8 @@ namespace Chainbound.Combat
         {
             if (defeatedTeam == null || defeated == null)
                 return;
+
+            defeated.ClearTemporaryDefenses();
 
             EnsureTurnActionLedger(_currentState)?.RecordKo(defeated.instanceId, defeatedTeam.teamIndex);
             TeamState opposingTeam = _currentState != null
@@ -781,6 +856,7 @@ namespace Chainbound.Combat
             actions1 = NormalizeActionsForQueue(state, state.team1, actions1, 1);
             EnforceSingleCapture(actions0);
             EnforceSingleCapture(actions1);
+            BuildBlockTargetReservations(state, actions0, actions1);
 
             var queue = new List<ActionQueueEntry>();
 
@@ -965,6 +1041,7 @@ namespace Chainbound.Combat
             executionOrder.AddRange(priorityBlock);
             executionOrder.AddRange(combatPhase);
             executionOrder.AddRange(capturePhase);
+            ApplyFeeCollectorDrains(state, executionOrder);
 
             if (CombatLogSettings.EnableForensicLogging)
             {
@@ -1014,6 +1091,62 @@ namespace Chainbound.Combat
             }
 
             return executionOrder;
+        }
+
+        private void BuildBlockTargetReservations(
+            CombatState state,
+            List<CombatAction> actions0,
+            List<CombatAction> actions1)
+        {
+            EnsureBlockEligibilitySnapshot(state);
+            _blockReservationOwnerByTarget.Clear();
+            ReserveBlockTargetsForTeam(state?.team0, state?.team1, actions0);
+            ReserveBlockTargetsForTeam(state?.team1, state?.team0, actions1);
+        }
+
+        private void ReserveBlockTargetsForTeam(
+            TeamState actingTeam,
+            TeamState opposingTeam,
+            List<CombatAction> actions)
+        {
+            if (actingTeam == null || actions == null)
+                return;
+
+            int count = Math.Min(actions.Count, actingTeam.activeIndices.Count);
+            for (int slot = 0; slot < count; slot++)
+            {
+                ChainlingInstance actor = actingTeam.GetActiveInSlot(slot);
+                CombatAction action = actions[slot];
+                if (actor == null || !actor.isAlive || action == null ||
+                    action.actionType != CombatActionType.UseMove ||
+                    action.moveIndex < 0 || action.moveIndex >= actor.moves.Count)
+                {
+                    continue;
+                }
+
+                MoveInstance move = actor.moves[action.moveIndex];
+                if (!CombatWallStateUtility.MovePlacesBlock(move))
+                    continue;
+
+                ChainlingInstance target = ResolveSingleSelectedTarget(
+                    actingTeam,
+                    opposingTeam,
+                    actor,
+                    move,
+                    action,
+                    out _,
+                    out _);
+                if (target == null || string.IsNullOrEmpty(target.instanceId) ||
+                    _blockTargetsAtTurnStart.Contains(target.instanceId) ||
+                    _blockReservationOwnerByTarget.ContainsKey(target.instanceId))
+                {
+                    continue;
+                }
+
+                // Slot order is selection order. Resolution speed must not change which
+                // teammate owns the one legal reservation for a target this turn.
+                _blockReservationOwnerByTarget.Add(target.instanceId, actor.instanceId);
+            }
         }
 
         private List<CombatAction> NormalizeActionsForQueue(CombatState state, TeamState team, List<CombatAction> actions, int teamIndex)
@@ -1134,6 +1267,7 @@ namespace Chainbound.Combat
             ProcessStartOfTurnForTeam(state.team1, state.currentTurn);
             ProcessStartOfTurnTriggersForTeam(state.team0, state.currentTurn);
             ProcessStartOfTurnTriggersForTeam(state.team1, state.currentTurn);
+            CaptureBlockEligibilitySnapshot(state);
 
             state.currentPhase = TurnPhase.ActionSelection;
         }
@@ -1273,6 +1407,7 @@ namespace Chainbound.Combat
                 {
                     ResetChemistrySwapState(active, turn);
                     active.ClearArmedUtilityWindows();
+                    active.ClearTemporaryDefenses();
                     bool eligibleNextTurn = swappedIn.isAlive;
                     _log.LogForensic(
                         CombatForensicEventType.SwapResolved,
@@ -1333,6 +1468,10 @@ namespace Chainbound.Combat
             CombatAction action, ChainlingInstance actor, bool hasPriority = false)
         {
             if (actor == null || !actor.isAlive) return;
+
+            // Read the boss bank before this action spends it so the Ready crossing
+            // is visible on the actual payoff turn, not only through a helper call.
+            EmitBossPayoffTell(state, actingTeam, actor);
 
             // Check skip conditions
             if (actor.lostActionThisTurn)
@@ -1411,6 +1550,9 @@ namespace Chainbound.Combat
             }
 
             EnsureTurnActionLedger(state)?.RecordActorAction(actor.instanceId);
+            EnsureTurnActionLedger(state)?.ClearPendingUplink();
+            if (ApplyLeakedActionTax(state, actingTeam, actor) && !actor.isAlive)
+                return;
 
             switch (action.actionType)
             {
@@ -1419,6 +1561,7 @@ namespace Chainbound.Combat
                     break;
 
                 case CombatActionType.Swap:
+                    WasteIncomingSetupFeed(state, actingTeam, actor);
                     _log.LogForensic(
                         CombatForensicEventType.ActionChosen,
                         new ActionChosenPayload
@@ -1441,6 +1584,7 @@ namespace Chainbound.Combat
                     break;
 
                 case CombatActionType.Pass:
+                    WasteIncomingSetupFeed(state, actingTeam, actor);
                     _log.LogForensic(
                         CombatForensicEventType.ActionChosen,
                         new ActionChosenPayload
@@ -1464,6 +1608,7 @@ namespace Chainbound.Combat
                     break;
 
                 case CombatActionType.Capture:
+                    WasteIncomingSetupFeed(state, actingTeam, actor);
                     ResolveCapture(state, opposingTeam, action, actor);
                     break;
             }
@@ -1568,6 +1713,7 @@ namespace Chainbound.Combat
             {
                 _log.LogMessage(CombatEventType.ValidationError,
                     $"Invalid move index {moveIndex} for {actor.displayName}", state.currentTurn);
+                WasteIncomingSetupFeed(state, actingTeam, actor);
                 return;
             }
 
@@ -1576,16 +1722,24 @@ namespace Chainbound.Combat
             {
                 _log.LogMessage(CombatEventType.ValidationError,
                     $"{actor.displayName} attempted to use a null move reference", state.currentTurn);
+                WasteIncomingSetupFeed(state, actingTeam, actor);
                 return;
             }
 
-            MoveSelectionEvaluation selection = _eligibilityService.EvaluateMoveSelection(actor, move, state);
+            EnsureBlockEligibilitySnapshot(state);
+            MoveSelectionEvaluation selection = _eligibilityService.EvaluateMoveSelection(
+                actor,
+                move,
+                state,
+                blockedTargetIds: _blockTargetsAtTurnStart,
+                blockReservationOwners: _blockReservationOwnerByTarget);
             if (!selection.canSelect)
             {
                 if (selection.reason == "InsufficientAP")
                 {
                     LogNoApActionFailed(actor, move, state.currentTurn);
                     actor.hasActedThisTurn = true;
+                    WasteIncomingSetupFeed(state, actingTeam, actor);
                     return;
                 }
 
@@ -1593,6 +1747,7 @@ namespace Chainbound.Combat
                     CombatEventType.ValidationError,
                     $"{actor.displayName} cannot select {move.displayName}: {selection.reason}",
                     state.currentTurn);
+                WasteIncomingSetupFeed(state, actingTeam, actor);
                 return;
             }
             bool conditionMet = selection.conditionMet;
@@ -1602,6 +1757,22 @@ namespace Chainbound.Combat
             bool targetRetargeted;
             string retargetReason;
             var target = ResolveSingleSelectedTarget(actingTeam, opposingTeam, actor, move, action, out targetRetargeted, out retargetReason);
+            if (CombatWallStateUtility.MovePlacesBlock(move) &&
+                !_eligibilityService.EvaluateBlockTarget(
+                    actor,
+                    move,
+                    target,
+                    state,
+                    blockedTargetIds: _blockTargetsAtTurnStart,
+                    blockReservationOwners: _blockReservationOwnerByTarget).canTarget)
+            {
+                _log.LogMessage(
+                    CombatEventType.ValidationError,
+                    $"{actor.displayName} cannot place {move.displayName} on {target?.displayName ?? "that target"}: block already active or queued.",
+                    state.currentTurn);
+                WasteIncomingSetupFeed(state, actingTeam, actor);
+                return;
+            }
             string selectedTargetId = string.Empty;
             ChainlingInstance explicitSelectedTarget = null;
             if (hadExplicitTarget)
@@ -1675,6 +1846,7 @@ namespace Chainbound.Combat
             {
                 LogNoApActionFailed(actor, move, state.currentTurn);
                 actor.hasActedThisTurn = true;
+                WasteIncomingSetupFeed(state, actingTeam, actor);
                 return;
             }
 
@@ -1687,6 +1859,22 @@ namespace Chainbound.Combat
                     state.currentTurn);
             }
 
+            if (HasSpendRemainingAp(move) && actor.currentAP > 0)
+            {
+                if (_apService.TrySpendCost(actor, actor.currentAP, state.currentTurn, "SpendRemainingAp", out int extraPaid))
+                    paidCost += extraPaid;
+            }
+
+            if (HasSpendRemainingAp(move))
+            {
+                _log.LogMessage(
+                    CombatEventType.APSpent,
+                    $"{move.displayName} spent {paidCost} AP.",
+                    state.currentTurn);
+            }
+
+            bool bossOnlyMove = state.isBossBattle && MoveAvailability.IsBossOnly(move);
+
             _log.Log(new CombatEvent
             {
                 eventType = CombatEventType.MoveUsed,
@@ -1695,7 +1883,9 @@ namespace Chainbound.Combat
                 targetId = target?.instanceId ?? "",
                 moveId = move.instanceId,
                 boolValue = hasPriority,
-                message = hasPriority
+                message = bossOnlyMove
+                    ? $"{actor.displayName} levies the {move.displayName} on your whole team!"
+                    : hasPriority
                     ? $"{actor.displayName} struck first with priority {move.displayName}" +
                       (target != null ? $" → {target.displayName}" : "")
                     : $"{actor.displayName} used {move.displayName}" +
@@ -1704,9 +1894,11 @@ namespace Chainbound.Combat
 
             ProcessLowHpModifierWindows(actor, move, state.currentTurn);
 
-            // Branch by category
-            if (move.category == MoveCategory.DamagingMelee ||
-                move.category == MoveCategory.DamagingRanged)
+            // Branch by category. Setup Feed is settled before the branch so a
+            // non-power action spends it, and armed only after a move that actually resolved.
+            bool powerMove = move.category == MoveCategory.DamagingMelee ||
+                             move.category == MoveCategory.DamagingRanged;
+            if (powerMove)
             {
                 var resolvedTargets = BuildResolvedTargetsForMove(actingTeam, opposingTeam, actor, move, target);
                 List<ChainlingInstance> selectedTargets = null;
@@ -1717,22 +1909,30 @@ namespace Chainbound.Combat
                         selectedTargets.Add(explicitSelectedTarget);
                 }
                 LogResolvedTargets(state.currentTurn, actor, move, resolvedTargets, selectedTargets, targetRetargeted, retargetReason);
+                SettleIncomingSetupFeed(state, actingTeam, actor, true);
                 ResolveDamagingMove(state, actingTeam, opposingTeam, actor, target, move);
+                EnsureTurnActionLedger(state)?.ClearActiveSetupFeed();
                 EnsureTurnActionLedger(state)?.RecordDamagingMove(
                     actingTeam != null ? actingTeam.teamIndex : -1,
                     actor.instanceId);
             }
             else if (move.category == MoveCategory.Passive)
             {
+                WasteIncomingSetupFeed(state, actingTeam, actor);
                 _log.LogMessage(CombatEventType.ValidationError,
                     $"Passive move {move.displayName} cannot be used as an action",
                     state.currentTurn);
             }
             else
             {
+                WasteIncomingSetupFeed(state, actingTeam, actor);
                 ResolveUtilityMove(state, actingTeam, opposingTeam, actor, move, action, target, conditionMet, paidCost);
             }
 
+            if (move.category != MoveCategory.Passive)
+                ArmSetupFeeds(state, actingTeam, actor, move);
+
+            SettleUplink(state, actor, state.currentTurn);
             CheckPassiveTriggers(actor, state.currentTurn, PassiveTriggerPoint.OnAction, target, 0, move);
 
             // TriggerOnce is also valid for authored active/utility moves (for example,
@@ -1763,6 +1963,52 @@ namespace Chainbound.Combat
             actor.hasActedThisTurn = true;
         }
 
+        private void EmitBossPayoffTell(CombatState state, TeamState actingTeam, ChainlingInstance actor)
+        {
+            if (state == null || !state.isBossBattle || actingTeam == null || actingTeam.teamIndex != 1 ||
+                actor == null || !actor.isAlive || actor.moves == null)
+                return;
+
+            MoveInstance payoff = null;
+            for (int i = 0; i < actor.moves.Count; i++)
+            {
+                if (MoveAvailability.IsBossOnly(actor.moves[i]))
+                {
+                    payoff = actor.moves[i];
+                    break;
+                }
+            }
+            if (payoff == null)
+                return;
+
+            int cost = _eligibilityService.GetEffectiveApCost(actor, payoff);
+            MoveSelectionEvaluation withoutApGate = _eligibilityService.EvaluateMoveSelection(
+                actor,
+                payoff,
+                state,
+                skipHpCostCheck: false,
+                extraAvailableAp: Math.Max(0, cost));
+            int nextState = !withoutApGate.canSelect
+                ? 0
+                : actor.currentAP >= cost
+                    ? 2
+                    : actor.currentAP >= Math.Max(0, cost - 2)
+                        ? 1
+                        : 0;
+
+            TurnActionLedger ledger = EnsureTurnActionLedger(state);
+            int previousState = ledger != null ? ledger.GetBossTellState(actor.instanceId) : 0;
+            if (ledger != null)
+                ledger.SetBossTellState(actor.instanceId, nextState);
+            if (nextState <= previousState || nextState == 0)
+                return;
+
+            string message = nextState == 2
+                ? $"{actor.displayName} has banked {cost} AP. The {payoff.displayName} is due!"
+                : $"{actor.displayName}'s grinder starts to rattle… {actor.currentAP}/{cost} AP banked.";
+            _log.LogMessage(CombatEventType.BossTell, message, state.currentTurn);
+        }
+
         private void LogNoApActionFailed(ChainlingInstance actor, MoveInstance move, int turn)
         {
             _log.Log(new CombatEvent
@@ -1772,7 +2018,9 @@ namespace Chainbound.Combat
                 sourceId = actor != null ? actor.instanceId : string.Empty,
                 moveId = move != null ? move.instanceId : string.Empty,
                 message = actor != null && move != null
-                    ? $"{actor.displayName} could not use {move.displayName}: NO AP"
+                    ? actor.lastApDrainTurn == turn && !string.IsNullOrWhiteSpace(actor.lastApDrainSourceName)
+                        ? $"{actor.displayName} could not use {move.displayName}: not enough AP after {actor.lastApDrainSourceName} drained it."
+                        : $"{actor.displayName} could not use {move.displayName}: not enough AP."
                     : "Action failed: NO AP",
             });
 
@@ -1932,6 +2180,7 @@ namespace Chainbound.Combat
 
             bool attackerChemistryReactionApplied = false;
             var defenderChemistryReactionApplied = new HashSet<ChainlingInstance>();
+            var moveEffectsAppliedTargets = new HashSet<ChainlingInstance>();
 
             foreach (var target in targets)
             {
@@ -1945,6 +2194,16 @@ namespace Chainbound.Combat
                 float bouncePower = isBounceTarget
                     ? (modifierContext.bouncePowerMultiplier > 0f ? modifierContext.bouncePowerMultiplier : 0.50f)
                     : 1f;
+                DamageModifierContext targetModifierContext = modifierContext != null
+                    ? modifierContext.Clone()
+                    : new DamageModifierContext();
+                ApplyTargetDependentDamageModifiers(
+                    targetModifierContext,
+                    state,
+                    attacker,
+                    target,
+                    move,
+                    state.currentTurn);
 
                 if (!isBounceTarget && resolveProfile.utilityExecutionTiming == MoveUtilityExecutionTiming.ResolveBeforeFirstHit)
                     ApplyDamagingMoveUtilityEffects(attacker, target, move, state.currentTurn);
@@ -1955,7 +2214,7 @@ namespace Chainbound.Combat
 
                     float accMult;
                     float evaMult;
-                    float hitChance = DamageCalculator.ComputeHitChance(attacker, target, move, modifierContext, out accMult, out evaMult);
+                    float hitChance = DamageCalculator.ComputeHitChance(attacker, target, move, targetModifierContext, out accMult, out evaMult);
                     float hitRoll = -1f;
                     bool hits;
                     MoveAccuracyTuning accuracyTuning = resolveProfile.accuracy ?? new MoveAccuracyTuning();
@@ -2018,9 +2277,9 @@ namespace Chainbound.Combat
                             _log.LogMiss(state.currentTurn, attacker.instanceId, target.instanceId, move.instanceId);
                         if (ShouldApplyMoveEffectsAtResolve(attacker, target, move, state.currentTurn, logSkipped: false))
                         {
-                            if (resolveProfile.applyStatusEffectsOnMiss)
+                            if (!resolveProfile.moveEffectsOncePerTarget && resolveProfile.applyStatusEffectsOnMiss)
                                 ApplyMoveStatuses(attacker, target, move, state.currentTurn);
-                            if (resolveProfile.applyStageChangesOnMiss)
+                            if (!resolveProfile.moveEffectsOncePerTarget && resolveProfile.applyStageChangesOnMiss)
                                 ApplyMoveStageChanges(attacker, target, move, state.currentTurn);
                         }
                         CheckPassiveTriggers(attacker, state.currentTurn, PassiveTriggerPoint.OnMiss, target, 0, move);
@@ -2035,7 +2294,12 @@ namespace Chainbound.Combat
                         continue;
                     }
 
-                    EnsureTurnActionLedger(state)?.RecordHit(attacker.instanceId, target.instanceId);
+                    EnsureTurnActionLedger(state)?.RecordHit(
+                        actingTeam != null ? actingTeam.teamIndex : -1,
+                        attacker.instanceId,
+                        target.instanceId);
+                    bool applyLandedMoveEffects = !isBounceTarget &&
+                        (!resolveProfile.moveEffectsOncePerTarget || moveEffectsAppliedTargets.Add(target));
 
                     ChemistryResolvedPayload chemistryPayload;
                     ChemistryResult chemResult = _chemistry.Resolve(
@@ -2064,22 +2328,26 @@ namespace Chainbound.Combat
                             state.currentTurn);
                     }
 
-                    ApplyChemistryAwareModifierBonuses(modifierContext, attacker, target, move, chemResult, state.currentTurn);
-                    float critRate = DamageCalculator.ComputeCritRate(attacker, move, modifierContext);
+                    ApplyChemistryAwareModifierBonuses(targetModifierContext, attacker, target, move, chemResult, state.currentTurn);
+                    float critRate = DamageCalculator.ComputeCritRate(attacker, move, targetModifierContext);
                     float critRoll = _rng.NextFloat();
                     bool isCrit = critRoll < critRate;
 
-                    DamageCalculator.ResolveDamageStats(move, modifierContext, out CoreStat atkStat, out CoreStat defStat);
+                    DamageCalculator.ResolveDamageStats(move, targetModifierContext, out CoreStat atkStat, out CoreStat defStat);
                     StatBreakdown atkBreakdown = attacker.GetStatBreakdown(atkStat);
                     StatBreakdown defBreakdown = target.GetStatBreakdown(defStat);
                     int hpBefore = target.currentHP;
-                    DamageModifierContext hitModifierContext = modifierContext != null
-                        ? modifierContext.Clone()
-                        : new DamageModifierContext();
+                    DamageModifierContext hitModifierContext = targetModifierContext.Clone();
                     if (isBounceTarget)
                         hitModifierContext.powerMultiplier *= bouncePower;
                     bool firstIncomingHit = target.hitsTakenThisTurn == 0;
                     ApplyDefensivePassiveMitigation(hitModifierContext, target, move, state.currentTurn);
+                    bool ignoreMitigationForHit = resolveProfile.damage != null && resolveProfile.damage.ignoreMitigation;
+                    BarrierBypassResult bypassResult = ignoreMitigationForHit
+                        ? new BarrierBypassResult(true, "IgnoreMitigation")
+                        : CheckBarrierBypass(attacker, move, chemResult, hit, hitModifierContext, state.currentTurn);
+                    bool bypassBarrier = bypassResult.bypassed;
+                    hitModifierContext.bypassBlockMitigation = bypassBarrier;
                     hitModifierContext.damageMultiplier *= ResolveConditionalDamageMultiplier(
                         state,
                         actingTeam,
@@ -2099,26 +2367,43 @@ namespace Chainbound.Combat
                     bool wallActiveBeforeHit = CombatWallStateUtility.HasActiveWallState(target);
                     string wallSourceBeforeHit = CombatWallStateUtility.ResolveLatestWallSourceTag(target);
                     int activeBarrierCountBeforeHit = CombatWallStateUtility.CountActiveBarriers(target);
-                    BarrierBypassResult bypassResult = CheckBarrierBypass(attacker, move, chemResult, hit, modifierContext, state.currentTurn);
-                    bool bypassBarrier = bypassResult.bypassed;
                     int penetrationDamage = 0;
-                    if (!bypassBarrier && modifierContext != null && modifierContext.barrierPenetrationPercent > 0f)
-                        penetrationDamage = Math.Max(0, (int)Math.Floor(incomingDamage * modifierContext.barrierPenetrationPercent));
+                    if (!bypassBarrier && targetModifierContext.barrierPenetrationPercent > 0f)
+                        penetrationDamage = Math.Max(0, (int)Math.Floor(incomingDamage * targetModifierContext.barrierPenetrationPercent));
                     float wallReflectPercent = CombatWallEffectUtility.ResolveWallReflectPercent(target, wallSourceBeforeHit);
                     int reflectedDamage;
                     int barrierApDrain;
-                    damage = target.ApplyBarrierAbsorption(damage, bypassBarrier, out reflectedDamage, out barrierApDrain);
+                    damage = target.ApplyBarrierAbsorption(
+                        damage, bypassBarrier, move.contactType, out reflectedDamage, out barrierApDrain);
+                    int expiredMitigationByHit = 0;
+                    MitigationSource consumedBlock = null;
+                    if (!ignoreMitigationForHit)
+                    {
+                        expiredMitigationByHit = target.ConsumeMitigationHitBudgets(
+                            move.contactType,
+                            consumeBlocks: !bypassBarrier,
+                            out consumedBlock);
+                    }
+                    if (consumedBlock != null && consumedBlock.reflectPercent > 0f)
+                    {
+                        int preventedByBlock = Math.Max(0, (int)Math.Floor(trace.preMitigationDamage * consumedBlock.mitigation));
+                        reflectedDamage += Math.Max(0, (int)Math.Floor(preventedByBlock * consumedBlock.reflectPercent));
+                        wallReflectPercent = consumedBlock.reflectPercent;
+                    }
                     reflectedDamage = ApplyStickyMirrorReflectBoost(target, reflectedDamage);
                     if (!bypassBarrier && damage == 0 && penetrationDamage > 0)
                         damage = Math.Min(incomingDamage, penetrationDamage);
 
                     string payloadWallSourceTag = ResolvePayloadWallSourceTag(wallSourceBeforeHit, wallSourceBeforeHit);
+                    int activeBarrierCountAfterAbsorption = CombatWallStateUtility.CountActiveBarriers(target);
+                    int blockApDrain = consumedBlock != null ? consumedBlock.attackerApDrainOnHit : 0;
                     int attackerApDrained = ResolveWallStrikeApDrain(
                         target,
                         attacker,
                         state.currentTurn,
-                        wallActiveBeforeHit && !bypassBarrier,
-                        barrierApDrain,
+                        !ignoreMitigationForHit && (consumedBlock != null ||
+                            (!bypassBarrier && activeBarrierCountBeforeHit > activeBarrierCountAfterAbsorption)),
+                        Math.Max(barrierApDrain, blockApDrain),
                         payloadWallSourceTag);
 
                     if (incomingDamage > 0 && damage == 0)
@@ -2136,10 +2421,11 @@ namespace Chainbound.Combat
                             bypassResult,
                             move,
                             trace.mitigation,
+                            trace.wallMitigation,
                             incomingDamage,
                             0,
                             barrierFullyBlocked: true,
-                            mitigationSourcesExpired: 0,
+                            mitigationSourcesExpired: expiredMitigationByHit,
                             barriersExpired: Math.Max(0, activeBarrierCountBeforeHit - activeBarrierCountAfterBlock),
                             wallExpiredThisStep: wallActiveBeforeHit && !wallActiveAfterBlock,
                             partialPenetration: false,
@@ -2160,12 +2446,20 @@ namespace Chainbound.Combat
                         }
                         if (resolveProfile.utilityExecutionTiming == MoveUtilityExecutionTiming.AfterEachConfirmedHit)
                             ApplyDamagingMoveUtilityEffects(attacker, target, move, state.currentTurn, 0);
+                        if (applyLandedMoveEffects &&
+                            ShouldApplyMoveEffectsAtResolve(attacker, target, move, state.currentTurn, logSkipped: false))
+                        {
+                            ApplyMoveStatuses(attacker, target, move, state.currentTurn);
+                            ApplyMoveStageChanges(attacker, target, move, state.currentTurn);
+                        }
                         if (attackerKoByReflect)
                         {
                             HandleReflectedAttackerKo(
                                 state, actingTeam, opposingTeam, attacker, target, move, attackerHpBeforeReflect);
                             break;
                         }
+                        ProcessAfterDamageModifiers(attacker, target, move, 0, isCrit, state.currentTurn);
+                        ProcessRiposteModifiers(target, attacker, move, 0, state.currentTurn);
                         continue;
                     }
 
@@ -2187,8 +2481,9 @@ namespace Chainbound.Combat
                     int actualDelta = hpBefore - hpAfter;
                     bool mismatch = expectedDelta != actualDelta;
                     EnsureTurnActionLedger(state)?.RecordHpDamage(target.instanceId, actualDelta);
+                    if (actualDelta > 0 && hpAfter > 0 && target.isAlive)
+                        TryApplyKindling(state, attacker, target, state.currentTurn);
 
-                    int expiredMitigationByHit = target.ConsumeMitigationHitBudgets(move.contactType);
                     if (expiredMitigationByHit > 0)
                     {
                         _log.LogMessage(
@@ -2215,6 +2510,7 @@ namespace Chainbound.Combat
                         bypassResult,
                         move,
                         trace.mitigation,
+                        trace.wallMitigation,
                         incomingDamage,
                         damage,
                         barrierFullyBlocked: false,
@@ -2228,9 +2524,16 @@ namespace Chainbound.Combat
                         wallReflectPercent,
                         trace.preMitigationDamage);
 
-                    int reactiveApGain = target.currentHP > 0
-                        ? target.GrantReactiveApOnDamage(attacker, apply: false)
-                        : 0;
+                    int reactiveApGain = 0;
+                    if (target.currentHP > 0)
+                    {
+                        reactiveApGain = target.GrantReactiveApOnDamage(attacker, apply: false);
+                        if (consumedBlock != null && consumedBlock.apGainOnConsumeIfFaster > 0 && attacker != null &&
+                            target.GetEffectiveStat(CoreStat.Speed) > attacker.GetEffectiveStat(CoreStat.Speed))
+                        {
+                            reactiveApGain += consumedBlock.apGainOnConsumeIfFaster;
+                        }
+                    }
                     if (reactiveApGain > 0)
                     {
                         _apService.Gain(target, reactiveApGain, state.currentTurn, "ReactiveAPOnDamage");
@@ -2317,7 +2620,7 @@ namespace Chainbound.Combat
                         state.currentTurn);
 
                     EmitDamageContextModifierOutcomes(
-                        modifierContext,
+                        targetModifierContext,
                         attacker,
                         target,
                         move,
@@ -2327,7 +2630,7 @@ namespace Chainbound.Combat
                         penetrationDamage,
                         actualDelta);
 
-                    bool shouldApplyMoveEffects = !isBounceTarget && ShouldApplyMoveEffectsAtResolve(attacker, target, move, state.currentTurn, logSkipped: false);
+                    bool shouldApplyMoveEffects = applyLandedMoveEffects && ShouldApplyMoveEffectsAtResolve(attacker, target, move, state.currentTurn, logSkipped: false);
                     if (shouldApplyMoveEffects)
                     {
                         ApplyMoveStatuses(attacker, target, move, state.currentTurn);
@@ -2370,6 +2673,7 @@ namespace Chainbound.Combat
                     if (target.currentHP <= 0)
                     {
                         target.isAlive = false;
+                        target.ClearTemporaryDefenses();
                         EnsureTurnActionLedger(state)?.RecordKo(
                             target.instanceId,
                             opposingTeam != null ? opposingTeam.teamIndex : -1);
@@ -2451,6 +2755,7 @@ namespace Chainbound.Combat
                 return;
 
             attacker.isAlive = false;
+            attacker.ClearTemporaryDefenses();
             int defeatedTeamIndex = actingTeam != null ? actingTeam.teamIndex : -1;
             EnsureTurnActionLedger(state)?.RecordKo(attacker.instanceId, defeatedTeamIndex);
             ProcessArmedWindowsForTeam(opposingTeam, attacker, ArmedWindowTrigger.FoeKO, state.currentTurn);
@@ -3156,7 +3461,8 @@ namespace Chainbound.Combat
             MoveInstance move,
             int turn,
             bool conditionMet,
-            TeamState opposingTeam = null)
+            TeamState opposingTeam = null,
+            UtilityEffectExecutionOrigin origin = UtilityEffectExecutionOrigin.Move)
         {
             bool shouldApply = ShouldApplyMoveEffectsAtResolve(source, target, move, turn, logSkipped: true);
             if (!shouldApply)
@@ -3187,7 +3493,7 @@ namespace Chainbound.Combat
                 shouldApply,
                 _rng,
                 opposingTeam,
-                CreateUtilityContext(sourceTeam, targetTeam, 0));
+                CreateUtilityContext(sourceTeam, targetTeam, 0, origin));
             ProcessSupportSynergyModifiers(source, target, move, turn);
         }
 
@@ -3393,7 +3699,8 @@ namespace Chainbound.Combat
         private UtilityEffectExecutionContext CreateUtilityContext(
             TeamState sourceTeam,
             TeamState targetTeam,
-            int damageDealt)
+            int damageDealt,
+            UtilityEffectExecutionOrigin origin = UtilityEffectExecutionOrigin.Move)
         {
             return new UtilityEffectExecutionContext
             {
@@ -3402,6 +3709,7 @@ namespace Chainbound.Combat
                 targetTeam = targetTeam,
                 ledger = EnsureTurnActionLedger(_currentState),
                 damageDealt = damageDealt,
+                origin = origin,
             };
         }
 
@@ -3664,7 +3972,9 @@ namespace Chainbound.Combat
                     int idx = _rng.NextInt(0, RandomStageStats.Length - 1, out roll);
                     CoreStat stat = RandomStageStats[idx];
                     int oldStage = target.GetStage(stat);
-                    target.SetStage(stat, oldStage + 1);
+                    int requested = BuffGate.FilterPositiveStage(
+                        target, stat, 1, $"Modifier.{mod.sectionId}", turn);
+                    target.SetStage(stat, oldStage + requested);
                     int newStage = target.GetStage(stat);
                     int delta = newStage - oldStage;
                     if (delta == 0)
@@ -3693,7 +4003,8 @@ namespace Chainbound.Combat
                         "Support synergy stage applied",
                         "STAT +1",
                         target.instanceId,
-                        ModifierPopupMoment.OnSynergyMet);
+                        ModifierPopupMoment.OnSynergyMet,
+                        Math.Abs(delta));
                 }
             }
         }
@@ -3744,8 +4055,12 @@ namespace Chainbound.Combat
                     }
                     else
                     {
+                        bool alreadyHadStatus = HasStatus(statusTarget, effect.statusId);
                         bool applied = _statusProcessor.ApplyStatus(statusTarget, effect.statusId,
                             duration, move.instanceId, turn);
+                        if (applied && !alreadyHadStatus && statusDefinition != null && statusDefinition.isBuff &&
+                            statusTarget != source)
+                            EnsureTurnActionLedger(_currentState)?.NoteUplinkAlly(source.instanceId, statusTarget.instanceId);
                         if (applied)
                             TrySpiteCounter(statusTarget, source, effect.statusId, duration, turn, statusDefinition);
                     }
@@ -3920,6 +4235,14 @@ namespace Chainbound.Combat
         {
             if (target == null || statusId == StatusId.None)
                 return;
+            if (statusId == StatusId.ThreadLock && IsThreadLockQueueBlocked(target, applyOnTurn - 1))
+            {
+                _log.LogMessage(
+                    CombatEventType.SystemMessage,
+                    $"{target.displayName} cannot be Thread Locked again yet.",
+                    Math.Max(0, applyOnTurn - 1));
+                return;
+            }
             if (target.pendingTurnStartStatuses == null)
                 target.pendingTurnStartStatuses = new List<PendingStatusApplication>();
 
@@ -3935,6 +4258,34 @@ namespace Chainbound.Combat
                 CombatEventType.SystemMessage,
                 $"{target.displayName} will gain {statusId} next turn.",
                 Math.Max(0, applyOnTurn - 1));
+        }
+
+        private static bool IsThreadLockQueueBlocked(ChainlingInstance target, int turn)
+        {
+            if (target == null)
+                return true;
+            if (turn < target.threadLockBlockedUntilTurn)
+                return true;
+            if (target.statuses != null)
+            {
+                for (int i = 0; i < target.statuses.Count; i++)
+                {
+                    StatusInstance status = target.statuses[i];
+                    if (status != null && status.statusId == StatusId.ThreadLock && !status.IsExpired)
+                        return true;
+                }
+            }
+
+            if (target.pendingTurnStartStatuses == null)
+                return false;
+            for (int i = 0; i < target.pendingTurnStartStatuses.Count; i++)
+            {
+                PendingStatusApplication pending = target.pendingTurnStartStatuses[i];
+                if (pending != null && pending.statusId == StatusId.ThreadLock)
+                    return true;
+            }
+
+            return false;
         }
 
         private static bool IsTurnStartPendingStatus(StatusId statusId)
@@ -3979,10 +4330,23 @@ namespace Chainbound.Combat
                     int clampedChange = change.stages;
                     if (clampedChange < 0)
                         clampedChange = Math.Max(clampedChange, -_resolverConfig.stageActiveChangeCap);
+                    clampedChange = BuffGate.FilterPositiveStage(
+                        stageTarget, change.stat, clampedChange, move.instanceId, turn);
+                    if (change.stages > 0 && clampedChange == 0)
+                    {
+                        _log.LogMessage(
+                            CombatEventType.BuffBlocked,
+                            $"Cipher Lock blocked {stageTarget.displayName}'s {change.stat} +{change.stages}.",
+                            turn);
+                        continue;
+                    }
 
                     stageTarget.SetStage(change.stat, oldStage + clampedChange);
+                    int appliedStage = stageTarget.GetStage(change.stat) - oldStage;
                     _log.LogStageChange(turn, stageTarget.instanceId, change.stat,
-                        clampedChange, stageTarget.GetStage(change.stat));
+                        appliedStage, stageTarget.GetStage(change.stat));
+                    if (appliedStage > 0 && stageTarget != source)
+                        EnsureTurnActionLedger(_currentState)?.NoteUplinkAlly(source.instanceId, stageTarget.instanceId);
                 }
             }
         }
@@ -4244,7 +4608,7 @@ namespace Chainbound.Combat
                     true,
                     _rng,
                     targetTeam,
-                    CreateUtilityContext(sourceTeam, targetTeam, damage));
+                    CreateUtilityContext(sourceTeam, targetTeam, damage, UtilityEffectExecutionOrigin.Passive));
                 appliedAny = true;
             }
 
@@ -4426,6 +4790,11 @@ namespace Chainbound.Combat
             if (attacker == null || move == null)
                 return context;
 
+            if (state != null &&
+                state.turnActionLedger != null &&
+                state.turnActionLedger.TryPeekActiveSetupFeed(attacker.instanceId, out float setupFeedFraction))
+                context.powerMultiplier *= 1f + setupFeedFraction;
+
             var modifiers = ResolveMoveModifiers(move);
             for (int i = 0; i < modifiers.Count; i++)
             {
@@ -4574,29 +4943,10 @@ namespace Chainbound.Combat
                         LogModifierOutcome(mod, attacker, target, move, turn, false, "Stat substitution condition not met");
                     }
                 }
-                else if (section.Equals("6.3-a", StringComparison.OrdinalIgnoreCase))
+                else if (IsTargetDependentDamageModifier(section))
                 {
-                    if (target != null && target.EffectiveMaxHP > 0 && target.currentHP * 100f / target.EffectiveMaxHP < 50f)
-                    {
-                        context.damageMultiplier *= 1f + RollModifierPercent(mod, 0.25f);
-                        applied = true;
-                    }
-                    else
-                    {
-                        LogModifierOutcome(mod, attacker, target, move, turn, false, "Target HP condition not met");
-                    }
-                }
-                else if (section.Equals("6.3-b", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (target != null && attacker.currentHP < target.currentHP)
-                    {
-                        context.damageMultiplier *= 1f + RollModifierPercent(mod, 0.25f);
-                        applied = true;
-                    }
-                    else
-                    {
-                        LogModifierOutcome(mod, attacker, target, move, turn, false, "Attacker HP condition not met");
-                    }
+                    // Evaluated against the final target inside ResolveDamagingMove.
+                    continue;
                 }
                 else if (section.Equals("6.3-d", StringComparison.OrdinalIgnoreCase))
                 {
@@ -4610,20 +4960,6 @@ namespace Chainbound.Combat
                     else
                     {
                         LogModifierOutcome(mod, attacker, target, move, turn, false, "No ally KO this turn");
-                    }
-                }
-                else if (section.Equals("6.3-e", StringComparison.OrdinalIgnoreCase))
-                {
-                    TurnActionLedger ledger = EnsureTurnActionLedger(state);
-                    if (target != null && ledger != null && ledger.DidTargetMissLastTurn(target.instanceId))
-                    {
-                        context.accuracyBonus += 0.20f;
-                        context.powerMultiplier *= 1.15f;
-                        applied = true;
-                    }
-                    else
-                    {
-                        LogModifierOutcome(mod, attacker, target, move, turn, false, "Target did not miss last turn");
                     }
                 }
                 else if (section.Equals("7.1-a", StringComparison.OrdinalIgnoreCase))
@@ -4652,19 +4988,6 @@ namespace Chainbound.Combat
                     else
                     {
                         LogModifierOutcome(mod, attacker, target, move, turn, false, "No ally attack earlier this turn");
-                    }
-                }
-                else if (section.Equals("7.2-b", StringComparison.OrdinalIgnoreCase))
-                {
-                    TurnActionLedger ledger = EnsureTurnActionLedger(state);
-                    if (target != null && ledger != null && ledger.WasTargetHitThisTurn(target.instanceId))
-                    {
-                        context.powerMultiplier *= 1f + RollModifierPercent(mod, 0.45f);
-                        applied = true;
-                    }
-                    else
-                    {
-                        LogModifierOutcome(mod, attacker, target, move, turn, false, "Target was not hit earlier this turn");
                     }
                 }
                 else if (section.Equals("10.1-b", StringComparison.OrdinalIgnoreCase))
@@ -4697,6 +5020,81 @@ namespace Chainbound.Combat
             return context;
         }
 
+        private static bool IsTargetDependentDamageModifier(string section)
+        {
+            return section.Equals("6.3-a", StringComparison.OrdinalIgnoreCase) ||
+                   section.Equals("6.3-b", StringComparison.OrdinalIgnoreCase) ||
+                   section.Equals("6.3-e", StringComparison.OrdinalIgnoreCase) ||
+                   section.Equals("7.2-b", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ApplyTargetDependentDamageModifiers(
+            DamageModifierContext context,
+            CombatState state,
+            ChainlingInstance attacker,
+            ChainlingInstance target,
+            MoveInstance move,
+            int turn)
+        {
+            if (context == null || attacker == null || target == null || move == null)
+                return;
+
+            List<ResolvedMoveModifier> modifiers = ResolveMoveModifiers(move);
+            TurnActionLedger ledger = EnsureTurnActionLedger(state);
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                ResolvedMoveModifier mod = modifiers[i];
+                string section = mod.sectionId ?? string.Empty;
+                bool applied = false;
+                string failureReason = string.Empty;
+
+                if (section.Equals("6.3-a", StringComparison.OrdinalIgnoreCase))
+                {
+                    applied = target.EffectiveMaxHP > 0 && target.currentHP * 100f / target.EffectiveMaxHP < 50f;
+                    if (applied)
+                        context.damageMultiplier *= 1f + RollModifierPercent(mod, 0.25f);
+                    else
+                        failureReason = "Target HP condition not met";
+                }
+                else if (section.Equals("6.3-b", StringComparison.OrdinalIgnoreCase))
+                {
+                    applied = attacker.currentHP < target.currentHP;
+                    if (applied)
+                        context.damageMultiplier *= 1f + RollModifierPercent(mod, 0.25f);
+                    else
+                        failureReason = "Attacker HP condition not met";
+                }
+                else if (section.Equals("6.3-e", StringComparison.OrdinalIgnoreCase))
+                {
+                    applied = ledger != null && ledger.DidTargetMissLastTurn(target.instanceId);
+                    if (applied)
+                    {
+                        context.accuracyBonus += 0.20f;
+                        context.powerMultiplier *= 1.15f;
+                    }
+                    else
+                        failureReason = "Target did not miss last turn";
+                }
+                else if (section.Equals("7.2-b", StringComparison.OrdinalIgnoreCase))
+                {
+                    applied = ledger != null && ledger.WasTargetHitThisTurn(target.instanceId);
+                    if (applied)
+                        context.powerMultiplier *= 1f + RollModifierPercent(mod, 0.45f);
+                    else
+                        failureReason = "Target was not hit earlier this turn";
+                }
+                else
+                {
+                    continue;
+                }
+
+                if (applied)
+                    context.AddApplied(section);
+                else
+                    LogModifierOutcome(mod, attacker, target, move, turn, false, failureReason);
+            }
+        }
+
         private bool ApplyPassiveStrike(
             ChainlingInstance source,
             ChainlingInstance victim,
@@ -4725,6 +5123,7 @@ namespace Chainbound.Combat
 
             victim.currentHP = 0;
             victim.isAlive = false;
+            victim.ClearTemporaryDefenses();
             TeamState victimTeam = FindTeamContaining(_currentState, victim);
             TeamState sourceTeam = FindTeamContaining(_currentState, source);
             int teamIndex = victimTeam != null ? victimTeam.teamIndex : -1;
@@ -5058,7 +5457,7 @@ namespace Chainbound.Combat
             bool isCrit,
             int turn)
         {
-            if (attacker == null || target == null || move == null || damage <= 0)
+            if (attacker == null || target == null || move == null)
                 return;
 
             var modifiers = ResolveMoveModifiers(move);
@@ -5068,6 +5467,11 @@ namespace Chainbound.Combat
                 ModifierTriggerCondition trigger = ResolveModifierTrigger(mod);
                 if (trigger == ModifierTriggerCondition.OnHit)
                 {
+                    if (damage <= 0 && IsOnHitLifestealModifier(mod))
+                    {
+                        LogModifierOutcome(mod, attacker, target, move, turn, false, "On-hit heal had no HP damage");
+                        continue;
+                    }
                     if (!CheckModifierTriggerChance(mod))
                     {
                         LogModifierOutcome(mod, attacker, target, move, turn, false, "On-hit proc failed");
@@ -5082,26 +5486,28 @@ namespace Chainbound.Combat
                         int actual = attacker.currentHP - before;
                         if (actual > 0)
                             LogHealApplied(turn, attacker, attacker, move, actual, $"modifier {mod.sectionId}");
-                        LogModifierOutcome(mod, attacker, target, move, turn, true, "On-hit heal applied",
-                            ResolveModifierDisplayText(mod), attacker.instanceId, ModifierPopupMoment.OnHitApplied);
+                        LogModifierOutcome(mod, attacker, target, move, turn, actual > 0, "On-hit heal applied",
+                            ResolveModifierDisplayText(mod), attacker.instanceId, ModifierPopupMoment.OnHitApplied, actual);
                     }
                     else if (IsPostCastBarrierModifier(mod))
                     {
-                        ApplyPostCastBarrierModifier(attacker, move, mod, turn);
-                        LogModifierOutcome(mod, attacker, target, move, turn, true, "Post-cast barrier granted",
-                            ResolveModifierDisplayText(mod), attacker.instanceId, ModifierPopupMoment.OnHitApplied);
+                        bool granted = ApplyPostCastBarrierModifier(attacker, move, mod, turn, out int barrierAmount);
+                        LogModifierOutcome(mod, attacker, target, move, turn, granted,
+                            granted ? "Post-cast barrier granted" : "Existing barrier was stronger",
+                            ResolveModifierDisplayText(mod), attacker.instanceId, ModifierPopupMoment.OnHitApplied,
+                            granted ? barrierAmount : 0);
                     }
                     else if (mod.sectionId.Equals("6.1-b", StringComparison.OrdinalIgnoreCase))
                     {
-                        _apService.Steal(attacker, target, 1, turn, $"Modifier.{mod.sectionId}");
-                        LogModifierOutcome(mod, attacker, target, move, turn, true, "On-hit AP drain applied",
-                            ResolveModifierDisplayText(mod), target.instanceId, ModifierPopupMoment.OnHitApplied);
+                        int stolen = _apService.Steal(attacker, target, 1, turn, $"Modifier.{mod.sectionId}");
+                        LogModifierOutcome(mod, attacker, target, move, turn, stolen > 0, "On-hit AP drain applied",
+                            ResolveModifierDisplayText(mod), target.instanceId, ModifierPopupMoment.OnHitApplied, stolen);
                     }
                     else if (mod.sectionId.Equals("6.1-c", StringComparison.OrdinalIgnoreCase))
                     {
-                        _statusProcessor.ApplyStatus(target, StatusId.Staggered, 1, move.instanceId, turn);
-                        LogModifierOutcome(mod, attacker, target, move, turn, true, "Staggered applied",
-                            ResolveModifierDisplayText(mod), target.instanceId, ModifierPopupMoment.OnHitApplied);
+                        bool applied = _statusProcessor.ApplyStatus(target, StatusId.Staggered, 1, move.instanceId, turn);
+                        LogModifierOutcome(mod, attacker, target, move, turn, applied, "Staggered applied",
+                            ResolveModifierDisplayText(mod), target.instanceId, ModifierPopupMoment.OnHitApplied, applied ? 1 : 0);
                     }
                 }
                 else if (trigger == ModifierTriggerCondition.OnCrit && isCrit)
@@ -5114,24 +5520,26 @@ namespace Chainbound.Combat
 
                     if (mod.sectionId.Equals("6.2-a", StringComparison.OrdinalIgnoreCase))
                     {
-                        _apService.Gain(attacker, 1, turn, $"Modifier.{mod.sectionId}");
-                        LogModifierOutcome(mod, attacker, target, move, turn, true, "Crit AP gained",
-                            ResolveModifierDisplayText(mod), attacker.instanceId, ModifierPopupMoment.OnCritApplied);
+                        int gained = _apService.Gain(attacker, 1, turn, $"Modifier.{mod.sectionId}");
+                        LogModifierOutcome(mod, attacker, target, move, turn, gained > 0, "Crit AP gained",
+                            ResolveModifierDisplayText(mod), attacker.instanceId, ModifierPopupMoment.OnCritApplied, gained);
                     }
                     else if (mod.sectionId.Equals("6.2-b", StringComparison.OrdinalIgnoreCase))
                     {
                         DamageCalculator.ResolveDamageStats(move, out _, out CoreStat defStat);
                         int oldStage = target.GetStage(defStat);
                         target.SetStage(defStat, oldStage - 2);
-                        _log.LogStageChange(turn, target.instanceId, defStat, target.GetStage(defStat) - oldStage, target.GetStage(defStat));
-                        LogModifierOutcome(mod, attacker, target, move, turn, true, "Crit defense stage drop applied",
-                            ResolveModifierDisplayText(mod), target.instanceId, ModifierPopupMoment.OnCritApplied);
+                        int delta = target.GetStage(defStat) - oldStage;
+                        if (delta != 0)
+                            _log.LogStageChange(turn, target.instanceId, defStat, delta, target.GetStage(defStat));
+                        LogModifierOutcome(mod, attacker, target, move, turn, delta != 0, "Crit defense stage drop applied",
+                            ResolveModifierDisplayText(mod), target.instanceId, ModifierPopupMoment.OnCritApplied, Math.Abs(delta));
                     }
                     else if (mod.sectionId.Equals("6.2-c", StringComparison.OrdinalIgnoreCase))
                     {
-                        _statusProcessor.ApplyStatus(attacker, StatusId.Surging, 1, move.instanceId, turn);
-                        LogModifierOutcome(mod, attacker, target, move, turn, true, "Surging applied",
-                            ResolveModifierDisplayText(mod), attacker.instanceId, ModifierPopupMoment.OnCritApplied);
+                        bool applied = _statusProcessor.ApplyStatus(attacker, StatusId.Surging, 1, move.instanceId, turn);
+                        LogModifierOutcome(mod, attacker, target, move, turn, applied, "Surging applied",
+                            ResolveModifierDisplayText(mod), attacker.instanceId, ModifierPopupMoment.OnCritApplied, applied ? 1 : 0);
                     }
                 }
             }
@@ -5159,7 +5567,8 @@ namespace Chainbound.Combat
                 if (mitigation <= 0f)
                     continue;
 
-                actor.AddMitigationSource(mitigation, RestOfTurnDuration, $"Modifier.{mod.sectionId}");
+                const int gritGuardDurationTurns = 2;
+                actor.AddMitigationSource(mitigation, gritGuardDurationTurns, $"Modifier.{mod.sectionId}");
                 LogModifierOutcome(
                     mod,
                     actor,
@@ -5174,6 +5583,217 @@ namespace Chainbound.Combat
             }
         }
 
+        private const string SetupFeedSectionId = "7.2-c";
+
+        private void WasteIncomingSetupFeed(CombatState state, TeamState actingTeam, ChainlingInstance actor)
+        {
+            SettleIncomingSetupFeed(state, actingTeam, actor, false);
+        }
+
+        private void SettleIncomingSetupFeed(
+            CombatState state,
+            TeamState actingTeam,
+            ChainlingInstance actor,
+            bool powerMove)
+        {
+            if (state == null || actor == null || string.IsNullOrWhiteSpace(actor.instanceId))
+                return;
+
+            TurnActionLedger ledger = EnsureTurnActionLedger(state);
+            if (ledger == null)
+                return;
+
+            int teamIndex = actingTeam != null ? actingTeam.teamIndex : -1;
+            var consumed = new List<float>(2);
+            if (!ledger.TryConsumeSetupFeeds(teamIndex, actor.instanceId, powerMove, consumed))
+                return;
+
+            if (powerMove)
+                return;
+
+            for (int i = 0; i < consumed.Count; i++)
+                LogSetupFeedFade(actor, state.currentTurn, consumed[i]);
+        }
+
+        private bool ApplyLeakedActionTax(CombatState state, TeamState team, ChainlingInstance actor)
+        {
+            if (state == null || team == null || actor == null || !actor.isAlive)
+                return false;
+
+            bool sideIsLeaked = false;
+            var actives = team.GetActiveChainlings();
+            for (int i = 0; i < actives.Count; i++)
+            {
+                if (HasStatus(actives[i], StatusId.Leaked))
+                {
+                    sideIsLeaked = true;
+                    break;
+                }
+            }
+
+            if (!sideIsLeaked)
+                return false;
+
+            int tax = Math.Max(1, (int)(actor.EffectiveMaxHP * 0.10f));
+            actor.currentHP -= tax;
+            _log.Log(new CombatEvent
+            {
+                eventType = CombatEventType.HPDotDamage,
+                turn = state.currentTurn,
+                sourceId = actor.instanceId,
+                targetId = actor.instanceId,
+                intValue = tax,
+                message = $"Leaked taxes {actor.displayName} for {tax}",
+            });
+            if (actor.currentHP > 0)
+                return true;
+
+            actor.currentHP = 0;
+            actor.isAlive = false;
+            actor.ClearTemporaryDefenses();
+            _log.LogKO(state.currentTurn, actor.instanceId);
+            return true;
+        }
+
+        private void TryApplyKindling(CombatState state, ChainlingInstance attacker, ChainlingInstance target, int turn)
+        {
+            if (!HasEquippedPassive(attacker, "kindling") || target == null || HasStatus(target, StatusId.Kindled))
+                return;
+            _statusProcessor.ApplyStatus(target, StatusId.Kindled, 1, attacker.instanceId, turn);
+        }
+
+        private void SettleUplink(CombatState state, ChainlingInstance source, int turn)
+        {
+            if (!HasEquippedPassive(source, "uplink"))
+                return;
+
+            TurnActionLedger ledger = EnsureTurnActionLedger(state);
+            if (ledger?.pendingUplinkAllies == null || ledger.pendingUplinkAllies.Count == 0)
+                return;
+
+            TeamState team = FindTeamContaining(state, source);
+            for (int i = 0; i < ledger.pendingUplinkAllies.Count; i++)
+            {
+                string key = ledger.pendingUplinkAllies[i];
+                int split = key != null ? key.IndexOf('|') : -1;
+                if (split <= 0 || split >= key.Length - 1)
+                    continue;
+                string allyId = key.Substring(split + 1);
+                if (!ledger.TryClaimUplinkPay(source.instanceId, allyId))
+                    continue;
+
+                ChainlingInstance ally = null;
+                if (team?.chainlings != null)
+                {
+                    for (int a = 0; a < team.chainlings.Count; a++)
+                    {
+                        if (team.chainlings[a] != null &&
+                            string.Equals(team.chainlings[a].instanceId, allyId, StringComparison.Ordinal))
+                        {
+                            ally = team.chainlings[a];
+                            break;
+                        }
+                    }
+                }
+                int gained = ally != null ? _apService.Gain(ally, 1, turn, "uplink") : 0;
+                _log.LogMessage(
+                    CombatEventType.SystemMessage,
+                    gained > 0
+                        ? $"Uplink gives {ally.displayName} 1 AP."
+                        : $"Uplink's point for {(ally != null ? ally.displayName : allyId)} is lost.",
+                    turn);
+            }
+        }
+
+        private static bool HasEquippedPassive(ChainlingInstance chainling, string definitionId)
+        {
+            if (chainling?.moves == null || string.IsNullOrEmpty(definitionId))
+                return false;
+            for (int i = 0; i < chainling.moves.Count; i++)
+            {
+                MoveInstance move = chainling.moves[i];
+                if (move != null &&
+                    move.category == MoveCategory.Passive &&
+                    string.Equals(move.definitionId, definitionId, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private void ArmSetupFeeds(CombatState state, TeamState actingTeam, ChainlingInstance actor, MoveInstance move)
+        {
+            if (state == null || actor == null || move == null)
+                return;
+
+            var modifiers = ResolveMoveModifiers(move);
+            if (modifiers == null)
+                return;
+
+            bool found = false;
+            float fraction = 0f;
+            ResolvedMoveModifier armedMod = default;
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                ResolvedMoveModifier mod = modifiers[i];
+                if (!string.Equals(mod.sectionId, SetupFeedSectionId, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                fraction = RollModifierPercent(mod, 0.12f);
+                armedMod = mod;
+                found = fraction > 0f;
+            }
+
+            if (!found)
+                return;
+
+            int teamIndex = actingTeam != null ? actingTeam.teamIndex : -1;
+            EnsureTurnActionLedger(state)?.ArmSetupFeed(teamIndex, actor.instanceId, fraction);
+            LogModifierOutcome(
+                armedMod,
+                actor,
+                actor,
+                move,
+                state.currentTurn,
+                true,
+                BuildSetupFeedSentence(true, fraction),
+                "SETUP",
+                actor.instanceId,
+                ModifierPopupMoment.OnSynergyMet);
+        }
+
+        private void LogSetupFeedFade(ChainlingInstance actor, int turn, float fraction)
+        {
+            LogModifierOutcome(
+                new ResolvedMoveModifier { sectionId = SetupFeedSectionId },
+                actor,
+                actor,
+                null,
+                turn,
+                false,
+                BuildSetupFeedSentence(false, fraction),
+                "SETUP",
+                actor != null ? actor.instanceId : null,
+                ModifierPopupMoment.OnSynergyMet);
+        }
+
+        private static string BuildSetupFeedSentence(bool armed, float fraction)
+        {
+            string percent = FormatSetupFeedPercent(fraction);
+            return armed
+                ? $"Setup Feed triggered. The next ally move gains {percent}% power."
+                : $"Setup Feed faded. The ally's next action was not a power move, so the {percent}% boost was lost.";
+        }
+
+        private static string FormatSetupFeedPercent(float fraction)
+        {
+            float percent = fraction > 1f ? fraction : fraction * 100f;
+            float rounded = (float)Math.Round(percent, 1, MidpointRounding.AwayFromZero);
+            if (Math.Abs(rounded - (float)Math.Round(rounded)) < 0.05f)
+                return Math.Round(rounded).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            return rounded.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         private void LogModifierOutcome(
             ResolvedMoveModifier mod,
             ChainlingInstance actor,
@@ -5184,7 +5804,8 @@ namespace Chainbound.Combat
             string reason,
             string displayText = null,
             string anchorChainlingId = null,
-            ModifierPopupMoment moment = ModifierPopupMoment.Unknown)
+            ModifierPopupMoment moment = ModifierPopupMoment.Unknown,
+            int amount = 0)
         {
             if (string.IsNullOrWhiteSpace(mod.sectionId))
                 return;
@@ -5193,6 +5814,9 @@ namespace Chainbound.Combat
             string targetId = target != null ? target.instanceId : string.Empty;
             string moveId = move != null ? move.instanceId : string.Empty;
             ModifierCategory category = ResolveModifierCategory(mod);
+            string modifierName = mod.definition != null ? mod.definition.GetDisplayName() : string.Empty;
+            if (string.Equals(modifierName, mod.sectionId, StringComparison.OrdinalIgnoreCase))
+                modifierName = string.Empty;
             _log.Log(ModifierOutcomePayload.CreateEvent(
                 turn,
                 mod.sectionId,
@@ -5204,7 +5828,9 @@ namespace Chainbound.Combat
                 reason,
                 sourceId,
                 targetId,
-                moveId));
+                moveId,
+                modifierName,
+                amount));
         }
 
         private static ModifierCategory ResolveModifierCategory(ResolvedMoveModifier mod)
@@ -5311,6 +5937,16 @@ namespace Chainbound.Combat
                 return "DEF -2";
             if (section.Equals("6.2-c", StringComparison.OrdinalIgnoreCase))
                 return "SURGE";
+            if (section.Equals("6.3-a", StringComparison.OrdinalIgnoreCase))
+                return "EXECUTE";
+            if (section.Equals("6.3-b", StringComparison.OrdinalIgnoreCase))
+                return "UNDERDOG";
+            if (section.Equals("6.3-c", StringComparison.OrdinalIgnoreCase))
+                return "GRIT";
+            if (section.Equals("6.3-d", StringComparison.OrdinalIgnoreCase))
+                return "REVENGE";
+            if (section.Equals("6.3-e", StringComparison.OrdinalIgnoreCase))
+                return "PUNISH";
             if (section.Equals("6.5-a", StringComparison.OrdinalIgnoreCase))
                 return "KO AP";
             if (section.Equals("6.5-b", StringComparison.OrdinalIgnoreCase))
@@ -5336,10 +5972,14 @@ namespace Chainbound.Combat
             if (section.Equals("7.3-a", StringComparison.OrdinalIgnoreCase) ||
                 section.Equals("7.1-d", StringComparison.OrdinalIgnoreCase))
                 return "SHARE";
+            if (section.Equals("7.1-a", StringComparison.OrdinalIgnoreCase))
+                return "DUO";
+            if (section.Equals("7.2-a", StringComparison.OrdinalIgnoreCase))
+                return "TAG";
+            if (section.Equals("7.2-b", StringComparison.OrdinalIgnoreCase))
+                return "PILE";
             if (StartsWithSection(section, "7."))
                 return "SYNC";
-            if (section.Equals("10.2-b", StringComparison.OrdinalIgnoreCase))
-                return "STATS";
 
             return "MOD";
         }
@@ -5401,7 +6041,7 @@ namespace Chainbound.Combat
             int damage,
             int turn)
         {
-            if (defender == null || !defender.isAlive || damage <= 0 || defender.moves == null)
+            if (defender == null || !defender.isAlive || defender.moves == null)
                 return;
 
             TeamState opposing = FindTeamContaining(_currentState, attacker);
@@ -5497,8 +6137,8 @@ namespace Chainbound.Combat
                     if (def == null || !def.isBuff)
                         continue;
 
-                    _statusProcessor.ApplyStatus(ally, effect.statusId, Math.Max(1, effect.duration), move.instanceId, turn);
-                    copied = true;
+                    copied |= _statusProcessor.ApplyStatus(
+                        ally, effect.statusId, Math.Max(1, effect.duration), move.instanceId, turn);
                 }
             }
 
@@ -5510,9 +6150,15 @@ namespace Chainbound.Combat
                     if (!change.targetsSelf || change.stages == 0)
                         continue;
                     int oldStage = ally.GetStage(change.stat);
-                    ally.SetStage(change.stat, oldStage + change.stages);
-                    _log.LogStageChange(turn, ally.instanceId, change.stat, change.stages, ally.GetStage(change.stat));
-                    copied = true;
+                    int requested = BuffGate.FilterPositiveStage(
+                        ally, change.stat, change.stages, $"Modifier.{shared.sectionId}", turn);
+                    ally.SetStage(change.stat, oldStage + requested);
+                    int delta = ally.GetStage(change.stat) - oldStage;
+                    if (delta != 0)
+                    {
+                        _log.LogStageChange(turn, ally.instanceId, change.stat, delta, ally.GetStage(change.stat));
+                        copied = true;
+                    }
                 }
             }
 
@@ -5539,7 +6185,8 @@ namespace Chainbound.Combat
             int actual = source.currentHP - before;
             if (actual > 0)
                 LogHealApplied(turn, source, source, move, actual, $"modifier {mod.sectionId}");
-            LogModifierOutcome(mod, source, source, move, turn, actual > 0, "Patch Kit heal");
+            LogModifierOutcome(mod, source, source, move, turn, actual > 0, "Patch Kit heal",
+                amount: actual);
         }
 
         private void ApplySparseWard(
@@ -5741,7 +6388,14 @@ namespace Chainbound.Combat
             {
                 TeamState acting = FindTeamContaining(_currentState, actor);
                 ChainlingInstance selected = ResolvePassACastTarget(acting, opposing, actor, move);
-                ApplyUtilityEffects(actor, selected ?? actor, move, turn, true, opposing);
+                ApplyUtilityEffects(
+                    actor,
+                    selected ?? actor,
+                    move,
+                    turn,
+                    true,
+                    opposing,
+                    UtilityEffectExecutionOrigin.Modifier);
                 LogModifierOutcome(mod, actor, selected ?? actor, move, turn, true, reason);
                 return true;
             }
@@ -5841,29 +6495,40 @@ namespace Chainbound.Combat
             return mod.definition != null && mod.definition.slotType == ModifierSlotType.Barrier;
         }
 
-        private void ApplyPostCastBarrierModifier(
+        private bool ApplyPostCastBarrierModifier(
             ChainlingInstance attacker,
             MoveInstance move,
             ResolvedMoveModifier mod,
-            int turn)
+            int turn,
+            out int barrierAmount)
         {
+            barrierAmount = 0;
             if (attacker == null)
-                return;
+                return false;
 
             string section = mod.sectionId ?? string.Empty;
             bool replaced;
+            BarrierType barrierType;
+            int hits = 0;
+            int pool = 0;
+            int turns;
 
             if (section.Equals("6.7-c", StringComparison.OrdinalIgnoreCase))
             {
                 float pct = RollModifierPercent(mod, 0.15f);
-                int pool = Math.Max(1, (int)Math.Round(attacker.EffectiveMaxHP * pct));
+                pool = Math.Max(1, (int)Math.Round(attacker.EffectiveMaxHP * pct));
+                barrierType = BarrierType.DamageThreshold;
+                turns = 2;
+                if (!ShouldReplaceWithPostCastBarrier(attacker, barrierType, hits, pool, turns))
+                    return false;
                 replaced = attacker.AddBarrier(
-                    BarrierType.DamageThreshold,
+                    barrierType,
                     hitsRemaining: 0,
                     damageThreshold: pool,
-                    turnsRemaining: 2,
+                    turnsRemaining: turns,
                     sourceTag: $"modifier.{section}",
                     reflectPercent: 0f);
+                barrierAmount = pool;
             }
             else
             {
@@ -5873,22 +6538,70 @@ namespace Chainbound.Combat
                 else if (mod.definition != null && mod.definition.effectMin > 0f)
                     hitsRaw = mod.definition.effectMin;
 
-                int hits = Math.Max(1, (int)Math.Round(hitsRaw));
-                int turns = section.Equals("6.7-b", StringComparison.OrdinalIgnoreCase) ? 3 : 2;
+                hits = Math.Max(1, (int)Math.Round(hitsRaw));
+                turns = section.Equals("6.7-b", StringComparison.OrdinalIgnoreCase) ? 3 : 2;
+                barrierType = BarrierType.SingleHit;
+                if (!ShouldReplaceWithPostCastBarrier(attacker, barrierType, hits, pool, turns))
+                    return false;
                 replaced = attacker.AddBarrier(
-                    BarrierType.SingleHit,
+                    barrierType,
                     hitsRemaining: hits,
                     damageThreshold: 0,
                     turnsRemaining: turns,
                     sourceTag: $"modifier.{section}",
                     reflectPercent: 0f);
+                barrierAmount = hits;
             }
 
+            string modifierName = mod.definition != null ? mod.definition.GetDisplayName() : string.Empty;
+            if (string.IsNullOrWhiteSpace(modifierName) ||
+                string.Equals(modifierName, section, StringComparison.OrdinalIgnoreCase))
+                modifierName = "Barrier";
+            _log.RegisterName($"modifier.{section}", modifierName);
             string note = replaced ? " (replaced prior wall/shield)" : string.Empty;
             _log.LogMessage(
                 CombatEventType.SystemMessage,
                 $"{attacker.displayName} gained a post-cast barrier from {section}{note}.",
                 turn);
+            return true;
+        }
+
+        private static bool ShouldReplaceWithPostCastBarrier(
+            ChainlingInstance actor,
+            BarrierType newType,
+            int newHits,
+            int newPool,
+            int newTurns)
+        {
+            if (actor?.barriers == null || actor.barriers.Count == 0)
+                return true;
+
+            for (int i = actor.barriers.Count - 1; i >= 0; i--)
+            {
+                BarrierInstance existing = actor.barriers[i];
+                if (existing == null || existing.turnsRemaining <= 0)
+                    continue;
+                if (existing.barrierType != newType)
+                    return false;
+
+                if (newType == BarrierType.SingleHit)
+                {
+                    if (existing.hitsRemaining > newHits)
+                        return false;
+                    if (existing.hitsRemaining == newHits && existing.turnsRemaining >= newTurns)
+                        return false;
+                }
+                else
+                {
+                    int existingPool = Math.Max(0, existing.damageThreshold - existing.damageAbsorbed);
+                    if (existingPool > newPool)
+                        return false;
+                    if (existingPool == newPool && existing.turnsRemaining >= newTurns)
+                        return false;
+                }
+            }
+
+            return true;
         }
 
 
@@ -6044,15 +6757,14 @@ namespace Chainbound.Combat
                 if (opponent == null || !opponent.isAlive || opponent.moves == null)
                     continue;
 
-                bool triggeredForOpponent = false;
-                for (int m = 0; m < opponent.moves.Count && escapingActor.isAlive && !triggeredForOpponent; m++)
+                for (int m = 0; m < opponent.moves.Count && escapingActor.isAlive; m++)
                 {
                     var move = opponent.moves[m];
                     if (move == null)
                         continue;
 
                     var modifiers = ResolveMoveModifiers(move);
-                    for (int k = 0; k < modifiers.Count && escapingActor.isAlive && !triggeredForOpponent; k++)
+                    for (int k = 0; k < modifiers.Count && escapingActor.isAlive; k++)
                     {
                         var mod = modifiers[k];
                         if (ResolveModifierTrigger(mod) != ModifierTriggerCondition.OnEscape)
@@ -6062,18 +6774,11 @@ namespace Chainbound.Combat
 
                         string desc = GetModifierDescription(mod);
                         bool applied = false;
+                        int appliedAmount = 0;
 
-                        if (ContainsIgnoreCase(desc, "slow"))
+                        if (string.Equals(mod.sectionId, "6.6-a", StringComparison.OrdinalIgnoreCase))
                         {
-                            int oldStage = escapingActor.GetStage(CoreStat.Speed);
-                            escapingActor.SetStage(CoreStat.Speed, oldStage - 1);
-                            int newStage = escapingActor.GetStage(CoreStat.Speed);
-                            int delta = newStage - oldStage;
-                            if (delta != 0)
-                            {
-                                _log.LogStageChange(turn, escapingActor.instanceId, CoreStat.Speed, delta, newStage);
-                                applied = true;
-                            }
+                            applied = _statusProcessor.ApplySlowedForTurns(escapingActor, 1, "6.6-a", turn);
                         }
 
                         if (ContainsIgnoreCase(desc, "chip") || ContainsIgnoreCase(desc, "maxhp"))
@@ -6085,16 +6790,24 @@ namespace Chainbound.Combat
                             int actual = before - escapingActor.currentHP;
                             if (actual > 0)
                             {
-                                _log.LogMessage(
-                                    CombatEventType.HPDotDamage,
-                                    $"{escapingActor.displayName} took {actual} chip damage from escape trigger.",
-                                    turn);
+                                _log.Log(new CombatEvent
+                                {
+                                    eventType = CombatEventType.HPDotDamage,
+                                    turn = turn,
+                                    sourceId = opponent.instanceId,
+                                    targetId = escapingActor.instanceId,
+                                    moveId = move.instanceId,
+                                    intValue = actual,
+                                    message = $"{escapingActor.displayName} took {actual} chip damage from {opponent.displayName}'s {move.displayName}.",
+                                });
+                                appliedAmount = actual;
                                 applied = true;
                             }
 
                             if (escapingActor.currentHP <= 0)
                             {
                                 escapingActor.isAlive = false;
+                                escapingActor.ClearTemporaryDefenses();
                                 _log.LogKO(turn, escapingActor.instanceId);
                             }
                         }
@@ -6111,8 +6824,8 @@ namespace Chainbound.Combat
                                 "OnEscape effect applied",
                                 ResolveModifierDisplayText(mod),
                                 escapingActor.instanceId,
-                                ModifierPopupMoment.OnEscapeTrigger);
-                            triggeredForOpponent = true;
+                                ModifierPopupMoment.OnEscapeTrigger,
+                                appliedAmount);
                         }
                     }
                 }
@@ -6195,8 +6908,15 @@ namespace Chainbound.Combat
         private bool CheckModifierTriggerChance(ResolvedMoveModifier mod)
         {
             float chance = 1f;
-            if (mod.definition != null && mod.definition.triggerChance > 0f)
+            if (mod.runtime != null && mod.runtime.effectValueLocked &&
+                mod.definition != null && mod.definition.triggerChance > 0f && mod.definition.triggerChance < 1f)
+            {
+                float raw = mod.runtime.effectValue;
+                chance = raw > 1f ? raw / 100f : raw;
+            }
+            else if (mod.definition != null && mod.definition.triggerChance > 0f)
                 chance = mod.definition.triggerChance;
+            chance = Math.Max(0f, Math.Min(1f, chance));
             if (chance >= 1f)
                 return true;
             return _rng.Check(chance);
@@ -6300,6 +7020,7 @@ namespace Chainbound.Combat
             int slotAp = actor.currentAP;
             ResetChemistrySwapState(actor, state.currentTurn);
             actor.ClearArmedUtilityWindows();
+            actor.ClearTemporaryDefenses();
             actor.isActive = false;
             newActive.isActive = true;
             newActive.currentAP = slotAp;
@@ -6363,20 +7084,22 @@ namespace Chainbound.Combat
             for (int i = outgoing.statuses.Count - 1; i >= 0; i--)
             {
                 StatusInstance status = outgoing.statuses[i];
-                if (status == null || status.statusId != StatusId.CascadeFailure)
+                if (status == null ||
+                    (status.statusId != StatusId.CascadeFailure && status.statusId != StatusId.CipherLocked))
                     continue;
 
                 int counterBefore = status.counterValue;
+                StatusId removedStatus = status.statusId;
                 outgoing.statuses.RemoveAt(i);
                 _log.LogStatus(turn, CombatEventType.StatusCleansed,
-                    outgoing.instanceId, StatusId.CascadeFailure, 0, "SwapReset");
+                    outgoing.instanceId, removedStatus, 0, "SwapReset");
                 _log.LogForensic(
                     CombatForensicEventType.StatusCleansed,
                     new StatusEventPayload
                     {
                         targetDisplayName = outgoing.displayName,
-                        statusId = StatusId.CascadeFailure.ToString(),
-                        origin = StatusOrigin.ChemistryOnly.ToString(),
+                        statusId = removedStatus.ToString(),
+                        origin = status.origin.ToString(),
                         durationBefore = status.turnsRemaining,
                         durationAfter = 0,
                         counterBefore = counterBefore,
@@ -6387,14 +7110,99 @@ namespace Chainbound.Combat
                     outgoing.instanceId,
                     new List<string> { outgoing.instanceId },
                     turn);
-                _log.LogMessage(CombatEventType.SystemMessage,
-                    $"{outgoing.displayName}'s Cascade Failure counter reset on swap-out.", turn);
+                _log.LogMessage(
+                    removedStatus == StatusId.CipherLocked ? CombatEventType.BuffBlocked : CombatEventType.SystemMessage,
+                    removedStatus == StatusId.CipherLocked
+                        ? $"{outgoing.displayName}'s Cipher Lock fell away as it left the field."
+                        : $"{outgoing.displayName}'s Cascade Failure counter reset on swap-out.",
+                    turn);
             }
         }
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Helpers
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+        private void ApplyFeeCollectorDrains(CombatState state, List<ActionQueueEntry> executionOrder)
+        {
+            if (state == null || executionOrder == null)
+                return;
+            if (state.feeCollectorAppliedTurn == state.currentTurn)
+                return;
+
+            state.feeCollectorAppliedTurn = state.currentTurn;
+            DrainFeeCollectorHolders(state, state.team0, executionOrder);
+            DrainFeeCollectorHolders(state, state.team1, executionOrder);
+        }
+
+        private void DrainFeeCollectorHolders(CombatState state, TeamState team, List<ActionQueueEntry> executionOrder)
+        {
+            if (team?.activeIndices == null)
+                return;
+
+            for (int slot = 0; slot < team.activeIndices.Count; slot++)
+            {
+                ChainlingInstance holder = team.GetActiveInSlot(slot);
+                if (holder == null || !holder.isAlive || !HasFeeCollector(holder))
+                    continue;
+
+                ChainlingInstance firstFoe = FirstLivingOpposingActor(executionOrder, team.teamIndex);
+                if (firstFoe == null || firstFoe.currentAP <= holder.currentAP)
+                    continue;
+
+                int drained = _apService.Drain(firstFoe, 1, state.currentTurn, "fee_collector");
+                if (drained > 0)
+                {
+                    firstFoe.lastApDrainSourceName = holder.displayName;
+                    firstFoe.lastApDrainTurn = state.currentTurn;
+                    _log.LogMessage(
+                        CombatEventType.PassiveTriggered,
+                        $"{holder.displayName}'s Fee Collector drained {drained} AP from {firstFoe.displayName}.",
+                        state.currentTurn);
+                }
+            }
+        }
+
+        private static ChainlingInstance FirstLivingOpposingActor(List<ActionQueueEntry> executionOrder, int holderTeamIndex)
+        {
+            for (int i = 0; i < executionOrder.Count; i++)
+            {
+                ActionQueueEntry entry = executionOrder[i];
+                if (entry.teamIndex == holderTeamIndex || entry.actor == null || !entry.actor.isAlive)
+                    continue;
+                return entry.actor;
+            }
+
+            return null;
+        }
+
+        private static bool HasFeeCollector(ChainlingInstance chainling)
+        {
+            if (chainling?.moves == null)
+                return false;
+
+            for (int i = 0; i < chainling.moves.Count; i++)
+            {
+                if (IsDefinition(chainling.moves[i], "fee_collector"))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasSpendRemainingAp(MoveInstance move)
+        {
+            if (move?.tags == null)
+                return false;
+
+            for (int i = 0; i < move.tags.Count; i++)
+            {
+                if (string.Equals(move.tags[i], "SpendRemainingAp", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
 
         private static bool IsDefinition(MoveInstance move, string defId)
         {
@@ -6589,6 +7397,7 @@ namespace Chainbound.Combat
             BarrierBypassResult bypassResult,
             MoveInstance move,
             float mitigationPercent,
+            float wallMitigationPercent,
             int incomingDamage,
             int finalHpDamage,
             bool barrierFullyBlocked,
@@ -6604,13 +7413,16 @@ namespace Chainbound.Combat
         {
             ContactType contactType = move != null ? move.contactType : ContactType.None;
             MoveCategory moveCategory = move != null ? move.category : MoveCategory.Support;
-            int damageAbsorbed = Math.Max(0, incomingDamage - finalHpDamage);
+            int barrierAbsorbed = Math.Max(0, incomingDamage - finalHpDamage);
             if (barrierFullyBlocked && incomingDamage > 0)
-                damageAbsorbed = incomingDamage;
+                barrierAbsorbed = incomingDamage;
 
-            // Percent mitigation is applied in DamageCalculator before incomingDamage is captured.
-            if (wallActiveBeforeHit && !bypassResult.bypassed && preMitigationDamage > finalHpDamage)
-                damageAbsorbed = Math.Max(damageAbsorbed, preMitigationDamage - finalHpDamage);
+            // Credit only mitigation supplied by wall/block sources. Ordinary guards and passive
+            // resistance may share the same damage calculation but must not inflate the wall line.
+            int wallMitigationAbsorbed = wallActiveBeforeHit && !bypassResult.bypassed
+                ? Math.Max(0, (int)Math.Floor(preMitigationDamage * Math.Max(0f, wallMitigationPercent)))
+                : 0;
+            int damageAbsorbed = barrierAbsorbed + wallMitigationAbsorbed;
 
             return WallInterceptPayload.Create(
                 zeroBasedHitIndex + 1,
@@ -7027,9 +7839,27 @@ namespace Chainbound.Combat
             if (team0Dead && team1Dead)
             {
                 state.isActive = false;
-                state.winnerTeamIndex = -2;
                 state.currentPhase = TurnPhase.BattleOver;
-                _log.LogMessage(CombatEventType.Draw, "Battle ended in a draw!", state.currentTurn);
+                if (state.isBossBattle)
+                {
+                    TurnActionLedger ledger = EnsureTurnActionLedger(state);
+                    int team0LastKo = ledger != null ? ledger.lastKoSequenceTeam0 : -1;
+                    int team1LastKo = ledger != null ? ledger.lastKoSequenceTeam1 : -1;
+
+                    // The side whose final Chainling fell first loses. Missing or tied
+                    // ordering is a same-tick wipe, which intentionally favors the boss.
+                    state.winnerTeamIndex = team0LastKo > team1LastKo ? 0 : 1;
+                    TeamState winner = state.GetTeam(state.winnerTeamIndex);
+                    _log.LogMessage(
+                        CombatEventType.WinDeclared,
+                        $"{winner.teamName} wins the boss-fight tiebreak!",
+                        state.currentTurn);
+                }
+                else
+                {
+                    state.winnerTeamIndex = -2;
+                    _log.LogMessage(CombatEventType.Draw, "Battle ended in a draw!", state.currentTurn);
+                }
                 return true;
             }
             else if (team0Dead)

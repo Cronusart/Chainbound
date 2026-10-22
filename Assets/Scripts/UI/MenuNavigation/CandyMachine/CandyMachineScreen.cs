@@ -224,9 +224,24 @@ namespace SignalJam.UI.MenuNavigation
             && (devConfig == null || devConfig.ShowDevGrantStrip)
             && (devInventory != null || ownershipService != null);
 
-        public long DisplayRamBalance => ownershipService != null
-            ? ownershipService.RamBalance
-            : devInventory != null ? devInventory.RamBalance : 0L;
+        public long DisplayRamBalance
+        {
+            get
+            {
+                return ownershipService != null
+                    ? ResolveDisplayRamBalance(
+                        GameSessionContext.Instance != null ? GameSessionContext.Instance.PlayerProfileId : string.Empty,
+                        ownershipService.RamBalance)
+                    : devInventory != null ? devInventory.RamBalance : 0L;
+            }
+        }
+
+        public static long ResolveDisplayRamBalance(string playerProfileId, long ownershipBalance)
+        {
+            return PlayerRamBalanceStore.TryGet(playerProfileId, out long profileBalance)
+                ? profileBalance
+                : ownershipBalance;
+        }
 
         /// <summary>
         /// RAM shown on the label. Once a Stamp is confirmed locally the cost is shown as spent
@@ -494,6 +509,8 @@ namespace SignalJam.UI.MenuNavigation
 
         private void OnEnable()
         {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
+            PlayerRamBalanceStore.BalanceChanged += HandleRamBalanceChanged;
             if (instance == null)
                 instance = this;
             BindFromHierarchy();
@@ -507,6 +524,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private void OnDisable()
         {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
             SetInputContextActive(false);
             UnwireInput();
             StopAuthoredShellLayoutProtection();
@@ -541,12 +559,25 @@ namespace SignalJam.UI.MenuNavigation
 
         private void OnDestroy()
         {
+            PlayerRamBalanceStore.BalanceChanged -= HandleRamBalanceChanged;
             StopAuthoredShellLayoutProtection();
             DOTween.Kill(this);
             pullDirector?.CancelAndRestore();
             if (instance == this)
                 instance = null;
             ReleaseInputLock();
+        }
+
+        private void HandleRamBalanceChanged(string playerProfileId, long balance)
+        {
+            string activeProfileId = GameSessionContext.Instance != null
+                ? GameSessionContext.Instance.PlayerProfileId
+                : string.Empty;
+            if (!showing || !string.Equals(playerProfileId, activeProfileId, StringComparison.Ordinal))
+                return;
+
+            RefreshPresentation();
+            grantPanel?.RefreshForCurrentState();
         }
 
         private void SetOverlayVisible(bool visible)
@@ -1406,12 +1437,13 @@ namespace SignalJam.UI.MenuNavigation
             }
             else if (navLayer == CandyMachineNavLayer.Detail)
             {
+                string stampEffect = stampCost <= 0
+                    ? $"FILLS THE NEXT EMPTY SLOT ON {catalog.displayName.ToUpperInvariant()}."
+                    : $"FILLS THE NEXT EMPTY SLOT ON {catalog.displayName.ToUpperInvariant()}. {stampCost} RAM IS SPENT WHEN THE STAMP CONFIRMS.";
                 detailBodyView?.Show(
                     CandyMachineDetailBodyMode.Confirm,
                     "STAMP THIS MOVE?",
-                    stampCost <= 0
-                        ? $"FILLS THE NEXT EMPTY SLOT ON {catalog.displayName.ToUpperInvariant()}."
-                        : $"FILLS THE NEXT EMPTY SLOT ON {catalog.displayName.ToUpperInvariant()}. {stampCost} RAM IS SPENT WHEN THE STAMP CONFIRMS.",
+                    $"{stampEffect} A LINKED WALLET IS REQUIRED; WE'LL PROMPT IF NEEDED.",
                     "PRESS CONFIRM TO PREPARE | BACK TO PICK ANOTHER");
             }
             else
@@ -2139,6 +2171,20 @@ namespace SignalJam.UI.MenuNavigation
                 reviewedRequest != null ? "CONFIRM TO RETRY" : "CHECK REQUIREMENTS AND TRY AGAIN");
             PlayUiCue(PlayerMenuSfxCue.Invalid);
             RefreshActions();
+            RestoreOperationFocus();
+        }
+
+        private void RestoreOperationFocus()
+        {
+            if (!showing || inputContext == null)
+                return;
+
+            if (navLayer == CandyMachineNavLayer.Detail)
+                FocusDetailPrimary();
+            else if (navLayer == CandyMachineNavLayer.Browse)
+                FocusSelectedRow();
+            else
+                FocusModeTab();
         }
 
         private Sprite ResolveTypeIcon(MoveDefinitionSO move)

@@ -121,16 +121,25 @@ public class TMPTypewriterReveal : MonoBehaviour
             });
         }
 
-        _tween.OnComplete(() =>
-        {
-            tmp.maxVisibleCharacters = int.MaxValue;
-            if (_flickerTween != null) { _flickerTween.Kill(); _flickerTween = null; tmp.alpha = 1f; }
-        });
+        _tween.OnComplete(RevealAll);
+        _tween.OnKill(RevealAll);
     }
 
     public void Kill()
     {
-        if (_tween != null) { _tween.Kill(); _tween = null; }
-        if (_flickerTween != null) { _flickerTween.Kill(); _flickerTween = null; }
+        if (_tween != null) { _tween.Kill(false); _tween = null; }
+        if (_flickerTween != null) { _flickerTween.Kill(false); _flickerTween = null; }
+        RevealAll();
+    }
+
+    void RevealAll()
+    {
+        if (_tween != null && !_tween.IsActive())
+            _tween = null;
+        if (_flickerTween != null) { _flickerTween.Kill(false); _flickerTween = null; }
+        if (!tmp)
+            return;
+        tmp.maxVisibleCharacters = int.MaxValue;
+        tmp.alpha = 1f;
     }
 }

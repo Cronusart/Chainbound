@@ -14,18 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.3-d
   displayName: Revenge Spark
-  effectDescription: After an ally is knocked out, your later moves this turn deal +20-30% power
+  effectDescription: After an ally is knocked out
   category: 5
   scope: 0
   minimumRarity: 3
   effectMin: 20
   effectMax: 30
+  weight: 1
   allowedCategories: 0000000001000000
   forbiddenCombinations: []
   slotCostIncrease: 0
   powerCap: 0
   apCostCap: 0
-  forbiddenTags: []
+  forbiddenTags:
+  - 0
   slotType: 0
   isTypeInfusion: 0
   isStatSubstitution: 0

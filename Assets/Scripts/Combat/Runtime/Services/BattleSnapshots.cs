@@ -78,6 +78,12 @@ namespace Chainbound.Combat
         public List<string> moveIds;
 
         /// <summary>
+        /// How each equipped move was acquired, aligned with <see cref="moveIds"/>.
+        /// Empty or missing values read as a candy roll.
+        /// </summary>
+        public List<string> moveAcquisitions;
+
+        /// <summary>
         /// Optional per-move modifier_1 section IDs aligned to <see cref="moveIds"/> index.
         /// Empty/null entries mean "no override for that move slot".
         /// </summary>
@@ -113,6 +119,7 @@ namespace Chainbound.Combat
         public ChainlingSnapshot()
         {
             moveIds = new List<string>();
+            moveAcquisitions = new List<string>();
             modifier1SectionIds = new List<string>();
             modifier2SectionIds = new List<string>();
             ivs = new int[6];

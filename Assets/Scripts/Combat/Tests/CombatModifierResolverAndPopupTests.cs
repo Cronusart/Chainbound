@@ -40,6 +40,49 @@ namespace Chainbound.Combat.Tests
             Assert.IsTrue(ledger.DidAllyKoOccurThisTurn(0));
             Assert.IsFalse(ledger.DidAllyKoOccurThisTurn(1));
         }
+
+        [Test]
+        public void SetupFeedAppliesOnlyToTheNextAllyPowerAction()
+        {
+            var ledger = new TurnActionLedger();
+            ledger.BeginTurn(1);
+            ledger.RecordActorAction("feeder");
+            ledger.ArmSetupFeed(0, "feeder", 0.12f);
+
+            ledger.BeginTurn(2);
+            Assert.IsTrue(ledger.HasPendingSetupFeed(0, "feeder"));
+
+            ledger.RecordActorAction("feeder");
+            var ignored = new List<float>();
+            Assert.IsFalse(ledger.TryConsumeSetupFeeds(0, "feeder", true, ignored));
+            Assert.IsTrue(ledger.HasPendingSetupFeed(0, "feeder"));
+
+            ledger.RecordActorAction("ally");
+            var wasted = new List<float>();
+            Assert.IsTrue(ledger.TryConsumeSetupFeeds(0, "ally", false, wasted));
+            Assert.AreEqual(1, wasted.Count);
+            Assert.AreEqual(0.12f, wasted[0]);
+            Assert.IsFalse(ledger.TryPeekActiveSetupFeed("ally", out _));
+            Assert.IsFalse(ledger.HasPendingSetupFeed(0, "feeder"));
+        }
+
+        [Test]
+        public void SetupFeedPowerActionStoresTheExactFractionUntilCleared()
+        {
+            var ledger = new TurnActionLedger();
+            ledger.RecordActorAction("feeder");
+            ledger.ArmSetupFeed(0, "feeder", 0.12f);
+            ledger.RecordActorAction("ally");
+
+            var applied = new List<float>();
+            Assert.IsTrue(ledger.TryConsumeSetupFeeds(0, "ally", true, applied));
+            Assert.IsTrue(ledger.TryPeekActiveSetupFeed("ally", out float fraction));
+            Assert.AreEqual(0.12f, fraction);
+            Assert.IsFalse(ledger.TryConsumeSetupFeeds(1, "enemy", true, applied));
+
+            ledger.ClearActiveSetupFeed();
+            Assert.IsFalse(ledger.TryPeekActiveSetupFeed("ally", out _));
+        }
     }
 
     public class ModifierOutcomePayloadTests

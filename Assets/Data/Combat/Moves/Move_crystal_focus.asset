@@ -17,7 +17,7 @@ MonoBehaviour:
   description: At 0 AP heal 10% MaxHP and gain Speed +1.
   category: 2
   baseType: 6
-  rarity: 1
+  rarity: 0
   targeting: 4
   contactType: 2
   power: 0
@@ -48,6 +48,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

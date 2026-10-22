@@ -42,6 +42,12 @@ namespace Chainbound.Combat
         [Tooltip("Expected Chainbound program core_authority PDA for the Moves collection.")]
         public string coreMovesUpdateAuthority = "";
 
+        [Tooltip("Trusted Metaplex Core collection address for Chainling Archives.")]
+        public string coreArchivesCollectionId = "";
+
+        [Tooltip("Trusted Metaplex Core collection address for Bindery Book Covers.")]
+        public string coreCoversCollectionId = "";
+
         [Tooltip("Supported cb.schema_version for verified Stamped move inventory.")]
         [Min(1)] public int ownershipSchemaVersion = 1;
 
@@ -103,6 +109,8 @@ namespace Chainbound.Combat
             expectedGenesisHash = TrimOrEmpty(expectedGenesisHash);
             coreMovesCollectionId = TrimOrEmpty(coreMovesCollectionId);
             coreMovesUpdateAuthority = TrimOrEmpty(coreMovesUpdateAuthority);
+            coreArchivesCollectionId = TrimOrEmpty(coreArchivesCollectionId);
+            coreCoversCollectionId = TrimOrEmpty(coreCoversCollectionId);
             ownershipSchemaVersion = Mathf.Max(1, ownershipSchemaVersion);
             dasRpcEndpoint = TrimOrEmpty(dasRpcEndpoint);
             coreCosmeticsCollectionId = TrimOrEmpty(coreCosmeticsCollectionId);

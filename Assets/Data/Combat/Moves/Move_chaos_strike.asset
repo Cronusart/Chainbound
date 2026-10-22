@@ -17,10 +17,10 @@ MonoBehaviour:
   description: Contact hit swings high or low with +50% or -25% damage.
   category: 0
   baseType: 12
-  rarity: 0
+  rarity: 5
   targeting: 0
   contactType: 0
-  power: 64
+  power: 58
   apCost: 2
   accuracy: 95
   hitCountMin: 1
@@ -43,6 +43,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

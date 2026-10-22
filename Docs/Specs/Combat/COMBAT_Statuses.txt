@@ -87,7 +87,8 @@ Foe recipient. Chemistry reactions do not use stacks.
 - Slowed: Duration 2. Speed -2 only. It does not roll an action skip.
 - Shattered: Instant. Deal 8% of current HP (minimum 1) and apply Def -1; it is
   not an execute.
-- Drip: Duration 3. Heal 6% MaxHP once at End of Turn.
+- Drip: Duration 3. Heal 6% MaxHP at each End of Turn for 3 ticks, including the turn it is applied.
+- Leaked: Duration 3. While an active Chainling on that side has Leaked, each Chainling on that side that acts loses 10% of its own MaxHP (minimum 1). It is not an end-of-turn damage tick, and it does not hit the other side.
 - Rugged: Duration 3. End-of-Turn damage is counter/16 of MaxHP, increasing by
   one per tick and capping at counter 15.
 - FOMO: Duration 3. Atk +1 and 1/16 MaxHP self-damage at End of Turn.

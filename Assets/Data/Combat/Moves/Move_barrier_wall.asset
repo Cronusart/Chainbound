@@ -13,33 +13,38 @@ MonoBehaviour:
   m_Name: Move_barrier_wall
   m_EditorClassIdentifier: 
   moveId: barrier_wall
-  displayName: Barrier Wall
-  description: Give ally 25% mitigation for 2 turns or 2 hits.
+  displayName: Buffer Barrier
+  description: "**Lower Barrier \xB7 1 AP \xB7 [PRIOR] \xB7 Recharge 1.** The next
+    ranged hit on an ally or yourself deals 25% less. Lasts until it blocks 1 hit
+    or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first
+    hit. Melee attacks are not blocked. Only one Wall or Barrier can be on a Chainling
+    at a time."
   category: 3
   baseType: 0
-  rarity: 0
+  rarity: 1
   targeting: 2
   contactType: 2
   power: 0
-  apCost: 3
+  apCost: 1
   accuracy: 0
   hitCountMin: 1
   hitCountMax: 1
-  rechargeTurns: 0
+  rechargeTurns: 2
   statusEffects: []
   stageChanges: []
   tags:
   - SUP
+  - PRIOR
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
   utilityEffects:
-  - effectType: 0
+  - effectType: 31
     magnitude: 0.25
     turnBudget: 2
-    hitBudget: 2
+    hitBudget: 1
     apGain: 0
-    stackKey: wall_barrier
+    stackKey: barrier_buffer
     statusId: 0
     statusDuration: 0
     targetOverride: 0
@@ -54,7 +59,7 @@ MonoBehaviour:
     healPercentMaxHP: 0
     counterDamagePercentMaxHP: 0
     affectAllAllies: 0
-    contactFilter: 0
+    contactFilter: 2
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -64,6 +69,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

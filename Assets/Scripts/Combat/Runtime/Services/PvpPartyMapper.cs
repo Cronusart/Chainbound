@@ -15,6 +15,7 @@ namespace Chainbound.Combat
         public int rebirthCount;
         public int evolutionStage;
         public string[] moveIds;
+        public string[] moveAcquisitions;
         public string[] modifier1SectionIds;
         public string[] modifier2SectionIds;
         public int[] ivs;
@@ -267,6 +268,7 @@ namespace Chainbound.Combat
                 ivs = Pad(source.ivs),
                 rebirthIvBonuses = Pad(source.rebirthIvBonuses),
                 moveIds = ToList(source.moveIds),
+                moveAcquisitions = ToList(source.moveAcquisitions),
                 modifier1SectionIds = ToList(source.modifier1SectionIds),
                 modifier2SectionIds = ToList(source.modifier2SectionIds),
             };

@@ -564,6 +564,10 @@ namespace SignalJam.UI.MenuNavigation
                 Stretch(rootRect);
 
             transform.SetAsLastSibling();
+            // Boot draws over the terminal. An open chainling action sheet stays in front of that panel.
+            Transform actionSheet = transform.parent != null ? transform.parent.Find("ActionSheet") : null;
+            if (actionSheet != null && actionSheet.gameObject.activeSelf)
+                actionSheet.SetAsLastSibling();
 
             if (bootOverlayImage == null)
                 bootOverlayImage = transform.Find("BootOverlay")?.GetComponent<Image>();

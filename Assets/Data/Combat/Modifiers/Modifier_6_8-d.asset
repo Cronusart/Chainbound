@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.8-d
   displayName: Sticky Mirror
-  effectDescription: "{n}% boost to reflect / status-mirror chance"
+  effectDescription: '{n}% boost to reflect / status-mirror chance'
   category: 5
   scope: 1
   minimumRarity: 1

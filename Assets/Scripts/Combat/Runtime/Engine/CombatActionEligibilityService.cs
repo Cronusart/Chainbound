@@ -17,13 +17,34 @@ namespace Chainbound.Combat
         }
     }
 
+    public readonly struct BlockTargetEvaluation
+    {
+        public readonly bool canTarget;
+        public readonly string reason;
+
+        public BlockTargetEvaluation(bool canTarget, string reason)
+        {
+            this.canTarget = canTarget;
+            this.reason = reason ?? string.Empty;
+        }
+    }
+
     /// <summary>
     /// Single authority for move/swap legality checks.
     /// Shared by UI, AI, and resolver to prevent legality drift.
     /// </summary>
     public sealed class CombatActionEligibilityService
     {
-        public MoveSelectionEvaluation EvaluateMoveSelection(ChainlingInstance actor, MoveInstance move, CombatState state, bool skipHpCostCheck = false)
+        public MoveSelectionEvaluation EvaluateMoveSelection(
+            ChainlingInstance actor,
+            MoveInstance move,
+            CombatState state,
+            bool skipHpCostCheck = false,
+            int extraAvailableAp = 0,
+            IReadOnlyDictionary<int, CombatAction> queuedBySlot = null,
+            int actorSlot = -1,
+            ISet<string> blockedTargetIds = null,
+            IReadOnlyDictionary<string, string> blockReservationOwners = null)
         {
             if (actor == null)
                 return new MoveSelectionEvaluation(false, false, "ActorMissing");
@@ -36,7 +57,8 @@ namespace Chainbound.Combat
             if (move.triggerOncePerBattle && actor.triggeredPassiveIds != null &&
                 actor.triggeredPassiveIds.Contains(move.instanceId))
                 return new MoveSelectionEvaluation(false, false, "MoveAlreadyUsedThisBattle");
-            if (GetEffectiveApCost(actor, move) > actor.currentAP)
+            int availableAp = actor.currentAP + Math.Max(0, extraAvailableAp);
+            if (GetEffectiveApCost(actor, move) > availableAp)
                 return new MoveSelectionEvaluation(false, false, "InsufficientAP");
             if (!skipHpCostCheck && IsFullAbsorbBarrierWithHpCost(move) && !HasEnoughHpForBarrierCost(actor, move))
                 return new MoveSelectionEvaluation(false, false, "InsufficientHP");
@@ -51,7 +73,152 @@ namespace Chainbound.Combat
                 return new MoveSelectionEvaluation(false, false, "ActiveConditionNotMet");
             }
 
+            if (CombatWallStateUtility.MovePlacesBlock(move) &&
+                !HasAnyEligibleBlockTarget(
+                    actor,
+                    move,
+                    state,
+                    queuedBySlot,
+                    actorSlot,
+                    blockedTargetIds,
+                    blockReservationOwners))
+            {
+                return new MoveSelectionEvaluation(false, conditionMet, "AllTargetsBlocked");
+            }
+
             return new MoveSelectionEvaluation(true, conditionMet, conditionMet ? string.Empty : "ConditionNotMet");
+        }
+
+        public BlockTargetEvaluation EvaluateBlockTarget(
+            ChainlingInstance actor,
+            MoveInstance move,
+            ChainlingInstance target,
+            CombatState state,
+            IReadOnlyDictionary<int, CombatAction> queuedBySlot = null,
+            int actorSlot = -1,
+            ISet<string> blockedTargetIds = null,
+            IReadOnlyDictionary<string, string> blockReservationOwners = null)
+        {
+            if (!CombatWallStateUtility.MovePlacesBlock(move))
+                return new BlockTargetEvaluation(true, string.Empty);
+            if (actor == null || target == null || !target.isAlive)
+                return new BlockTargetEvaluation(false, "TargetUnavailable");
+            bool blockWasActive = blockedTargetIds != null
+                ? blockedTargetIds.Contains(target.instanceId)
+                : target.HasIntactBlock();
+            if (blockWasActive)
+                return new BlockTargetEvaluation(false, "BlockAlreadyActive");
+
+            if (blockReservationOwners != null &&
+                blockReservationOwners.TryGetValue(target.instanceId, out string ownerId) &&
+                !string.Equals(ownerId, actor.instanceId, StringComparison.Ordinal))
+            {
+                return new BlockTargetEvaluation(false, "BlockAlreadyQueued");
+            }
+
+            TeamState team = FindTeamContaining(state, actor);
+            int targetSlot = FindActiveSlot(team, target);
+            if (team == null || targetSlot < 0)
+                return new BlockTargetEvaluation(false, "TargetUnavailable");
+            if (HasQueuedBlockForTarget(team, targetSlot, queuedBySlot, actorSlot))
+                return new BlockTargetEvaluation(false, "BlockAlreadyQueued");
+
+            return new BlockTargetEvaluation(true, string.Empty);
+        }
+
+        private bool HasAnyEligibleBlockTarget(
+            ChainlingInstance actor,
+            MoveInstance move,
+            CombatState state,
+            IReadOnlyDictionary<int, CombatAction> queuedBySlot,
+            int actorSlot,
+            ISet<string> blockedTargetIds,
+            IReadOnlyDictionary<string, string> blockReservationOwners)
+        {
+            TeamState team = FindTeamContaining(state, actor);
+            if (team == null || team.activeIndices == null)
+                return true;
+
+            for (int slot = 0; slot < team.activeIndices.Count; slot++)
+            {
+                ChainlingInstance target = team.GetActiveInSlot(slot);
+                if (target != null && EvaluateBlockTarget(
+                    actor,
+                    move,
+                    target,
+                    state,
+                    queuedBySlot,
+                    actorSlot,
+                    blockedTargetIds,
+                    blockReservationOwners).canTarget)
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool HasQueuedBlockForTarget(
+            TeamState team,
+            int targetSlot,
+            IReadOnlyDictionary<int, CombatAction> queuedBySlot,
+            int actorSlot)
+        {
+            if (team == null || queuedBySlot == null)
+                return false;
+
+            int livingTargets = team.CountAliveActiveSlots();
+            foreach (KeyValuePair<int, CombatAction> pair in queuedBySlot)
+            {
+                if (pair.Key == actorSlot)
+                    continue;
+                CombatAction action = pair.Value;
+                if (action == null || action.actionType != CombatActionType.UseMove)
+                    continue;
+                ChainlingInstance queuedActor = team.GetActiveInSlot(pair.Key);
+                if (queuedActor?.moves == null || action.moveIndex < 0 || action.moveIndex >= queuedActor.moves.Count)
+                    continue;
+                if (!CombatWallStateUtility.MovePlacesBlock(queuedActor.moves[action.moveIndex]))
+                    continue;
+
+                bool explicitTarget = action.targetTeamIndex >= 0 && action.targetSlotIndex >= 0;
+                if (explicitTarget)
+                {
+                    if (action.targetTeamIndex == team.teamIndex && action.targetSlotIndex == targetSlot)
+                        return true;
+                }
+                else if (livingTargets == 1 && team.GetActiveInSlot(targetSlot) != null)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static TeamState FindTeamContaining(CombatState state, ChainlingInstance chainling)
+        {
+            if (state == null || chainling == null)
+                return null;
+            if (Contains(state.team0, chainling))
+                return state.team0;
+            if (Contains(state.team1, chainling))
+                return state.team1;
+            return null;
+        }
+
+        private static bool Contains(TeamState team, ChainlingInstance chainling)
+        {
+            return team?.chainlings != null && team.chainlings.Contains(chainling);
+        }
+
+        private static int FindActiveSlot(TeamState team, ChainlingInstance chainling)
+        {
+            if (team?.activeIndices == null || team.chainlings == null || chainling == null)
+                return -1;
+            for (int slot = 0; slot < team.activeIndices.Count; slot++)
+            {
+                if (ReferenceEquals(team.GetActiveInSlot(slot), chainling))
+                    return slot;
+            }
+            return -1;
         }
 
         public List<int> GetAvailableSwapTargets(TeamState team, ISet<int> reservedBenchIndices)
@@ -99,6 +266,88 @@ namespace Chainbound.Combat
             return PassiveDisplayState.Armed;
         }
 
+        /// <summary>
+        /// AP a faster ally has already committed to this fighter via AP Donation or AP Router.
+        /// The menu can spend it. A slower ally's gift is not included.
+        /// </summary>
+        public int ResolveCommittedFasterGiftAp(
+            TeamState team,
+            ChainlingInstance recipient,
+            int recipientSlot,
+            IReadOnlyDictionary<int, CombatAction> queuedBySlot)
+        {
+            if (team == null || recipient == null || queuedBySlot == null || team.activeIndices == null)
+                return 0;
+
+            int otherLivingAllies = 0;
+            for (int slot = 0; slot < team.activeIndices.Count; slot++)
+            {
+                ChainlingInstance ally = team.GetActiveInSlot(slot);
+                if (ally != null && ally.isAlive && !ReferenceEquals(ally, recipient))
+                    otherLivingAllies++;
+            }
+
+            int recipientSpeed = recipient.GetStatBreakdown(CoreStat.Speed).finalInt;
+            int gift = 0;
+            foreach (KeyValuePair<int, CombatAction> pair in queuedBySlot)
+            {
+                if (pair.Key == recipientSlot)
+                    continue;
+
+                CombatAction action = pair.Value;
+                if (action == null || action.actionType != CombatActionType.UseMove)
+                    continue;
+
+                ChainlingInstance giver = team.GetActiveInSlot(pair.Key);
+                if (giver == null || !giver.isAlive || giver.moves == null)
+                    continue;
+                if (action.moveIndex < 0 || action.moveIndex >= giver.moves.Count)
+                    continue;
+
+                MoveInstance move = giver.moves[action.moveIndex];
+                if (!IsCommittedGiftMove(move))
+                    continue;
+                if (giver.GetStatBreakdown(CoreStat.Speed).finalInt <= recipientSpeed)
+                    continue;
+                if (!GiftTargetsRecipient(action, team, recipientSlot, otherLivingAllies))
+                    continue;
+
+                int cost = GetEffectiveApCost(giver, move);
+                if (cost <= 0 || giver.currentAP < cost)
+                    continue;
+                gift += cost;
+            }
+
+            return gift;
+        }
+
+        private static bool IsCommittedGiftMove(MoveInstance move)
+        {
+            if (move == null)
+                return false;
+            if (IsMoveId(move.definitionId, "ap_donation") || IsMoveId(move.definitionId, "ap_router"))
+                return true;
+            return IsMoveId(move.instanceId, "ap_donation") || IsMoveId(move.instanceId, "ap_router");
+        }
+
+        private static bool IsMoveId(string value, string id)
+        {
+            return !string.IsNullOrEmpty(value) &&
+                   value.IndexOf(id, StringComparison.Ordinal) >= 0;
+        }
+
+        private static bool GiftTargetsRecipient(
+            CombatAction action,
+            TeamState team,
+            int recipientSlot,
+            int otherLivingAllies)
+        {
+            bool explicitTarget = action.targetTeamIndex >= 0 && action.targetSlotIndex >= 0;
+            if (explicitTarget)
+                return action.targetTeamIndex == team.teamIndex && action.targetSlotIndex == recipientSlot;
+            return otherLivingAllies == 1;
+        }
+
         public int GetEffectiveApCost(ChainlingInstance actor, MoveInstance move)
         {
             if (move == null)
@@ -106,7 +355,8 @@ namespace Chainbound.Combat
 
             int surcharge = actor != null ? Math.Max(0, actor.nextMoveApSurcharge) : 0;
             int discount = ResolvePassiveApDiscount(actor);
-            return Math.Max(0, move.apCost + surcharge - discount);
+            int adjusted = move.apCost + surcharge - discount;
+            return move.apCost <= 0 ? Math.Max(0, adjusted) : Math.Max(1, adjusted);
         }
 
         private static int ResolvePassiveApDiscount(ChainlingInstance actor)

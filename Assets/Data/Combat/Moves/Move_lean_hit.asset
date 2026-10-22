@@ -17,10 +17,10 @@ MonoBehaviour:
   description: Lean contact jab for efficient pressure.
   category: 0
   baseType: 10
-  rarity: 0
+  rarity: 2
   targeting: 0
   contactType: 0
-  power: 46
+  power: 26
   apCost: 1
   accuracy: 95
   hitCountMin: 1
@@ -43,6 +43,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

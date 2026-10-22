@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Passive - below 2 AP after turn AP gain Speed +1.
   category: 4
   baseType: 0
-  rarity: 0
+  rarity: 2
   targeting: 4
   contactType: 2
   power: 0
@@ -71,6 +71,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: hammer_sync
   displayName: Hammer Sync
-  description: Damage rises +10% per buffed partner; cap +30%.
+  description: Heavy hit; +20% damage if your partner is buffed.
   category: 0
   baseType: 1
-  rarity: 2
+  rarity: 4
   targeting: 0
   contactType: 0
-  power: 72
-  apCost: 2
+  power: 80
+  apCost: 4
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
@@ -43,6 +43,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0
@@ -105,8 +106,8 @@ MonoBehaviour:
         statusId: 0
         stat: 1
         comparisonStat: 1
-      bonusMultiplierPerCount: 0.1
-      maxMultiplier: 1.3
+      bonusMultiplierPerCount: 0.2
+      maxMultiplier: 1.2
       randomMultipliers: []
   triggerCondition: 0
   hpThresholdPercent: 0

@@ -78,6 +78,7 @@ namespace Chainbound.Combat
 
                 case StatusId.BacklashType:
                 case StatusId.Leaked:
+                case StatusId.Kindled:
                     return ChemistryStatusFamily.Exposure;
 
                 case StatusId.Siphoned:
@@ -134,6 +135,7 @@ namespace Chainbound.Combat
                 case StatusId.Anchored:
                 case StatusId.BacklashType:
                 case StatusId.Leaked:
+                case StatusId.Kindled:
                 case StatusId.CascadeFailure:
                     return ChemistryStatusPolarity.Harmful;
 

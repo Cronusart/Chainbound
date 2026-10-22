@@ -223,6 +223,9 @@ namespace Chainbound.Combat
         public void LogWallExpired(int turn, string targetId, string sourceTag, string metadataJson = null)
         {
             string defName = Name(targetId);
+            string wallName = Name(sourceTag);
+            if (string.IsNullOrWhiteSpace(wallName))
+                wallName = "block";
             Log(new CombatEvent
             {
                 eventType = CombatEventType.WallExpired,
@@ -230,7 +233,7 @@ namespace Chainbound.Combat
                 sourceId = string.Empty,
                 targetId = targetId,
                 moveId = sourceTag ?? string.Empty,
-                message = $"{defName}'s wall expired.",
+                message = $"{defName}'s {wallName} faded.",
                 metadataJson = metadataJson
             });
         }

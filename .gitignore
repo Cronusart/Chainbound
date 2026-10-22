@@ -57,7 +57,13 @@ Supabase/.temp/
 **/*.p12
 **/*.keystore
 **/*secret*
-**/*key*
+**/*keypair*.json
+**/*.keystore
+*.keystores/
+**/*.pem
+.env*
+!**/.env.example
+**/*secret*.json
 !**/*.cs
 !**/*.ts
 !**/*.tsx

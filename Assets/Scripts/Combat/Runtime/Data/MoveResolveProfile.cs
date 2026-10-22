@@ -34,6 +34,9 @@ namespace Chainbound.Combat
         [Tooltip("If true, heal tags/percent healing may resolve from damaging moves after confirmed damage.")]
         public bool applyHealingOnDamagingMoves;
 
+        [Tooltip("If true, authored statuses and stage changes resolve only on the first landed hit per target in a cast.")]
+        public bool moveEffectsOncePerTarget;
+
         public MoveHitCountTuning hitCount = new MoveHitCountTuning();
         public MoveAccuracyTuning accuracy = new MoveAccuracyTuning();
         public MoveCritTuning crit = new MoveCritTuning();
@@ -51,6 +54,7 @@ namespace Chainbound.Combat
                 applyStatusEffectsOnMiss = applyStatusEffectsOnMiss,
                 applyStageChangesOnMiss = applyStageChangesOnMiss,
                 applyHealingOnDamagingMoves = applyHealingOnDamagingMoves,
+                moveEffectsOncePerTarget = moveEffectsOncePerTarget,
                 hitCount = hitCount != null ? hitCount.Clone() : new MoveHitCountTuning(),
                 accuracy = accuracy != null ? accuracy.Clone() : new MoveAccuracyTuning(),
                 crit = crit != null ? crit.Clone() : new MoveCritTuning(),
@@ -651,6 +655,15 @@ namespace Chainbound.Combat
                     return passed;
                 }
 
+                case MoveResolveConditionType.StageHigherThanOtherStage:
+                {
+                    int left = subject.GetStage(condition.stat);
+                    int right = subject.GetStage(condition.comparisonStat);
+                    bool passed = left > right;
+                    reason = passed ? string.Empty : $"{condition.subject}{condition.stat}StageNotHigher";
+                    return passed;
+                }
+
                 case MoveResolveConditionType.WasHitLastTurn:
                 {
                     bool passed = context?.ledger != null && context.ledger.WasTargetHitLastTurn(subject.instanceId);
@@ -771,7 +784,7 @@ namespace Chainbound.Combat
             for (int i = 0; i < allies.Count; i++)
             {
                 ChainlingInstance ally = allies[i];
-                if (ally == null || ally == source)
+                if (ally == null || ally == source || !ally.isAlive)
                     continue;
                 if (HasPositiveStage(ally) || CountStatuses(ally, context, requireDebuff: false, requireBuff: true) > 0)
                     count++;

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: StatusDef_Relay
   m_EditorClassIdentifier: 
   statusId: 308
-  displayName: Relay
-  effectSummary: Full barrier bypass for next hit
+  displayName: 'Relay [Deprecated]'
+  effectSummary: Deprecated; no producer.
   statusClass: 3
   origin: 1
   defaultDuration: 1

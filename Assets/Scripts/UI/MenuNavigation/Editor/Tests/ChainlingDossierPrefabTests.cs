@@ -110,7 +110,16 @@ public sealed class ChainlingDossierPrefabTests
                     hasFocusRow = true;
             }
 
-            Assert.That(hasFocusRow, Is.True, pages[i] + " needs an active focus row");
+            if (!hasFocusRow)
+            {
+                // Data-driven move pages intentionally start with only an inactive
+                // pooled template; runtime rows inherit its explicit navigation.
+                Button template = content.Find("Viewport/Rows/RowTemplate")?.GetComponent<Button>();
+                Assert.That(template, Is.Not.Null, pages[i] + " needs a focus row or pooled focus template");
+                Assert.That(template.navigation.mode, Is.EqualTo(Navigation.Mode.Explicit), pages[i] + " template navigation");
+                Assert.That(template.GetComponent<LayoutElement>().preferredHeight, Is.GreaterThanOrEqualTo(60f),
+                    pages[i] + " template touch target");
+            }
         }
 
         Transform growth = FindPage(prefab, "GrowthPage");
@@ -142,7 +151,13 @@ public sealed class ChainlingDossierPrefabTests
         Assert.That(moves.Find("Content/Viewport/Rows/RowTemplate").gameObject.activeSelf, Is.False);
         ChainlingMoveEquipPanel movePanel = moves.GetComponent<ChainlingMoveEquipPanel>();
         SerializedObject moveSo = new SerializedObject(movePanel);
-        Assert.That(moveSo.FindProperty("loadoutRowLabels").arraySize, Is.EqualTo(4));
+        Assert.That(moves.Find("Content/Viewport/Rows/InventoryHeader"), Is.Not.Null);
+        Assert.That(moves.Find("Content/Viewport/Rows/LoadoutHeader"), Is.Null);
+        Assert.That(moveSo.FindProperty("moveRowsRoot").objectReferenceValue,
+            Is.SameAs(moves.Find("Content/Viewport/Rows")));
+        Assert.That(moveSo.FindProperty("moveRowTemplate").objectReferenceValue,
+            Is.SameAs(moves.Find("Content/Viewport/Rows/RowTemplate").GetComponent<Button>()));
+        Assert.That(moveSo.FindProperty("loadoutRowLabels").arraySize, Is.EqualTo(0));
 
         ChainlingStylePanel stylePanel = FindPage(prefab, "StylePage").GetComponent<ChainlingStylePanel>();
         Assert.That(new SerializedObject(stylePanel).FindProperty("authoredWireframe").boolValue, Is.True);

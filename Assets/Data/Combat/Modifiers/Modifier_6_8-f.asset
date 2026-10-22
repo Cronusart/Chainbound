@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.8-f
   displayName: Cleanse Soft
-  effectDescription: "{n}% chance to clear 1 self debuff"
+  effectDescription: '{n}% chance to clear 1 self debuff'
   category: 5
   scope: 0
   minimumRarity: 1

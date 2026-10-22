@@ -55,7 +55,8 @@ namespace Chainbound.Combat.Tests
         [Test]
         public void MoveDefinitionPlacesWallFromUtilityEffectsAndTags()
         {
-            Assert.IsTrue(CombatWallStateUtility.MoveDefinitionPlacesWall(CreateMoveDefinition(UtilityEffectType.MitigationWindow)));
+            Assert.IsTrue(CombatWallStateUtility.MoveDefinitionPlacesWall(CreateMoveDefinition(UtilityEffectType.BlockWindow)));
+            Assert.IsFalse(CombatWallStateUtility.MoveDefinitionPlacesWall(CreateMoveDefinition(UtilityEffectType.MitigationWindow)));
             Assert.IsTrue(CombatWallStateUtility.MoveDefinitionPlacesWall(CreateMoveDefinition(UtilityEffectType.FullAbsorbBarrier)));
             Assert.IsTrue(CombatWallStateUtility.MoveDefinitionPlacesWall(CreateMoveDefinition(UtilityEffectType.DamageThresholdBarrier)));
             Assert.IsTrue(CombatWallStateUtility.MoveDefinitionPlacesWall(CreateMoveDefinitionWithTag("WALL")));
@@ -245,13 +246,23 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
-        public void ResolverSequencesFourHitMoveAgainstTwoHitWall()
+        public void ResolverSequencesFourHitMoveAgainstOneHitBlock()
         {
             var resolver = CreateResolver();
             var attacker = CreateChainling("attacker", ap: 3, speed: 20);
             var target = CreateChainling("target", ap: 0, speed: 10, maxHp: 200);
             attacker.moves.Add(CreateMove("quad_strike", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, power: 18, hitCount: 4));
-            target.AddMitigationSource(0.5f, turnsRemaining: 3, hitsRemaining: 2, sourceTag: "barrier_wall", stackKey: "wall");
+            target.AddBlock(new MitigationSource
+            {
+                mitigation = 0.5f,
+                turnsRemaining = 2,
+                hitsRemaining = 1,
+                sourceTag = "ember_wall",
+                sourceMoveId = "ember_wall",
+                stackKey = "wall_ember",
+                contactFilter = UtilityContactFilter.Contact,
+                blockKind = BlockKind.Wall,
+            });
 
             var state = resolver.InitializeBattle(CreateTeam(0, attacker), CreateTeam(1, target));
             resolver.ExecuteTurn(state, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
@@ -270,8 +281,8 @@ namespace Chainbound.Combat.Tests
             CollectionAssert.AreEqual(
                 new[]
                 {
-                    WallInterceptMode.WallMitigated,
                     WallInterceptMode.WallBrokenThrough,
+                    WallInterceptMode.None,
                     WallInterceptMode.None,
                     WallInterceptMode.None
                 },
@@ -299,6 +310,26 @@ namespace Chainbound.Combat.Tests
             Assert.Greater(payload.damageAbsorbed, 0);
             Assert.IsTrue(payload.RoutesAttackToWall());
             Assert.GreaterOrEqual(payload.damageAbsorbed + payload.finalHpDamage, payload.incomingDamage);
+        }
+
+        [Test]
+        public void WallCredit_ExcludesModifierMitigation()
+        {
+            WallInterceptPayload wallOnly = ResolveWallCredit(includeOrdinaryGuard: false);
+            WallInterceptPayload wallAndGuard = ResolveWallCredit(includeOrdinaryGuard: true);
+
+            Assert.AreEqual(WallInterceptMode.WallMitigated, wallOnly.Mode);
+            Assert.AreEqual(WallInterceptMode.WallMitigated, wallAndGuard.Mode);
+            Assert.Greater(wallOnly.damageAbsorbed, 0);
+            Assert.AreEqual(
+                wallOnly.damageAbsorbed,
+                wallAndGuard.damageAbsorbed,
+                "Ordinary guard/passive mitigation must not inflate damage credited to the wall.");
+            Assert.Greater(
+                wallAndGuard.mitigationPercent,
+                wallOnly.mitigationPercent,
+                "The control case must still apply the extra non-wall mitigation.");
+            Assert.Less(wallAndGuard.finalHpDamage, wallOnly.finalHpDamage);
         }
 
         [Test]
@@ -330,25 +361,29 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
-        public void WallHitRetaliationDrainsAttackerApOnBarrierBlock()
+        public void WallHitRetaliationDrainsAttackerApOnBlockConsume()
         {
             var resolver = CreateResolver();
             var attacker = CreateChainling("attacker", ap: 3, speed: 20);
             var target = CreateChainling("target", ap: 0, speed: 10);
             attacker.moves.Add(CreateMove("strike", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, power: 45));
-            target.AddBarrier(
-                BarrierType.SingleHit,
-                hitsRemaining: 1,
-                damageThreshold: 0,
-                turnsRemaining: 2,
-                sourceTag: "ember_wall",
-                reflectPercent: 0f,
-                attackerApDrainOnHit: 1);
+            target.AddBlock(new MitigationSource
+            {
+                mitigation = 0.5f,
+                turnsRemaining = 2,
+                hitsRemaining = 1,
+                sourceTag = "ember_wall",
+                sourceMoveId = "ember_wall",
+                stackKey = "wall_ember",
+                attackerApDrainOnHit = 1,
+                contactFilter = UtilityContactFilter.Contact,
+                blockKind = BlockKind.Wall,
+            });
 
             var state = resolver.InitializeBattle(CreateTeam(0, attacker), CreateTeam(1, target));
             resolver.ExecuteTurn(state, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
 
-            CombatEvent blocked = resolver.Log.Events.First(e => e.eventType == CombatEventType.BarrierBlocked);
+            CombatEvent blocked = resolver.Log.Events.First(e => e.eventType == CombatEventType.DamageDealt);
             Assert.IsTrue(WallInterceptPayload.TryFromEvent(blocked, out var payload));
             Assert.AreEqual(1, payload.attackerApDrained);
             Assert.IsTrue(payload.HasWallOnHitFeedback());
@@ -359,6 +394,36 @@ namespace Chainbound.Combat.Tests
         {
             matrix ??= CreateAsset<TypeChemistryMatrixSO>();
             return new CombatResolver(matrix, CreateStatusCatalog(), seed: 1234, chemistryStrictMode: true);
+        }
+
+        private WallInterceptPayload ResolveWallCredit(bool includeOrdinaryGuard)
+        {
+            var resolver = CreateResolver();
+            var attacker = CreateChainling("attacker", ap: 3, speed: 20);
+            var target = CreateChainling("target", ap: 0, speed: 10, maxHp: 200);
+            attacker.moves.Add(CreateMove("strike", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, power: 80));
+            target.AddMitigationSource(
+                0.25f,
+                turnsRemaining: 3,
+                hitsRemaining: 2,
+                sourceTag: "barrier_wall",
+                stackKey: "wall");
+            if (includeOrdinaryGuard)
+            {
+                target.AddMitigationSource(
+                    0.50f,
+                    turnsRemaining: 3,
+                    hitsRemaining: 2,
+                    sourceTag: "Modifier.GritGuard",
+                    stackKey: "modifier_grit_guard");
+            }
+
+            var state = resolver.InitializeBattle(CreateTeam(0, attacker), CreateTeam(1, target));
+            resolver.ExecuteTurn(state, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
+
+            CombatEvent damage = resolver.Log.Events.First(e => e.eventType == CombatEventType.DamageDealt);
+            Assert.IsTrue(WallInterceptPayload.TryFromEvent(damage, out WallInterceptPayload payload));
+            return payload;
         }
 
         private StatusCatalogSO CreateStatusCatalog()

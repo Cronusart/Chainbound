@@ -114,10 +114,21 @@ public class DialogueService : MonoBehaviour
     
     private void OnDestroy()
     {
+        // The service can persist while its presentation is torn down during a
+        // scene/app lifecycle change. Never leave its owned dialogue lock behind.
+        StopDialogue();
+
         if (instance == this)
         {
             instance = null;
         }
+    }
+
+    private void OnDisable()
+    {
+        // Disabling the service is a terminal presentation state, not a pause.
+        // StopDialogue releases the token and notifies any sequence waiting on it.
+        StopDialogue();
     }
     
     /// <summary>

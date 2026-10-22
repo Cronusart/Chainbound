@@ -11,8 +11,8 @@ using UnityEngine.UI;
 namespace SignalJam.UI.MenuNavigation
 {
     /// <summary>
-    /// Landscape player ID card for the Profile tab. Dog art is a serialized sprite;
-    /// stats bind from <see cref="IPlayerStatsProvider"/> and <see cref="GameSessionContext"/>.
+    /// Profile career sheet. The portrait turntable owns the dog sprites.
+    /// Stats bind from <see cref="IPlayerStatsProvider"/> and <see cref="GameSessionContext"/>.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ProfileMenuScreen : MenuScreen
@@ -28,24 +28,24 @@ namespace SignalJam.UI.MenuNavigation
 
         [Header("Card")]
         [SerializeField] private RectTransform profileCardRoot;
-        [SerializeField] private Image dogImage;
-        [SerializeField] private Sprite dogSprite;
-        [SerializeField] private GameObject hatSlot;
-        [SerializeField] private GameObject outfitSlot;
         [SerializeField] private TMP_Text nameLabel;
         [SerializeField] private TMP_Text linkChipLabel;
-        [SerializeField] private TMP_Text cardTitleLabel;
-        [SerializeField] private TMP_Text uniqueSpeciesLabel;
-        [SerializeField] private TMP_Text capturesLabel;
-        [SerializeField] private TMP_Text stampedMovesLabel;
-        [SerializeField] private TMP_Text recordLabel;
+        [SerializeField] private TMP_Text uniqueSpeciesValue;
+        [SerializeField] private TMP_Text capturesValue;
+        [SerializeField] private TMP_Text entangledValue;
+        [SerializeField] private TMP_Text winsValue;
+        [SerializeField] private TMP_Text lossesValue;
+        [SerializeField] private TMP_Text kosValue;
+        [SerializeField] private TMP_Text kodValue;
+        [SerializeField] private TMP_Text ramEarnedValue;
+        [SerializeField] private TMP_Text ramSpentValue;
+        [SerializeField] private TMP_Text rebirthsValue;
+        [SerializeField] private TMP_Text starUpsValue;
+        [SerializeField] private TMP_Text focusLine;
         [SerializeField] private TMP_Text cosmeticHintLabel;
         [SerializeField] private Button shareButton;
-        [SerializeField] private string defaultTitle = "New Signal";
 
         [Header("Capture Utility")]
-        [SerializeField] private TMP_Text headUtilityLabel;
-        [SerializeField] private TMP_Text bodyUtilityLabel;
         [SerializeField] private GameObject captureRecordDrawer;
         [SerializeField] private TMP_Text captureRecordLabel;
         [SerializeField] private Button captureRecordButton;
@@ -87,7 +87,7 @@ namespace SignalJam.UI.MenuNavigation
         {
             ResolveAuthoredReferencesFromHierarchy();
             WireShareButton();
-            ApplyStaticArt();
+            EnsureCaptureUtilityUi();
             BindSessionIdentity();
             base.Show();
             Refresh();
@@ -96,7 +96,6 @@ namespace SignalJam.UI.MenuNavigation
         public override void Refresh()
         {
             ResolveAuthoredReferencesFromHierarchy();
-            ApplyStaticArt();
             BindSessionIdentity();
             _ = RefreshStatsAsync(++statsRequestVersion);
             _ = RefreshCaptureLoadoutAsync(++loadoutRequestVersion);
@@ -111,10 +110,13 @@ namespace SignalJam.UI.MenuNavigation
                 return;
             }
 
-            if (captureRecordButton != null && MenuSelectableNavigation.IsUsable(captureRecordButton))
-                order.Add(captureRecordButton);
-            if (shareButton != null && MenuSelectableNavigation.IsUsable(shareButton) && !order.Contains(shareButton))
-                order.Add(shareButton);
+            ProfileCareerRow[] rows = GetComponentsInChildren<ProfileCareerRow>(false);
+            for (int i = 0; i < rows.Length; i++)
+            {
+                Button button = rows[i] != null ? rows[i].GetComponent<Button>() : null;
+                if (button != null && MenuSelectableNavigation.IsUsable(button) && !order.Contains(button))
+                    order.Add(button);
+            }
         }
 
         protected override Selectable ResolveDefaultNavigationSelection(List<Selectable> order)
@@ -148,14 +150,12 @@ namespace SignalJam.UI.MenuNavigation
             shareService.Share();
         }
 
-        private void ApplyStaticArt()
+        public void ShowFocusLine(string line)
         {
-            if (dogImage != null && dogSprite != null)
-                dogImage.sprite = dogSprite;
+            if (focusLine == null)
+                return;
 
-            EnsureCaptureUtilityUi();
-            BindUtilitySlot(hatSlot, headUtilityLabel, "HEAD", lastLoadout != null ? lastLoadout.HeadItemId : "");
-            BindUtilitySlot(outfitSlot, bodyUtilityLabel, "BODY", lastLoadout != null ? lastLoadout.BodyItemId : "");
+            focusLine.text = string.IsNullOrWhiteSpace(line) ? "CAREER" : line;
         }
 
         private void BindSessionIdentity()
@@ -167,8 +167,6 @@ namespace SignalJam.UI.MenuNavigation
             if (nameLabel != null)
                 nameLabel.text = ProfileCardFormatter.FormatDisplayName(sessionName);
             BindLinkChip(guest);
-            if (cardTitleLabel != null)
-                cardTitleLabel.text = string.IsNullOrWhiteSpace(defaultTitle) ? "New Signal" : defaultTitle;
         }
 
         private void BindLinkChip(bool guest)
@@ -192,28 +190,31 @@ namespace SignalJam.UI.MenuNavigation
                 nameLabel.text = ProfileCardFormatter.FormatDisplayName(sessionName, statsName);
             BindLinkChip(guest);
 
-            int unique = stats != null ? stats.uniqueSpeciesCaptured : 0;
-            int captures = stats != null ? stats.totalCaptures : 0;
-            int entangled = stats != null ? stats.entangledCaptures : 0;
-            int moves = stats != null ? stats.totalStampedMovesCreated : 0;
-            int won = stats != null ? stats.battlesWon : 0;
-            int lost = stats != null ? stats.battlesLost : 0;
-
-            if (uniqueSpeciesLabel != null)
-                uniqueSpeciesLabel.text = ProfileCardFormatter.FormatUniqueSpecies(unique);
-            if (capturesLabel != null)
-                capturesLabel.text = ProfileCardFormatter.FormatCaptures(captures, entangled) + "   [VIEW RECORD]";
-            if (stampedMovesLabel != null)
-                stampedMovesLabel.text = ProfileCardFormatter.FormatStampedMoves(moves);
-
-            string record = ProfileCardFormatter.FormatRecord(won, lost);
-            if (recordLabel != null)
-            {
-                recordLabel.text = record;
-                recordLabel.gameObject.SetActive(!string.IsNullOrEmpty(record));
-            }
+            SetCount(uniqueSpeciesValue, stats != null ? stats.uniqueSpeciesCaptured : 0);
+            SetCount(capturesValue, stats != null ? stats.totalCaptures : 0);
+            SetCount(entangledValue, stats != null ? stats.entangledCaptures : 0);
+            SetCount(winsValue, stats != null ? stats.battlesWon : 0);
+            SetCount(lossesValue, stats != null ? stats.battlesLost : 0);
+            SetCount(kosValue, stats != null ? stats.totalKosScored : 0);
+            SetCount(kodValue, stats != null ? stats.totalKosTaken : 0);
+            SetRam(ramEarnedValue, stats != null ? stats.totalRamEarned : 0L);
+            SetRam(ramSpentValue, stats != null ? stats.totalRamSpent : 0L);
+            SetCount(rebirthsValue, stats != null ? stats.totalRebirths : 0);
+            SetCount(starUpsValue, stats != null ? stats.totalStarUps : 0);
 
             RefreshCaptureRecordCopy();
+        }
+
+        private static void SetCount(TMP_Text label, int value)
+        {
+            if (label != null)
+                label.text = ProfileCardFormatter.FormatCount(value);
+        }
+
+        private static void SetRam(TMP_Text label, long value)
+        {
+            if (label != null)
+                label.text = ProfileCardFormatter.FormatRam(value);
         }
 
         private async Task RefreshCaptureLoadoutAsync(int requestVersion)
@@ -245,65 +246,18 @@ namespace SignalJam.UI.MenuNavigation
         private void BindCaptureLoadout(CaptureLoadoutSnapshot snapshot)
         {
             lastLoadout = snapshot;
-            BindUtilitySlot(hatSlot, headUtilityLabel, "HEAD", snapshot != null ? snapshot.HeadItemId : "");
-            BindUtilitySlot(outfitSlot, bodyUtilityLabel, "BODY", snapshot != null ? snapshot.BodyItemId : "");
             RefreshCaptureRecordCopy();
-        }
-
-        private static void BindUtilitySlot(GameObject slot, TMP_Text label, string slotName, string itemId)
-        {
-            if (slot == null || label == null)
-                return;
-
-            slot.SetActive(true);
-            string itemName = "EMPTY";
-            if (!string.IsNullOrWhiteSpace(itemId) && PlayerItemCatalogSeed.TryGet(itemId, out PlayerItemDefinition definition))
-                itemName = definition.displayName;
-            else if (!string.IsNullOrWhiteSpace(itemId))
-                itemName = itemId.Replace('_', ' ').ToUpperInvariant();
-            label.text = $"{slotName}\n{itemName}";
         }
 
         private void EnsureCaptureUtilityUi()
         {
-            if (hatSlot != null)
-                headUtilityLabel = EnsureUtilitySlotLabel(hatSlot, headUtilityLabel, "HeadUtilityLabel");
-            if (outfitSlot != null)
-                bodyUtilityLabel = EnsureUtilitySlotLabel(outfitSlot, bodyUtilityLabel, "BodyUtilityLabel");
-
-            if (captureRecordButton == null && capturesLabel != null)
-            {
-                capturesLabel.raycastTarget = true;
-                captureRecordButton = capturesLabel.GetComponent<Button>();
-                if (captureRecordButton == null)
-                    captureRecordButton = capturesLabel.gameObject.AddComponent<Button>();
-                captureRecordButton.targetGraphic = capturesLabel;
-            }
-
             EnsureCaptureRecordDrawer();
-            if (!captureUiWired)
-            {
-                captureRecordButton?.onClick.AddListener(() => SetCaptureRecordVisible(true));
-                captureRecordCloseButton?.onClick.AddListener(() => SetCaptureRecordVisible(false));
-                captureUiWired = true;
-            }
-        }
+            if (captureUiWired)
+                return;
 
-        private static TMP_Text EnsureUtilitySlotLabel(GameObject slot, TMP_Text current, string labelName)
-        {
-            if (current != null)
-                return current;
-
-            Image background = slot.GetComponent<Image>();
-            if (background == null)
-                background = slot.AddComponent<Image>();
-            background.color = new Color(0.03f, 0.08f, 0.12f, 0.82f);
-            background.raycastTarget = false;
-            TMP_Text label = PlayerMenuUiFactory.CreateText(labelName, slot.transform, "", 15f, TextAlignmentOptions.Center, true);
-            PlayerMenuUiFactory.Stretch(label.rectTransform, 4f, 4f, 4f, 4f);
-            label.fontStyle = FontStyles.Bold;
-            label.color = PlayerMenuUiFactory.Accent;
-            return label;
+            captureRecordButton?.onClick.AddListener(() => SetCaptureRecordVisible(true));
+            captureRecordCloseButton?.onClick.AddListener(() => SetCaptureRecordVisible(false));
+            captureUiWired = true;
         }
 
         private void EnsureCaptureRecordDrawer()
@@ -314,8 +268,8 @@ namespace SignalJam.UI.MenuNavigation
             Image panel = PlayerMenuUiFactory.CreateImage("CaptureRecordDrawer", transform, new Color(0.025f, 0.055f, 0.09f, 0.98f));
             captureRecordDrawer = panel.gameObject;
             RectTransform rect = panel.rectTransform;
-            rect.anchorMin = new Vector2(0.2f, 0.08f);
-            rect.anchorMax = new Vector2(0.8f, 0.92f);
+            rect.anchorMin = new Vector2(0.206f, 0.12f);
+            rect.anchorMax = new Vector2(0.794f, 0.9f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
             panel.raycastTarget = true;
@@ -470,48 +424,53 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (profileCardRoot == null)
             {
-                Transform card = transform.Find("ProfileCardRoot");
-                if (card != null)
-                    profileCardRoot = card as RectTransform;
-            }
-
-            if (dogImage == null)
-                dogImage = FindChildComponent<Image>("ProfileCardRoot/LeftStage/DogImage");
-            if (hatSlot == null)
-            {
-                Transform hat = transform.Find("ProfileCardRoot/LeftStage/HatSlot");
-                if (hat != null)
-                    hatSlot = hat.gameObject;
-            }
-
-            if (outfitSlot == null)
-            {
-                Transform outfit = transform.Find("ProfileCardRoot/LeftStage/OutfitSlot");
-                if (outfit != null)
-                    outfitSlot = outfit.gameObject;
+                Transform sheet = transform.Find("ProfileSheet");
+                if (sheet != null)
+                    profileCardRoot = sheet as RectTransform;
             }
 
             if (nameLabel == null)
-                nameLabel = FindChildComponent<TMP_Text>("ProfileCardRoot/RightIdentity/NameLabel");
+                nameLabel = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/NameLabel");
             if (linkChipLabel == null)
-                linkChipLabel = FindChildComponent<TMP_Text>("ProfileCardRoot/RightIdentity/ChipLabel");
-            if (cardTitleLabel == null)
-                cardTitleLabel = FindChildComponent<TMP_Text>("ProfileCardRoot/RightIdentity/TitleLabel");
-            if (uniqueSpeciesLabel == null)
-                uniqueSpeciesLabel = FindChildComponent<TMP_Text>("ProfileCardRoot/RightIdentity/UniqueSpeciesLabel");
-            if (capturesLabel == null)
-                capturesLabel = FindChildComponent<TMP_Text>("ProfileCardRoot/RightIdentity/CapturesLabel");
-            if (stampedMovesLabel == null)
-                stampedMovesLabel = FindChildComponent<TMP_Text>("ProfileCardRoot/RightIdentity/StampedMovesLabel");
-            if (recordLabel == null)
-                recordLabel = FindChildComponent<TMP_Text>("ProfileCardRoot/RightIdentity/RecordLabel");
+                linkChipLabel = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/ChipLabel");
+            if (uniqueSpeciesValue == null)
+                uniqueSpeciesValue = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/UniqueSpecies/Value");
+            if (capturesValue == null)
+                capturesValue = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/Captures/Value");
+            if (entangledValue == null)
+                entangledValue = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/Entangled/Value");
+            if (winsValue == null)
+                winsValue = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/Wins/Value");
+            if (lossesValue == null)
+                lossesValue = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/Losses/Value");
+            if (kosValue == null)
+                kosValue = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/Kos/Value");
+            if (kodValue == null)
+                kodValue = FindChildComponent<TMP_Text>("ProfileSheet/TopCenter/Kod/Value");
+            if (ramEarnedValue == null)
+                ramEarnedValue = FindChildComponent<TMP_Text>("ProfileSheet/TopRight/RamEarned/Value");
+            if (ramSpentValue == null)
+                ramSpentValue = FindChildComponent<TMP_Text>("ProfileSheet/TopRight/RamSpent/Value");
+            if (rebirthsValue == null)
+                rebirthsValue = FindChildComponent<TMP_Text>("ProfileSheet/TopRight/Rebirths/Value");
+            if (starUpsValue == null)
+                starUpsValue = FindChildComponent<TMP_Text>("ProfileSheet/TopRight/StarUps/Value");
+            if (focusLine == null)
+                focusLine = FindChildComponent<TMP_Text>("ProfileSheet/DialogueLowerCenter/FocusLine");
             if (cosmeticHintLabel == null)
-                cosmeticHintLabel = FindChildComponent<TMP_Text>("CosmeticHintLabel");
+                cosmeticHintLabel = FindChildComponent<TMP_Text>("ProfileSheet/TopLeft/CosmeticHintLabel");
             if (shareButton == null)
             {
-                Transform share = transform.Find("ShareButton");
+                Transform share = transform.Find("ProfileSheet/DialogueLowerCenter/ShareButton");
                 if (share != null)
                     shareButton = share.GetComponent<Button>();
+            }
+
+            if (captureRecordButton == null)
+            {
+                Transform captures = transform.Find("ProfileSheet/TopCenter/Captures");
+                if (captures != null)
+                    captureRecordButton = captures.GetComponent<Button>();
             }
 
             if (shareService == null)

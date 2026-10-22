@@ -1,12 +1,17 @@
 using System.Threading.Tasks;
+using SignalJam.UI.MobileControls;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 /// <summary>
 /// Passive safe-area modal. It deliberately has no cancel/back route: button B
 /// never means forfeit, and the player must explicitly choose the destructive action.
+/// Keyboard, gamepad, and the handheld A button confirm the focused choice here,
+/// because Play pauses the menu submit owner before this prompt opens.
 /// </summary>
 public sealed class PendingBattleResumePresenter : MonoBehaviour
 {
@@ -21,6 +26,12 @@ public sealed class PendingBattleResumePresenter : MonoBehaviour
 
     private TaskCompletionSource<PendingBattleResumeChoice> completion;
     private Rect lastSafeArea;
+    private InputAction submitAction;
+    private InputAction navigateAction;
+    private bool submitEnabledByPrompt;
+    private bool navigateEnabledByPrompt;
+    private Vector2 lastNavigate;
+    private MobileInputManager mobileInput;
 
     public bool IsOpen => canvasGroup != null
         ? canvasGroup.alpha > 0.01f && canvasGroup.blocksRaycasts
@@ -37,12 +48,14 @@ public sealed class PendingBattleResumePresenter : MonoBehaviour
 
     private void OnDestroy()
     {
+        DisarmConfirmInput();
         completion?.TrySetResult(PendingBattleResumeChoice.Unavailable);
     }
 
     private void Update()
     {
         ApplySafeArea();
+        PollConfirmInput();
     }
 
     public Task<PendingBattleResumeChoice> ShowOpenAsync(string status = "")
@@ -106,8 +119,22 @@ public sealed class PendingBattleResumePresenter : MonoBehaviour
 
         SetVisible(true);
         ApplySafeArea(force: true);
+        ArmConfirmInput();
         EventSystem.current?.SetSelectedGameObject(primaryButton.gameObject);
         return completion.Task;
+    }
+
+    /// <summary>
+    /// Submit confirms the focused prompt button. A cleared or foreign selection
+    /// confirms the primary choice, which is Continue on a timed-out battle.
+    /// </summary>
+    public static Button ResolveConfirmTarget(Button primary, Button secondary, GameObject selected)
+    {
+        if (IsPromptButton(secondary, selected))
+            return secondary;
+        if (IsPromptButton(primary, selected))
+            return primary;
+        return IsUsable(primary) ? primary : null;
     }
 
     private void ConfigureButton(Button button, string label, PendingBattleResumeChoice choice, bool visible)
@@ -133,7 +160,152 @@ public sealed class PendingBattleResumePresenter : MonoBehaviour
 
     private void Hide()
     {
+        DisarmConfirmInput();
         SetVisible(false);
+    }
+
+    private void ArmConfirmInput()
+    {
+        DisarmConfirmInput();
+        submitAction = FindUiAction("Submit");
+        navigateAction = FindUiAction("Navigate");
+        submitEnabledByPrompt = EnableIfNeeded(submitAction);
+        navigateEnabledByPrompt = EnableIfNeeded(navigateAction);
+        lastNavigate = navigateAction != null && navigateAction.enabled
+            ? navigateAction.ReadValue<Vector2>()
+            : Vector2.zero;
+
+        mobileInput = FindFirstObjectByType<MobileInputManager>(FindObjectsInactive.Include);
+        if (mobileInput != null)
+            mobileInput.OnAPressed += ConfirmFocusedButton;
+    }
+
+    private void DisarmConfirmInput()
+    {
+        if (mobileInput != null)
+        {
+            mobileInput.OnAPressed -= ConfirmFocusedButton;
+            mobileInput = null;
+        }
+
+        if (submitAction != null && submitEnabledByPrompt)
+            submitAction.Disable();
+        if (navigateAction != null && navigateEnabledByPrompt)
+            navigateAction.Disable();
+
+        submitAction = null;
+        navigateAction = null;
+        submitEnabledByPrompt = false;
+        navigateEnabledByPrompt = false;
+        lastNavigate = Vector2.zero;
+    }
+
+    private void PollConfirmInput()
+    {
+        if (completion == null || completion.Task.IsCompleted)
+            return;
+
+        if (submitAction != null && submitAction.WasPressedThisFrame())
+            ConfirmFocusedButton();
+
+        PollPromptNavigation();
+    }
+
+    private void PollPromptNavigation()
+    {
+        if (navigateAction == null || !navigateAction.enabled)
+            return;
+        if (secondaryButton == null || !secondaryButton.gameObject.activeSelf)
+            return;
+        if (UiModuleOwnsMove())
+            return;
+
+        Vector2 value = navigateAction.ReadValue<Vector2>();
+        bool verticalEdge = Mathf.Abs(value.y) >= 0.5f && Mathf.Abs(lastNavigate.y) < 0.5f;
+        lastNavigate = value;
+        if (!verticalEdge || EventSystem.current == null)
+            return;
+
+        GameObject selected = EventSystem.current.currentSelectedGameObject;
+        Button next = selected == secondaryButton.gameObject ? primaryButton : secondaryButton;
+        if (IsUsable(next))
+            EventSystem.current.SetSelectedGameObject(next.gameObject);
+    }
+
+    private void ConfirmFocusedButton()
+    {
+        if (completion == null || completion.Task.IsCompleted)
+            return;
+
+        Button target = ResolveConfirmTarget(
+            primaryButton,
+            secondaryButton,
+            EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null);
+        if (target == null)
+            return;
+
+        target.onClick.Invoke();
+    }
+
+    private static bool UiModuleOwnsMove()
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return false;
+
+        InputSystemUIInputModule module = eventSystem.GetComponent<InputSystemUIInputModule>();
+        return module != null && module.move != null;
+    }
+
+    private static InputAction FindUiAction(string actionName)
+    {
+        InputActionAsset asset = ResolveActionAsset();
+        if (asset == null || string.IsNullOrWhiteSpace(actionName))
+            return null;
+
+        InputActionMap map = asset.FindActionMap("UI", false);
+        return map != null ? map.FindAction(actionName, false) : null;
+    }
+
+    private static InputActionAsset ResolveActionAsset()
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem != null)
+        {
+            InputSystemUIInputModule module = eventSystem.GetComponent<InputSystemUIInputModule>();
+            if (module != null && module.actionsAsset != null)
+                return module.actionsAsset;
+        }
+
+        InputSystemUIInputModule[] modules = FindObjectsByType<InputSystemUIInputModule>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < modules.Length; i++)
+        {
+            if (modules[i] != null && modules[i].actionsAsset != null)
+                return modules[i].actionsAsset;
+        }
+
+        return Resources.Load<InputActionAsset>("InputSystem_Actions");
+    }
+
+    private static bool EnableIfNeeded(InputAction action)
+    {
+        if (action == null || action.enabled)
+            return false;
+
+        action.Enable();
+        return true;
+    }
+
+    private static bool IsPromptButton(Button button, GameObject selected)
+    {
+        return IsUsable(button) && selected == button.gameObject;
+    }
+
+    private static bool IsUsable(Button button)
+    {
+        return button != null && button.gameObject.activeInHierarchy && button.IsInteractable();
     }
 
     private void SetVisible(bool visible)

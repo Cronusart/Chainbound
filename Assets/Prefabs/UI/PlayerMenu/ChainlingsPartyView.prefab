@@ -12258,6 +12258,7 @@ MonoBehaviour:
   debugReadModelViewMode: 0
   screenStack: {fileID: 0}
   detailScreen: {fileID: 0}
+  detailViewPrefab: {fileID: 8843033668398946530, guid: 5ea6c6cbf9ca95c4db467a6dd664fe21, type: 3}
   sfxPlayerBehaviour: {fileID: 0}
   motionProfile: {fileID: 11400000, guid: 708192a3b4c5d6e7f8091a2b3c4d5e6f, type: 2}
   starRatingArt: {fileID: 11400000, guid: e9a6c3d14b2f485a8e0f1d2c3b4a5e6f, type: 2}

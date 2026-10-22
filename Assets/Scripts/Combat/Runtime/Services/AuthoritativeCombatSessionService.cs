@@ -187,9 +187,12 @@ namespace Chainbound.Combat
             CancellationToken cancellationToken = default(CancellationToken))
         {
             RequireConfigured();
+            string accessToken = await ResolveAccessTokenAsync(forceRefresh: false);
+            if (string.IsNullOrWhiteSpace(accessToken))
+                throw new InvalidOperationException("An authenticated Supabase profile session is required.");
             var session = new AuthoritativeCaptureSession(
                 BuildWebSocketUri(battleId),
-                SupabaseAuthSessionContext.AccessToken,
+                accessToken,
                 attemptId,
                 enableDebugLogs);
             await session.ConnectAsync(cancellationToken);
@@ -235,6 +238,43 @@ namespace Chainbound.Combat
             bool authenticated,
             CancellationToken cancellationToken)
         {
+            string accessToken = authenticated
+                ? await ResolveAccessTokenAsync(forceRefresh: false)
+                : string.Empty;
+            if (authenticated && string.IsNullOrWhiteSpace(accessToken))
+                throw new InvalidOperationException("An authenticated Supabase profile session is required.");
+
+            HttpResponse response = await SendOnceAsync(
+                method,
+                relativePath,
+                json,
+                authenticated,
+                accessToken,
+                cancellationToken);
+            if (!authenticated || response.statusCode != 401 || AccountSessionService.Instance == null)
+                return response;
+
+            string refreshedToken = await ResolveAccessTokenAsync(forceRefresh: true);
+            if (string.IsNullOrWhiteSpace(refreshedToken))
+                return response;
+
+            return await SendOnceAsync(
+                method,
+                relativePath,
+                json,
+                authenticated: true,
+                accessToken: refreshedToken,
+                cancellationToken: cancellationToken);
+        }
+
+        private async Task<HttpResponse> SendOnceAsync(
+            string method,
+            string relativePath,
+            string json,
+            bool authenticated,
+            string accessToken,
+            CancellationToken cancellationToken)
+        {
             string url = config.serviceBaseUrl.TrimEnd('/') + relativePath;
             using (var request = new UnityWebRequest(url, method))
             {
@@ -245,10 +285,7 @@ namespace Chainbound.Combat
                 request.SetRequestHeader("Content-Type", "application/json");
                 if (authenticated)
                 {
-                    string token = SupabaseAuthSessionContext.AccessToken;
-                    if (string.IsNullOrWhiteSpace(token))
-                        throw new InvalidOperationException("An authenticated Supabase profile session is required.");
-                    request.SetRequestHeader("Authorization", $"Bearer {token.Trim()}");
+                    request.SetRequestHeader("Authorization", $"Bearer {accessToken.Trim()}");
                 }
                 request.timeout = Mathf.Max(1, config.requestTimeoutSeconds);
                 UnityWebRequestAsyncOperation operation = request.SendWebRequest();
@@ -275,6 +312,22 @@ namespace Chainbound.Combat
                     Debug.Log($"[AuthoritativeCombatSessionService] {method} {relativePath} -> {result.statusCode}", this);
                 return result;
             }
+        }
+
+        private static async Task<string> ResolveAccessTokenAsync(bool forceRefresh)
+        {
+            AccountSessionService sessions = AccountSessionService.Instance;
+            if (sessions == null)
+                return SupabaseAuthSessionContext.AccessToken;
+
+            AccountAuthSessionResult result = await sessions.EnsureFreshAuthSessionAsync(forceRefresh);
+            if (result != null && result.success && !string.IsNullOrWhiteSpace(result.accessToken))
+            {
+                SupabaseAuthSessionContext.AccessToken = result.accessToken.Trim();
+                return SupabaseAuthSessionContext.AccessToken;
+            }
+
+            return forceRefresh ? string.Empty : SupabaseAuthSessionContext.AccessToken;
         }
 
         private CombatSessionEnvelope ParseEnvelopeOrThrow(HttpResponse response)

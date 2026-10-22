@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 130
   displayName: Splinter
-  effectSummary: Next damaging move spreads at 65% power; one foe takes more. Holds through the next turn if unused.
-    more damage
+  effectSummary: Next damaging move spreads at 65% power; one foe takes more. Holds
+    through the next turn if unused.
   statusClass: 3
   origin: 0
   defaultDuration: 1

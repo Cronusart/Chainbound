@@ -43,6 +43,8 @@ interface LifetimeStatsRow {
   total_ram_spent?: number | null;
   total_ordinals_acquired?: number | null;
   total_inscriptions_created?: number | null;
+  candy_machine_rolls?: number | null;
+  candy_machine_stamps?: number | null;
   unique_species_captured?: number | null;
 }
 
@@ -77,7 +79,7 @@ serve(async (req: Request) => {
     const { data: statsRow, error: statsError } = await supabase
       .from("player_lifetime_stats")
       .select(
-        "battles_won, battles_lost, battles_drawn, battles_fled, total_kos_scored, total_kos_taken, total_captures, entangled_captures, capture_attempts, capture_orbs_used, capture_timeouts, capture_targets_escaped, capture_perfect_locks, captures_above_low_hp, captures_by_orb, fastest_capture_milliseconds, extreme_profile_captures, entangle_orb_captures, total_rebirths, total_star_ups, total_mastery_cycles, total_ram_earned, total_ram_spent, total_ordinals_acquired, total_inscriptions_created, unique_species_captured",
+        "battles_won, battles_lost, battles_drawn, battles_fled, total_kos_scored, total_kos_taken, total_captures, entangled_captures, capture_attempts, capture_orbs_used, capture_timeouts, capture_targets_escaped, capture_perfect_locks, captures_above_low_hp, captures_by_orb, fastest_capture_milliseconds, extreme_profile_captures, entangle_orb_captures, total_rebirths, total_star_ups, total_mastery_cycles, total_ram_earned, total_ram_spent, total_ordinals_acquired, total_inscriptions_created, candy_machine_rolls, candy_machine_stamps, unique_species_captured",
       )
       .eq("player_profile_id", profile.player_profile_id)
       .maybeSingle();
@@ -126,6 +128,8 @@ serve(async (req: Request) => {
         total_ram_spent: stats.total_ram_spent ?? 0,
         total_ordinals_acquired: stats.total_ordinals_acquired ?? 0,
         total_inscriptions_created: stats.total_inscriptions_created ?? 0,
+        candy_machine_rolls: stats.candy_machine_rolls ?? 0,
+        candy_machine_stamps: stats.candy_machine_stamps ?? 0,
         unique_species_captured: stats.unique_species_captured ?? 0,
       },
       capture_achievement_ids: (achievementRows ?? []).map((row) => str(row.achievement_id)),

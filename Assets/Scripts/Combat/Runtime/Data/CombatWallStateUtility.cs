@@ -20,7 +20,7 @@ namespace Chainbound.Combat
                 MitigationSource source = chainling.mitigationSources[i];
                 if (!IsActiveMitigation(source))
                     continue;
-                if (IsWallTag(source.sourceTag) || IsWallTag(source.stackKey))
+                if (source.blockKind != BlockKind.None || IsWallTag(source.sourceTag) || IsWallTag(source.stackKey))
                     return true;
             }
 
@@ -54,7 +54,7 @@ namespace Chainbound.Combat
                     MitigationSource source = chainling.mitigationSources[i];
                     if (!IsActiveMitigation(source))
                         continue;
-                    if (!IsWallTag(source.sourceTag) && !IsWallTag(source.stackKey))
+                    if (source.blockKind == BlockKind.None && !IsWallTag(source.sourceTag) && !IsWallTag(source.stackKey))
                         continue;
 
                     if (!string.IsNullOrWhiteSpace(source.sourceTag))
@@ -91,7 +91,7 @@ namespace Chainbound.Combat
                     UtilityEffectPayload effect = definition.utilityEffects[i];
                     if (effect == null)
                         continue;
-                    if (effect.effectType == UtilityEffectType.MitigationWindow ||
+                    if (effect.effectType == UtilityEffectType.BlockWindow ||
                         effect.effectType == UtilityEffectType.FullAbsorbBarrier ||
                         effect.effectType == UtilityEffectType.DamageThresholdBarrier)
                         return true;
@@ -116,8 +116,22 @@ namespace Chainbound.Combat
         {
             if (string.IsNullOrWhiteSpace(value))
                 return false;
-            return value.IndexOf("wall", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   value.IndexOf("barrier", StringComparison.OrdinalIgnoreCase) >= 0;
+            string normalized = value.Trim();
+            return normalized.StartsWith("wall_", StringComparison.OrdinalIgnoreCase) ||
+                   normalized.StartsWith("barrier_", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool MovePlacesBlock(MoveInstance move)
+        {
+            if (move?.utilityEffects == null)
+                return false;
+            for (int i = 0; i < move.utilityEffects.Count; i++)
+            {
+                UtilityEffectPayload effect = move.utilityEffects[i];
+                if (effect != null && effect.effectType == UtilityEffectType.BlockWindow)
+                    return true;
+            }
+            return false;
         }
 
         private static bool IsActiveMitigation(MitigationSource source)

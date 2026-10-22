@@ -14,18 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 7.1-b
   displayName: Shield Link
-  effectDescription: On use, an ally gains 12-18% mitigation for the rest of this turn
+  effectDescription: On use
   category: 6
   scope: 0
   minimumRarity: 2
   effectMin: 12
   effectMax: 18
+  weight: 1
   allowedCategories: 03000000
   forbiddenCombinations: []
   slotCostIncrease: 0
   powerCap: 0
   apCostCap: 0
-  forbiddenTags: []
+  forbiddenTags:
+  - 0
   slotType: 0
   isTypeInfusion: 0
   isStatSubstitution: 0

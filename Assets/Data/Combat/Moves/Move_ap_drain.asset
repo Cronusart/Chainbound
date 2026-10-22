@@ -14,36 +14,79 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: ap_drain
   displayName: AP Drain
-  description: Cut target AP by 1; 25% chance to steal it.
-  category: 2
+  description: Low hit. Cuts target AP by 1. 25% chance to gain 1 AP.
+  category: 1
   baseType: 0
-  rarity: 0
+  rarity: 1
   targeting: 0
-  contactType: 2
-  power: 0
+  contactType: 1
+  power: 16
   apCost: 2
-  accuracy: 0
+  accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
   rechargeTurns: 0
   statusEffects: []
   stageChanges: []
   tags:
-  - UTIL
+  - DMG
   - APMAN
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 4
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: ap_drain
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 0
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
+  - effectType: 3
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: ap_drain_steal
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 4
+    chance: 0.25
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
-    utilityExecutionTiming: 0
+    utilityExecutionTiming: 2
     conditionalEffectPolicy: 0
     resolveConditions: []
     requireAllResolveConditions: 1
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

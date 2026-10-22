@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.7-c
   displayName: Threshold Guard
-  effectDescription: After hit: grant a damage-threshold barrier (15-25% MaxHP) for 2 turns
+  effectDescription: 'After hit: grant a damage-threshold barrier (15-25% MaxHP)
+    for 2 turns'
   category: 5
   scope: 0
   minimumRarity: 3

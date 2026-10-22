@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 104
   displayName: Leaked
-  effectSummary: 'On action: 1/10 HP to all'
+  effectSummary: 'On action: 10% own MaxHP while the side is leaked'
   statusClass: 0
   origin: 0
   defaultDuration: 3
@@ -24,7 +24,7 @@ MonoBehaviour:
   isDebuff: 1
   isBuff: 0
   preventsAction: 0
-  hasEndOfTurnDamage: 1
-  endOfTurnDamagePercent: 0.1
+  hasEndOfTurnDamage: 0
+  endOfTurnDamagePercent: 0
   hasEndOfTurnAP: 0
   endOfTurnAPChange: 0

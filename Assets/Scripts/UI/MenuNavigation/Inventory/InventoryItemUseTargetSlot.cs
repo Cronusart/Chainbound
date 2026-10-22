@@ -492,6 +492,96 @@ namespace SignalJam.UI.MenuNavigation
                 .SetUpdate(true);
         }
 
+        public void PresentStorageIdentity(string nickname, string speciesName)
+        {
+            if (nameLabel == null)
+                return;
+
+            string species = string.IsNullOrWhiteSpace(speciesName) ? "UNKNOWN" : speciesName.Trim().ToUpperInvariant();
+            string given = string.IsNullOrWhiteSpace(nickname) ? string.Empty : nickname.Trim();
+            bool distinct = given.Length > 0
+                && !string.Equals(given, species, System.StringComparison.OrdinalIgnoreCase);
+            nameLabel.alignment = TextAlignmentOptions.TopLeft;
+            nameLabel.enableWordWrapping = false;
+            nameLabel.overflowMode = TextOverflowModes.Ellipsis;
+            nameLabel.richText = true;
+            nameLabel.lineSpacing = distinct ? -6f : 0f;
+            nameLabel.fontSize = distinct ? 20f : 24f;
+            nameLabel.text = distinct
+                ? $"{given.ToUpperInvariant()}\n<size=70%><color=#D7CBBE>{species}</color></size>"
+                : species;
+        }
+
+        public void FitStorageColumn()
+        {
+            Transform typeBackground = transform.Find("TypeIconBG");
+            if (typeBackground != null)
+                typeBackground.gameObject.SetActive(false);
+
+            if (typeIcon != null)
+            {
+                RectTransform iconRect = typeIcon.rectTransform;
+                iconRect.anchorMin = new Vector2(0f, 0.5f);
+                iconRect.anchorMax = new Vector2(0f, 0.5f);
+                iconRect.pivot = new Vector2(0f, 0.5f);
+                iconRect.anchoredPosition = new Vector2(12f, 4f);
+                iconRect.sizeDelta = new Vector2(48f, 48f);
+            }
+
+            if (nameLabel != null)
+            {
+                RectTransform nameRect = nameLabel.rectTransform;
+                nameRect.anchorMin = new Vector2(0f, 1f);
+                nameRect.anchorMax = new Vector2(1f, 1f);
+                nameRect.pivot = new Vector2(0f, 1f);
+                nameRect.offsetMin = new Vector2(68f, -52f);
+                nameRect.offsetMax = new Vector2(-112f, -4f);
+            }
+
+            if (starRatingDisplay != null)
+            {
+                RectTransform stars = starRatingDisplay.transform as RectTransform;
+                if (stars != null)
+                {
+                    stars.anchorMin = new Vector2(1f, 1f);
+                    stars.anchorMax = new Vector2(1f, 1f);
+                    stars.pivot = new Vector2(1f, 1f);
+                    stars.anchoredPosition = new Vector2(-8f, -6f);
+                    stars.sizeDelta = new Vector2(100f, 22f);
+                }
+            }
+
+            FitBottomBar(transform.Find("HpBarBackground") as RectTransform, 18f, 40f);
+            FitBottomBar(transform.Find("XpBarBackground") as RectTransform, 4f, 14f);
+            FitBottomBar(transform.Find("HpLabel") as RectTransform, 18f, 40f);
+            if (hpLabel != null)
+            {
+                hpLabel.fontSize = 13f;
+                hpLabel.alignment = TextAlignmentOptions.Center;
+            }
+
+            Transform cycleIcon = transform.Find("CycleIcon");
+            if (cycleIcon is RectTransform cycleRect)
+            {
+                cycleRect.anchorMin = new Vector2(1f, 1f);
+                cycleRect.anchorMax = new Vector2(1f, 1f);
+                cycleRect.pivot = new Vector2(1f, 1f);
+                cycleRect.anchoredPosition = new Vector2(-8f, -30f);
+                cycleRect.sizeDelta = new Vector2(22f, 22f);
+            }
+        }
+
+        private static void FitBottomBar(RectTransform bar, float bottom, float top)
+        {
+            if (bar == null)
+                return;
+            bar.anchorMin = new Vector2(0f, 0f);
+            bar.anchorMax = new Vector2(1f, 0f);
+            bar.pivot = new Vector2(0.5f, 0f);
+            bar.offsetMin = new Vector2(68f, bottom);
+            bar.offsetMax = new Vector2(-12f, top);
+        }
+
         public void KillMotion()
         {
             if (scaleTween != null && scaleTween.IsActive())

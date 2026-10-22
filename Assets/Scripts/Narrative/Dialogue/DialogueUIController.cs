@@ -86,6 +86,8 @@ public class DialogueUIController : MonoBehaviour
 
     private void OnDisable()
     {
+        CancelDialogueForPresentationLoss();
+
         if (_mobileInput != null)
         {
             _mobileInput.OnAPressed -= HandleMobileAdvancePressed;
@@ -94,6 +96,20 @@ public class DialogueUIController : MonoBehaviour
 
         _mobileAdvanceQueued = false;
         StopCurrentLineSound();
+    }
+
+    /// <summary>
+    /// Ends active dialogue when its presentation can no longer receive input.
+    /// This is safe to call from scene, app, or UI lifecycle adapters.
+    /// </summary>
+    public void CancelDialogueForPresentationLoss()
+    {
+        // DialogueService is persistent. If this scene-owned presentation goes away
+        // mid-dialogue, explicitly terminate playback so its Dialogue input-lock
+        // token cannot strand world interaction after a resume or scene change.
+        DialogueService dialogueService = FindFirstObjectByType<DialogueService>(FindObjectsInactive.Include);
+        if (dialogueService != null && dialogueService.IsPlaying)
+            dialogueService.StopDialogue();
     }
 
     public void ShowDialogue()

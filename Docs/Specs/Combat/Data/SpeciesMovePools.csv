@@ -1,22 +1,22 @@
 SpeciesId,LearnableMoves,ExclusiveMoves,FlagshipMove,InitialMoves,OffTypeMoves
-# Progression pools are 4-5 moves. FlagshipMove is the signature and must sit in LearnableMoves or ExclusiveMoves.
-# Import gives the signature weight 8, and weight 24 at 5 stars. Every other pool move gets weight 23.
+# Wild playable pools are five moves: three at the body tier or lower, one at that tier or one step higher, and a signature that is strictly the highest rarity. Starters only keep a unique top-rarity signature. Ghost and Cofi Lootwak stay outside that rule.
+# Import gives the signature weight 8, and weight 24 at 5 stars. Every other pool move gets weight 23. Effective weight multiplies by the learn-rarity curve and floors a positive result at 1.
 # OffTypeMoves equip even when the move type does not match. Empty means no theme exception.
-validape,hub_heal|coordinated_shot|ap_router,hammer_sync|pack_rally,hammer_sync,baseline_striker,
-gilarime,frost_shot|ice_wall|cold_snap,cryo_ray|gecko_guard,cryo_ray,baseline_shot,
-kitsauto,multi_thread_shot|automated_pressure|debuff_script,fox_feint|blade_flurry,fox_feint,baseline_jab,
-kreechank,data_scramble|chaos_strike|bug_payoff|defense_corrupt|unstable_code,,data_scramble,chaos_strike,
-cinislug,ember_wall|scorch_shot|ash_guard|deflation_mark|baseline_shot,,ember_wall,scorch_shot,
-rattlestake,compound_guard|stake_heal|ap_reserve|yield_cycle|hibernate,,compound_guard,stake_heal,hibernate
-humpacked,streamlined_flow|lean_hit|barrier_wall|compression_trade|ice_wall,,streamlined_flow,lean_hit,ice_wall
-crackett,seam_cut|isolation_tool|parallel_passive|shard_partition|baseline_jab,,seam_cut,baseline_jab,cold_snap
-keyper,memory_leak|cipher_shot|verification_lock|firewall_passive|key_rotation,,memory_leak,cipher_shot,
-deghoul,fee_collector|fuel_surge|transaction_tax|slipstream|ap_siphon,,fee_collector,fuel_surge,
-forkrook,fork_split|voltage_rush|rapid_strike|pivot_line|baseline_shot,,fork_split,baseline_shot,
-cofi_lootwak,civet_beam|compound_guard|stake_heal,bean_sip,bean_sip,bean_sip|civet_beam,
-blockwyrm,bulwark_blow|immovable_stance|blockade|immutable_ledger|ice_wall,,bulwark_blow,immovable_stance,ice_wall
-hopoch,patience_passive|yield_spike|stake_strike|stake_heal|yield_cycle,,patience_passive,stake_strike,deep_reap
+validape,hub_heal|baseline_striker|uplink,hammer_sync|pack_rally,hammer_sync,baseline_striker,
+gilarime,frost_shot|ice_wall|frost_shards|chilling_retort,cryo_ray,cryo_ray,frost_shards,
+kitsauto,multi_thread_shot|packet_skim|debuff_script,fox_feint|blade_flurry,fox_feint,blade_flurry,
+kreechank,chaos_strike|error_correction|defense_corrupt|bug_fix|baseline_striker,,chaos_strike,chaos_strike,
+cinislug,ember_wall|kindling|cinder_burst|hype_burst|baseline_shot,,ember_wall,cinder_burst,
+rattlestake,ap_reserve|compound_guard|baseline_shot|baseline_jab|baseline_thrust,,ap_reserve,compound_guard,
+humpacked,streamlined_flow|lean_hit|barrier_wall|compression_trade|zipped_strikes,,streamlined_flow,lean_hit,
+crackett,shard_partition|seam_cut|parallel_passive|isolation_tool|baseline_jab,,shard_partition,baseline_jab,cold_snap
+keyper,memory_leak|cipher_shot|cipher_burst|key_rotation|system_reset,,memory_leak,cipher_shot,
+deghoul,transaction_tax|volatile_shot|gas_bump|slipstream|baseline_striker,,transaction_tax,gas_bump,
+forkrook,fork_split|rapid_strike|baseline_shot|baseline_volley|chain_fork,,fork_split,baseline_shot,
+cofi_lootwak,civet_beam|compound_guard|stake_heal|baseline_shot,bean_sip,bean_sip,bean_sip|civet_beam,
+blockwyrm,immutable_ledger|bulwark_blow|immovable_stance|blockade|stone_barrage,,immutable_ledger,immovable_stance,
+hopoch,yield_spike|patience_passive|stake_strike|stake_heal|baseline_striker,,yield_spike,stake_strike,deep_reap
 minefolk,deep_reap|refined_shot|baseline_shot|pickaxe_flurry|exploit_window,,deep_reap,baseline_shot,
-marrowhead,partition_shot|field_split|shattered_armor|isolation_tool|precision_strike,,partition_shot,partition_shot,precision_strike
-kodiax,pickaxe_flurry|deep_dig|ore_strike|extraction_hit|solid_strike,,pickaxe_flurry,ore_strike,solid_strike
-balloom,all_in|volatile_shot|recoil_strike|fuel_surge|gas_cloud,,all_in,volatile_shot,all_in|recoil_strike
+marrowhead,field_split|partition_shot|isolation_tool|precision_strike|baseline_snipe,,field_split,partition_shot,precision_strike
+kodiax,ore_strike|deep_dig|pickaxe_flurry|crystal_extraction|baseline_slam,,ore_strike,ore_strike,solid_strike
+balloom,fuel_surge|volatile_shot|gas_bump|slipstream|baseline_slam,,fuel_surge,gas_bump,recoil_strike

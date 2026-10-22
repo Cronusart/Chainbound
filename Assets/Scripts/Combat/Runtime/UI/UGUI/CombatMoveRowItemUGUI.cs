@@ -146,7 +146,7 @@ namespace Chainbound.Combat
                     labelText.font = fontOverride;
                 if (labelText.fontSize <= 0f)
                     labelText.fontSize = 20f;
-                labelText.enableWordWrapping = false;
+                labelText.textWrappingMode = TextWrappingModes.NoWrap;
                 labelText.alignment = TextAlignmentOptions.Left;
             }
 
@@ -579,16 +579,47 @@ namespace Chainbound.Combat
 
         private void EnsureLayoutElement(float preferredHeight)
         {
-            if (layoutElement == null)
-                layoutElement = GetComponent<LayoutElement>();
-            if (layoutElement == null)
-                layoutElement = gameObject.AddComponent<LayoutElement>();
+            LayoutElement own = GetComponent<LayoutElement>();
+            if (own == null)
+                own = gameObject.AddComponent<LayoutElement>();
+
+            // The preview row in the battle canvas was wired at the list's layout element.
+            // Writes must stay on this row so the list's content height is left alone.
+            if (layoutElement == null || layoutElement.gameObject != gameObject)
+                layoutElement = own;
 
             float height = preferredHeight > 0f ? preferredHeight : DefaultPreferredHeight;
             if (layoutElement.preferredHeight <= 0f)
                 layoutElement.preferredHeight = height;
             if (layoutElement.minHeight <= 0f)
                 layoutElement.minHeight = layoutElement.preferredHeight;
+
+            ApplyAuthoredHeightToRect(height);
+        }
+
+        private void ApplyAuthoredHeightToRect(float fallbackHeight)
+        {
+            RectTransform rect = transform as RectTransform;
+            if (rect == null || layoutElement == null)
+                return;
+
+            // A stretched vertical anchor is already driven by the parent width/height.
+            if (Mathf.Abs(rect.anchorMax.y - rect.anchorMin.y) > 0.001f)
+                return;
+            if (rect.sizeDelta.y > 0.5f)
+                return;
+
+            float authored = layoutElement.preferredHeight > 0f
+                ? layoutElement.preferredHeight
+                : layoutElement.minHeight > 0f
+                    ? layoutElement.minHeight
+                    : fallbackHeight;
+            if (authored <= 0f)
+                return;
+
+            Vector2 size = rect.sizeDelta;
+            size.y = authored;
+            rect.sizeDelta = size;
         }
 
         private void SetPriorityPillVisible(bool visible, bool isUsable, bool selected)
@@ -659,7 +690,7 @@ namespace Chainbound.Combat
                 priorityPillText.text = MoveSelectDisplayUtility.PriorityPillLabel;
                 priorityPillText.alignment = TextAlignmentOptions.Center;
                 priorityPillText.color = priorityPillTextColor;
-                priorityPillText.enableWordWrapping = false;
+                priorityPillText.textWrappingMode = TextWrappingModes.NoWrap;
                 priorityPillText.overflowMode = TextOverflowModes.Overflow;
                 priorityPillText.raycastTarget = false;
                 if (labelText != null && labelText.font != null)
@@ -694,7 +725,7 @@ namespace Chainbound.Combat
 
             if (priorityPillText != null)
             {
-                priorityPillText.enableWordWrapping = false;
+                priorityPillText.textWrappingMode = TextWrappingModes.NoWrap;
                 priorityPillText.overflowMode = TextOverflowModes.Overflow;
                 priorityPillText.fontSize = fontSize;
                 priorityPillText.ForceMeshUpdate(true);

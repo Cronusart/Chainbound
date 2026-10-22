@@ -106,11 +106,13 @@ serve(async (req: Request) => {
         new Date(String(operation.expires_at)).getTime() <= Date.now();
       if (outcome === "failed" || expiredUnsignedPrepare) {
         const failureCode = outcome === "failed" ? "transaction_failed" : "unsigned_intent_expired";
-        await cancelRamReservationOnChain({
-          config,
-          walletAddress,
-          operationId: str(operation.operation_id),
-        });
+        if (str(operation.known_source) !== "profile") {
+          await cancelRamReservationOnChain({
+            config,
+            walletAddress,
+            operationId: str(operation.operation_id),
+          });
+        }
         const { error: releaseError } = await supabase.rpc("ram_ledger_release_operation", {
           p_operation_id: str(operation.operation_id),
           p_cluster: config.cluster,

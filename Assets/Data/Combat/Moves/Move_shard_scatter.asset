@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: shard_scatter
   displayName: Shard Scatter
-  description: 2-3 AoE hits; each lowers Eva on a different foe.
+  description: 2-3 hits against all foes.
   category: 1
   baseType: 13
-  rarity: 1
+  rarity: 4
   targeting: 1
   contactType: 1
-  power: 18
-  apCost: 3
+  power: 22
+  apCost: 4
   accuracy: 95
   hitCountMin: 2
   hitCountMax: 3
@@ -45,6 +45,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

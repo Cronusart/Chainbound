@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: Move_volatile_shot
   m_EditorClassIdentifier: 
   moveId: volatile_shot
-  displayName: Volatile Shot
-  description: High-power ranged hit; miss costs you 15% MaxHP.
+  displayName: Gas War
+  description: Heavy ranged hit; your next move costs +1 AP.
   category: 1
   baseType: 2
-  rarity: 0
+  rarity: 1
   targeting: 0
   contactType: 1
   power: 72
-  apCost: 2
+  apCost: 4
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
@@ -33,16 +33,38 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 8
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: gas_war
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 4
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
-    utilityExecutionTiming: 0
+    utilityExecutionTiming: 3
     conditionalEffectPolicy: 0
     resolveConditions: []
     requireAllResolveConditions: 1
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

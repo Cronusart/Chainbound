@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Passive - hits can raise Atk; at Atk +3 also gain Speed.
   category: 4
   baseType: 8
-  rarity: 0
+  rarity: 2
   targeting: 4
   contactType: 2
   power: 0
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

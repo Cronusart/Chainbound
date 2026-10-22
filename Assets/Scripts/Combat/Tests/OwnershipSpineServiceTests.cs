@@ -9,10 +9,14 @@ namespace Chainbound.Combat.Tests
 {
     public sealed class OwnershipSpineServiceTests
     {
-        private readonly ReadyWalletCoordinator walletCoordinator = new ReadyWalletCoordinator();
+        private ReadyWalletCoordinator walletCoordinator;
 
         [SetUp]
-        public void SetUp() => ProfileWalletAccessRegistry.Register(walletCoordinator);
+        public void SetUp()
+        {
+            walletCoordinator = new ReadyWalletCoordinator();
+            ProfileWalletAccessRegistry.Register(walletCoordinator);
+        }
 
         [TearDown]
         public void TearDown() => ProfileWalletAccessRegistry.Unregister(walletCoordinator);
@@ -93,7 +97,10 @@ namespace Chainbound.Combat.Tests
             Assert.NotNull(result.verifiedAsset);
             Assert.AreEqual(0, service.CachedKnown.Count);
             Assert.AreEqual(1, service.CachedStamped.Count);
-            Assert.AreEqual(refreshesBeforeStamp, gateway.FetchStateCalls);
+            Assert.AreEqual(
+                refreshesBeforeStamp + 1,
+                gateway.FetchStateCalls,
+                "Stamp performs one canonical preflight refresh but must not wait on a post-confirm inventory refresh.");
         }
 
         [Test]

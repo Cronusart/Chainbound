@@ -29,14 +29,14 @@ MonoBehaviour:
   learnableMoves:
   - {fileID: 11400000, guid: 76af410d87a59c344ae85a1814cf2eee, type: 2}
   - {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
-  - {fileID: 11400000, guid: 5cc708803c6bda14792d714b1168b357, type: 2}
-  learnLevels: 010000000100000001000000
+  - {fileID: 11400000, guid: a69ac457dddf4e846a6f786d6a3dbf3c, type: 2}
+  - {fileID: 11400000, guid: cfe63cbbaa8e52943b474b4edce895f4, type: 2}
+  learnLevels: 01000000010000000100000001000000
   exclusiveMoves:
   - {fileID: 11400000, guid: 9fe98046216cb2e48825d0fcc6f550b1, type: 2}
-  - {fileID: 11400000, guid: 501c886e99237f849ba2c638dff36442, type: 2}
   flagshipMove: {fileID: 11400000, guid: 9fe98046216cb2e48825d0fcc6f550b1, type: 2}
   initialMoves:
-  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  - {fileID: 11400000, guid: a69ac457dddf4e846a6f786d6a3dbf3c, type: 2}
   progressionMovePool:
   - move: {fileID: 11400000, guid: 76af410d87a59c344ae85a1814cf2eee, type: 2}
     weight: 23
@@ -56,7 +56,16 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 5cc708803c6bda14792d714b1168b357, type: 2}
+  - move: {fileID: 11400000, guid: a69ac457dddf4e846a6f786d6a3dbf3c, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: cfe63cbbaa8e52943b474b4edce895f4, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -74,19 +83,10 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 501c886e99237f849ba2c638dff36442, type: 2}
-    weight: 23
-    useWeightAtStarFive: 0
-    weightAtStarFive: 23
-    isSignature: 0
-    poolTag: 1
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
   isStarter: 1
   defaultCaptureProfile: 1
   rarity: 0
   combatRoleOverride: 4
   designNotes: 'Starter. One per team in 2v2. Net 460, one step above Legendary.
     Frozen ranged guard shape kept: melee defense above the ranged shot, speed still
-    the low stat. Exclusive moves: Gecko Guard (once per battle). Spec 06 v1.2.'
+    the low stat. Exclusive move: Cryo Ray. Spec 06 v1.2.'

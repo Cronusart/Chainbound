@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 2.7-a
   displayName: Sparse Focus
-  effectDescription: "+{n}% accuracy per empty bench slot"
+  effectDescription: +{n}% accuracy per empty bench slot
   category: 0
   scope: 0
   minimumRarity: 0

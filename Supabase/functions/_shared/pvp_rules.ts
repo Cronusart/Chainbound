@@ -5,6 +5,7 @@
 
 import { versionsCompatible } from "./matchmaking_config.ts";
 import { apCostForMove, PVP_AP_CAP } from "./move_ap.ts";
+import { isBlockMove } from "./move_flags.generated.ts";
 
 export const PVP_ROSTER_MAX = 3;
 export const PVP_ACTIVE_MAX = 2;
@@ -94,6 +95,39 @@ function rosterMoveError(roster: LockedChainling[], moveIndex: number): string |
   return "move_illegal";
 }
 
+function certainMoveId(roster: LockedChainling[], moveIndex: number): string | null {
+  if (!Number.isInteger(moveIndex) || moveIndex < 0) return null;
+  const candidates = new Set<string>();
+  for (const chainling of roster) {
+    if (chainling?.fainted === true) continue;
+    const moveIds = Array.isArray(chainling?.moveIds) ? chainling.moveIds : [];
+    const moveId = (moveIds[moveIndex] ?? "").trim();
+    if (moveId) candidates.add(moveId);
+  }
+  if (candidates.size !== 1) return null;
+  return candidates.values().next().value ?? null;
+}
+
+function resolvedBlockTargetKey(
+  expectedTeam: number,
+  actorSlot: number,
+  active: number[],
+  roster: LockedChainling[],
+  action: TurnAction,
+): string {
+  const hasExplicitTarget = (action.targetTeamIndex ?? -1) >= 0 && (action.targetSlotIndex ?? -1) >= 0;
+  if (hasExplicitTarget) return `${action.targetTeamIndex}:${action.targetSlotIndex}`;
+
+  // Unity resolves an implicit SingleAlly target to the first living active
+  // teammate, falling back to the actor when no teammate is available.
+  for (let slot = 0; slot < active.length; slot++) {
+    if (slot === actorSlot) continue;
+    const rosterIndex = active[slot];
+    if (roster[rosterIndex]?.fainted !== true) return `${expectedTeam}:${slot}`;
+  }
+  return `${expectedTeam}:${actorSlot}`;
+}
+
 export function validateTurnActions(
   seat: "a" | "b",
   chainlings: LockedChainling[],
@@ -106,6 +140,7 @@ export function validateTurnActions(
   const active = activeRosterAfter(roster.length, priorTurns);
   if (!Array.isArray(actions) || actions.length !== active.length) return "action_count";
   const expectedTeam = seat === "a" ? 0 : 1;
+  const blockTargets = new Set<string>();
 
   for (let slot = 0; slot < actions.length; slot++) {
     const action = actions[slot];
@@ -130,6 +165,12 @@ export function validateTurnActions(
     }
     if (action.targetTeamIndex !== undefined && action.targetTeamIndex !== -1) {
       if (action.targetTeamIndex !== 0 && action.targetTeamIndex !== 1) return "target_illegal";
+    }
+    const moveId = certainMoveId(roster, action.moveIndex ?? -1);
+    if (moveId && isBlockMove(moveId)) {
+      const key = resolvedBlockTargetKey(expectedTeam, slot, active, roster, action);
+      if (blockTargets.has(key)) return "block_target_duplicate";
+      blockTargets.add(key);
     }
   }
   return null;

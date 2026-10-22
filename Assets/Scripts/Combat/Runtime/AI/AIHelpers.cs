@@ -18,7 +18,9 @@ namespace Chainbound.Combat
             TeamState enemyTeam,
             int teamIndex,
             CombatState state,
-            CombatActionEligibilityService eligibilityService = null)
+            CombatActionEligibilityService eligibilityService = null,
+            IReadOnlyDictionary<int, CombatAction> queuedBySlot = null,
+            int actorSlot = -1)
         {
             var actions = new List<ScoredAction>();
             var eligibility = eligibilityService ?? new CombatActionEligibilityService();
@@ -33,14 +35,32 @@ namespace Chainbound.Combat
             for (int i = 0; i < actor.moves.Count; i++)
             {
                 var insc = actor.moves[i];
-                MoveSelectionEvaluation evaluation = eligibility.EvaluateMoveSelection(actor, insc, state);
+                MoveSelectionEvaluation evaluation = eligibility.EvaluateMoveSelection(
+                    actor, insc, state, queuedBySlot: queuedBySlot, actorSlot: actorSlot);
                 if (!evaluation.canSelect)
                     continue;
 
-                actions.Add(new ScoredAction(
-                    CombatAction.UseMove(teamIndex, i),
-                    0f,
-                    insc.displayName));
+                if (CombatWallStateUtility.MovePlacesBlock(insc))
+                {
+                    for (int targetSlot = 0; myTeam?.activeIndices != null && targetSlot < myTeam.activeIndices.Count; targetSlot++)
+                    {
+                        ChainlingInstance target = myTeam.GetActiveInSlot(targetSlot);
+                        if (!eligibility.EvaluateBlockTarget(
+                                actor, insc, target, state, queuedBySlot, actorSlot).canTarget)
+                            continue;
+                        actions.Add(new ScoredAction(
+                            CombatAction.UseMove(teamIndex, i, teamIndex, targetSlot),
+                            ScoreBlockValue(insc, target, enemyTeam),
+                            $"{insc.displayName} -> {target.displayName}"));
+                    }
+                }
+                else
+                {
+                    actions.Add(new ScoredAction(
+                        CombatAction.UseMove(teamIndex, i),
+                        0f,
+                        insc.displayName));
+                }
             }
 
             // Swap actions (swap with bench)
@@ -146,6 +166,91 @@ namespace Chainbound.Combat
         {
             if (insc.apCost <= 0) return 0f;
             return EstimateDamage(attacker, insc) / insc.apCost;
+        }
+
+        public static float ScoreBlockValue(
+            MoveInstance blockMove,
+            ChainlingInstance target,
+            TeamState enemyTeam)
+        {
+            if (!TryGetBlockEffect(blockMove, out UtilityEffectPayload block) || target == null || enemyTeam == null)
+                return -1f;
+
+            bool protectsMelee = block.contactFilter == UtilityContactFilter.Contact;
+            float largestThreat = 0f;
+            List<ChainlingInstance> enemies = enemyTeam.GetActiveChainlings();
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                ChainlingInstance enemy = enemies[i];
+                if (enemy?.moves == null)
+                    continue;
+                for (int m = 0; m < enemy.moves.Count; m++)
+                {
+                    MoveInstance attack = enemy.moves[m];
+                    if (attack == null || !IsDamaging(attack))
+                        continue;
+                    bool matching = protectsMelee
+                        ? attack.category == MoveCategory.DamagingMelee
+                        : attack.category == MoveCategory.DamagingRanged;
+                    if (matching)
+                        largestThreat = Math.Max(largestThreat, EstimateDamage(enemy, attack));
+                }
+            }
+
+            float mitigation = block.magnitude > 1f ? block.magnitude / 100f : block.magnitude;
+            float prevented = largestThreat * Math.Max(0f, mitigation);
+            float worthwhileThreshold = Math.Max(1f, target.currentHP * 0.15f);
+            return prevented >= worthwhileThreshold ? prevented : -1f;
+        }
+
+        public static bool ShouldBankForGreaterBlock(
+            ChainlingInstance actor,
+            TeamState myTeam,
+            TeamState enemyTeam,
+            CombatState state,
+            IReadOnlyDictionary<int, CombatAction> queuedBySlot,
+            int actorSlot)
+        {
+            if (actor?.moves == null || actor.currentAP >= CombatConstants.AP_CAP)
+                return false;
+
+            var eligibility = new CombatActionEligibilityService();
+            for (int i = 0; i < actor.moves.Count; i++)
+            {
+                MoveInstance move = actor.moves[i];
+                if (!TryGetBlockEffect(move, out UtilityEffectPayload block))
+                    continue;
+                float mitigation = block.magnitude > 1f ? block.magnitude / 100f : block.magnitude;
+                if (mitigation <= 0.5f || move.apCost <= CombatConstants.AP_PER_TURN || actor.currentAP >= move.apCost)
+                    continue;
+
+                for (int slot = 0; myTeam?.activeIndices != null && slot < myTeam.activeIndices.Count; slot++)
+                {
+                    ChainlingInstance target = myTeam.GetActiveInSlot(slot);
+                    if (!eligibility.EvaluateBlockTarget(actor, move, target, state, queuedBySlot, actorSlot).canTarget)
+                        continue;
+                    if (ScoreBlockValue(move, target, enemyTeam) > 0f)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool TryGetBlockEffect(MoveInstance move, out UtilityEffectPayload block)
+        {
+            block = null;
+            if (move?.utilityEffects == null)
+                return false;
+            for (int i = 0; i < move.utilityEffects.Count; i++)
+            {
+                UtilityEffectPayload candidate = move.utilityEffects[i];
+                if (candidate != null && candidate.effectType == UtilityEffectType.BlockWindow)
+                {
+                    block = candidate;
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

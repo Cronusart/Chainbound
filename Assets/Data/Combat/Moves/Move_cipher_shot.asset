@@ -14,19 +14,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: cipher_shot
   displayName: Cipher Shot
-  description: Ranged hit with 25% chance to block target next buff.
+  description: If any hit lands, the target can't gain buffs for 2 turns.
   category: 1
   baseType: 4
-  rarity: 0
+  rarity: 1
   targeting: 0
   contactType: 1
-  power: 64
+  power: 40
   apCost: 2
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
   rechargeTurns: 0
-  statusEffects: []
+  statusEffects:
+  - statusId: 312
+    duration: 2
+    chance: 1
+    overrideTargeting: 0
+    targetOverride: 0
+    parameterType: 0
   stageChanges: []
   tags:
   - DMG
@@ -43,6 +49,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 1
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

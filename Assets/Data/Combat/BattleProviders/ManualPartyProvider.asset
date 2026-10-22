@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   roster:
   - speciesId: validape
-    displayName: mankey
+    displayName: gudmonke
     stars: 1
     rebirthCount: 0
     masteryXp: 0
@@ -39,53 +39,6 @@ MonoBehaviour:
     modifier1SectionIds:
     - 
     modifier2SectionIds:
-    - 
-    ivMaxHP: 2
-    ivMeleeAtk: 0
-    ivMeleeDef: 0
-    ivRangedAtk: -2
-    ivRangedDef: 2
-    ivSpeed: 5
-    pickMaxHP: 0
-    pickMeleeAtk: 0
-    pickMeleeDef: 0
-    pickRangedAtk: 0
-    pickRangedDef: 0
-    pickSpeed: 0
-    isMutated: 0
-    mutationId: none
-    isEntangled: 0
-    entangledType: 0
-    currentHp: -1
-  - speciesId: hopoch
-    displayName: Pepe
-    stars: 1
-    rebirthCount: 0
-    masteryXp: 0
-    evolutionStage: 1
-    visualIdentity:
-      visualVariantId: base
-      auraId: 
-      hudCardVariantId: default
-      partyColumnVariantId: default
-      swapInFxId: default
-      swapOutFxId: default
-      koFxId: none
-      victoryPoseId: 
-      idleStyleId: none
-      idleFlourishId: 
-      meleeAttackStyleId: none
-      rangedAttackStyleId: none
-      hitReactionStyleId: none
-      attackerKoStyleId: none
-    moveIds:
-    - barrier_wall
-    - baseline_jab
-    modifier1SectionIds:
-    - 
-    - 
-    modifier2SectionIds:
-    - 
     - 
     ivMaxHP: 2
     ivMeleeAtk: 0

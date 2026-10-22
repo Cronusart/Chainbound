@@ -82,8 +82,10 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
     [SerializeField] private SoundEventSO victoryChime;
     [SerializeField, Range(0f, 1f)] private float portraitDuckMultiplier = 0.05f;
     [SerializeField, Min(0f)] private float portraitDuckAttackSeconds = 0.08f;
-    [SerializeField, Min(0f)] private float portraitDuckReleaseSeconds = 0.35f;
+    [SerializeField, Min(0f)] private float portraitDuckReleaseSeconds = 0.5f;
     [SerializeField, Min(0f)] private float portraitDismissDelaySeconds = 1f;
+    [Tooltip("{0} is the captured species name. Shown with a per-character reveal on the portrait.")]
+    [SerializeField] private string portraitBannerFormat = "CAPTURED!\n{0}";
 
     [Header("Debug")]
     [SerializeField] private bool enableDebugLogs = false;
@@ -129,6 +131,12 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
     private Vector2 speciesNameSizeDelta;
     private Vector2 speciesNamePivot;
     private TextAlignmentOptions speciesNameAlignment;
+    private float speciesNameCharacterSpacing;
+    private bool speciesNameSpacingCaptured;
+    private TmpCharacterFlourish portraitBanner;
+    private Coroutine portraitBannerRoutine;
+    private bool portraitPlateCaptured;
+    private Color authoredPortraitPlateColor;
     private bool starterNameInputResolved;
     private bool starterNameInputUsesAuthoredPose;
     private bool starterNameTextAuthored;
@@ -394,7 +402,9 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         panelInputArmed = false;
         StopSelectRoutine();
         HideStarterNameInput();
-        StopPanelPresentation();
+        if (portraitReveal)
+            yield return ExitPortraitBanner();
+        StopPanelPresentation(restorePortraitBanner: false);
 
         Transform panelTransform = ResolvePreviewContainer();
         if (panelTransform != null)
@@ -493,6 +503,53 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             pedestalImage.sprite = pedestalSprite;
     }
 
+    private void ApplyPortraitPanelPlate()
+    {
+        EnsurePanelScanlines();
+        Transform container = ResolvePreviewContainer();
+        if (container == null)
+            return;
+
+        Image plate = container.GetComponent<Image>();
+        if (plate != null)
+        {
+            if (!portraitPlateCaptured)
+            {
+                authoredPortraitPlateColor = plate.color;
+                portraitPlateCaptured = true;
+            }
+
+            plate.color = ResolvePortraitPlateColor(plate);
+            plate.enabled = true;
+        }
+    }
+
+    private Color ResolvePortraitPlateColor(Image plate)
+    {
+        ResolveDetailsPanel();
+        if (detailsPanel != null)
+        {
+            Image detailsImage = detailsPanel.GetComponent<Image>();
+            if (detailsImage != null && detailsImage.color.a > 0.05f)
+                return detailsImage.color;
+        }
+
+        Color visible = plate != null ? plate.color : new Color(0.21568628f, 0.30588236f, 0.2901961f, 0.78431374f);
+        visible.a = Mathf.Max(visible.a, 0.78f);
+        return visible;
+    }
+
+    private void RestorePortraitPanelPlate()
+    {
+        if (!portraitPlateCaptured)
+            return;
+
+        Transform container = ResolvePreviewContainer();
+        Image plate = container != null ? container.GetComponent<Image>() : null;
+        if (plate != null)
+            plate.color = authoredPortraitPlateColor;
+    }
+
     private void EnsurePanelScanlines()
     {
         Transform container = ResolvePreviewContainer();
@@ -510,6 +567,14 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             tiling: PanelScanlineTiling,
             scrollDirection: Vector2.down,
             uvSpeed: 0.05f);
+
+        if (scanlines.ScanlineOverlay != null)
+        {
+            scanlines.ScanlineOverlay.gameObject.SetActive(true);
+            CanvasGroup overlayGroup = scanlines.ScanlineOverlay.GetComponent<CanvasGroup>();
+            if (overlayGroup != null)
+                overlayGroup.alpha = 1f;
+        }
 
         // DetailsPanel intentionally owns the darker text-contrast surface.
         // Never let the panel-content helper attach a scanline layer to it.
@@ -986,7 +1051,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         PrepareDimOverlayReveal();
         PreparePanelContentReveal();
         if (portraitReveal && speciesNameText != null)
-            speciesNameText.maxVisibleCharacters = int.MaxValue;
+            speciesNameText.maxVisibleCharacters = 0;
 
         if (selectionPanel == null || !isShowing)
             return;
@@ -1076,10 +1141,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
 
         StartPreviewVisualPlayback();
         if (portraitReveal)
-        {
-            if (speciesNameText != null)
-                speciesNameText.maxVisibleCharacters = int.MaxValue;
-        }
+            yield return StartCoroutine(PlayPortraitBanner());
         else
         {
             StartTypewriter();
@@ -1293,7 +1355,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         previewVisual?.Play(currentOption.VisualProfile, currentOption.Icon);
     }
 
-    private void StopPanelPresentation()
+    private void StopPanelPresentation(bool restorePortraitBanner = true)
     {
         if (panelOpeningRoutine != null)
         {
@@ -1302,6 +1364,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         }
 
         StopTypewriter();
+        StopPortraitBanner(restorePortraitBanner);
 
         panelContentRevealTween?.Kill();
         panelContentRevealTween = null;
@@ -1547,11 +1610,12 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             visualFrameRect.anchorMin = new Vector2(0.5f, 0.5f);
             visualFrameRect.anchorMax = new Vector2(0.5f, 0.5f);
             visualFrameRect.pivot = new Vector2(0.5f, 0.5f);
-            float nameBlock = 108f;
+            float nameBlock = 156f;
             visualFrameRect.anchoredPosition = new Vector2(0f, -nameBlock * 0.5f);
         }
 
         PlaceSpeciesNameAbovePortrait(speciesName);
+        ApplyPortraitPanelPlate();
         SetPanelTitleVisible(false);
         if (detailsPanel != null)
             detailsPanel.SetActive(false);
@@ -1578,6 +1642,8 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             speciesNameSizeDelta = nameRect.sizeDelta;
             speciesNamePivot = nameRect.pivot;
             speciesNameAlignment = speciesNameText.alignment;
+            speciesNameCharacterSpacing = speciesNameText.characterSpacing;
+            speciesNameSpacingCaptured = true;
             speciesNamePoseCaptured = true;
         }
 
@@ -1597,9 +1663,11 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         }
 
         nameRect.anchoredPosition = new Vector2(visualFrameRect != null ? visualFrameRect.anchoredPosition.x : 0f, top);
-        nameRect.sizeDelta = new Vector2(width, 90f);
+        nameRect.sizeDelta = new Vector2(width, 140f);
         speciesNameText.alignment = TextAlignmentOptions.Center;
-        speciesNameText.text = speciesName;
+        speciesNameText.characterSpacing = 8f;
+        speciesNameText.text = StarterSelectionCopy.FormatPortraitBanner(portraitBannerFormat, speciesName);
+        speciesNameText.maxVisibleCharacters = 0;
         speciesNameText.gameObject.SetActive(true);
     }
 
@@ -1621,6 +1689,51 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         nameRect.anchoredPosition = speciesNameAnchoredPosition;
         nameRect.sizeDelta = speciesNameSizeDelta;
         speciesNameText.alignment = speciesNameAlignment;
+        if (speciesNameSpacingCaptured)
+            speciesNameText.characterSpacing = speciesNameCharacterSpacing;
+        StopPortraitBanner(restoreMesh: true);
+    }
+
+    private IEnumerator PlayPortraitBanner()
+    {
+        if (speciesNameText == null)
+            yield break;
+
+        portraitBanner = speciesNameText.GetComponent<TmpCharacterFlourish>();
+        if (portraitBanner == null)
+            portraitBanner = speciesNameText.gameObject.AddComponent<TmpCharacterFlourish>();
+
+        portraitBanner.PrepareHidden();
+        portraitBannerRoutine = StartCoroutine(portraitBanner.PlayReveal());
+        yield return portraitBannerRoutine;
+        portraitBannerRoutine = null;
+    }
+
+    private IEnumerator ExitPortraitBanner()
+    {
+        if (portraitBannerRoutine != null)
+        {
+            StopCoroutine(portraitBannerRoutine);
+            portraitBannerRoutine = null;
+        }
+
+        if (portraitBanner == null && speciesNameText != null)
+            portraitBanner = speciesNameText.GetComponent<TmpCharacterFlourish>();
+        if (portraitBanner == null)
+            yield break;
+
+        yield return portraitBanner.PlayExit();
+    }
+
+    private void StopPortraitBanner(bool restoreMesh)
+    {
+        if (portraitBannerRoutine != null)
+        {
+            StopCoroutine(portraitBannerRoutine);
+            portraitBannerRoutine = null;
+        }
+
+        portraitBanner?.StopMotion(restoreMesh);
     }
 
     private void BeginPortraitChime()
@@ -1763,6 +1876,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         }
 
         RestoreSpeciesNamePose();
+        RestorePortraitPanelPlate();
         portraitReveal = false;
         portraitProfile = null;
         portraitFallback = null;

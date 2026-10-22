@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: deep_dig
   displayName: Deep Dig
-  description: Heavy contact hit that ignores 50% of target Def stages.
+  description: Heavy contact hit.
   category: 0
   baseType: 8
-  rarity: 0
+  rarity: 1
   targeting: 0
   contactType: 0
   power: 72
-  apCost: 3
+  apCost: 4
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
@@ -43,6 +43,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -92,6 +92,16 @@ namespace Chainbound.Combat
         public int currentAP;
         public bool isAlive;
 
+        /// <summary>
+        /// Thread Lock cannot be applied again until this turn number.
+        /// Set when a Thread Lock expires, so the following turn is still blocked.
+        /// </summary>
+        public int threadLockBlockedUntilTurn;
+
+        /// <summary>Most recent combatant that drained AP, used to explain same-turn affordability failures.</summary>
+        public string lastApDrainSourceName;
+        public int lastApDrainTurn = -1;
+
         // ── Display Vitals (HUD snapshot) ───────────────────────────────
         /// <summary>HP shown on the HUD. Updated by the presenter at impact time.</summary>
         public int displayHP;
@@ -501,6 +511,76 @@ namespace Chainbound.Combat
         }
 
         /// <summary>
+        /// Add a one-hit Wall or Barrier without disturbing ordinary mitigation such as Armor.
+        /// Explicit overrides are reserved for resolver/passive effects; normal move legality
+        /// prevents replacing an intact block.
+        /// </summary>
+        public bool AddBlock(MitigationSource source, bool @override = false)
+        {
+            if (source == null || source.blockKind == BlockKind.None || source.turnsRemaining <= 0 || source.hitsRemaining == 0)
+                return false;
+
+            float sourceCap = BalanceConfigRuntime.ResolverConfig.mitigationSingleSourceCap;
+            source.mitigation = Math.Max(0f, Math.Min(sourceCap, source.mitigation));
+            if (source.mitigation <= 0f)
+                return false;
+
+            if (mitigationSources == null)
+                mitigationSources = new List<MitigationSource>();
+
+            for (int i = mitigationSources.Count - 1; i >= 0; i--)
+            {
+                MitigationSource existing = mitigationSources[i];
+                if (!IsMitigationSourceActive(existing) || existing.blockKind == BlockKind.None)
+                    continue;
+                if (!@override)
+                    return false;
+
+                mitigationSources.RemoveAt(i);
+            }
+
+            source.hitsRemaining = 1;
+            source.attackerApDrainOnHit = Math.Max(0, source.attackerApDrainOnHit);
+            source.apGainOnConsumeIfFaster = Math.Max(0, source.apGainOnConsumeIfFaster);
+            source.reflectPercent = Math.Max(0f, Math.Min(1f, source.reflectPercent));
+            source.stackKey = source.stackKey?.Trim() ?? string.Empty;
+            source.sourceTag = source.sourceTag ?? string.Empty;
+            source.sourceMoveId = source.sourceMoveId ?? string.Empty;
+            source.blockTier = ResolveBlockTier(source.mitigation);
+            mitigationSources.Add(source);
+            return true;
+        }
+
+        public bool HasIntactBlock()
+        {
+            if (mitigationSources == null)
+                return false;
+            for (int i = 0; i < mitigationSources.Count; i++)
+            {
+                MitigationSource source = mitigationSources[i];
+                if (IsMitigationSourceActive(source) && source.blockKind != BlockKind.None)
+                    return true;
+            }
+            return false;
+        }
+
+        public bool TryGetIntactBlock(ContactType contactType, out MitigationSource block)
+        {
+            block = null;
+            if (mitigationSources == null)
+                return false;
+            for (int i = mitigationSources.Count - 1; i >= 0; i--)
+            {
+                MitigationSource source = mitigationSources[i];
+                if (!IsMitigationSourceActive(source) || source.blockKind == BlockKind.None || !AppliesToContact(source, contactType))
+                    continue;
+                block = source;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Get total active mitigation after multiplicative stacking.
         /// </summary>
         public float GetTotalMitigation()
@@ -539,6 +619,15 @@ namespace Chainbound.Combat
 
         public int ConsumeMitigationHitBudgets(ContactType contactType)
         {
+            return ConsumeMitigationHitBudgets(contactType, consumeBlocks: true, out _);
+        }
+
+        public int ConsumeMitigationHitBudgets(
+            ContactType contactType,
+            bool consumeBlocks,
+            out MitigationSource consumedBlock)
+        {
+            consumedBlock = null;
             if (mitigationSources == null || mitigationSources.Count == 0)
                 return 0;
 
@@ -562,6 +651,10 @@ namespace Chainbound.Combat
 
                 if (source.hitsRemaining > 0 && AppliesToContact(source, contactType))
                 {
+                    if (source.blockKind != BlockKind.None && !consumeBlocks)
+                        continue;
+                    if (source.blockKind != BlockKind.None && consumedBlock == null)
+                        consumedBlock = source;
                     source.hitsRemaining--;
                     if (!IsMitigationSourceActive(source))
                     {
@@ -572,6 +665,22 @@ namespace Chainbound.Combat
             }
 
             return removed;
+        }
+
+        public void ClearTemporaryDefenses()
+        {
+            mitigationSources?.Clear();
+            barriers?.Clear();
+        }
+
+        private static BlockTier ResolveBlockTier(float mitigation)
+        {
+            float percent = mitigation <= 1f ? mitigation * 100f : mitigation;
+            if (percent <= 30f)
+                return BlockTier.Lower;
+            if (percent <= 50f)
+                return BlockTier.Mid;
+            return BlockTier.Greater;
         }
 
         private static bool AppliesToContact(MitigationSource source, ContactType contactType)
@@ -867,6 +976,16 @@ namespace Chainbound.Combat
             out int reflectedDamage,
             out int attackerApDrain)
         {
+            return ApplyBarrierAbsorption(incomingDamage, bypassBarriers, ContactType.None, out reflectedDamage, out attackerApDrain);
+        }
+
+        public int ApplyBarrierAbsorption(
+            int incomingDamage,
+            bool bypassBarriers,
+            ContactType contactType,
+            out int reflectedDamage,
+            out int attackerApDrain)
+        {
             reflectedDamage = 0;
             attackerApDrain = 0;
             if (barriers == null || barriers.Count == 0 || bypassBarriers)
@@ -878,6 +997,8 @@ namespace Chainbound.Combat
             {
                 if (remaining <= 0) break;
                 var barrier = barriers[i];
+                if (!AppliesToContact(barrier, contactType))
+                    continue;
 
                 if (barrier.barrierType == BarrierType.SingleHit && barrier.hitsRemaining != 0)
                 {
@@ -911,6 +1032,17 @@ namespace Chainbound.Combat
             }
 
             return remaining;
+        }
+
+        private static bool AppliesToContact(BarrierInstance barrier, ContactType contactType)
+        {
+            if (barrier == null || barrier.contactFilter == UtilityContactFilter.Any)
+                return true;
+            if (barrier.contactFilter == UtilityContactFilter.Contact)
+                return contactType == ContactType.Contact;
+            if (barrier.contactFilter == UtilityContactFilter.Projectile)
+                return contactType == ContactType.Projectile;
+            return contactType == ContactType.None;
         }
 
         /// <summary>
@@ -1014,6 +1146,11 @@ namespace Chainbound.Combat
         public string sourceTag;
         public int attackerApDrainOnHit;
         public UtilityContactFilter contactFilter = UtilityContactFilter.Any;
+        public BlockKind blockKind;
+        public BlockTier blockTier;
+        public string sourceMoveId;
+        public float reflectPercent;
+        public int apGainOnConsumeIfFaster;
     }
 
     [Serializable]

@@ -1,6 +1,7 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadChainlingLoadouts } from "./chainling_loadouts.ts";
 import { apCostForMove } from "./move_ap.ts";
+import { isBossOnlyMove } from "./move_flags.generated.ts";
 import { HP_POLICY_FULL_HEAL, partyLockError } from "./pvp_rules.ts";
 
 interface ChainlingRow {
@@ -54,6 +55,7 @@ export interface PvpChainlingWire {
   moveIds: string[];
   modifier1SectionIds: string[];
   modifier2SectionIds: string[];
+  moveAcquisitions: string[];
   ivs: number[];
   rebirthIvBonuses: number[];
   currentHp: number;
@@ -113,11 +115,17 @@ export async function profileHasActiveWallet(supabase: SupabaseClient, profileId
 
 function toWire(
   row: ChainlingRow,
-  loadout: { move_ids: string[]; modifier1_section_ids: string[]; modifier2_section_ids: string[] } | undefined,
+  loadout: {
+    move_ids: string[];
+    modifier1_section_ids: string[];
+    modifier2_section_ids: string[];
+    acquisitions?: string[];
+  } | undefined,
 ): PvpChainlingWire {
   const moveIds: string[] = [];
   const modifier1SectionIds: string[] = [];
   const modifier2SectionIds: string[] = [];
+  const moveAcquisitions: string[] = [];
   const sourceMoves = loadout?.move_ids ?? [];
   for (let i = 0; i < sourceMoves.length; i++) {
     const moveId = (sourceMoves[i] ?? "").trim();
@@ -125,6 +133,7 @@ function toWire(
     moveIds.push(moveId);
     modifier1SectionIds.push((loadout?.modifier1_section_ids[i] ?? "").trim());
     modifier2SectionIds.push((loadout?.modifier2_section_ids[i] ?? "").trim());
+    moveAcquisitions.push((loadout?.acquisitions?.[i] ?? "").trim());
   }
 
   const mutationId = (row.mutation_id ?? "").trim() || "none";
@@ -141,6 +150,7 @@ function toWire(
     moveIds,
     modifier1SectionIds,
     modifier2SectionIds,
+    moveAcquisitions,
     ivs: padInts(row.ivs, 6),
     rebirthIvBonuses: padInts(row.rebirth_iv_bonuses, 6),
     currentHp: row.current_hp ?? -1,
@@ -162,6 +172,7 @@ export function prepareLockedParty(party: PvpPartyWire): { party: PvpPartyWire; 
     const moveIds = Array.isArray(chainling.moveIds) ? chainling.moveIds : [];
     const moveApCosts: number[] = [];
     for (const moveId of moveIds) {
+      if (isBossOnlyMove(moveId)) return { party, error: "party_move_boss_only" };
       const cost = apCostForMove(moveId);
       if (cost === null) return { party, error: "party_move_unknown" };
       moveApCosts.push(cost);

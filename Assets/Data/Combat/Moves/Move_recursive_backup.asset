@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: recursive_backup
   displayName: Recursive Backup
-  description: Below 50% HP heal 20% at turn end and reset durations.
+  description: Below 50% HP, heal 20% now.
   category: 2
   baseType: 11
-  rarity: 2
+  rarity: 0
   targeting: 4
   contactType: 2
   power: 0
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

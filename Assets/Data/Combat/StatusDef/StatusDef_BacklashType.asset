@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 118
   displayName: 'Backlash[Type]'
-  effectSummary: Contact adds typed DoT
+  effectSummary: Token. No contact damage.
   statusClass: 0
   origin: 0
   defaultDuration: 3

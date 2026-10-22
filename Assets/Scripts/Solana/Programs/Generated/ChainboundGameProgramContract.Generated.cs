@@ -120,6 +120,12 @@ namespace Chainbound.Combat
         public static readonly bool[] InitializeOwnershipConfigWritable = { true, false, true, false };
         public static readonly bool[] InitializeOwnershipConfigSigner = { false, false, true, false };
 
+        public const string PrepareProfileStampTicket = "prepare_profile_stamp_ticket";
+        public static readonly byte[] PrepareProfileStampTicketDiscriminator = { 14, 195, 234, 21, 25, 158, 57, 144 };
+        public static readonly string[] PrepareProfileStampTicketAccounts = { "ticket", "ownership_config", "owner", "game_config", "result_authority", "system_program" };
+        public static readonly bool[] PrepareProfileStampTicketWritable = { true, false, false, false, true, false };
+        public static readonly bool[] PrepareProfileStampTicketSigner = { false, false, false, false, true, false };
+
         public const string PrepareStampTicket = "prepare_stamp_ticket";
         public static readonly byte[] PrepareStampTicketDiscriminator = { 244, 254, 92, 75, 125, 49, 21, 158 };
         public static readonly string[] PrepareStampTicketAccounts = { "ticket", "vault", "ownership_config", "owner", "game_config", "result_authority", "system_program" };
@@ -167,6 +173,12 @@ namespace Chainbound.Combat
         public static readonly string[] StampKnownMoveAccounts = { "owner", "profile", "reservation", "vault", "ticket", "ownership_config", "core_authority", "stamped_asset", "moves_collection", "core_program", "system_program" };
         public static readonly bool[] StampKnownMoveWritable = { true, true, true, true, true, false, false, true, true, false, false };
         public static readonly bool[] StampKnownMoveSigner = { true, false, false, false, false, false, false, false, false, false, false };
+
+        public const string StampProfileKnownMove = "stamp_profile_known_move";
+        public static readonly byte[] StampProfileKnownMoveDiscriminator = { 158, 107, 90, 125, 109, 128, 171, 210 };
+        public static readonly string[] StampProfileKnownMoveAccounts = { "owner", "ticket", "ownership_config", "core_authority", "stamped_asset", "moves_collection", "core_program", "system_program" };
+        public static readonly bool[] StampProfileKnownMoveWritable = { true, true, false, false, true, true, false, false };
+        public static readonly bool[] StampProfileKnownMoveSigner = { true, false, false, false, false, false, false, false };
 
         public const string UpdateGameConfig = "update_game_config";
         public static readonly byte[] UpdateGameConfigDiscriminator = { 180, 82, 7, 205, 89, 182, 61, 128 };

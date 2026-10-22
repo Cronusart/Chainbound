@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: bug_fix
   displayName: Bug Fix
-  description: Heal 10%; cleanse 1 debuff; deal -20% damage next turn.
+  description: Heal 10%, cleanse 1 debuff, and your next move deals -10%.
   category: 2
   baseType: 12
-  rarity: 1
+  rarity: 0
   targeting: 4
   contactType: 2
   power: 0
@@ -26,14 +26,41 @@ MonoBehaviour:
   hitCountMin: 1
   hitCountMax: 1
   rechargeTurns: 0
-  statusEffects: []
+  statusEffects:
+  - statusId: 305
+    duration: 1
+    chance: 1
+    overrideTargeting: 1
+    targetOverride: 4
+    parameterType: 0
   stageChanges: []
   tags:
   - UTIL
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 12
+    magnitude: 1
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: bug_fix
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 4
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -43,6 +70,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0
