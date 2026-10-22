@@ -23,13 +23,36 @@ import {
   reconcileRamDeltaOnChain,
   SECOND_STAMP_RAM_COST_PIN,
 } from "./ownership_spine.ts";
+import { allowedHostCategoriesForModifier, eligibleModifierPoolForMove } from "./modifier_host_compatibility.ts";
 
-const repoPrefix = import.meta.url.includes("/Supabase/supabase/functions/_shared/")
-  ? "../../../../"
-  : "../../../";
+const repoPrefix = import.meta.url.includes("/Supabase/supabase/functions/_shared/") ? "../../../../" : "../../../";
 const functionPrefix = import.meta.url.includes("/Supabase/supabase/functions/_shared/")
   ? "../../../functions/"
   : "../";
+
+Deno.test("stamp modifier pool is filtered by the canonical host move category", async () => {
+  const eligible = eligibleModifierPoolForMove("baseline_striker");
+  assertEquals(eligible.includes("6.1-a"), true);
+  assertEquals(eligible.includes("6.4-d"), false);
+  assertEquals(eligible.includes("6.8-b"), false);
+  assertEquals(eligible.includes("8.1-a"), false);
+  for (const sectionId of eligible) {
+    const allowed = allowedHostCategoriesForModifier(sectionId);
+    assertEquals(allowed == null || allowed.includes("DamagingMelee"), true, sectionId);
+  }
+
+  const secret = new TextEncoder().encode("host-compatible-stamp-test");
+  const result = await deriveStampResult(
+    secret,
+    "profile-a",
+    "known-a",
+    1,
+    1,
+    EXPECTED_MODIFIER_POOL_HASH,
+    "baseline_striker",
+  );
+  assertEquals(eligible.includes(result.modifierIds[0]), true);
+});
 
 function functionSourceUrl(relativePath: string): URL {
   const leaf = relativePath.startsWith("../") ? relativePath.slice(3) : relativePath;

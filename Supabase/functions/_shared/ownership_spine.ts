@@ -10,6 +10,7 @@ import * as bs58Module from "npm:bs58@5.0.0";
 import { Buffer } from "npm:buffer@6.0.3";
 import { JsonMap, SOLANA_BASE58_RE, str } from "./account_helpers.ts";
 import { MODIFIER_EFFECT_BOUNDS, MODIFIER_POOL } from "./modifier_pool.generated.ts";
+import { eligibleModifierPoolForMove } from "./modifier_host_compatibility.ts";
 import { EVENT_KNOWN_GRANT_CATALOG, KNOWN_POOL } from "./known_pool.generated.ts";
 import {
   HELIUS_DAS_URL_ENV,
@@ -1027,6 +1028,7 @@ export async function deriveStampResult(
   modifierCount: number,
   generatorVersion: number,
   poolHash: string,
+  hostMoveId = "",
 ): Promise<StampAuthorityResult> {
   if (modifierCount !== 1 && modifierCount !== 2) throw new Error("invalid_modifier_count");
   if (!Number.isSafeInteger(generatorVersion) || generatorVersion <= 0) throw new Error("invalid_generator_version");
@@ -1042,8 +1044,10 @@ export async function deriveStampResult(
     generatorVersion,
     poolHash,
   );
-  const first = readU32(digest, 0) % MODIFIER_POOL.length;
-  let second = readU32(digest, 4) % (MODIFIER_POOL.length - 1);
+  const modifierPool = hostMoveId ? eligibleModifierPoolForMove(hostMoveId) : MODIFIER_POOL;
+  if (modifierPool.length < modifierCount) throw new Error("insufficient_compatible_modifiers");
+  const first = readU32(digest, 0) % modifierPool.length;
+  let second = modifierCount === 2 ? readU32(digest, 4) % (modifierPool.length - 1) : 0;
   if (second >= first) second++;
   const rarityRoll = readU32(digest, 8) % 10000;
   const rarity = rarityRoll < 4500
@@ -1057,7 +1061,7 @@ export async function deriveStampResult(
     : rarityRoll < 9900
     ? 4
     : 5;
-  const modifierIds = modifierCount === 1 ? [MODIFIER_POOL[first]] : [MODIFIER_POOL[first], MODIFIER_POOL[second]];
+  const modifierIds = modifierCount === 1 ? [modifierPool[first]] : [modifierPool[first], modifierPool[second]];
   return {
     modifierIds,
     rarity,
