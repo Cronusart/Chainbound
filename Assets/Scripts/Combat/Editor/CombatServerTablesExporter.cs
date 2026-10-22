@@ -14,16 +14,27 @@ namespace Chainbound.Combat.Editor
     {
         private const string ManifestRelativePath = "backend/Chainbound.BattleService/manifests/gameplay-manifest.json";
         private const string SharedRelativePath = "Supabase/functions/_shared";
+        private const string NestedSharedRelativePath = "Supabase/supabase/functions/_shared";
 
         [MenuItem("Tools/Chainbound/Combat/Export Server Move Tables", priority = 341)]
         public static void ExportAll()
         {
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            string outputRoot = Path.Combine(projectRoot, SharedRelativePath);
-            Directory.CreateDirectory(outputRoot);
             IReadOnlyDictionary<string, string> outputs = BuildCurrentTables();
-            foreach (KeyValuePair<string, string> output in outputs)
-                File.WriteAllText(Path.Combine(outputRoot, output.Key), output.Value, new UTF8Encoding(false));
+            string[] outputRoots =
+            {
+                Path.Combine(projectRoot, SharedRelativePath),
+                Path.Combine(projectRoot, NestedSharedRelativePath),
+            };
+            for (int rootIndex = 0; rootIndex < outputRoots.Length; rootIndex++)
+            {
+                string outputRoot = outputRoots[rootIndex];
+                if (rootIndex > 0 && !Directory.Exists(outputRoot))
+                    continue;
+                Directory.CreateDirectory(outputRoot);
+                foreach (KeyValuePair<string, string> output in outputs)
+                    File.WriteAllText(Path.Combine(outputRoot, output.Key), output.Value, new UTF8Encoding(false));
+            }
             AssetDatabase.Refresh();
             Debug.Log($"[CombatServerTablesExporter] Exported {LoadMoves().Count} move AP entries and server availability tables.");
         }
@@ -89,6 +100,15 @@ namespace Chainbound.Combat.Editor
             sb.AppendLine();
             sb.AppendLine("export function isBossOnlyMove(moveId: string): boolean {");
             sb.AppendLine("  return BOSS_ONLY_MOVE_IDS.has((moveId ?? \"\").trim());");
+            sb.AppendLine("}");
+            sb.AppendLine();
+            sb.AppendLine("export const BLOCK_MOVE_IDS: ReadonlySet<string> = new Set([");
+            foreach (MoveDefinitionSO move in moves.Where(HasBlockWindow))
+                sb.AppendLine($"  \"{Escape(move.moveId)}\",");
+            sb.AppendLine("]);");
+            sb.AppendLine();
+            sb.AppendLine("export function isBlockMove(moveId: string): boolean {");
+            sb.AppendLine("  return BLOCK_MOVE_IDS.has((moveId ?? \"\").trim());");
             sb.AppendLine("}");
             return sb.ToString();
         }
@@ -186,6 +206,16 @@ namespace Chainbound.Combat.Editor
                 return false;
             for (int i = 0; i < move.tags.Count; i++)
                 if (string.Equals(move.tags[i], expected, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            return false;
+        }
+
+        private static bool HasBlockWindow(MoveDefinitionSO move)
+        {
+            if (move?.utilityEffects == null)
+                return false;
+            for (int i = 0; i < move.utilityEffects.Count; i++)
+                if (move.utilityEffects[i]?.effectType == UtilityEffectType.BlockWindow)
                     return true;
             return false;
         }

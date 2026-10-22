@@ -97,6 +97,7 @@ namespace Chainbound.Combat
         Targeting,
         Barrier,
         Durability,
+        StatSubstitution,
     }
 
     /// <summary>
@@ -311,6 +312,25 @@ namespace Chainbound.Combat
         StripBuffsThenStage,
         /// <summary>Heal the source for a percent of MaxHP per General debuff on the target. Params: percentPerDebuff:chance:stackKey.</summary>
         HealSelfPerTargetDebuff,
+        /// <summary>One-hit Wall/Barrier mitigation. Params: percent:category:turns:stackKey.</summary>
+        BlockWindow,
+        /// <summary>Reflect a percent of damage prevented by the paired BlockWindow. Params: percent:stackKey.</summary>
+        BlockReflect,
+    }
+
+    public enum BlockKind
+    {
+        None,
+        Wall,
+        Barrier,
+    }
+
+    public enum BlockTier
+    {
+        None,
+        Lower,
+        Mid,
+        Greater,
     }
 
     public enum PassiveDisplayState

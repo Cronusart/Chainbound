@@ -14,7 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: guard_posture
   displayName: Guard Posture
-  description: Reduce next hit by 25%; lasts 1 hit or 2 turns.
+  description: "**Armor \xB7 1 AP.** Reduce the next hit by 25%; lasts 1 hit or 2
+    turns. Stacks with a Wall or Barrier. *(numbers unchanged; reviewed in the Armor
+    round)*"
   category: 2
   baseType: 0
   rarity: 0
@@ -29,7 +31,7 @@ MonoBehaviour:
   statusEffects: []
   stageChanges: []
   tags:
-  - UTIL
+  - ARMOR
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
@@ -39,7 +41,7 @@ MonoBehaviour:
     turnBudget: 2
     hitBudget: 1
     apGain: 0
-    stackKey: wall_guard_posture
+    stackKey: armor_guard_posture
     statusId: 0
     statusDuration: 0
     targetOverride: 0

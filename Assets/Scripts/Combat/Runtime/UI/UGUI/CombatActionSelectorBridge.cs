@@ -588,7 +588,8 @@ namespace Chainbound.Combat
                             actor,
                             HandlePanelActionCommitted,
                             HandlePanelSelectionCanceled,
-                            projectedGiftAp);
+                            projectedGiftAp,
+                            _queuedActionsBySlot);
 
                     if (!opened)
                     {
@@ -971,6 +972,21 @@ namespace Chainbound.Combat
                 return false;
 
             action = CombatAction.UseMove(ControlledTeamIndex, moveIndex);
+            MoveInstance move = actor.moves[moveIndex];
+            if (CombatWallStateUtility.MovePlacesBlock(move))
+            {
+                TeamState team = ControlledTeam();
+                for (int targetSlot = 0; team?.activeIndices != null && targetSlot < team.activeIndices.Count; targetSlot++)
+                {
+                    ChainlingInstance target = team.GetActiveInSlot(targetSlot);
+                    if (!_eligibilityService.EvaluateBlockTarget(
+                            actor, move, target, _pendingState, _queuedActionsBySlot, GetCurrentSlotIndex()).canTarget)
+                        continue;
+                    action = CombatAction.UseMove(ControlledTeamIndex, moveIndex, ControlledTeamIndex, targetSlot);
+                    return true;
+                }
+                return false;
+            }
             return true;
         }
 
@@ -1003,7 +1019,9 @@ namespace Chainbound.Combat
                     actor,
                     move,
                     _pendingState,
-                    extraAvailableAp: projectedGiftAp);
+                    extraAvailableAp: projectedGiftAp,
+                    queuedBySlot: _queuedActionsBySlot,
+                    actorSlot: GetCurrentSlotIndex());
                 if (!evaluation.canSelect)
                     continue;
 
@@ -1040,6 +1058,40 @@ namespace Chainbound.Combat
             _queuedActionsBySlot[slot] = queued;
             if (queued.actionType == CombatActionType.Swap)
                 _reservedBenchIndices.Add(queued.swapTargetIndex);
+            ReconcileQueuedBlockTargets(slot, queued);
+        }
+
+        private void ReconcileQueuedBlockTargets(int preferredSlot, CombatAction preferredAction)
+        {
+            TeamState team = ControlledTeam();
+            ChainlingInstance actor = team?.GetActiveInSlot(preferredSlot);
+            if (actor?.moves == null || preferredAction == null || preferredAction.actionType != CombatActionType.UseMove ||
+                preferredAction.moveIndex < 0 || preferredAction.moveIndex >= actor.moves.Count ||
+                !CombatWallStateUtility.MovePlacesBlock(actor.moves[preferredAction.moveIndex]) ||
+                preferredAction.targetTeamIndex != ControlledTeamIndex || preferredAction.targetSlotIndex < 0)
+            {
+                return;
+            }
+
+            var conflicts = new List<int>();
+            foreach (KeyValuePair<int, CombatAction> pair in _queuedActionsBySlot)
+            {
+                if (pair.Key == preferredSlot || pair.Value == null || pair.Value.actionType != CombatActionType.UseMove)
+                    continue;
+                ChainlingInstance otherActor = team.GetActiveInSlot(pair.Key);
+                if (otherActor?.moves == null || pair.Value.moveIndex < 0 || pair.Value.moveIndex >= otherActor.moves.Count)
+                    continue;
+                if (!CombatWallStateUtility.MovePlacesBlock(otherActor.moves[pair.Value.moveIndex]))
+                    continue;
+                if (pair.Value.targetTeamIndex == preferredAction.targetTeamIndex &&
+                    pair.Value.targetSlotIndex == preferredAction.targetSlotIndex)
+                {
+                    conflicts.Add(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < conflicts.Count; i++)
+                RemoveQueuedActionForSlot(conflicts[i]);
         }
 
         private bool HasQueuedCapture()

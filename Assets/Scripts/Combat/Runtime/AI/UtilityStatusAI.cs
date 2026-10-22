@@ -20,6 +20,7 @@ namespace Chainbound.Combat
             var myTeam = state.GetTeam(teamIndex);
             var enemyTeam = state.GetOpposingTeam(teamIndex);
             var actions = new List<CombatAction>();
+            var queuedBySlot = new Dictionary<int, CombatAction>();
 
             for (int slot = 0; slot < myTeam.activeIndices.Count; slot++)
             {
@@ -30,7 +31,16 @@ namespace Chainbound.Combat
                     continue;
                 }
 
-                var legalActions = AIHelpers.GetLegalActions(c, myTeam, enemyTeam, teamIndex, state);
+                var legalActions = AIHelpers.GetLegalActions(
+                    c, myTeam, enemyTeam, teamIndex, state, queuedBySlot: queuedBySlot, actorSlot: slot);
+
+                if (AIHelpers.ShouldBankForGreaterBlock(c, myTeam, enemyTeam, state, queuedBySlot, slot))
+                {
+                    CombatAction bank = CombatAction.Pass(teamIndex);
+                    actions.Add(bank);
+                    queuedBySlot[slot] = bank;
+                    continue;
+                }
 
                 // Score every action by disruption value
                 float bestScore = -1f;
@@ -49,6 +59,7 @@ namespace Chainbound.Combat
                 }
 
                 actions.Add(bestAction);
+                queuedBySlot[slot] = bestAction;
             }
 
             return actions;
@@ -67,6 +78,8 @@ namespace Chainbound.Combat
                 return 0f;
 
             var move = actor.moves[sa.action.moveIndex];
+            if (CombatWallStateUtility.MovePlacesBlock(move))
+                return sa.score;
             float score = 0f;
             int effectiveCost = ResolveScoringCost(actor, move);
 

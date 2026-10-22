@@ -50,6 +50,7 @@ namespace Chainbound.Combat
         public float chemistry;
         public float crit;
         public float mitigation;
+        public float wallMitigation;
         public float mitigationFloor;
         public float tuningMultiplier;
         public int preMitigationDamage;

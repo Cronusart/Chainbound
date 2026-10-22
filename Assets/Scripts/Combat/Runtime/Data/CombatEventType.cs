@@ -92,5 +92,7 @@ namespace Chainbound.Combat
         SpeedTieResolved,
         BuffBlocked,
         BossTell,
+        // Appended for serialized enum stability: informational outcome, not damage.
+        BlockIgnoredDot,
     }
 }

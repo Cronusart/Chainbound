@@ -35,6 +35,8 @@ namespace Chainbound.Combat
         public string sourceChainlingId;
         public string targetChainlingId;
         public string moveId;
+        public string modifierName;
+        public int amount;
 
         public string ToJson()
         {
@@ -52,7 +54,9 @@ namespace Chainbound.Combat
             string reason,
             string sourceChainlingId,
             string targetChainlingId,
-            string moveId)
+            string moveId,
+            string modifierName = null,
+            int amount = 0)
         {
             return new ModifierOutcomePayload
             {
@@ -68,6 +72,8 @@ namespace Chainbound.Combat
                 sourceChainlingId = sourceChainlingId ?? string.Empty,
                 targetChainlingId = targetChainlingId ?? string.Empty,
                 moveId = moveId ?? string.Empty,
+                modifierName = modifierName ?? string.Empty,
+                amount = amount,
             };
         }
 
@@ -82,7 +88,9 @@ namespace Chainbound.Combat
             string reason,
             string sourceChainlingId,
             string targetChainlingId,
-            string moveId)
+            string moveId,
+            string modifierName = null,
+            int amount = 0)
         {
             ModifierOutcomePayload payload = Create(
                 sectionId,
@@ -94,7 +102,9 @@ namespace Chainbound.Combat
                 reason,
                 sourceChainlingId,
                 targetChainlingId,
-                moveId);
+                moveId,
+                modifierName,
+                amount);
 
             return new CombatEvent
             {

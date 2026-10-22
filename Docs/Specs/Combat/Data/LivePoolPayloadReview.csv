@@ -1,7 +1,7 @@
 MoveId,ExpectedTokens,TextOnly,Reviewer,Note
 accuracy_focus,ChangeStage,false,Cronus,Reviewed against authoritative payload
 ap_reserve,BankAPUntilNextTurn,false,Cronus,Reviewed against authoritative payload
-barrier_wall,MitigationWindow,false,Cronus,Reviewed against authoritative payload
+barrier_wall,BlockWindow,false,Cronus,Reviewed against authoritative payload
 baseline_blast,Damage,false,Cronus,Reviewed against authoritative payload
 baseline_jab,Damage,false,Cronus,Reviewed against authoritative payload
 baseline_shot,Damage,false,Cronus,Reviewed against authoritative payload
@@ -12,7 +12,7 @@ baseline_thrust,Damage|MeleeDef,false,Cronus,Reviewed against authoritative payl
 baseline_volley,Damage,false,Cronus,Reviewed against authoritative payload
 bean_sip,Speed|GainAP|Heal|Recharge,false,Cronus,Reviewed against authoritative payload
 blade_flurry,Damage,false,Cronus,Reviewed against authoritative payload
-blockade,MitigationWindow,false,Cronus,Reviewed against authoritative payload
+blockade,BlockWindow,false,Cronus,Reviewed against authoritative payload
 bug_fix,Staggered|Cleanse|Heal,false,Cronus,Reviewed against authoritative payload
 bulwark_blow,Damage,false,Cronus,Reviewed against authoritative payload
 chain_fork,Damage,false,Cronus,Reviewed against authoritative payload
@@ -23,7 +23,7 @@ cipher_burst,Damage,false,Cronus,Reviewed against authoritative payload
 cipher_shot,Damage|CipherLocked,false,Cronus,Reviewed against authoritative payload
 civet_beam,Damage|Speed,false,Cronus,Reviewed against authoritative payload
 cold_snap,Speed,false,Cronus,Reviewed against authoritative payload
-compound_guard,MeleeDef|MitigationWindow,false,Cronus,Reviewed against authoritative payload
+compound_guard,MeleeDef|BlockWindow,false,Cronus,Reviewed against authoritative payload
 compression_trade,MeleeAtk|Speed,false,Cronus,Reviewed against authoritative payload
 cryo_ray,Damage|Speed,false,Cronus,Reviewed against authoritative payload
 crystal_extraction,HealSelfPerTargetDebuff|Cleanse,false,Cronus,Reviewed against authoritative payload
@@ -31,7 +31,7 @@ debuff_script,MeleeAtk|MeleeDef,false,Cronus,Reviewed against authoritative payl
 deep_dig,Damage,false,Cronus,Reviewed against authoritative payload
 deep_reap,Damage|LifestealPercent,false,Cronus,Reviewed against authoritative payload
 defense_corrupt,MeleeDef,false,Cronus,Reviewed against authoritative payload
-ember_wall,FullAbsorbBarrier|WallHitRetaliation,false,Cronus,Reviewed against authoritative payload
+ember_wall,BlockWindow|WallHitRetaliation,false,Cronus,Reviewed against authoritative payload
 error_correction,Cleanse|Heal,false,Cronus,Reviewed against authoritative payload
 exploit_window,ExploitMark,false,Cronus,Reviewed against authoritative payload
 field_split,FieldEntryStageChange,false,Cronus,Reviewed against authoritative payload
@@ -44,7 +44,7 @@ gas_bump,Damage,false,Cronus,Reviewed against authoritative payload
 hammer_sync,Damage,false,Cronus,Reviewed against authoritative payload
 hub_heal,Heal,false,Cronus,Reviewed against authoritative payload
 hype_burst,StripBuffs|MeleeAtk,false,Cronus,Compound opcode strips buffs then stages the user
-ice_wall,MitigationWindow|GainApOnDamageIfSpeedHigher,false,Cronus,Reviewed against authoritative payload
+ice_wall,BlockWindow|GainApOnDamageIfSpeedHigher,false,Cronus,Reviewed against authoritative payload
 immovable_stance,Immovable,false,Cronus,Reviewed against authoritative payload
 immutable_ledger,PassiveHandler,false,Cronus,Passive handler reviewed against resolver allowlist
 isolation_tool,ApplyChemistryStatus|Anchored,false,Cronus,Reviewed against authoritative payload

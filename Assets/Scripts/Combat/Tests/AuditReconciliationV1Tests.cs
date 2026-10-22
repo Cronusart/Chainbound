@@ -140,27 +140,26 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
-        public void Walls_MitigateForTheirTurnWindowWithUnlimitedHits()
+        public void Walls_BlockOneMatchingHitWithinTheirTwoTurnWindow()
         {
-            foreach ((string id, float amount, int turns) in new[]
+            foreach ((string id, float amount, ContactType matching, ContactType nonMatching) in new[]
             {
-                ("ash_guard", 0.20f, 2),
-                ("compound_guard", 0.20f, 2),
-                ("ice_wall", 0.25f, 1),
-                ("blockade", 0.25f, 2),
+                ("ash_guard", 0.35f, ContactType.Projectile, ContactType.Contact),
+                ("compound_guard", 0.35f, ContactType.Projectile, ContactType.Contact),
+                ("ice_wall", 0.40f, ContactType.Contact, ContactType.Projectile),
+                ("blockade", 0.60f, ContactType.Contact, ContactType.Projectile),
             })
             {
                 MoveDefinitionSO definition = LoadMove(id);
                 MoveInstance move = CombatFactory.CreateMove(definition);
                 ChainlingInstance ally = Chainling(id + "-ally");
                 Executor(null).Execute(Chainling(id + "-source"), ally, move, 1, true);
-                Assert.That(ally.GetTotalMitigation(), Is.EqualTo(amount).Within(0.0001f), id);
-                ally.ConsumeMitigationHitBudgets();
-                ally.ConsumeMitigationHitBudgets();
-                Assert.That(ally.GetTotalMitigation(), Is.EqualTo(amount).Within(0.0001f), id + " after two hits");
-                for (int i = 0; i < turns; i++)
-                    ally.TickMitigationSources();
-                Assert.That(ally.GetTotalMitigation(), Is.Zero, id + " after duration");
+                Assert.That(ally.GetTotalMitigation(matching), Is.EqualTo(amount).Within(0.0001f), id);
+                Assert.That(ally.GetTotalMitigation(nonMatching), Is.Zero, id + " wrong category");
+                ally.ConsumeMitigationHitBudgets(nonMatching);
+                Assert.That(ally.HasIntactBlock(), Is.True, id + " survives wrong category");
+                ally.ConsumeMitigationHitBudgets(matching);
+                Assert.That(ally.HasIntactBlock(), Is.False, id + " consumed by first matching hit");
             }
 
             Assert.That(LoadMove("compound_guard").stageChanges.Any(x => x.stat == CoreStat.MeleeDef && x.stages == 1), Is.True);
@@ -547,7 +546,8 @@ namespace Chainbound.Combat.Tests
 
                 foreach (string effect in utilities.Split('|'))
                 {
-                    if (!effect.StartsWith("MitigationWindow:", StringComparison.Ordinal)) continue;
+                    if (!effect.StartsWith("MitigationWindow:", StringComparison.Ordinal) &&
+                        !effect.StartsWith("BlockWindow:", StringComparison.Ordinal)) continue;
                     string[] parts = effect.Split(':');
                     Assert.That(parts.Length, Is.GreaterThanOrEqualTo(4), moveId);
                     Assert.That(parts[3], Is.Not.EqualTo("0"), moveId + " has a zero-hit mitigation window");

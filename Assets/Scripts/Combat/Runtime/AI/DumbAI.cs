@@ -16,6 +16,7 @@ namespace Chainbound.Combat
             var myTeam = state.GetTeam(teamIndex);
             var enemyTeam = state.GetOpposingTeam(teamIndex);
             var actions = new List<CombatAction>();
+            var queuedBySlot = new Dictionary<int, CombatAction>();
 
             for (int slot = 0; slot < myTeam.activeIndices.Count; slot++)
             {
@@ -26,7 +27,8 @@ namespace Chainbound.Combat
                     continue;
                 }
 
-                var legalActions = AIHelpers.GetLegalActions(c, myTeam, enemyTeam, teamIndex, state);
+                var legalActions = AIHelpers.GetLegalActions(
+                    c, myTeam, enemyTeam, teamIndex, state, queuedBySlot: queuedBySlot, actorSlot: slot);
                 CombatAction chosen = CombatAction.Pass(teamIndex);
 
                 // First affordable damaging move
@@ -59,6 +61,7 @@ namespace Chainbound.Combat
                 }
 
                 actions.Add(chosen);
+                queuedBySlot[slot] = chosen;
             }
 
             return actions;

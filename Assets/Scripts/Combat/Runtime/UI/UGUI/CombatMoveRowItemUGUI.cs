@@ -146,7 +146,7 @@ namespace Chainbound.Combat
                     labelText.font = fontOverride;
                 if (labelText.fontSize <= 0f)
                     labelText.fontSize = 20f;
-                labelText.enableWordWrapping = false;
+                labelText.textWrappingMode = TextWrappingModes.NoWrap;
                 labelText.alignment = TextAlignmentOptions.Left;
             }
 
@@ -690,7 +690,7 @@ namespace Chainbound.Combat
                 priorityPillText.text = MoveSelectDisplayUtility.PriorityPillLabel;
                 priorityPillText.alignment = TextAlignmentOptions.Center;
                 priorityPillText.color = priorityPillTextColor;
-                priorityPillText.enableWordWrapping = false;
+                priorityPillText.textWrappingMode = TextWrappingModes.NoWrap;
                 priorityPillText.overflowMode = TextOverflowModes.Overflow;
                 priorityPillText.raycastTarget = false;
                 if (labelText != null && labelText.font != null)
@@ -725,7 +725,7 @@ namespace Chainbound.Combat
 
             if (priorityPillText != null)
             {
-                priorityPillText.enableWordWrapping = false;
+                priorityPillText.textWrappingMode = TextWrappingModes.NoWrap;
                 priorityPillText.overflowMode = TextOverflowModes.Overflow;
                 priorityPillText.fontSize = fontSize;
                 priorityPillText.ForceMeshUpdate(true);

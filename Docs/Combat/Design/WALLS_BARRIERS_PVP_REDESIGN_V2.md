@@ -1,559 +1,615 @@
-# Walls & Barriers v2: testing Cronus's simple rule set (PROPOSALS)
+# Walls & Barriers: decided rules and implementation plan
 
-> **Status: PROPOSALS ONLY.** Nothing here is applied to code or data. Every value, card text, rename and code note is for Cronus to accept, change or reject.
-> **Snapshot:** engine mirror `/workspace/balance/s10` (2026-10-20 02:15 CT). **Sim:** `tempo_2v2_sim.py` (unchanged) + `walls_pvp_v2_sim.py` (new designs and policies, as a subclass). 4000 battles per cell, random IVs (±5 per stat), real learn-pool kits, type chemistry, passives, statuses, AP denial, swaps, focus fire and ally-targeted walls. Seeds are shared across designs, so columns are directly comparable.
-> **Checker:** `walls_pvp_v2_check.py`. Result: see section 11.
-> **Hard rules kept:** no move changes rarity or learn-pool tier (`learn_pool_rarity_6d7ff36f`); Ember Wall stays Cinislug's Legendary signature and the strictly highest rarity in its pool; no self-damage; Block stays the barrier type.
+> **Status: DECIDED, implementation-ready.** Cronus approved these rules on 2026-10-20, then sent two corrections (block denial at target selection; 2-turn duration) and one design acceptance (near-continuous coverage). Everything in section 1 is a design decision. Details Cronus left open carry a default marked **(default, accepted unless Cronus objects)**.
+> **Codex plan:** `walls_barriers_tiered_v1.plan.md` (same folder) turns section 5 into phased work.
+> **Snapshot:** engine mirror `/workspace/balance/s10`. **Sim:** `walls_pvp_v2_sim.py`, an extension of the unchanged `tempo_2v2_sim.py`.
+> - 4000 battles per cell, 31 cells, random IVs (±5).
+> - Real learn-pool kits, type chemistry, passives, statuses, AP denial, swaps and focus fire.
+> - All designs share seeds, so columns are directly comparable.
+>
+> **Checker:** `walls_pvp_v2_check.py`; result in section 11.
+> **Hard rules kept:**
+> - No move changes rarity, type, or learn-pool membership or tier (`learn_pool_rarity_6d7ff36f`). Renames change the display name only; the `MoveId` stays.
+> - Typed moves beat typeless ones.
+> - No self-damage.
+> - Block stays the barrier type.
+>
+> **Supersedes:** the PROPOSAL "P" version of this doc (full block, flat 2 AP, Recharge 2) and the first decided round (blocks lasting "this turn", cancel-on-resolution). Both are kept only as comparison columns (`P`, `F`).
 
-## 0. Plain-language summary
+## 1. Decided rules (approved by Cronus 2026-10-20)
 
-**Cronus's rule set:**
-- **Walls** stop melee.
-- **Barriers** stop ranged.
-- Both act first (PRIOR).
-- Both need a recharge.
+1. **Walls block MELEE only. Barriers block RANGED only.** Ember Wall is a melee Wall and has no dual-category perk.
+2. **Three tiers.** A block mitigates a percentage of the **one hit** it blocks.
 
-**Verdict.** It works as a rule, and the sim supports the core idea. It needs **three fixes** before it is safe to ship:
+   | Tier | Mitigation | Priority | AP | Role |
+   |---|---|---|---|---|
+   | Lower | 10–30% | almost always [PRIOR] | 1–2 | quick, cheap answer |
+   | Mid | 30–50% | optional, depends on the effects | 2–3 | "utility" blocks: about half, plus an effect |
+   | Greater | 50–75% | rarely | 3–4 | damage mitigators on tanky / guardian profiles. Turn-1 use usually needs an AP setup. |
 
-1. **"Blocks one hit, this turn only."** Of the four versions, the 1-hit version (V4) is the only one where multi-hit moves are the counter Cronus wants. Blade Flurry into a self-walled Cinislug:
-   - V4: mean KO turn **4.98**, close to no walls at all (4.49).
-   - V1 (one whole move blocked): **9.71**. V2 (all hits that turn blocked): **9.83**.
-2. **Recharge 2 turns, not 1.** Our heavies cost 4 AP and Chainlings regen 2 AP a turn, so a heavy fires every other turn. A 1-turn-recharge wall is also up every other turn. The two line up, and the wall then blocks the heavy every time. With a 1-turn recharge:
-   - Deep Dig into Keyper (Guard Posture + ally Blockade): KO by turn 3 is **0%**, and the mean KO turn is **11.25**.
-   - The wall-caster spends **25.52 AP** a battle on walls.
-   
-   A 2-turn recharge breaks that lockstep. The mean KO turn falls to **4.22**, and every turn-1 answer is kept.
-3. **Every wall/barrier costs 2 AP.** Chainlings start at 0 AP and gain 2 a turn, so a 3-AP wall can never be cast on turn 1.
-   - Crackett's Seam Cut into Deghoul behind an ally Blockade: **92.2%** turn-1 KO at today's 3 AP, **0%** at 2 AP.
+3. **Every Wall/Barrier blocks exactly 1 hit.** A multi-hit breaks it on its first hit, and the remaining hits land normally.
+4. **Duration: until it blocks one hit, or 2 turns (the cast turn and the next turn), whichever comes first.** Authored as a 2-turn window with a 1-hit budget. *(Correction 2, 2026-10-20. Replaces "this turn only".)*
+5. **Recharge: 1 turn for every Wall/Barrier.** Authored `RechargeTurns = 2`, because the authored number counts the cast turn's end tick. Cast on turn N, usable again on turn N+2.
+6. **Accepted design consequence: near-continuous coverage.** A 2-turn block plus a 1-turn recharge lets one caster keep a block up on most turns. Cronus accepted this on 2026-10-20: each block is one hit at a fractional %, so a waller still loses to sustained attacks. The sim reports the numbers (section 4) and flags only a **true lock** (battles at the 30-turn cap, or a line the attacker can never win). There is none (section 4.1).
+7. **Priority hits do not break walls.** A block still mitigates its % against a priority hit that arrives after it is up. Ranged priority attacks are wanted later and are **out of scope** this round.
+8. **Renames** must fit the logic (Wall = melee, Barrier = ranged):
+   - Barrier Wall → **Buffer Barrier**
+   - Compound Guard → **Compound Barrier**
+   - Ash Guard → **Ash Barrier**
+   - Lattice Guard → **Lattice Barrier**
+9. **One active block per Chainling, enforced at target selection.** *(Correction 1, 2026-10-20.)* A blocked cast never reaches turn resolution.
+   - A Chainling **holds a block** while it has an intact Wall/Barrier from any source (not yet consumed, not yet expired).
+   - In target selection, a Wall/Barrier move cannot target a Chainling that holds a block. That target is greyed out and the cursor skips it.
+   - **Same-turn allies:** a Chainling already chosen as the target of a Wall/Barrier by a teammate's queued action this turn counts as holding one. The second ally sees it greyed out with "<Chainling> is already getting a block."
+   - If every target of the move is invalid, the move is not selectable. The player stays on (or returns to) the MoveSelectPanel, no AP is spent, and the move row shows "Every target already has a block."
+   - The AI uses the same check. The Unity resolver and the battle service validate it too (section 5.2 E4, 5.5).
+   - Blocks granted any other way (passives, modifiers/stamps) **override** an intact block.
+   - A **broken or expired** block no longer counts, so the Chainling is a valid block target again from the next selection on.
+10. **Ice Wall keeps its AP gain,** capped at **1 AP** for the one hit it blocks.
+11. **No flat AP.** Each move gets a tier and an AP cost inside its tier range, chosen by rarity, type profile and existing effects. Block-type and guardian/tanky moves get Greater.
+12. **Guard Posture leaves the family** and becomes the first **Armor** move (section 3). Its numbers are unchanged until the Armor round.
 
-**What the rule does well:**
-- It answers turn-1 bursts: Seam Cut turn-1 KO goes from **91.3%** to **0%**.
-- It ends the Ember Wall stall: **99.8%** of battles hit the turn cap today, **0%** under the proposal.
-- It hard-counters a one-sided attacker for the turns the wall is up.
+**Defaults from the first decided round, now accepted** (Cronus accepted the other defaults with the corrections):
+- Ember Wall = Mid 50%, [PRIOR], 2 AP, keeps its 1 AP drain.
+- **Blockade = Greater with [PRIOR].** Without PRIOR it is still a dead card under the 2-turn rule (section 4.2).
+- A mitigated hit still applies its riders, statuses and chemistry.
 
-**What it does not do:**
-- **It does not protect against the other category.** Cryo Ray into a target with an ally Ember Wall: **93.3%** KO by turn 3, the same as no wall. Package R's Protect held it to **0.4%**.
-- **It does not stop a one-sided attacker for long.** Against Crackett it buys one turn, because the attacker waits out the recharge. With a ranged partner, the wall is mostly bypassed (**63.6%** turn-1 KO).
-- **"Only a faster priority attack beats it" does almost nothing in practice.**
-  - Only three attacks have priority today (Quick Jab, Blink Lunge, Rapid Strike), all melee and Power 16–26. Only Quick Jab and Rapid Strike are in any learn pool.
-  - The species that learn them (Crackett, Forkrook) are faster than every wall user.
-  - A priority hit lands before the wall, but it does not remove the wall. In the sim it never changed the KO turn (mean **2.06** vs **2.09** naive).
+**New defaults for the open items (default, accepted unless Cronus objects):**
+- **D1. Wallbreaker (4.3-b) and Ignore Walls (4.8-a)** also bypass Walls/Barriers: the stamped attack's first hit ignores the block's % and **does not consume it**. They do not bypass Armor. Today both bypass only `BarrierInstance` barriers, and the family will no longer use those.
+- **D2. Core Breach (`ignoreMitigation`)** ignores Walls/Barriers **and** Armor, and consumes neither. That is what `ignoreMitigation` means today (`DamageCalculator.cs:179`). Core Breach stays catalog-only.
+- **D3. No Greater-tier Barrier** this round. Ranged tanks keep Lower/Mid barriers.
+- **D4. Compound Barrier's Melee Def +1 stacks on recast** under the normal stage rules and stage cap. A cast denied at selection never happens, so it grants nothing.
 
-**Recommendation (PROPOSAL "P"):**
-- **Ruleset:**
-  - **Wall** = blocks the next **melee hit** on one ally or yourself, **this turn only**, [PRIOR], **Recharge 2**, **2 AP**.
-  - **Barrier** = the same for **ranged**.
-  - A blocked hit does nothing: no damage, riders or chemistry.
-- **Moves that don't fit:**
-  - Guard Posture stays a plain "Guard" (25% next hit, no priority).
-  - The three "Guard"-named family moves are renamed to Barriers: Compound, Ash and Lattice (section 7).
-- **Keep package R's Ember Wall (all-category Protect) instead?** That is Cronus's call (open question Q1). The data for both is in the table.
+## 2. Final per-move table
 
-## 1. Task A: does a priority system exist in s10?
+How to read it:
+- Recharge is "card / authored `RechargeTurns`".
+- Every block lasts until it blocks 1 hit or until the end of the next turn (2 turns).
+- Every move keeps its MoveId, BaseType, Rarity, Targeting (`SingleAlly`, self allowed) and learn pools.
+- "Effects" are in addition to the block.
 
-**Yes. Turn order, priority tag, stamps and UI all exist.** Nothing about walls uses it yet.
+| MoveId | Name | Kind | Tier | % | AP (s10 → new) | PRIOR | Recharge | Effects | Type / Rarity (unchanged) | Learned by (unchanged) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `ember_wall` | Ember Wall | Wall (melee) | Mid | 50% | 2 → 2 | Y | 1 / 2 | The melee attacker whose hit it mitigates loses 1 AP | Burned / Legendary | Cinislug (signature) |
+| `blockade` | Blockade | Wall (melee) | Greater | 60% | 3 → 3 | Y (accepted default) | 1 / 2 | none | Block / Uncommon | Blockwyrm |
+| `ice_wall` | Ice Wall | Wall (melee) | Mid | 40% | 3 → 2 | Y | 1 / 2 | If the protected Chainling is faster than the attacker, it gains 1 AP (max 1) | Frozen / Uncommon | Gilarime |
+| `barrier_wall` | **Buffer Barrier** | Barrier (ranged) | Lower | 25% | 3 → 1 | Y | 1 / 2 | none | None / Uncommon | Humpacked |
+| `vapor_barrier` | Vapor Barrier | Barrier (ranged) | Lower | 30% | 2 → 1 | Y | 1 / 2 | none | Gas / Uncommon | (none) |
+| `compound_guard` | **Compound Barrier** | Barrier (ranged) | Mid | 35% | 3 → 2 | Y | 1 / 2 | Target gains Melee Def +1 (stacks on recast, D4) | Staked / Uncommon | Rattlestake, Cofi |
+| `ash_guard` | **Ash Barrier** | Barrier (ranged) | Mid | 35% | 2 → 2 | Y | 1 / 2 | Target heals 5% max HP | Burned / Uncommon | (none) |
+| `lattice_guard` | **Lattice Barrier** | Barrier (ranged) | Mid | 40% | 1 → 2 | Y | 1 / 2 | The attacker takes 20% of the damage this barrier prevented | Shard / Uncommon | (none) |
+| `guard_posture` | Guard Posture | **Armor** | n/a | 25% next hit (unchanged) | 1 → 1 | N | none | Stacks with a Wall/Barrier | None / Common | (none) |
 
-| What | Where (s10) | Notes |
-|---|---|---|
-| Turn order | `CombatResolver.cs:863` sorts by Speed desc → stars → rebirth → 50/50 roll; `:970` / `:988` split the queue: **swaps → priority block → normal moves → capture** | The priority block is itself Speed-sorted, so of two PRIOR actions the faster resolves first. This is the existing basis for Cronus's "beaten only by a *faster* priority attack". |
-| Priority flag | `CombatResolver.cs:7225` `ResolvePriorityForAction`: a move is PRIOR if its `Tags` contain `PRIOR` or `PRIO` (`:7236`) | **No numeric priority field.** Priority is binary: in the block or not. There is no "+4 beats +1" ladder. |
-| Priority from stamps | same function, `:7243` / `:7250` / `:7274` | `4.3-a` Jump the Queue (Epic, PRIOR, power ×0.90 at `:4700`). `4.3-b` Wallbreaker (Legendary, PRIOR **and** first hit bypasses barriers, `:7178`). `1.1-a` Hair Trigger, `1.3-a` First Dibs and `1.3-b` Quiet Priority are % chances. `1.2-a` Last Gasp gives priority below a HP threshold. All are on 1–2 AP damaging moves, or utility moves for 1.3-a/b. |
-| UI | `MoveSelectDisplayUtility.cs:199–213` shows a PRIOR pill | Already player-facing |
-| Moves tagged PRIOR (`Moves.csv`, 211 rows) | **Quick Jab** (`baseline_jab`, None/Common, melee P16, 1 AP; in Crackett's and Rattlestake's pools). **Blink Lunge** (`quick_lunge`, None/Common, melee P26, 2 AP; in **no** pool). **Rapid Strike** (`rapid_strike`, Forked/Rare, melee P26, 1 AP; Forkrook). Position Swap (utility). Bean Sip (utility heal, Cofi). | **Every PRIOR attack is melee, Power 16–26.** No ranged priority attack exists without a stamp. |
-| Walls today | No wall/barrier move has PRIOR; all have `RechargeTurns` 0 | |
+**Exact card text** (every limit stated):
 
-**Speed reality for "beaten by a faster priority attack".** Base Speed of the priority attackers vs the wall learners, and P(attacker faster) with ±5 IVs:
+| MoveId | Card text |
+|---|---|
+| `ember_wall` | **Mid Wall · 2 AP · [PRIOR] · Recharge 1.** The next melee hit on an ally or yourself deals 50% less. Lasts until it blocks 1 hit or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Ranged attacks are not blocked. The attacker loses 1 AP. |
+| `blockade` | **Greater Wall · 3 AP · [PRIOR] · Recharge 1.** The next melee hit on an ally or yourself deals 60% less. Lasts until it blocks 1 hit or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Ranged attacks are not blocked. |
+| `ice_wall` | **Mid Wall · 2 AP · [PRIOR] · Recharge 1.** The next melee hit on an ally or yourself deals 40% less. Lasts until it blocks 1 hit or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Ranged attacks are not blocked. If the protected Chainling is faster than the attacker, it gains 1 AP (max 1). |
+| `barrier_wall` | **Lower Barrier · 1 AP · [PRIOR] · Recharge 1.** The next ranged hit on an ally or yourself deals 25% less. Lasts until it blocks 1 hit or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Melee attacks are not blocked. |
+| `vapor_barrier` | **Lower Barrier · 1 AP · [PRIOR] · Recharge 1.** The next ranged hit on an ally or yourself deals 30% less. Lasts until it blocks 1 hit or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Melee attacks are not blocked. |
+| `compound_guard` | **Mid Barrier · 2 AP · [PRIOR] · Recharge 1.** The next ranged hit on an ally or yourself deals 35% less. Lasts until it blocks 1 hit or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Melee attacks are not blocked. The target also gains Melee Def +1. |
+| `ash_guard` | **Mid Barrier · 2 AP · [PRIOR] · Recharge 1.** The next ranged hit on an ally or yourself deals 35% less. Lasts until it blocks 1 hit or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Melee attacks are not blocked. The target also heals 5% of its max HP. |
+| `lattice_guard` | **Mid Barrier · 2 AP · [PRIOR] · Recharge 1.** The next ranged hit on an ally or yourself deals 40% less. Lasts until it blocks 1 hit or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Melee attacks are not blocked. The attacker takes 20% of the damage this barrier prevented. |
+| `guard_posture` | **Armor · 1 AP.** Reduce the next hit by 25%; lasts 1 hit or 2 turns. Stacks with a Wall or Barrier. *(numbers unchanged; reviewed in the Armor round)* |
 
-| Priority attacker | Cinislug 28 | Blockwyrm 24 | Gilarime 49 | Humpacked 44 | Rattlestake 57 | Cofi 16 |
-|---|---|---|---|---|---|---|
-| Crackett 92 (Quick Jab) | 100% | 100% | 100% | 100% | 100% | 100% |
-| Forkrook 88 (Rapid Strike) | 100% | 100% | 100% | 100% | 100% | 100% |
-| Rattlestake 57 (Quick Jab) | 100% | 100% | 95% | 100% | 45.5% | 100% |
+Every block card adds the shared line: "Only one Wall or Barrier can be on a Chainling at a time."
 
-So the condition is basically on/off by species.
-- Crackett and Forkrook always beat any wall with a priority hit.
-- Nobody else can, unless they carry a stamp.
+**Why each tier** (rarity, type profile, existing effect):
+- **Ember Wall: Mid.**
+  - Cinislug is not a tank (HP 134, MeleeDef 54). The drain is a real effect, which makes it a "utility" block.
+  - It must have PRIOR. In the first decided round's sensitivity without it (FEg: Greater 60%, 3 AP, no PRIOR), Seam Cut was back to 92% turn-1 KOs, and the self-Ember stall line cast 0.04 blocks a battle.
+  - It stays the highest-rarity move in Cinislug's pool. Rarity is unchanged.
+- **Blockade: Greater.**
+  - Block type, and Blockwyrm is the tank (HP 168, MeleeDef 86).
+  - 3 AP, so it cannot be cast on turn 1 without setup. That is the intended Greater-tier trade.
+- **Ice Wall: Mid.** Gilarime is tanky-ish (HP 161), and the AP rider is the "utility".
+- **Buffer Barrier: Lower.** It is typeless, so it sits below the typed Vapor Barrier (25% vs 30% at the same AP).
+- **Vapor Barrier: Lower.** Gas is evasive, not tanky. It has no pool.
+- **Compound, Ash and Lattice: Mid.** Each keeps its existing effect (Melee Def +1, 5% heal, 20% reflect).
+- **No Greater Barrier exists** (D3).
 
-**What would need building** (data first, code second; none of it is done):
+## 3. Armor (new move kind)
 
-1. **Data:**
-   - Add `PRIOR` to every Wall/Barrier's `Tags`.
-   - Set `RechargeTurns = 3`. Authored recharge counts the cast turn's end tick, so 3 means "skip 2 turns" (`FormatPlayerFacingRecharge`, `CombatResolver.cs:525`).
-   - Set AP to 2.
-2. **Category filter on barriers.** `BarrierInstance.contactFilter` exists, but `ApplyBarrierAbsorption` never reads it (`ChainlingInstance.cs:874–925`). The importer must also parse a contact parameter for `FullAbsorbBarrier`. Melee maps 1:1 to Contact and ranged to Projectile (checked). % mitigation windows already honour a contact filter (`AppliesToContact`, `ChainlingInstance.cs:587`). Chemistry and status code already create Projectile-only windows (`ChemistryResolver.cs:414`, `StatusProcessor.cs:425`). V3-style Screens therefore need only an importer parameter, not new filter logic.
-3. **One Wall + one Barrier per Chainling.** Today `exclusiveBarriersAndWalls: 1` makes the second barrier **replace** the first (`ChainlingInstance.cs:850`). Without this change, Cronus's "ally Wall + self Barrier" double coverage is impossible: the second cast silently deletes the first.
-4. **A blocked hit applies nothing.** Today statuses and type chemistry still land through a blocked hit (`tempo_2v2_sim.py` mirrors this). The proposal needs a "blocked" early-out before riders/chemistry.
-5. **"This turn only"** = `FullAbsorbBarrier:1:1`. Verify `TickBarriers` expires it at the end of the cast turn.
-6. **Ember Wall's drain:** at most 1 AP per blocked move.
-7. **AI:**
-   - Category-aware wall choice.
-   - Bank AP for a wall when the threat fires next turn.
-   - Don't wall on turns no matching threat can fire (section 4.7).
+**For players:**
+- **Walls and Barriers** stop part of **one** attack of **one** category, for up to 2 turns. You can have only one at a time.
+- **Armor** is flat mitigation that works against **any** category and **stacks** with a Wall or Barrier.
+- When both apply, they multiply. A 25% Armor plus a 60% Wall leaves 0.75 × 0.40 = 30% of the hit.
 
-## 2. Variants tested
+**This round:**
+- Guard Posture becomes Armor. Its numbers stay the same (25%, next hit, lasts 1 hit or 2 turns, 1 AP, no priority).
+- Its stack key moves from `wall_guard_posture` to `armor_guard_posture`, so the wall UI and the single-active rule stop treating it as a wall.
+- Armor is not a block: it never greys out a block target, and a block never greys out Armor.
+- That is the only Armor move this round.
 
-All V-variants:
-- Walls (Ember Wall, Blockade, Ice Wall) = **melee**.
-- Barriers (Barrier Wall, Vapor Barrier, Compound Guard) = **ranged**. Compound Guard keeps its MeleeDef +1.
-- All are PRIOR (except V2np), target one ally or self, and use today's AP (except V2ap2 and P).
-- Ember Wall keeps "attacker loses 1 AP", once per blocked move, melee only.
-- A blocked hit deals 0 and applies no rider or chemistry.
-- Guard Posture is left as today's 25% next-hit softener (it is not a Wall or Barrier by name).
+**Queued for a separate Armor round** (not designed here):
+- How Armor stacks with Walls/Barriers: multiply, or add with a cap.
+- A **% floor** for the combined block + Armor. The slowest stacked line, HS-B, is GP Armor 25% stacked with Blockade 60% (section 4.1).
+- Which existing moves and modifiers become Armor or stay plain mitigation. Candidates:
+  - the passives and stamps 6.4-a Brace, 6.4-d Cover Ally, 6.4-g Fade Guard, 7.1-b Shield Link, 6.3-c Grit Guard and 6.8-e Sparse Ward;
+  - Chemistry Firewall;
+  - Immutable Ledger.
 
-| Design | Block | Lasts | Recharge |
-|---|---|---|---|
-| `engine` | today's data (Ember 3-hit absorb 2 turns, % walls) | | none |
-| `R` | previous study's package (Ember = PRIOR Protect all categories; % Screens per category; HP Shields) | | 1 turn on Ember |
-| **V1** | full block of the **first matching move** (all its hits) | this turn | 1 turn |
-| **V2** | full block of **every** matching hit (Protect-by-category) | this turn | 1 turn |
-| **V3** | **50%** less damage from the category (one Screen per category, never multiplied) | 2 turns (`V3t3`: 3) | 1 turn after expiry |
-| **V4** | full block of the **first matching hit**; later hits of a multi-hit land | this turn | 1 turn |
-| `V1L` | V1, but lasts until it blocks (up to 2 turns) | ≤ 2 turns | 1 turn |
-| `V2np` | V2 without PRIOR | this turn | 1 turn |
-| `V2ap2` | V2 with every wall/barrier at 2 AP | this turn | 1 turn |
-| `V2cgm` | V2 with Compound Guard as a melee Wall | this turn | 1 turn |
-| `V2rc2` / `V4rc2` | V2 / V4 with a **2-turn** recharge | this turn | 2 turns |
-| **P (recommended)** | **V4 + 2-turn recharge + every wall/barrier 2 AP** | this turn | 2 turns |
+## 4. Sim results under the decided rules
 
-**Cells.** The 15 lines from the previous study (same seeds) plus 15 new ones:
-- CR-H: Cryo Ray into a ranged Barrier.
-- DC, DC/strict: double coverage.
-- STALL/greedy: wall every legal turn.
-- 8 Crackett cells: one per attacker response.
-- 3 "wait" cells: rhythm reads.
+**Designs:**
+- `none` = no wall moves.
+- `engine` = today's s10 data.
+- `P` = the superseded proposal.
+- `F` = the first decided round: the section 2 table, but blocks last **this turn only** and a second block is **cancelled on resolution**.
+- **`C` = the decided rules in section 1** (2-turn blocks, denial at selection, Blockade [PRIOR]).
+- Sensitivities around C:
+  - `Cnp`: C, but Blockade without PRIOR.
+  - `Crc2`: C with a 2-turn recharge.
+  - `Cmax`: every move at the top of its tier (Ember, Ice and Compound 50%; Buffer and Vapor 30%; Blockade 75%).
 
-**Defender AI (V-designs):** a team plan.
-- Each turn, the target and its walling ally pick the wall(s) that cover the largest *affordable* threat of each category, with at most one block per category.
-- Turn-only walls are cast only on turns the threat can fire.
-- Casters bank AP when the line's heavy fires next turn and the wall costs more than one regen.
-- `engine` and `R` use the previous study's policy unchanged. That makes their 45 cells **byte-identical** to `walls_pvp_sim.out.json`: the regression check is in the checker.
+The sim covers Ember Wall, Blockade, Ice Wall, Buffer Barrier and Compound Barrier: the five family moves any species learns. Vapor, Ash and Lattice are in no pool, so they are not simulated.
 
-**Attacker reads** (Crackett and "wait" cells):
-- The attacker sees the defender's AP and recharges, so it knows when a matching wall is *ready*.
-- When it is, the attacker either retargets, uses a priority hit, or holds the heavy one turn.
+**Headline** (target KO % by end of turn 1 / turn 3 · mean KO turn, capped at 12):
 
-**Correction to the previous doc.** Its "100-turn cap" stall cells are the sim's **30-turn** cap (`tempo_2v2_sim.py:188`, `max_turns=30`). The engine cap is 100 (`CombatBattleController.cs:114`). The conclusion ("Ember Wall stalls forever") is unchanged.
-
-## 3. Comparison table (headline)
-
-How to read the table:
-- Each cell is **target KO % by end of turn 1 / by end of turn 3 · mean KO turn** (capped at 12). 4000 battles per cell.
-- "Target" is the Chainling the line attacks. Lower = the wall protects better.
-- `none` = the same teams with every wall/barrier move removed.
-- The full set of tables is in section 4. The rows below are copied from T-MAIN / T-CK.
-
-| key line | none | engine (today) | R (prev. package) | V1 move | V2 category-Protect | V3 50% | V4 1 hit | **P** |
-|---|---|---|---|---|---|---|---|---|
-| Ember Wall recast stall (STALL) | 0/95 · 2.22 | 0/0 · 12.00 | 0/5.3 · 4.77 | 0/4.9 · 4.58 | 0/4.9 · 4.58 | 0/65.2 · 3.52 | 0/4.9 · 4.58 | 0/5 · 4.59 |
-| Seam Cut T1 → Deghoul, ally Ember (SC) | 91.7/100 · 1.09 | 91.3/96.5 · 1.21 | 0/92 · 2.17 | 0/93.8 · 2.16 | 0/92 · 2.17 | 1.3/99.3 · 2.12 | 0/93.8 · 2.16 | 0/99.3 · 2.09 |
-| Cryo Ray → Crackett, ally Ember (CR) | 0/93.2 · 2.21 | 0/0.4 · 4.93 | 0/0.4 · 5.09 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 |
-| Cryo Ray → Crackett, ally Barrier Wall (CR-H) | 0/93.7 · 2.17 | 0/75 · 2.63 | 0/28.7 · 3.75 | 0/0 · 4.84 | 0/0 · 4.84 | 0/0.5 · 4.80 | 0/0 · 4.84 | 0/0 · 4.83 |
-| Deep Dig → Keyper, GP + ally Blockade (DD-B, "stacked") | 0/95 · 2.14 | 0/64.2 · 2.90 | 0/94.7 · 2.13 | 0/0 · 11.25 | 0/0 · 11.25 | 0/7.5 · 3.96 | 0/0 · 11.25 | 0/0 · 4.22 |
-| Blade Flurry (3 hits) vs self-Ember (MULTI) | 0/5.4 · 4.49 | 0/0 · 8.54 | 0/0 · 9.83 | 0/0 · 9.71 | 0/0 · 9.83 | 0/0 · 8.76 | 0/0 · 4.98 | 0/0.3 · 4.87 |
-| Crackett naive vs ally Ember (CK-E) | 92/100 · 1.09 | 91.8/97 · 1.19 | 0/91.6 · 2.18 | 0/93.5 · 2.16 | 0/91.6 · 2.18 | 1.7/99.5 · 2.11 | 0/93.5 · 2.16 | 0/99.4 · 2.09 |
-| Crackett naive vs ally Blockade (CK-B) | 92.7/100 · 1.08 | 92.2/99.8 · 1.09 | 92.2/99.7 · 1.12 | 92.2/99.6 · 1.16 | 92/99.6 · 1.17 | 92/99.5 · 1.13 | 92.2/99.6 · 1.16 | 0/99.6 · 2.09 |
-| Double coverage: Cryo Ray + Kodiax → Humpacked, self Barrier + ally Ember (DC) | 0.1/99.2 · 2.15 | 0/18.2 · 3.94 | 0/12.4 · 3.84 | 0/65.4 · 2.73 | 0/65.4 · 2.73 | 0/94.2 · 3.03 | 0/65.4 · 2.73 | 0/97.1 · 2.40 |
-| Stall rate (STALL, % at 30-turn cap) | 0% | 99.8% | 0% | 0% | 0% | 0% | 0% | 0% |
-| DD-B: defender AP spent on walls / battle | 0 | 6.96 | 4.2 | 25.52 | 25.52 | 6.05 | 25.52 | 6.32 |
-
-**Reading the variants:**
-- **V1 (one move).** Fixes the stall and turn-1 bursts. Multi-hits are blocked wholesale (MULTI 9.71). Locks against 4-AP heavies through the recharge parity.
-- **V2 (Protect-by-category).** Plays the same as V1 in nearly every line. The only differences are focus fire with two same-category attackers, and PS (74.1 vs 95.3 by turn 3). The likely reason is that V2 also blocks the melee partner's follow-up into the target. It has the same parity lock.
-- **V3 (50% for 2 turns).** The only variant with no lock (DD-B mean 3.96), but it is also the weakest answer to a turn-1 burst:
-  - SC still gives 1.3% turn-1 KOs. That is a big drop from 91.3% because 50% off Seam Cut is no longer lethal, but kills come back as soon as damage stacks.
-  - Self-cast stall: 65.2% KO by turn 3.
-  - Against a retargeting Crackett it is the strongest (35% by turn 3). The screen covers 2 turns, so retargeting buys nothing.
-- **V4 (one hit).** Plays like V1, except multi-hits beat it (MULTI 4.98 vs none 4.49). It has the same parity lock.
-- **P = V4 + 2-turn recharge + 2 AP.** Keeps every turn-1 answer (SC, PF, CK-E, CK-B all 0% turn-1). Breaks the lock (DD-B 4.22, HS-B 6.42, NCR 4.94, DD-I 4.16). Multi-hit stays the counter (4.87). Wall AP drops back to package-R levels (DD-B 6.32 vs 25.52 under V1).
-
-## 4. Key lines (Task B)
-
-### 4.1 Ember Wall recast stall
-- **Today:** 99.8% of STALL battles hit the sim's 30-turn cap, with 29.97 Ember casts a battle.
-- **Every variant with a recharge** ends the stall: 0% capped.
-  - V1/V2/V4: mean KO turn 4.58. P: 4.59.
-  - P blocks for one turn and then is down for two.
-- **Greedy walling is punished.** STALL/greedy has the AI wall on every legal turn, even with no heavy coming. KO by turn 3 is 95.3% under P.
-- **Don't let a block persist until used.** V1L (the block waits up to 2 turns for a hit) brings the stall back: mean 10.24, greedy 11.21.
-
-### 4.2 Seam Cut turn 1 into Deghoul (ally Ember)
-- Engine: 91.3% turn-1 KO.
-- V1/V2/V4/P: 0%. V3: 1.3%.
-- KO by turn 3 is still 92–99.3%. The wall buys exactly one turn, which is the stated goal of a hard counter to a turn-1 burst.
-- **Priority is what makes this work.** V2np (no PRIOR) is back to 92.9% turn-1, because Crackett (Speed 92) outruns Cinislug (28).
-
-### 4.3 Cryo Ray into an ally-walled target
-- **Ember is melee-only, so it does nothing against Cryo Ray.** CR is 93.3% KO by turn 3 under every V-variant, the same as none (93.2). Package R's all-category Ember held it to 0.4%.
-- **The right barrier works.** With a ranged Barrier Wall on the ally (CR-H): 0% by turn 3 under V1–V4 and P.
-- **The attacker's read.** If it holds Cryo Ray while the barrier is ready (CR-H/wait), turn-3 KO comes back: 56.3% (V1), 57.9% (P).
-
-### 4.4 Deep Dig into stacked walls
-- **DD-B (Guard Posture + ally Blockade).**
-  - V1/V2/V4: 0% KO by turn 3, mean 11.25, wall AP 25.52.
-  - P: 0% by turn 3, mean 4.22, wall AP 6.32.
-- **DD-I (with Ice Wall).**
-  - V1: mean 6.84, wall AP 13.96.
-  - P: mean 4.16.
-- **HS-B (Hammer Sync).** V1 8.55, P 6.42.
-- **This is the recharge-parity lock.**
-  - A 4-AP heavy fires on turns 2, 4, 6…
-  - A 1-turn-recharge wall is ready on turns 2, 4, 6…
-  - A 3-AP wall at +2 AP a turn affords 2 casts every 3 turns, enough to cover every heavy.
-- **Two ways to break it:**
-  - A 2-turn recharge (V2rc2 4.21, V4rc2 4.21).
-  - The attacker reading the wall (DD/wait 34.2% by turn 3 under V1).
-
-### 4.5 Crackett vs a melee wall
-Crackett has 86 melee Atk and 38 ranged Atk, and no damaging ranged move. The target is Deghoul behind an ally-cast Ember Wall (Cinislug).
-
-| Crackett's response | Does it work under P? | Number (P) |
-|---|---|---|
-| Naive: Seam Cut every turn | The wall eats turn 1. KO lands on turn 2 while the wall is on recharge. | T1 0%, mean 2.09 |
-| **Swap target** (hit the other foe while the wall is ready) | Slightly *slower* to kill the target. Damage moves to the other foe; the target dies on turn 2–3 anyway. | mean 2.21, T3 93.1% |
-| **Multi-hit partner** (Kitsauto Blade Flurry) | Hit 1 pops the wall and hits 2–3 land, but they are not enough to kill on turn 1. | T1 0.2% |
-| **Debuff / AP denial** (Keyper Memory Leak on Cinislug) | **No effect.** A 2-AP wall is always affordable on the turns it is off recharge. | mean 2.08 |
-| **Priority attack** (Quick Jab while the wall is ready) | The jab lands before the wall: 0.95 jabs a battle, all before a same-turn wall. It adds chip (165.3 vs 132.8 damage) but **does not remove the wall**, so the KO turn barely moves. | mean 2.06 |
-| **Ranged partner** (Marrowhead) | **Works.** A melee wall cannot touch a ranged hit. | T1 63.6% |
-
-**Summary.** Crackett is hard-countered for exactly one turn, and his real answer is his partner. Against a 3-AP ally **Blockade** at today's AP, the wall cannot be cast on turn 1 (CK-B 92.2% turn-1 KO under V1). At 2 AP (P) it can: 0%.
-
-V3 is the variant that slows Crackett most. A 2-turn screen survives the retarget: with retarget, 35% KO by turn 3 and mean 3.81.
-
-### 4.6 Double coverage on one target (DC: Humpacked self Barrier Wall + ally Ember, vs Cryo Ray + Kodiax melee focus)
-- **This requires the code change in section 1 item 3.** The engine today lets only one barrier live on a Chainling.
-- **V1:**
-  - 1.1 turns a battle with both categories covered.
-  - 1.31 turns where every hit on the target was blocked.
-  - 65.4% KO by turn 3.
-- **P:** 1.02 / 0.97 turns, and 97.1% KO by turn 3.
-- **Why it doesn't stall:** both walls recharge together, so a shutdown turn is followed by two open turns.
-- **DC/strict** (the defender walls only when a threat is ≥40% of the target's current HP): 89.6% (V1) and 92.9% (P).
-- For comparison, engine 18.2% and R 12.4%. Their walls last 2 turns or are % screens.
-- **Verdict:** double coverage is a one-turn "turtle" with a built-in punish window. It is safe under P.
-
-### 4.7 AP cost
-- **At today's 3 AP**, the bank-or-cast choice decides everything:
-  - Under V1, DD-B burns 25.52 AP a battle on walls, and the defending team deals 250.9 damage vs 393.4 without walls.
-  - The attacking side then *wins more* (T-WIN DD-B: 96.3% vs 22.4% with no walls). Walls became a tempo sink: the defenders stop attacking.
-- **Under P:**
-  - DD-B: 6.32 AP, 365.5 damage, attacker win 28.6%.
-  - CK-B: 2.01 AP. The single turn-1 cast is affordable.
-- **Win % is the most AI-dependent number here.** Use it for direction only.
-
-### 4.8 How often the priority counter matters
-- **In the sim** (CK-E/jab), Crackett lands 0.95 Quick Jabs a battle on the target under P, and all 0.95 resolve before a same-turn wall.
-- **Statically**, only Crackett, Forkrook and Rattlestake learn a priority attack:
-  - Crackett and Forkrook are faster than every wall learner 100% of the time.
-  - Rattlestake is faster than Gilarime 95% of the time, and wins the mirror 45.5% of the time.
-- **But a priority attack is never the counter.** It lands *before* the wall goes up, so the wall still blocks the real hit.
-- **What would make it a counter:** "a priority hit breaks a wall", or the Wallbreaker stamp (4.3-b, Legendary: PRIOR + first hit bypasses barriers). That is open question Q4.
-
-## 5. Design gaps (Task C)
-
-1. **Can the wall user's ally simply be hit? Yes, and that is the main leak.**
-   - A wall covers one Chainling for one turn. The attacker can always hit the other one.
-   - Under P, Crackett's retarget line still kills the target by turn 3 in 93.1% of battles. It also deals 246.8 damage to the walling team, vs 227.9 when naive.
-   - The caster has spent its action on the wall, so walling an ally also means not attacking.
-   - Under P this trade is fair. Under V1, at 3 AP, it is a tempo sink (section 4.7).
-2. **The other category walks straight through** (CR 93.3%, PS 62.8% turn-1 under P, CK-E/rng 63.6% turn-1).
-   - The hard counter only applies to one-sided teams. Most 2v2 teams have both categories across their two Chainlings.
-   - The wrong-category wall is a dead card: NHFh, a ranged Barrier Wall vs a melee Hard Fork, is 97.6% = none.
-   - This is the honest price of "instantly understandable".
-3. **Priority is binary, and speed decides it before the battle starts** (section 4.8).
-   - There is no ranged priority attack, so **nothing can pre-empt a Barrier** without a stamp.
-   - A faster priority hit only chips the target; it doesn't beat the wall.
-   - If Cronus wants "faster priority beats it" to be a real counter, it has to be a rule: "a hit that resolves before the wall goes up, on the same turn, cancels it". Or rely on Wallbreaker (4.3-b). See Q4.
-4. **Statuses, DoT and riders.** Proposed: a blocked hit **does nothing**: no damage, no on-hit status, no chemistry status, no on-hit passive.
-   - The engine today still applies statuses and chemistry through a full-absorb barrier. Changing that is a code change.
-   - These still go through, because they are not hits: DoT / end-of-turn ticks; pure status moves (e.g. Cipher Lock), which are "StatusUtility", not melee or ranged; and AP drains from utility moves.
-   - That matches "walls stop hits" and keeps the card text short.
-   - The one existing hard breaker is the **Isolated** chemistry status ("cannot receive ally Support moves", `StatusId.cs:38`). It comes from a **Gas** or **Burned** hit on a **Staked** target. It stops an ally's wall, not a self-cast. That is narrow and fine.
-5. **Every-other-turn rhythm.**
-   - **With a 1-turn recharge** the rhythm is the problem (section 4.4): it lines up exactly with 4-AP heavies and locks them out (DD-B mean 11.25, HS-B 8.55, NCR 9.76).
-   - Holding the heavy for one turn is a real read (CR-H/wait 56.3% by turn 3 under V1). Players will find it, but the AI and new players won't.
-   - **With a 2-turn recharge** (P) the wall is up one turn in three. That leaves a visible punish window and no lock.
-   - Under P the read still helps vs barriers (CR-H/wait 57.9%). Vs Hammer Sync it is worse than firing into the wall (HS/wait 3.4%).
-6. **Moves that don't fit melee/ranged.**
-   - **Ice Wall** (all-category 25% today): proposed melee Wall. Its "+1 AP if faster" rider is kept but reworded for a block. Untested, because the sim counts the rider only on landed hits.
-   - **Lattice Guard** (40-damage pool + 20% reflect): proposed ranged Barrier, rename **Lattice Barrier**. It reflects 20% of the blocked hit's damage. Reflect is not self-damage. Not in any pool, so untested.
-   - **Vapor Barrier** (any hit within 2 turns): becomes a ranged Barrier, this turn only. Not in any pool.
-   - **Ash Guard** (20% for 2 turns, 5% heal): rename **Ash Barrier**, ranged; keeps the heal. Not in any pool.
-   - **Compound Guard** (Rattlestake, Cofi): ranged Barrier plus its MeleeDef +1, rename **Compound Barrier**.
-     - Making it a melee Wall instead (V2cgm) creates a two-melee-wall lock on Rattlestake (NHF mean 10.06) and frees Cryo Ray (NCR 54.9% by turn 3).
-     - As a ranged Barrier, Rattlestake/Cofi get one hard Barrier plus a soft melee buff.
-   - **Barrier Wall** (Humpacked): it has both words in its name. Proposed ranged, rename **Buffer Barrier**.
-   - **Guard Posture** (Common, 1 AP, self): **not** a Wall or Barrier. It stays a 25% next-hit softener with no PRIOR and no recharge.
-     - A 1-AP Common full block with priority would be strictly better than the Uncommon walls.
-     - Keeping it outside the family keeps the rule "Wall = melee block, Barrier = ranged block, Guard = soften anything".
-7. **3-AP walls can't answer turn 1.** Chainlings start at 0 and gain +2 a turn, so a 3-AP Blockade has 2 AP on turn 1 (CK-B 92.2% turn-1 KO at 3 AP). All family moves go to 2 AP.
-8. **One Wall + one Barrier per Chainling.** Engine exclusivity has to become per category, or the second cast deletes the first.
-9. **Signature identity.** Under P, Ember Wall is "Blockade plus a 1 AP drain". That may be too thin for a Legendary signature (Q1).
-
-## 6. Recommendation: **PROPOSAL "P"**
-
-> **PROPOSAL P.** Every **Wall** blocks the next **melee hit**, and every **Barrier** the next **ranged hit**, on one ally or the caster. The block lasts **this turn only**. The move is **[PRIOR]**, has **Recharge 2**, and costs **2 AP**. A blocked hit deals no damage and applies nothing.
-
-**Why P over V1–V4:**
-
-| Need (from the brief) | V1 | V2 | V3 | V4 | **P** |
+| key line | none | engine (today) | P (superseded) | F (1-turn round) | **C (decided)** |
 |---|---|---|---|---|---|
-| Hard counter to a turn-1 one-sided burst (SC T1) | 0% | 0% | 1.3% | 0% | **0%** |
-| No stall (STALL capped) | 0% | 0% | 0% | 0% | **0%** |
-| No lock vs 4-AP heavies (DD-B mean) | 11.25 | 11.25 | 3.96 | 11.25 | **4.22** |
-| Multi-hit is the counter (MULTI mean, none 4.49) | 9.71 | 9.83 | 8.76 | 4.98 | **4.87** |
-| Cheap Blockade answers turn 1 (CK-B T1) | 92.2% | 92% | 92% | 92.2% | **0%** |
-| Simple card text | yes | yes | % maths | yes | **yes** |
+| Ember Wall stall: self-Ember Cinislug (STALL) | 0/95 · 2.22 | 0/0 · 12.00 | 0/5 · 4.59 | 0/90.8 · 3.11 | 0/90.6 · 3.35 |
+| Greedy waller: wall every legal turn (STALL/greedy) | 0/95 · 2.22 | 0/0 · 12.00 | 0/95.3 · 2.18 | 0/95.5 · 2.31 | 0/3.3 · 7.16 |
+| Seam Cut turn 1 → Deghoul, ally Ember (SC) | 91.7/100 · 1.09 | 91.3/96.5 · 1.21 | 0/99.3 · 2.09 | 1/99.5 · 2.05 | 1.4/98 · 2.10 |
+| Cryo Ray → Crackett, ally Ember Wall (CR) | 0/93.2 · 2.21 | 0/0.4 · 4.93 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 |
+| Cryo Ray → Crackett, ally Buffer Barrier (CR-H) | 0/93.7 · 2.17 | 0/75 · 2.63 | 0/0 · 4.83 | 0/28.3 · 3.76 | 0/27.4 · 3.80 |
+| Deep Dig → Keyper, GP Armor + ally Blockade (DD-B) | 0/95 · 2.14 | 0/64.2 · 2.90 | 0/0 · 4.22 | 0/1.6 · 4.18 | 0/1.6 · 4.18 |
+| Hammer Sync → Deghoul, GP Armor + ally Blockade (HS-B) | 0/51.6 · 4.23 | 0/5.8 · 6.33 | 0/0 · 6.42 | 0/0 · 6.50 | 0/0 · 6.50 |
+| Blade Flurry (3 hits) vs self-Ember (MULTI) | 0/5.4 · 4.49 | 0/0 · 8.54 | 0/0.3 · 4.87 | 0/1.4 · 4.46 | 0/1.3 · 4.47 |
+| Crackett vs ally Blockade (CK-B) | 92.7/100 · 1.08 | 92.2/99.8 · 1.09 | 0/99.6 · 2.09 | 92/99.8 · 1.13 | 91.7/99.3 · 1.15 |
+| Double coverage: Cryo Ray + Kodiax → Humpacked (DC) | 0.1/99.2 · 2.15 | 0/18.2 · 3.94 | 0/97.1 · 2.40 | 0/96.4 · 2.32 | 0/92.4 · 2.40 |
+| Crackett retargets while the wall is up (CK-E/rt) | 92/100 · 1.09 | 0/63.9 · 3.40 | 0/93.1 · 2.21 | 0/93.9 · 2.15 | 0/28.6 · 3.90 |
+| Priority line: Crackett Quick Jab while the wall is up (CK-E/jab) | 92/100 · 1.09 | 0/0.3 · 4.20 | 0/99.8 · 2.06 | 0/96.6 · 2.09 | 0/24.4 · 4.00 |
+| Deep Dig held while a block is up (DD/wait) | 0/94.5 · 2.17 | 0/0 · 5.40 | 0/26.2 · 4.03 | 0/34.2 · 3.82 | 0/0 · 4.68 |
+| Battles at the 30-turn cap, worst of 31 cells | 0% | 99.8% | 0% | 0% | 0.1% |
+| Attacking-team win %, lowest of 31 cells | 13.8 | 29.3 | 3.9 | 9.9 | 9.5 |
 
-**Choices behind it:**
-- **"One hit"** gives the multi-hit counter. It is also Cronus's own "1 absorbed attack" cap in its simplest form.
-- **"This turn"** avoids the V1L stall.
-- **"Recharge 2"** removes the parity lock.
-- **"2 AP"** makes every wall castable on turn 1.
+### 4.1 Stall / lock check under the decided rules: **no true lock**
 
-**Alternatives:**
-- **V3** (50% for 2 turns) is the best runner-up if Cronus prefers softer walls. It has no lock and is best vs retarget. But it is not a hard counter, and it needs % maths on the card.
-- **V2rc2** (Protect-by-category, 2-turn recharge) has the same lock-break as P (DD-B 4.21). It loses the multi-hit counter (MULTI 7.92).
+Per rule 6, near-continuous coverage is accepted and is not treated as a problem. This section only looks for a true lock.
 
-## 7. Per-move rewrites (PROPOSAL P)
+- **30-turn cap.** 0% of battles reach it in 30 of the 31 cells under C and every sensitivity. Today's engine reaches it in 99.8% of the Ember stall battles.
+- **The one non-zero cell is not a wall lock.** CK-E/deny under C (and Cnp, Crc2, Cmax) has 0.1% of battles at the cap: 4 of 4000. I replayed all 4:
+  - Each ends in a Keyper vs Blockwyrm 1v1 that starts by turn 10.
+  - No block is cast or up at any point in the capped stretch.
+  - The cause is the sim's scripted AP-denial partner: it casts Memory Leak on Blockwyrm every turn and never attacks. The same script runs under F; the 2-turn rule only changes which battles reach that endgame.
+  - The attacking team wins 99.8% of this line.
+  - No wall fix is proposed. It is noted for an AP-denial review (Q2).
+- **The attacker can win every line.** The lowest attacking-team win rate under C is the STALL line at 9.5%. That is the same as F (9.9%), so the 2-turn rule did not cause it, and it is above 0 in every cell.
+- **The slowest lines:**
+  - **STALL/greedy**, the defender walling every legal turn: mean KO turn **7.16**, 3.3% by turn 3. It is the near-continuous coverage case. The greedy waller spends 6.98 AP a battle on blocks, and the attacking team's win rate **rises** to 56.1% (F 32%), because the waller does not attack. Accepted by rule 6.
+  - **HS-B**, GP Armor 25% stacked with Blockade 60% (30% of Hammer Sync gets through): mean **6.50**, identical to F. This is the Armor stack, not the duration. The Armor round's **% floor** is the place to tune it.
+- **The old lockstep stays gone.** It came from a 4-AP heavy fired every other turn into a *full* block that was up every other turn. Under the old V1 rules Deep Dig into stacked walls had a mean KO turn of 11.25 with 0% by turn 3. Under C the same line (DD-B) is mean **4.18**, 1.6% by turn 3: the heavy always lands, just smaller.
 
-**What does not change:**
-- Rarity, BaseType, learn pools and Targeting (SingleAlly; Guard Posture Self) all stay as they are.
-- Ember Wall stays Cinislug's Legendary signature.
+### 4.2 Blockade still needs [PRIOR] under the 2-turn rule
 
-**Shared rules for every Wall and Barrier:**
-- **Tags:** add `PRIOR` to the existing tags.
-- **Recharge:** `RechargeTurns = 3`, shown as "Recharge 2".
-- **AP:** 2.
-- **Effect:** the data form `FullAbsorbBarrier:1:1:<id>` plus a new contact parameter (`Contact` for Walls, `Projectile` for Barriers).
+- **Cnp** (C with Blockade non-PRIOR): Blockade mitigated **0** hits on the target per battle in DD-B, NHF and CK-B (T-ABS).
+  - DD-B is 95% by turn 3, the same as no walls. NHF is 94.5% (C 57.1%).
+  - Blockwyrm has Speed 24. On turn 1 it has 2 AP and Blockade costs 3. When it does cast, the attacker sees the block and hits the other Chainling.
+  - HS-B is the one line where a slow Blockade helps: 0.78 hits a battle, every one of them carried into the turn after the cast.
+- **C** (Blockade [PRIOR]): 1.99 mitigated hits per battle in DD-B (1.6% by turn 3, mean 4.18), HS-B 0% by turn 3.
+- The first decided round showed the same thing for "this turn" blocks (D: 0 hits in DD-B, NHF 94.8% by turn 3). So [PRIOR] stays the accepted default.
+- **Turn 1 is unchanged by design.** At 3 AP Blockade cannot be cast on turn 1 (CK-B 91.7% turn-1 KO under C). That is the Greater-tier "needs an AP setup" trade.
 
-**Card text template:**
-- **Wall:** "[PRIOR] This turn, block the next melee hit on an ally or yourself. Ranged hits are not blocked. Recharge 2."
-- **Barrier:** "[PRIOR] This turn, block the next ranged hit on an ally or yourself. Melee hits are not blocked. Recharge 2."
+### 4.3 What the 2-turn rule changed (F → C)
 
-| MoveId | Name (new) | Type / Rarity (unchanged) | Pool (unchanged) | Kind | AP | Card text (full) |
+- **Naive lines barely move** (within 0.3 of a turn): SC 2.05 → 2.10, DD 4.23 → 4.50, NHF 3.95 → 4.15, CR-H 3.76 → 3.80. MULTI, DD-B, DD-I, HS-B and NCR are unchanged.
+  - PS (ranged Partition Shot into Deghoul, ally Ember) moves most: 89.5% by turn 3, mean 1.84 (F 97.5%, 1.65). The attacking team still wins 99.7%.
+- **Reads change.** The sim's attacker avoids a block it can see. A block that is not hit now stays up through the next turn, so the attacker avoids it for longer:
+  - CK-E/rt (retarget): 28.6% by turn 3, mean 3.90 (F 93.9%).
+  - CK-E/jab (priority): 24.4%, mean 4.00 (F 96.6%). Quick Jab lands 1.65 times a battle, 1.14 of them before a same-turn block on the target.
+  - DD/wait and HS/wait: 0% by turn 3 (F 34.2% and 18%). Holding the heavy for one turn no longer finds the target open.
+  - The attacking team still wins 99.8% of CK-E/rt and CK-E/jab, 94.7% of DD/wait and 68.7% of HS/wait. The damage goes into the other Chainling.
+- **Blocks that absorb on the turn after the cast are rare on the target:** at most 0.04 a battle in any C cell. PRIOR blocks resolve before that turn's attacks, so a block that absorbs a hit almost always does it on the cast turn. The second turn mostly works as a deterrent (the reads above).
+- **The single-active rule holds:**
+  - Turns with both categories covered on the target: **0** in every C cell (P 1.02).
+  - Blocked casts that reached resolution: **0** in every C cell, including DC/naive, where the AI plans both blocks. Under F's cancel-on-resolution rule that line had 0.24 cancels a battle.
+- **Unchanged from the first decided round:**
+  - Seam Cut turn 1 into Deghoul: 1.4% turn-1 KO under C (engine 91.3%, P 0%). 50% off Seam Cut is no longer lethal on turn 1.
+  - Ember (melee) does nothing against ranged Cryo Ray: CR 93.3% by turn 3, same as none (93.2%).
+  - The right-category Buffer Barrier (25%) holds Crackett to 27.4% by turn 3 (none 93.7%, P 0%).
+  - Blade Flurry still counters a wall: MULTI mean 4.47, the same as no walls (4.49). With a multi-hit partner, Crackett's line is 81.9% turn-1 KO (P 0.2%).
+  - AP denial on the wall caster does nothing (CK-E/deny mean 2.09, CK-E 2.11).
+
+## 5. IMPLEMENTATION (for Codex)
+
+Scope rules:
+- Do not change rarity, type or learn pools.
+- Do not touch `Docs/GameTheory/`.
+- Keep every `MoveId`. Renames are `DisplayName` only, so saves, pools and `known_pool` stay valid.
+- The phased plan with acceptance checks is `walls_barriers_tiered_v1.plan.md`.
+
+### 5.1 Data changes
+
+**`Docs/Specs/Combat/Data/Moves.csv`**, then reimport the `Assets/Data/Combat/Moves/Move_<id>.asset` files. Columns per row:
+
+| MoveId | DisplayName | APCost | RechargeTurns | Tags (add) | UtilityEffects (new) | Other columns |
 |---|---|---|---|---|---|---|
-| `ember_wall` | Ember Wall | Burned / Legendary | Cinislug (signature) | **Wall** (melee) | 2 → 2 | [PRIOR] This turn, block the next melee hit on an ally or yourself (1 hit; ranged hits are not blocked). The attacker whose hit is blocked loses 1 AP. Recharge 2. |
-| `blockade` | Blockade | Block / Uncommon | Blockwyrm | **Wall** (melee) | 3 → 2 | [PRIOR] This turn, block the next melee hit on an ally or yourself (1 hit; ranged hits are not blocked). Recharge 2. |
-| `ice_wall` | Ice Wall | Frozen / Uncommon | Gilarime | **Wall** (melee) | 3 → 2 | [PRIOR] This turn, block the next melee hit on an ally or yourself (1 hit; ranged hits are not blocked). If the protected Chainling is faster than that attacker, the protected Chainling gains 1 AP. Recharge 2. *(rider untested)* |
-| `barrier_wall` | **Buffer Barrier** (rename) | None / Uncommon | Humpacked | **Barrier** (ranged) | 3 → 2 | [PRIOR] This turn, block the next ranged hit on an ally or yourself (1 hit; melee hits are not blocked). Recharge 2. |
-| `compound_guard` | **Compound Barrier** (rename) | Staked / Uncommon | Rattlestake, Cofi | **Barrier** (ranged) | 3 → 2 | [PRIOR] This turn, block the next ranged hit on an ally or yourself (1 hit; melee hits are not blocked). The target also gains Melee Def +1. Recharge 2. |
-| `vapor_barrier` | Vapor Barrier | Gas / Uncommon | (none) | **Barrier** (ranged) | 2 → 2 | [PRIOR] This turn, block the next ranged hit on an ally or yourself (1 hit; melee hits are not blocked). Recharge 2. *(untested, no pool)* |
-| `ash_guard` | **Ash Barrier** (rename) | Burned / Uncommon | (none) | **Barrier** (ranged) | 2 → 2 | [PRIOR] This turn, block the next ranged hit on an ally or yourself (1 hit; melee hits are not blocked). The target heals 5% max HP. Recharge 2. *(untested, no pool)* |
-| `lattice_guard` | **Lattice Barrier** (rename) | Shard / Uncommon | (none) | **Barrier** (ranged) | 1 → 2 | [PRIOR] This turn, block the next ranged hit on an ally or yourself (1 hit; melee hits are not blocked). The attacker takes 20% of the blocked hit's damage. Recharge 2. *(untested, no pool)* |
-| `guard_posture` | Guard Posture | None / Common | (none) | **Guard** (not a wall) | 1 → 1 | Reduce the next hit on yourself by 25% (melee or ranged). Lasts 1 hit or 2 turns. *(no PRIOR, no recharge; unchanged)* |
+| `ember_wall` | Ember Wall | 2 | 2 | `PRIOR` | `BlockWindow:50%:Melee:2:wall_ember\|WallHitRetaliation:1:wall_ember` | Description = card text |
+| `blockade` | Blockade | 3 | 2 | `PRIOR` | `BlockWindow:60%:Melee:2:wall_blockade` | Description; asset `wallSfxId: wall_blockade` |
+| `ice_wall` | Ice Wall | 2 | 2 | `PRIOR` | `BlockWindow:40%:Melee:2:wall_ice\|GainApOnDamageIfSpeedHigher:1:1:1:wall_ice_ap` | Description |
+| `barrier_wall` | Buffer Barrier | 1 | 2 | `PRIOR` | `BlockWindow:25%:Ranged:2:barrier_buffer` | Description |
+| `vapor_barrier` | Vapor Barrier | 1 | 2 | `PRIOR` (keep `SUP\|TRIG\|APMAN`) | `BlockWindow:30%:Ranged:2:barrier_vapor` | Description |
+| `compound_guard` | Compound Barrier | 2 | 2 | `PRIOR` | `BlockWindow:35%:Ranged:2:barrier_compound` | `StageChanges` unchanged (`MeleeDef:1:1.0:false`) |
+| `ash_guard` | Ash Barrier | 2 | 2 | `PRIOR` | `BlockWindow:35%:Ranged:2:barrier_ash` | `HealPercentMaxHP` 5 unchanged |
+| `lattice_guard` | Lattice Barrier | 2 | 2 | `PRIOR` | `BlockWindow:40%:Ranged:2:barrier_lattice\|BlockReflect:20%:barrier_lattice` | Description |
+| `guard_posture` | Guard Posture | 1 | 0 | `ARMOR` | `MitigationWindow:25%:2:1:armor_guard_posture` | Numbers unchanged; key rename only |
 
-**Notes on individual moves:**
-- **Two splits across Walls and Barriers:** Burned has one of each (Ember Wall, Ash Barrier). Staked (Compound Barrier) gets a Barrier while Block (Blockade) keeps a Wall. Block remains the barrier *type* per the hard rule. "Barrier" as a move-kind word is separate from the type.
-- **Compound Barrier's Melee Def +1** is a stage on the target. It keeps a small melee answer on a ranged card.
-  - It stacks with stage caps as today.
-  - Because it recharges, it can be cast at most once every 3 turns.
-- **Ice Wall's rider** reuses `GainApOnDamageIfSpeedHigher`, triggered on the block rather than on damage (a small code change). If that is unwanted, drop the rider and Ice Wall plays as Blockade.
+`BlockWindow` arguments: `%`, category (`Melee` / `Ranged`), turns (`2` = the cast turn and the next), stack key. The hit budget is always 1 and is not authored.
 
-## 8. Cautions
+**Recharge authoring note.** The authored `RechargeTurns` counts the cast turn's end tick (`FormatPlayerFacingRecharge`, `CombatResolver.cs:525`, `skippedTurns = rechargeTurns - 1`). So:
+- "Recharge 1" on the card = **`RechargeTurns = 2`**.
+- Authoring 1 means no recharge at all ("can be used again next turn").
 
-1. **AI quality decides how these numbers play out in the live game.** The V results use a category-aware, AP-banking team plan.
-   - Without the bank rule, 3-AP walls looked falsely weak (fixed during this study).
-   - The live AI needs the same three behaviours: pick the right category, bank for the wall, and don't wall when no matching threat can fire.
-   - Greedy walling (STALL/greedy) is punished hard under P: 95.3% KO by turn 3.
-2. **Win % (T-WIN) is AI- and kit-dependent.**
-   - Example: DD-B attacker win is 96.3% under V1 but 28.6% under P. The V1 defenders spend their game walling.
-   - Use KO-turn numbers for balance and win % only for direction.
-3. **Not simulated:**
-   - The Ice Wall AP rider on blocks.
-   - Lattice reflect, Ash heal and Vapor/Ash/Lattice in general (no species learns them).
-   - Stamps on walls.
-   - 4.3-b Wallbreaker vs P.
-   - Swapping a walled Chainling out.
-   - Human reads beyond "hold the heavy one turn".
-4. **The category escape is by design.** Expect mixed-category teams to rise in value and one-sided teams (Crackett, Kodiax) to lean on a partner of the other category.
-5. **Recharge semantics:** authored `RechargeTurns` counts the cast turn's tick. The card's "Recharge 2" must be authored as **3**. Authoring 2 gives the V1/V4 parity lock.
-6. **Exclusivity:**
-   - Until per-category slots exist, an ally's Wall and the target's own Barrier overwrite each other. Ship the code change with the data change.
-   - Alternatively, keep exclusivity and accept no double coverage. That is safe: double coverage is self-limiting under P (section 4.6).
-7. **Ember Wall's drain** is melee-only now. In the previous study (R) the drain was a large part of why Ember lines held.
-8. **Multi-hit randomness:** Cinder Burst (2–4 hits) through a 1-hit block varies a lot. Expect complaints that it "sometimes kills through a wall".
+**Duration authoring note.** A 2-turn window survives two end-of-turn ticks: the cast turn's and the next turn's. This matches Guard Posture's `MitigationWindow:25%:2:1` ("lasts 1 hit or 2 turns") and the existing `Walls_MitigateForTheirTurnWindowWithUnlimitedHits` test, which ticks a 2-turn source twice before it reads zero.
 
-## 9. Open questions only Cronus can answer
+**Other data:**
+- `BlockWindow` and `BlockReflect` are new opcodes (5.2 E1, E9).
+  - Tier is derived from the % (Lower ≤30, Mid 31–50, Greater >50). Alternatively add an explicit `BlockTier` column if the catalog wants it.
+  - Tie rule: 30% is Lower and 50% is Mid, matching section 2.
+- **Supabase generated tables:** regenerate with `CombatServerTablesExporter` (section 5.5).
+  - `move_ap.ts` changes for `ice_wall` 2, `barrier_wall` 1, `vapor_barrier` 1, `compound_guard` 2 and `lattice_guard` 2.
+  - `move_flags.generated.ts` gains a `BLOCK_MOVE_IDS` set (the eight family moves) for the server check in 5.5.
+  - `ownership_card_catalog.generated.ts` (element / basePower) and `known_pool.generated.ts` do not change.
 
-1. **Q1. Ember Wall identity.** Under P it is "Blockade + 1 AP drain". Options:
-   - (a) Keep it melee-only.
-   - (b) As the Legendary perk, it blocks the next hit of **either** category. That is R's Ember Protect: CR 0.4% by turn 3, PS 0% turn-1. It would break "walls = melee" for one card.
-   - (c) Keep it melee and block the whole move (V1 style) as the perk.
-2. **Q2. Recharge 1 or 2?** The data says 2, because 1 locks out 4-AP heavies. Is that slower rhythm acceptable for the "every other turn" feel Cronus pictured?
-3. **Q3. One hit, one move, or a whole turn?** P blocks one hit, so multi-hits counter it. V2 (all hits of the category this turn) is the Pokémon-style Protect.
-4. **Q4. Should a priority attack beat a wall?** Today it only lands first, as chip. Options:
-   - (a) Leave it as is. Wallbreaker stays the stamp counter.
-   - (b) A same-turn hit that resolves before the wall cancels it.
-   - (c) PRIOR hits ignore walls.
-   
-   Also: should any native ranged priority attack exist?
-5. **Q5. Renames:**
-   - Barrier Wall → Buffer Barrier.
-   - Compound Guard → Compound Barrier.
-   - Ash Guard → Ash Barrier.
-   - Lattice Guard → Lattice Barrier.
-   
-   Or keep the names and rely on a "Wall / Barrier" keyword pill.
-6. **Q6. Blocked-hit riders.** Should a blocked hit skip its statuses and chemistry (proposed), or keep today's behaviour where they land?
-7. **Q7. Double coverage.** Allow one Wall + one Barrier per Chainling (code change), or keep today's one-barrier rule?
-8. **Q8. Ice Wall's AP rider.** Keep it (reworked for blocks) or drop it?
-9. **Q9. AP 2 for all.** Blockade, Ice Wall, Barrier Wall and Compound Guard go 3 → 2, and Lattice goes 1 → 2. Is a flat 2 acceptable, or should one family member stay cheap or expensive as a deliberate trade?
-10. **Q10. Guard Posture** stays a % softener outside the family. Agreed?
+### 5.2 Engine changes
+
+- **E1. Block = a tagged mitigation source.**
+  - Add `BlockWindow` to the importer next to `MitigationWindow` (`Combat2DataImporter.cs:1696`). The `MitigationWindow` parser reads only magnitude / turns / hits today and has **no contact field**.
+  - `BlockWindow` installs a `MitigationSource` with: magnitude = %, `turnsRemaining = 2` (cast turn + next), `hitsRemaining = 1`, `contactFilter` = Contact for Melee / Projectile for Ranged, and new fields `blockKind` (Wall/Barrier), `blockTier` and `sourceMoveId`.
+  - `AddMitigationSource` already takes a contact filter and an attacker drain (`ChainlingInstance.cs:455`).
+  - Add `ChainlingInstance.HasIntactBlock()`: true while any source with a `blockKind` has `hitsRemaining > 0` and `turnsRemaining > 0`.
+  - Remove `FullAbsorbBarrier` / `DamageThresholdBarrier` from the family moves (Ember, Vapor, Lattice).
+- **E2. Melee/ranged.**
+  - % sources already honour `AppliesToContact` (`ChainlingInstance.cs:587`).
+  - `ApplyBarrierAbsorption` (`ChainlingInstance.cs:874–925`) ignores `BarrierInstance.contactFilter` (`:1014`). Make it read the filter too, so any remaining `BarrierInstance` source respects melee/ranged.
+- **E3. One hit, then consumed; else 2 turns.**
+  - The block's % applies to the first matching hit that lands. It is consumed by `ConsumeMitigationHitBudgets(move.contactType)`, which already runs per hit (`CombatResolver.cs:2323`).
+  - So a multi-hit breaks it on hit 1, and hits 2+ see no block.
+  - Misses do not consume it (as today). A block not hit expires at the end of the turn after the cast.
+  - Remove a consumed or expired block immediately, so `HasIntactBlock()` is false from then on.
+- **E4. Single-active block: denial at selection, never at resolution.**
+  - Add one legality check to `CombatActionEligibilityService` (already the "single authority for move/swap legality checks", shared by UI, AI and resolver):
+    - `EvaluateBlockTarget(actor, move, target, state, queuedBySlot)` returns `TargetHasBlock` when `target.HasIntactBlock()`, `TargetBlockQueued` when a teammate's queued action this turn is a family move on the same target, else OK.
+    - Resolve a queued action's target the way `ResolveCommittedFasterGiftAp` already does (explicit `targetTeamIndex`/`targetSlotIndex`, or the implicit single living ally; `CombatActionEligibilityService.cs:112`, `:184`).
+    - `EvaluateMoveSelection` gets an optional `queuedBySlot`. For a family move it returns `canSelect = false`, reason `AllTargetsBlocked`, when no candidate target passes.
+  - **UI** (5.3) and **AI** (5.4) call it before an action is queued.
+  - **Resolver safety net.** The resolver re-runs the same check where it already validates a move (`CombatResolver.cs:1621`). It checks against the state at the start of the turn plus the same team's actions in this turn's batch. On failure: log `ValidationError`, spend no AP, start no recharge, apply nothing, narrate nothing, and treat the action as a Pass. This path should be unreachable from an honest client. A test pins that it never fires in normal play.
+  - Selection-time state decides. A block that will break later this turn does not free the target for a cast chosen this turn.
+  - If the teammate's queued block never lands (its caster is KO'd or loses the AP first), the target just has no block this turn. There is no re-selection mid-turn.
+- **E5. Passive / modifier override.**
+  - Blocks granted by passives or modifiers/stamps use `AddBlock(override: true)`, which replaces an intact block. They do not go through selection.
+  - After a block is consumed or expires, a later block from any source applies normally.
+- **E6. Priority does not break walls.**
+  - No special case: a PRIOR hit that resolves after the block is up is mitigated and consumes it.
+  - Turn order stays swaps → priority block → normal → capture, each sorted by Speed (`CombatResolver.cs:863`, `:970`, `:988`).
+  - **D1:** 4.3-b Wallbreaker and 4.8-a Ignore Walls make the stamped attack's first hit skip every `blockKind` source's % and leave it unconsumed (today they bypass only `BarrierInstance`, `CombatResolver.cs:7178`). Armor still applies.
+  - **D2:** Core Breach's `ignoreMitigation` (`DamageCalculator.cs:179`) already zeroes all mitigation. Also skip `ConsumeMitigationHitBudgets` for that hit, so blocks and Armor survive it.
+- **E7. Ice Wall AP, cap 1.** Bind `GainApOnDamageIfSpeedHigher` to the block: grant +1 AP once, when the block consumes, if the protected Chainling is faster than the attacker. Today the reactive window ignores hit budget.
+- **E8. Ember drain.**
+  - `MitigationSource.attackerApDrainOnHit` exists (`ChainlingInstance.cs:1025`), but only barrier absorption applies drains (`:896`, `:916`).
+  - Apply the drain once, when a Wall consumes on a melee hit.
+- **E9. Riders on a mitigated hit (accepted default): riders, statuses and chemistry still apply,** because the hit lands for partial damage.
+  - `BlockReflect` deals 20% of the prevented amount (unmitigated − mitigated for that hit) to the attacker. That is reflect, not self-damage.
+  - Ash's heal and Compound's stage apply on cast. Compound's stage stacks on recast (D4).
+- **E10. Swap / KO.** Clear blocks (and all mitigation/barriers) on swap-out and on KO. Do not tick them on the bench (folded item, section 6). A block does not follow its holder to the bench and back.
+- **E11. Timer order.** Tick mitigation and barrier timers before `_statusProcessor.ProcessEndOfTurn` (today status ticks run first: `CombatResolver.cs:483` before `:492` / `:495`).
+- **E12. Exclusivity.** `exclusiveBarriersAndWalls: 1` (`CombatResolverConfig_Default.asset:31`, `ChainlingInstance.cs:850`) stays for `BarrierInstance`. The single-active rule (E4) governs the family.
+- **E13. Wall tag prefix.**
+  - `IsWallTag` matches the substring `wall`/`barrier` (`CombatWallStateUtility.cs:119`). That makes `Chemistry.Firewall` count as a wall and hides `blockade`.
+  - Match the prefixes `wall_` / `barrier_` and use them as the stack keys above. `armor_` is not a wall.
+
+### 5.3 UI
+
+- **Target selection** (`CombatSelectionCoordinatorUGUI`; `BuildTargetsForMove` at `:857`, `HandleConfirm` at `:300`):
+  - Build candidates as today, then mark each one with `EvaluateBlockTarget` (pass the bridge's `_queuedActionsBySlot`, `CombatActionSelectorBridge.cs:47`).
+  - Invalid targets stay visible but **greyed**, with a lock badge. Navigation skips them. Confirm on one plays the Invalid cue and shows "<Chainling> already has a block." or "<Chainling> is already getting a block."
+  - Exactly one valid target: auto-commit to it as today (no target step).
+  - No valid target: the move row is unusable (`AllTargetsBlocked`). Confirm plays `PlayUnavailableMoveFeedback` (`:327`) and the player stays on the MoveSelectPanel with "Every target already has a block." No AP is spent and no action is queued.
+  - **Back-navigation.** If the player goes back to slot 0 and queues a block onto the target slot 1 had chosen, slot 1's queued block becomes invalid. Clear it and reopen slot 1's selection.
+- **Icons.** Each move gets a kind icon (Wall = melee shield, Barrier = ranged shield, Armor = plate) and a tier pip (Lower / Mid / Greater). The existing PRIOR pill shows on every family move (`MoveSelectDisplayUtility.cs:199–213`).
+- **Status chip on the holder:** e.g. "WALL 50% · MELEE · 1 hit · 2 turns", counting down to "1 turn"; "BROKEN" when consumed.
+- **Narration:**
+  - "<attacker> broke <Chainling>'s <move> (−<n>)" on consume;
+  - "<Chainling>'s <move> faded" when it expires unhit;
+  - a line when DoT ticks while a block is up (DoT ignores blocks).
+  - There is **no** cancel line any more. A denied cast never reaches resolution.
+- **Blockade visibility fix.**
+  - Its stack key is `blockade`, so wall UI, popup and narration never see it. Its `wallSfxId` is empty.
+  - Fix with `wall_blockade` plus an sfx id (folded item).
+  - All family `wallSprite` slots are unauthored; art can follow.
+
+### 5.4 AI
+
+- **Legality.** `AIHelpers` already filters moves through `EvaluateMoveSelection` (`AIHelpers.cs:36`). Pass the team's actions queued so far this turn, and filter family-move targets with `EvaluateBlockTarget`. The AI never queues a blocked cast.
+- **Team order.** Build slot 0's action first, then slot 1's with slot 0's queued action visible, so two AI allies never block the same target.
+- **Category.** Cast a block only against an expected attack of its category. Value = tier % × the largest single matching attack into the target.
+- **Banking.**
+  - Bank AP for Greater tier: Blockade needs 3, so pass on the turn before a known heavy if regen alone won't cover it.
+  - Skip Lower-tier casts when the matching threat is small.
+- **No greedy walling.** Greedy walling costs AP for little (STALL/greedy: 6.98 AP a battle on blocks).
+- The sim policy `vwall`/`team_plan` in `walls_pvp_v2_sim.py` is a reference implementation.
+
+### 5.5 Supabase / battle-service parity
+
+- **How PvP works:** casual dual-sim. The server does structural checks only. Per `pvp_rules.ts`: "Cross-turn AP regen stays in the Unity resolver. A tampered resolver disputes on hash compare."
+- **Server check (same turn).** In `validateTurnActions` (`pvp_rules.ts:97`), reject a submission with `block_target_duplicate` when two `UseMove` actions both resolve to a `BLOCK_MOVE_IDS` move with the same `targetTeamIndex`/`targetSlotIndex`. Only reject when both move ids are certain from the reconstructed active roster. `rosterMoveError` deliberately does not bind indices to slots because of auto-swaps, so never false-reject an honest turn.
+- **Cross-turn state** (a block still up from last turn) is not visible to the stateless server. The Unity resolver safety net (E4) enforces it on both clients, and a tampered client disputes on hash compare.
+- **Regenerate** `move_ap.ts` / `move_flags.generated.ts` with `CombatServerTablesExporter`. This bumps `manifestHash`.
+- **Run** `move_ap_parity_test.ts` and `known_pool_parity_test.ts`, plus new `block_target_duplicate` cases in `pvp_matchmaking_test.ts` (where `validateTurnActions` is tested today).
+- **Ship together.** Edge functions and the client build must ship together. Both PvP clients must run the same resolver version, or every battle with a family move disputes on hash compare. Version-gate matchmaking.
+- **No server-side combat resolution** is added.
+
+### 5.6 Tests
+
+| Test | Checks |
+|---|---|
+| `Wall_BlocksMeleeOnly_BarrierBlocksRangedOnly` | category filter |
+| `Block_MitigatesTierPercent_OnOneHit_ThenConsumed` | one hit, % exact, consumed |
+| `Block_MultiHit_BreaksOnFirstHit_RestLandFull` | multi-hit rule |
+| `Block_Miss_DoesNotConsume` | misses |
+| `Block_NotHitOnCastTurn_StillBlocksNextTurn` | 2-turn duration |
+| `Block_ExpiresEndOfNextTurn_WhenNotHit` | 2-turn duration |
+| `BlockTarget_HoldingIntactBlock_IsNotSelectable` | E4, UI + AI share the check |
+| `BlockTarget_QueuedByTeammateThisTurn_IsNotSelectable` | E4 same-turn allies |
+| `BlockMove_AllTargetsBlocked_StaysOnMoveSelect_NoApSpent` | E4 / 5.3 |
+| `BlockTarget_BackNavigation_ClearsInvalidQueuedBlock` | 5.3 |
+| `AI_NeverQueuesBlockedCast` | 5.4 |
+| `Resolver_BlockedCastSafetyNet_PassNoApNoRechargeNoEffects` | E4 safety net |
+| `Resolver_BlockedCastSafetyNet_NeverFiresInScriptedBattles` | E4 unreachable in normal play |
+| `Block_PassiveOrModifier_OverridesIntactBlock` | E5 |
+| `Block_ConsumedOrExpired_TargetSelectableAgain` | E3 / E5 |
+| `Block_PriorityHitAfterBlock_IsMitigated` | E6 |
+| `Wallbreaker_IgnoreWalls_SkipBlockFirstHit_BlockSurvives` | D1 |
+| `CoreBreach_IgnoresBlockAndArmor_ConsumesNeither` | D2 |
+| `Block_AuthoredRecharge2_ShowsRecharge1_UsableTurnAfterNext` | recharge authoring |
+| `IceWall_GrantsAtMost1Ap_OnlyWhenHolderFaster` | E7 |
+| `EmberWall_DrainsAttackerOnce_OnMeleeConsume` | E8 |
+| `Block_MitigatedHit_StillAppliesRidersAndChemistry` | E9 |
+| `LatticeBarrier_Reflects20PercentOfPrevented` | E9 |
+| `CompoundBarrier_MeleeDefStacksOnRecast` | D4 |
+| `SwapOut_ClearsBlocks_BenchDoesNotTickThem` | E10 |
+| `WallTimers_TickBeforeStatusTicks` | E11 |
+| `WallTag_PrefixOnly_FirewallIsNotAWall` | E13 |
+| `Blockade_IsAWallForPresentation` | UI fix |
+| `GuardPosture_IsArmor_StacksWithBlock_NotABlockTarget` | Armor |
+| `MoveCatalog_RarityTypePoolsUnchanged` | hard rule |
+| `move_ap_parity_test.ts`, `pvp_matchmaking_test.ts` `block_target_duplicate` | Supabase parity |
+
+**Existing tests to rewrite** (they encode the old rules): `AuditReconciliationV1Tests.Walls_MitigateForTheirTurnWindowWithUnlimitedHits` (`:143`, unlimited hits), `CombatWallInterceptTests.ResolverSequencesFourHitMoveAgainstTwoHitWall` and `WallHitRetaliationDrainsAttackerApOnBarrierBlock` (Ember moves from barrier to % source), and `CombatModifierResolverAndPopupTests.IgnoreWalls_BypassesFirstHitBarrier` (D1).
+
+## 6. Folded in from `WALLS_BARRIERS_MITIGATION_ANALYSIS.md`
+
+| Earlier item | Status now |
+|---|---|
+| 1. Blockade visible: stack key `wall_blockade`, `wallSfxId` | **KEEP** (5.1, 5.3) |
+| 1. Wall tags match a `wall_` / `barrier_` prefix, not a substring | **KEEP** (E13) |
+| 2. One wall-tagged % source, newer replaces older | **SUPERSEDED** by the single-active rule. A move cast onto a blocked target is denied at selection; only passives/modifiers override (E4, E5). |
+| 3. Ice Wall 2 AP, text fix | **KEEP** (2 AP; new card text; AP tied to the block, E7) |
+| 4. Full absorb still grants reactive AP | **SUPERSEDED**: no full absorb in the family (E1, E7) |
+| 5. Core Breach, catalog-only (`ignoreMitigation`) | **KEEP** catalog-only. It ignores every Wall/Barrier and Armor and consumes neither (D2). |
+| 6. Lattice Guard 1 → 2 AP | **KEEP** (Lattice Barrier, 2 AP, Mid) |
+| 7. Ash Guard stays out of Cinislug | **KEEP** (no pool change) |
+| 8. Clear walls on swap-out and KO; no bench ticking | **KEEP** (E10) |
+| 9. Tick wall timers before status ticks | **KEEP** (E11) |
+| 10. Ignore Walls (4.8-a) stays a barrier bypass | **DECIDED (D1)**: it also skips Walls/Barriers on the first hit |
+| 11. Narrate DoT that lands while a wall is up | **KEEP** (5.3) |
+| 12. AI casts a wall on the ally who will be hit | **REPLACED** by 5.4 |
+| 13. Guard Stance stays out of pools | **KEEP** |
+
+## 7. Engine facts this plan relies on (s10)
+
+| Fact | Where |
+|---|---|
+| Turn order: swaps → priority block → normal → capture; each block sorted by Speed desc → stars → rebirth → roll | `CombatResolver.cs:863`, `:970`, `:988` |
+| Priority is binary: tag `PRIOR`/`PRIO`, or stamps 4.3-a Jump the Queue (power ×0.90), 4.3-b Wallbreaker, 1.1-a, 1.3-a, 1.3-b, 1.2-a | `CombatResolver.cs:7225`, `:7236`, `:7243`, `:4700` |
+| PRIOR attacks today: Quick Jab (P16, Crackett and Rattlestake), Blink Lunge (P26, no pool), Rapid Strike (P26, Forkrook). All melee, so **no ranged priority attack exists** (out of scope this round). | `Moves.csv`, `SpeciesMovePools.csv` |
+| No family move has PRIOR or a recharge today; all eight are `SingleAlly` | `Moves.csv` |
+| % mitigation sources take a contact filter and a drain field; consumed per landed hit | `ChainlingInstance.cs:455`, `:587`, `CombatResolver.cs:2323` |
+| Barrier absorption ignores the contact filter; only barriers apply drains | `ChainlingInstance.cs:874–925`, `:896`, `:916`, `:1014`, `:1025` |
+| Wallbreaker bypasses barriers on the first hit only | `CombatResolver.cs:7178` |
+| `ignoreMitigation` zeroes mitigation in damage | `DamageCalculator.cs:179` |
+| One barrier per Chainling | `CombatResolverConfig_Default.asset:31`, `ChainlingInstance.cs:850` |
+| Status ticks run before mitigation and barrier timers | `CombatResolver.cs:483`, `:492`, `:495` |
+| Wall tag = substring match | `CombatWallStateUtility.cs:119` |
+| Blockade stack key `blockade`, empty `wallSfxId` | `Move_blockade.asset` |
+| Recharge display = authored − 1 | `CombatResolver.cs:525` |
+| One legality service shared by UI, AI and resolver; it already reads teammates' queued actions | `CombatActionEligibilityService.cs:21`, `:112`, `:184` |
+| UI, AI and resolver call `EvaluateMoveSelection` | `CombatSelectionCoordinatorUGUI.cs:514`, `AIHelpers.cs:36`, `CombatResolver.cs:1621` |
+| Target candidates and the confirm path | `CombatSelectionCoordinatorUGUI.cs:857`, `:300`, `:327` |
+| The bridge keeps this turn's queued actions per slot | `CombatActionSelectorBridge.cs:47` |
+| Server turn validation is structural and stateless | `pvp_rules.ts:97` |
+| Sim turn cap 30 (engine 100) | `tempo_2v2_sim.py:188`, `CombatBattleController.cs:114` |
+
+## 8. Method and caveats
+
+- **Sim mechanics** (`tblock` in `walls_pvp_v2_sim.py`):
+  - The block's % multiplies the first matching landed hit, then the block is removed. Under C it otherwise lasts the cast turn and the next.
+  - Riders and chemistry still apply to that hit.
+  - Ember drains 1 AP on a melee consume. Ice Wall grants 1 AP if the holder is faster.
+  - **Denial at selection (C designs):** the AI never picks a block onto a target that holds one, and the team plan never queues two blocks onto one target in a turn. The resolver-side guard (refund, no recharge) is still in the sim as a safety net. It counts as "blocked casts that reached resolution", and it fired 0 times in all 124 C-family cells.
+  - A "carry" event is logged when a block absorbs on a later turn than its cast.
+  - GP Armor stays today's 25% window and multiplies.
+- **AI:**
+  - Category-aware, one block per target.
+  - Value = % × the largest single matching attack, with a threshold of 15% of the target's current HP.
+  - Banks AP for blocks that cost more than one regen.
+  - A non-PRIOR lasting block (Cnp Blockade) is cast on the prep turn before the heavy.
+  - The attacker "reads" a block when one is up on its target, or castable and at least 33%. It then retargets, jabs, or holds the heavy (the `/rt`, `/jab`, `/wait` cells).
+- **Regression:** the `engine`, `P` and `none` cells reproduce the previous run (`walls_pvp_v2_sim.prev.json`) exactly, and every cell shared with the first decided round (`walls_pvp_v2_sim.decided1.json`, including all of F) is identical. `engine` and `none` also match `walls_pvp_sim.out.json`.
+- **Not simulated:**
+  - Vapor, Ash and Lattice (no pool), and Lattice reflect.
+  - Passive/modifier override blocks (no such source exists yet).
+  - Wallbreaker / Ignore Walls / Core Breach vs blocks (D1, D2).
+  - A priority attacker slower than the wall caster.
+  - Human reads beyond "avoid a block that is up".
+- **Win %** (T-WIN) is AI- and kit-dependent; use it for direction only. KO timing is the balance signal.
+
+## 9. Open questions (still undecided)
+
+Everything the first decided round left open (duration, the cancel refund, Blockade [PRIOR], Ember's tier, riders, the bypass stamps, a Greater Barrier, Compound stacking) is now a decision or an accepted default in section 1. What is left:
+
+1. **Q1. HS-B** (Armor + Greater stack, mean 6.50): acceptable, or set the Armor round's % floor now?
+2. **Q2. AP-denial endgame** (not a wall rule). In the sim, a scripted Memory Leak partner can hold a lone Blockwyrm at 0 AP until the 30-turn cap (CK-E/deny, 4 of 4000 battles). Worth a look in the AP-denial review: can a human Keyper do this on purpose?
+3. **Q3. The Armor round** (section 3): stacking rule, % floor, and which moves and modifiers become Armor.
 
 ## 10. Full tables (generated, verbatim from `walls_pvp_v2_tables.py`)
 
 - **Format:** "T1 / T3 KO % · mean KO turn", capped at 12.
-- **4000 battles per cell.**
-- **Seeds:** cells reused from the previous study keep its seeds.
+- **Battles:** 4000 per cell.
 
 <!-- generated by walls_pvp_v2_tables.py -->
 
 ### T-MAIN  Target KO % by end of T1 / T3 · mean KO turn (capped at 12)
 
-| cell | none | engine | R | V1 | V2 | V3 | V4 | P |
+| cell | none | engine | P | F | C |
+|---|---|---|---|---|---|
+| STALL self-Ember Cinislug vs Hard Fork + Hammer Sync | 0/95 · 2.22 | 0/0 · 12.00 | 0/5 · 4.59 | 0/90.8 · 3.11 | 0/90.6 · 3.35 |
+| STALL, wall every legal turn | 0/95 · 2.22 | 0/0 · 12.00 | 0/95.3 · 2.18 | 0/95.5 · 2.31 | 0/3.3 · 7.16 |
+| MULTI Blade Flurry (3 hits) vs self-Ember | 0/5.4 · 4.49 | 0/0 · 8.54 | 0/0.3 · 4.87 | 0/1.4 · 4.46 | 0/1.3 · 4.47 |
+| SC Seam Cut T1 -> Deghoul, ally Ember | 91.7/100 · 1.09 | 91.3/96.5 · 1.21 | 0/99.3 · 2.09 | 1/99.5 · 2.05 | 1.4/98 · 2.10 |
+| PF Seam Cut + Hammer Sync focus -> Deghoul, ally Ember | 92.2/100 · 1.08 | 91.7/96.3 · 1.22 | 0/99.8 · 2.04 | 1.1/99.8 · 2.01 | 1/97.6 · 2.09 |
+| PS Partition Shot (ranged) T1 -> Deghoul, ally Ember | 64.8/98.8 · 1.61 | 63.9/65.8 · 2.08 | 62.8/98.4 · 1.66 | 63.8/97.5 · 1.65 | 64.7/89.5 · 1.84 |
+| CR Cryo Ray (ranged) -> Crackett, ally Ember | 0/93.2 · 2.21 | 0/0.4 · 4.93 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 |
+| CR-H Cryo Ray -> Crackett, ally Humpacked Buffer Barrier | 0/93.7 · 2.17 | 0/75 · 2.63 | 0/0 · 4.83 | 0/28.3 · 3.76 | 0/27.4 · 3.80 |
+| DD Deep Dig -> Keyper, ally Ember | 0/94.5 · 2.17 | 0/0 · 4.47 | 0/0.8 · 4.83 | 0/5 · 4.23 | 0/3.9 · 4.50 |
+| DD-B Deep Dig -> Keyper, GP + ally Blockade | 0/95 · 2.14 | 0/64.2 · 2.90 | 0/0 · 4.22 | 0/1.6 · 4.18 | 0/1.6 · 4.18 |
+| DD-I Deep Dig -> Keyper, GP + ally Ice Wall | 0/95 · 2.22 | 0/63.6 · 2.86 | 0/0 · 4.16 | 0/28.6 · 3.57 | 0/28.6 · 3.57 |
+| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 0/51.6 · 4.23 | 0/5.8 · 6.33 | 0/0 · 6.42 | 0/0 · 6.50 | 0/0 · 6.50 |
+| NCR Cryo Ray -> Rattlestake, self Compound Barrier | 0/57.2 · 2.92 | 0/8.5 · 3.99 | 0/0 · 4.94 | 0/2.9 · 4.12 | 0/2.9 · 4.12 |
+| NHF Hard Fork -> Rattlestake, Compound Barrier + ally Blockade | 0/94.7 · 2.24 | 0/20.9 · 5.71 | 0/0.3 · 5.55 | 0/57 · 3.95 | 0/57.1 · 4.15 |
+| NHFh Hard Fork (melee) -> Humpacked, self Buffer Barrier | 0/97.6 · 2.09 | 0/95.3 · 2.19 | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 |
+| DC Cryo Ray + Kodiax focus -> Humpacked, self Buffer Barrier + ally Ember | 0.1/99.2 · 2.15 | 0/18.2 · 3.94 | 0/97.1 · 2.40 | 0/96.4 · 2.32 | 0/92.4 · 2.40 |
+| DC, AI plans both blocks (F: 2nd cancelled on resolution; C: denied at selection) | 0.1/99.2 · 2.15 | 0/18.2 · 3.94 | 0/97.1 · 2.40 | 0/96.2 · 2.31 | 0/92.4 · 2.40 |
+| DC, defenders block only vs >=40% current-HP threats | 0.1/99.2 · 2.15 | 0/18.2 · 3.94 | 0/92.9 · 3.02 | 0.1/97.6 · 2.35 | 0.1/95.8 · 2.37 |
+
+### T-SENS  Sensitivities around C (the decided rules), same cells and format
+
+| cell | Cnp | Crc2 | Cmax |
+|---|---|---|---|
+| STALL self-Ember Cinislug vs Hard Fork + Hammer Sync | 0/90.6 · 3.35 | 0/90.7 · 3.35 | 0/90.6 · 3.35 |
+| STALL, wall every legal turn | 0/3.3 · 7.16 | 0/9.1 · 4.81 | 0/3.3 · 7.16 |
+| MULTI Blade Flurry (3 hits) vs self-Ember | 0/1.3 · 4.47 | 0/1.4 · 4.52 | 0/1.3 · 4.47 |
+| SC Seam Cut T1 -> Deghoul, ally Ember | 1.4/98 · 2.10 | 1.5/99.2 · 2.09 | 1.4/98 · 2.10 |
+| PF Seam Cut + Hammer Sync focus -> Deghoul, ally Ember | 1/97.6 · 2.09 | 1.2/99.5 · 2.06 | 1/97.6 · 2.09 |
+| PS Partition Shot (ranged) T1 -> Deghoul, ally Ember | 64.7/89.5 · 1.84 | 63.6/90.2 · 1.83 | 64.7/89.5 · 1.84 |
+| CR Cryo Ray (ranged) -> Crackett, ally Ember | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 |
+| CR-H Cryo Ray -> Crackett, ally Humpacked Buffer Barrier | 0/27.4 · 3.80 | 0/29.6 · 3.73 | 0/14.5 · 4.10 |
+| DD Deep Dig -> Keyper, ally Ember | 0/3.9 · 4.50 | 0/4.3 · 4.23 | 0/3.9 · 4.50 |
+| DD-B Deep Dig -> Keyper, GP + ally Blockade | 0/95 · 2.22 | 0/1.5 · 4.09 | 0/0 · 6.36 |
+| DD-I Deep Dig -> Keyper, GP + ally Ice Wall | 0/28.6 · 3.57 | 0/29 · 3.51 | 0/5.3 · 4.09 |
+| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 0/9.9 · 4.31 | 0/0 · 4.42 | 0/0 · 7.02 |
+| NCR Cryo Ray -> Rattlestake, self Compound Barrier | 0/2.9 · 4.12 | 0/2.9 · 4.07 | 0/0 · 4.76 |
+| NHF Hard Fork -> Rattlestake, Compound Barrier + ally Blockade | 0/94.5 · 2.27 | 0/56.8 · 4.15 | 0/10.1 · 5.46 |
+| NHFh Hard Fork (melee) -> Humpacked, self Buffer Barrier | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 |
+| DC Cryo Ray + Kodiax focus -> Humpacked, self Buffer Barrier + ally Ember | 0/92.4 · 2.40 | 0/94.5 · 2.37 | 0/91.8 · 2.42 |
+| DC, AI plans both blocks (F: 2nd cancelled on resolution; C: denied at selection) | 0/92.4 · 2.40 | 0/94.5 · 2.37 | 0/91.8 · 2.42 |
+| DC, defenders block only vs >=40% current-HP threats | 0.1/95.8 · 2.37 | 0.1/95.3 · 2.37 | 0.1/95.8 · 2.37 |
+
+### T-STALL  % of battles that reach the sim's 30-turn cap · block casts per battle
+
+| cell | none | engine | P | F | C | Cnp | Crc2 | Cmax |
 |---|---|---|---|---|---|---|---|---|
-| STALL self-Ember Cinislug vs Hard Fork + Hammer Sync | 0/95 · 2.22 | 0/0 · 12.00 | 0/5.3 · 4.77 | 0/4.9 · 4.58 | 0/4.9 · 4.58 | 0/65.2 · 3.52 | 0/4.9 · 4.58 | 0/5 · 4.59 |
-| STALL, wall every legal turn | 0/95 · 2.22 | 0/0 · 12.00 | 0/5.3 · 4.77 | 0/95 · 2.50 | 0/95 · 2.50 | 0/66 · 3.71 | 0/95 · 2.50 | 0/95.3 · 2.18 |
-| MULTI Blade Flurry (3 hits) vs self-Ember | 0/5.4 · 4.49 | 0/0 · 8.54 | 0/0 · 9.83 | 0/0 · 9.71 | 0/0 · 9.83 | 0/0 · 8.76 | 0/0 · 4.98 | 0/0.3 · 4.87 |
-| SC Seam Cut T1 -> Deghoul, ally Ember | 91.7/100 · 1.09 | 91.3/96.5 · 1.21 | 0/92 · 2.17 | 0/93.8 · 2.16 | 0/92 · 2.17 | 1.3/99.3 · 2.12 | 0/93.8 · 2.16 | 0/99.3 · 2.09 |
-| PF Seam Cut + Hammer Sync focus -> Deghoul, ally Ember | 92.2/100 · 1.08 | 91.7/96.3 · 1.22 | 0/96.3 · 2.08 | 0/96.4 · 2.08 | 0/96.3 · 2.08 | 1.4/99.7 · 2.04 | 0/96.4 · 2.08 | 0/99.8 · 2.04 |
-| PS Partition Shot (ranged) T1 -> Deghoul, ally Ember | 64.8/98.8 · 1.61 | 63.9/65.8 · 2.08 | 0/20.6 · 3.87 | 64.6/95.3 · 1.66 | 63.7/74.1 · 1.89 | 63/98.2 · 1.66 | 64.6/95.3 · 1.66 | 62.8/98.4 · 1.66 |
-| CR Cryo Ray (ranged) -> Crackett, ally Ember | 0/93.2 · 2.21 | 0/0.4 · 4.93 | 0/0.4 · 5.09 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 |
-| CR-H Cryo Ray -> Crackett, ally Humpacked (Barrier Wall) | 0/93.7 · 2.17 | 0/75 · 2.63 | 0/28.7 · 3.75 | 0/0 · 4.84 | 0/0 · 4.84 | 0/0.5 · 4.80 | 0/0 · 4.84 | 0/0 · 4.83 |
-| DD Deep Dig -> Keyper, ally Ember | 0/94.5 · 2.17 | 0/0 · 4.47 | 0/1 · 4.92 | 0/1.1 · 4.93 | 0/1.1 · 4.93 | 0/4.9 · 4.25 | 0/1.1 · 4.93 | 0/0.8 · 4.83 |
-| DD-B Deep Dig -> Keyper, GP + ally Blockade | 0/95 · 2.14 | 0/64.2 · 2.90 | 0/94.7 · 2.13 | 0/0 · 11.25 | 0/0 · 11.25 | 0/7.5 · 3.96 | 0/0 · 11.25 | 0/0 · 4.22 |
-| DD-I Deep Dig -> Keyper, GP + ally Ice Wall | 0/95 · 2.22 | 0/63.6 · 2.86 | 0/63 · 2.84 | 0/0 · 6.84 | 0/0 · 6.84 | 0/6.2 · 3.98 | 0/0 · 6.84 | 0/0 · 4.16 |
-| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 0/51.6 · 4.23 | 0/5.8 · 6.33 | 0/16.3 · 4.05 | 0/0 · 8.55 | 0/0 · 8.55 | 0/0.1 · 5.12 | 0/0 · 8.55 | 0/0 · 6.42 |
-| NCR Cryo Ray -> Rattlestake, self Compound Guard | 0/57.2 · 2.92 | 0/8.5 · 3.99 | 0/7.8 · 3.99 | 0/0 · 9.76 | 0/0 · 9.87 | 0/0 · 4.14 | 0/0 · 9.76 | 0/0 · 4.94 |
-| NHF Hard Fork -> Rattlestake, Compound Guard + Blockade | 0/94.7 · 2.24 | 0/20.9 · 5.71 | 0/10.7 · 6.56 | 0/0.3 · 5.55 | 0/0.3 · 5.55 | 0/10.5 · 5.05 | 0/0.3 · 5.55 | 0/0.3 · 5.55 |
-| NHFh Hard Fork (melee) -> Humpacked, self Barrier Wall | 0/97.6 · 2.09 | 0/95.3 · 2.19 | 0/98.2 · 2.10 | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 |
-| DC Cryo Ray + Kodiax focus -> Humpacked, self Barrier + ally Ember | 0.1/99.2 · 2.15 | 0/18.2 · 3.94 | 0/12.4 · 3.84 | 0/65.4 · 2.73 | 0/65.4 · 2.73 | 0/94.2 · 3.03 | 0/65.4 · 2.73 | 0/97.1 · 2.40 |
-| DC, defenders wall only vs >=40% HP threats | 0.1/99.2 · 2.15 | 0/18.2 · 3.94 | 0/12.4 · 3.84 | 0/89.6 · 3.05 | 0/89.6 · 3.05 | 0.1/96.7 · 2.37 | 0/89.6 · 3.05 | 0/92.9 · 3.02 |
-
-### T-SENS  Sensitivities, same cells and format
-
-| cell | V3t3 | V1L | V2np | V2ap2 | V2cgm | V2rc2 | V4rc2 |
-|---|---|---|---|---|---|---|---|
-| STALL self-Ember Cinislug vs Hard Fork + Hammer Sync | 0/60.4 · 3.99 | 0/0 · 10.24 | 0/95.6 · 2.12 | 0/4.9 · 4.58 | 0/4.9 · 4.58 | 0/5 · 4.59 | 0/5 · 4.59 |
-| STALL, wall every legal turn | 0/60.1 · 4.26 | 0/0 · 11.21 | 0/95.5 · 2.15 | 0/95 · 2.50 | 0/95 · 2.50 | 0/95.2 · 2.18 | 0/95.3 · 2.18 |
-| MULTI Blade Flurry (3 hits) vs self-Ember | 0/0 · 9.39 | 0/0 · 9.99 | 0/5.3 · 4.10 | 0/0 · 9.83 | 0/0 · 9.83 | 0/0 · 7.92 | 0/0.3 · 4.87 |
-| SC Seam Cut T1 -> Deghoul, ally Ember | 1.7/98.4 · 2.12 | 0/92.3 · 2.22 | 92.9/100 · 1.08 | 0/92 · 2.17 | 0/92 · 2.17 | 0/99.3 · 2.09 | 0/99.3 · 2.09 |
-| PF Seam Cut + Hammer Sync focus -> Deghoul, ally Ember | 1.4/99.5 · 2.04 | 0/94 · 2.16 | 92.2/100 · 1.08 | 0/96.3 · 2.08 | 0/96.3 · 2.08 | 0/99.8 · 2.04 | 0/99.8 · 2.04 |
-| PS Partition Shot (ranged) T1 -> Deghoul, ally Ember | 63.3/95.7 · 1.67 | 63.6/87.7 · 1.88 | 64/98.5 · 1.63 | 63.7/74.1 · 1.89 | 63.7/74.1 · 1.89 | 63.2/98.3 · 1.66 | 62.8/98.4 · 1.66 |
-| CR Cryo Ray (ranged) -> Crackett, ally Ember | 0/93.2 · 2.22 | 0/93.2 · 2.22 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 | 0/93.3 · 2.21 |
-| CR-H Cryo Ray -> Crackett, ally Humpacked (Barrier Wall) | 0/0.6 · 4.79 | 0/0.1 · 4.91 | 0/83.7 · 2.46 | 0/0 · 4.81 | 0/0 · 4.84 | 0/0 · 4.80 | 0/0 · 4.80 |
-| DD Deep Dig -> Keyper, ally Ember | 0/3.9 · 4.25 | 0/1.1 · 4.69 | 0/94.6 · 2.16 | 0/1.1 · 4.93 | 0/1.1 · 4.93 | 0/0.8 · 4.83 | 0/0.8 · 4.83 |
-| DD-B Deep Dig -> Keyper, GP + ally Blockade | 0/7.2 · 4.05 | 0/0 · 11.25 | 0/95 · 2.11 | 0/0 · 11.23 | 0/0 · 11.25 | 0/0 · 4.21 | 0/0 · 4.21 |
-| DD-I Deep Dig -> Keyper, GP + ally Ice Wall | 0/6.5 · 4.07 | 0/0 · 6.11 | 0/24.8 · 5.17 | 0/0 · 6.96 | 0/0 · 6.84 | 0/0 · 4.15 | 0/0 · 4.15 |
-| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 0/0.2 · 6.31 | 0/0 · 8.57 | 0/9.1 · 4.02 | 0/0 · 8.12 | 0/0 · 8.55 | 0/0 · 6.83 | 0/0 · 6.83 |
-| NCR Cryo Ray -> Rattlestake, self Compound Guard | 0/0 · 4.77 | 0/0 · 6.31 | 0/2.6 · 9.28 | 0/0 · 9.88 | 0/54.9 · 2.97 | 0/0 · 4.92 | 0/0 · 4.94 |
-| NHF Hard Fork -> Rattlestake, Compound Guard + Blockade | 0/10.2 · 5.03 | 0/0.2 · 6.25 | 0/94.8 · 2.23 | 0/0.3 · 5.56 | 0/0 · 10.06 | 0/0.2 · 5.55 | 0/0.2 · 5.55 |
-| NHFh Hard Fork (melee) -> Humpacked, self Barrier Wall | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 | 0/97.6 · 2.09 |
-| DC Cryo Ray + Kodiax focus -> Humpacked, self Barrier + ally Ember | 0/68.2 · 3.28 | 0/23.9 · 4.65 | 0.1/99.1 · 2.14 | 0/64.5 · 2.73 | 0/65.4 · 2.73 | 0/97.2 · 2.41 | 0/97.2 · 2.41 |
-| DC, defenders wall only vs >=40% HP threats | 0.1/96.6 · 2.37 | 0/76.5 · 3.49 | 0.1/98.6 · 2.22 | 0/89.2 · 3.12 | 0/89.6 · 3.05 | 0/93.2 · 2.98 | 0/93.2 · 2.98 |
-
-### T-STALL  Stall rate (% of battles that reach the sim's 30-turn cap) and wall casts per battle
-
-| cell | none | engine | R | V1 | V2 | V3 | V4 | P | V1L |
-|---|---|---|---|---|---|---|---|---|---|
-| STALL self-Ember Cinislug vs Hard Fork + Hammer Sync | 0% · 0 | 99.8% · 29.97 | 0% · 1.01 | 0% · 1.01 | 0% · 1.01 | 0% · 1.05 | 0% · 1.01 | 0% · 1.01 | 0% · 2.11 |
-| STALL, wall every legal turn | 0% · 0 | 99.8% · 29.97 | 0% · 1.01 | 0% · 1.13 | 0% · 1.13 | 0% · 1.35 | 0% · 1.13 | 0% · 1.05 | 0% · 4.05 |
-| MULTI Blade Flurry (3 hits) vs self-Ember | 0% · 0 | 1.1% · 7.84 | 0% · 3.72 | 0% · 3.68 | 0% · 3.72 | 0% · 2.58 | 0% · 2.74 | 0% · 2 | 0% · 3.76 |
+| STALL self-Ember Cinislug vs Hard Fork + Hammer Sync | 0% · 0 | 99.8% · 29.97 | 0% · 1.01 | 0% · 1 | 0% · 1 | 0% · 1 | 0% · 1 | 0% · 1 |
+| STALL, wall every legal turn | 0% · 0 | 99.8% · 29.97 | 0% · 1.05 | 0% · 1.11 | 0% · 3.49 | 0% · 3.49 | 0% · 1.92 | 0% · 3.49 |
+| MULTI Blade Flurry (3 hits) vs self-Ember | 0% · 0 | 1.1% · 7.84 | 0% · 2 | 0% · 2 | 0% · 2 | 0% · 2 | 0% · 1.25 | 0% · 2 |
+| DD-B Deep Dig -> Keyper, GP + ally Blockade | 0% · 0 | 0% · 3.27 | 0% · 5.27 | 0% · 6.27 | 0% · 6.27 | 0% · 2.27 | 0% · 5.14 | 0% · 9.53 |
+| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 0% · 0 | 0% · 5.68 | 0% · 7.5 | 0% · 8.9 | 0% · 8.9 | 0% · 5.24 | 0% · 5.48 | 0% · 9.43 |
+| worst cell (highest cap %), all 31 cells | 0% | 99.8% | 0% | 0% | 0.1% | 0.1% | 0.1% | 0.1% |
 
 ### T-CK  Crackett (86 melee / 38 ranged Atk, no damaging ranged move) vs a melee wall on Deghoul. T1 / T3 KO % · mean KO turn
 
-| attacker response | none | engine | R | V1 | V2 | V3 | V4 | P |
-|---|---|---|---|---|---|---|---|---|
-| naive: Seam Cut into the target every turn | 92/100 · 1.09 | 91.8/97 · 1.19 | 0/91.6 · 2.18 | 0/93.5 · 2.16 | 0/91.6 · 2.18 | 1.7/99.5 · 2.11 | 0/93.5 · 2.16 | 0/99.4 · 2.09 |
-| retarget: hit the other foe while the wall is ready | 92/100 · 1.09 | 0/63.9 · 3.40 | 0/90.5 · 2.24 | 0/93.8 · 2.16 | 0/93.6 · 2.16 | 0/35 · 3.81 | 0/93.8 · 2.16 | 0/93.1 · 2.21 |
-| priority: Quick Jab the target while the wall is ready | 92/100 · 1.09 | 0/0.3 · 4.20 | 0/94.8 · 2.11 | 0/96.6 · 2.09 | 0/94.8 · 2.11 | 0/97.5 · 2.69 | 0/96.6 · 2.09 | 0/99.8 · 2.06 |
-| ranged partner (Marrowhead) focuses the target | 98.1/100 · 1.02 | 97.9/99.4 · 1.05 | 0/98 · 2.04 | 63.9/100 · 1.36 | 63.9/100 · 1.36 | 93.3/100 · 1.07 | 63.9/100 · 1.36 | 63.6/100 · 1.36 |
-| multi-hit partner (Kitsauto Blade Flurry) focuses | 94.7/100 · 1.05 | 95.2/95.3 · 1.15 | 0/94.7 · 2.11 | 0.3/99.8 · 2.02 | 0/94.7 · 2.11 | 14.9/100 · 1.86 | 0.5/100 · 2.01 | 0.2/100 · 2.02 |
-| AP denial partner (Keyper Memory Leak on Cinislug) | 91.9/100 · 1.08 | 92.7/99.2 · 1.16 | 0/99.2 · 2.08 | 0/99.2 · 2.08 | 0/99.2 · 2.08 | 1.5/99.3 · 2.11 | 0/99.2 · 2.08 | 0/99.2 · 2.08 |
-| naive, wall = ally Blockwyrm Blockade | 92.7/100 · 1.08 | 92.2/99.8 · 1.09 | 92.2/99.7 · 1.12 | 92.2/99.6 · 1.16 | 92/99.6 · 1.17 | 92/99.5 · 1.13 | 92.2/99.6 · 1.16 | 0/99.6 · 2.09 |
-| retarget, wall = ally Blockwyrm Blockade | 92.7/100 · 1.08 | 92.2/99.8 · 1.09 | 0/12.4 · 4.34 | 92.7/99.5 · 1.15 | 92.4/99.4 · 1.17 | 91.9/94.7 · 1.22 | 92.7/99.5 · 1.15 | 0/99.6 · 2.08 |
+| attacker response | none | engine | P | F | C |
+|---|---|---|---|---|---|
+| naive: Seam Cut into the target every turn | 92/100 · 1.09 | 91.8/97 · 1.19 | 0/99.4 · 2.09 | 1.3/99.6 · 2.05 | 1.2/98.1 · 2.11 |
+| retarget: hit the other foe while the wall is ready | 92/100 · 1.09 | 0/63.9 · 3.40 | 0/93.1 · 2.21 | 0/93.9 · 2.15 | 0/28.6 · 3.90 |
+| priority: Quick Jab the target while the wall is ready | 92/100 · 1.09 | 0/0.3 · 4.20 | 0/99.8 · 2.06 | 0/96.6 · 2.09 | 0/24.4 · 4.00 |
+| ranged partner (Marrowhead) focuses the target | 98.1/100 · 1.02 | 97.9/99.4 · 1.05 | 63.6/100 · 1.36 | 93.3/100 · 1.07 | 93/100 · 1.09 |
+| multi-hit partner (Kitsauto Blade Flurry) focuses | 94.7/100 · 1.05 | 95.2/95.3 · 1.15 | 0.2/100 · 2.02 | 81.9/100 · 1.18 | 81.9/100 · 1.18 |
+| AP denial partner (Keyper Memory Leak on Cinislug) | 91.9/100 · 1.08 | 92.7/99.2 · 1.16 | 0/99.2 · 2.08 | 1/99.7 · 2.04 | 1.3/98.8 · 2.09 |
+| naive, wall = ally Blockwyrm Blockade | 92.7/100 · 1.08 | 92.2/99.8 · 1.09 | 0/99.6 · 2.09 | 92/99.8 · 1.13 | 91.7/99.3 · 1.15 |
+| retarget, wall = ally Blockwyrm Blockade | 92.7/100 · 1.08 | 92.2/99.8 · 1.09 | 0/99.6 · 2.08 | 92.7/99.5 · 1.15 | 91.2/91.2 · 1.33 |
 
-### T-CKD  Same cells: Crackett's damage to the target per battle
+### T-RHY  Rhythm read (attacker holds the heavy while a matching block is ready). T1 / T3 KO % · mean KO turn
 
-| attacker response | none | engine | R | V1 | V2 | V3 | V4 | P |
-|---|---|---|---|---|---|---|---|---|
-| naive: Seam Cut into the target every turn | 136.6 | 130.1 | 126.9 | 126.6 | 126.9 | 135 | 126.6 | 132.8 |
-| retarget: hit the other foe while the wall is ready | 136.6 | 64.2 | 120.8 | 126.4 | 126.5 | 12.6 | 126.4 | 122.2 |
-| priority: Quick Jab the target while the wall is ready | 136.6 | 44.4 | 163.2 | 163.8 | 163.2 | 149.5 | 163.8 | 165.3 |
-| ranged partner (Marrowhead) focuses the target | 128.4 | 127.4 | 127.1 | 45.7 | 45.7 | 66.8 | 45.7 | 46.3 |
-| multi-hit partner (Kitsauto Blade Flurry) focuses | 132.2 | 127.2 | 126 | 127.3 | 126 | 116.1 | 125.5 | 127.5 |
-| AP denial partner (Keyper Memory Leak on Cinislug) | 136.9 | 133.2 | 132.9 | 132.9 | 132.9 | 134.9 | 132.9 | 132.9 |
-| naive, wall = ally Blockwyrm Blockade | 136.1 | 135.8 | 135.1 | 132.7 | 132.6 | 133.7 | 132.7 | 132 |
-| retarget, wall = ally Blockwyrm Blockade | 136.1 | 135.8 | 11.1 | 132.8 | 132.7 | 129.7 | 132.8 | 132.4 |
+| cell | none | engine | P | F | C |
+|---|---|---|---|---|---|
+| CR-H naive | 0/93.7 · 2.17 | 0/75 · 2.63 | 0/0 · 4.83 | 0/28.3 · 3.76 | 0/27.4 · 3.80 |
+| CR-H attacker holds Cryo Ray while the wall is ready | 0/93.7 · 2.17 | 0/75 · 2.63 | 0/57.9 · 3.57 | 0/28.3 · 3.76 | 0/27.4 · 3.80 |
+| HS naive | 0/32.2 · 4.76 | 0/0.1 · 4.87 | 0/0.1 · 5.63 | 0/0.3 · 5.53 | 0/0.2 · 5.59 |
+| HS attacker holds Hammer Sync while the wall is ready | 0/32.2 · 4.76 | 0/8.5 · 4.70 | 0/3.4 · 5.84 | 0/18 · 4.92 | 0/0 · 5.56 |
+| DD naive | 0/94.5 · 2.17 | 0/0 · 4.47 | 0/0.8 · 4.83 | 0/5 · 4.23 | 0/3.9 · 4.50 |
+| DD attacker holds Deep Dig while the wall is ready | 0/94.5 · 2.17 | 0/0 · 5.40 | 0/26.2 · 4.03 | 0/34.2 · 3.82 | 0/0 · 4.68 |
 
-### T-RHY  Rhythm read (attacker holds the heavy while a matching wall is ready). T1 / T3 KO % · mean KO turn
+### T-ABS  Blocks that mitigated a hit on the target per battle · of those, on a later turn than the cast (Blockade cells; Cnp = Blockade without PRIOR)
 
-| cell | none | engine | R | V1 | V2 | V3 | V4 | P |
-|---|---|---|---|---|---|---|---|---|
-| CR-H naive | 0/93.7 · 2.17 | 0/75 · 2.63 | 0/28.7 · 3.75 | 0/0 · 4.84 | 0/0 · 4.84 | 0/0.5 · 4.80 | 0/0 · 4.84 | 0/0 · 4.83 |
-| CR-H attacker holds Cryo Ray while the wall is ready | 0/93.7 · 2.17 | 0/75 · 2.63 | 0/28.7 · 3.75 | 0/56.3 · 3.59 | 0/56.3 · 3.59 | 0/0.6 · 4.80 | 0/56.3 · 3.59 | 0/57.9 · 3.57 |
-| HS naive | 0/32.2 · 4.76 | 0/0.1 · 4.87 | 0/0.1 · 5.61 | 0/0.1 · 5.61 | 0/0.1 · 5.61 | 0/0.1 · 4.95 | 0/0.1 · 5.61 | 0/0.1 · 5.63 |
-| HS attacker holds Hammer Sync while the wall is ready | 0/32.2 · 4.76 | 0/8.5 · 4.70 | 0/3.4 · 5.84 | 0/16.9 · 5.32 | 0/16.9 · 5.32 | 0/0.1 · 5.13 | 0/16.9 · 5.32 | 0/3.4 · 5.84 |
-| DD naive | 0/94.5 · 2.17 | 0/0 · 4.47 | 0/1 · 4.92 | 0/1.1 · 4.93 | 0/1.1 · 4.93 | 0/4.9 · 4.25 | 0/1.1 · 4.93 | 0/0.8 · 4.83 |
-| DD attacker holds Deep Dig while the wall is ready | 0/94.5 · 2.17 | 0/0 · 5.40 | 0/26.2 · 4.03 | 0/34.2 · 3.82 | 0/34.2 · 3.82 | 0/5.1 · 4.36 | 0/34.2 · 3.82 | 0/26.2 · 4.03 |
+| cell | P | F | C | Cnp | Cmax |
+|---|---|---|---|---|---|
+| DD-B Deep Dig -> Keyper, GP + ally Blockade | 1 · 0 | 1.99 · 0 | 1.99 · 0 | 0 · 0 | 3 · 0 |
+| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 1.04 · 0 | 2.28 · 0 | 2.28 · 0 | 0.78 · 0.78 | 2.3 · 0 |
+| NHF Hard Fork -> Rattlestake, Compound Barrier + ally Blockade | 1.07 · 0 | 1.01 · 0 | 1 · 0 | 0 · 0 | 1.05 · 0 |
+| CK-B Crackett vs ally Blockade | 0.96 · 0 | 0.08 · 0 | 0.09 · 0 | 0 · 0 | 0.09 · 0 |
 
-### T-AP  AP the defending team spends on walls per battle · defending team damage dealt per battle
+### T-AP  AP the defending team spends on blocks per battle · defending team damage dealt per battle
 
-| cell | none | engine | R | V1 | V2 | V3 | V4 | P | V2ap2 |
-|---|---|---|---|---|---|---|---|---|---|
-| SC Seam Cut T1 -> Deghoul, ally Ember | 0 · 179.3 | 2.06 · 138.4 | 2.16 · 175.6 | 2.17 · 174.3 | 2.16 · 175.6 | 2.01 · 174.5 | 2.17 · 174.3 | 2.01 · 173.7 | 2.16 · 175.6 |
-| CR-H Cryo Ray -> Crackett, ally Humpacked (Barrier Wall) | 0 · 217.1 | 1.69 · 186.3 | 1.86 · 239.7 | 3.05 · 276.7 | 3.05 · 276.7 | 2.01 · 266.6 | 3.05 · 276.7 | 1.95 · 304.4 | 2.03 · 303.5 |
-| DD Deep Dig -> Keyper, ally Ember | 0 · 259.7 | 2.75 · 306.4 | 2.67 · 335.1 | 2.67 · 335.1 | 2.67 · 335.1 | 2.6 · 304.2 | 2.67 · 335.1 | 2 · 332.3 | 2.67 · 335.1 |
-| DD-B Deep Dig -> Keyper, GP + ally Blockade | 0 · 393.4 | 6.96 · 378.8 | 4.2 · 353.6 | 25.52 · 250.9 | 25.52 · 250.9 | 6.05 · 376.6 | 25.52 · 250.9 | 6.32 · 365.5 | 20.69 · 248.3 |
-| DD-I Deep Dig -> Keyper, GP + ally Ice Wall | 0 · 360.4 | 2.5 · 323.9 | 6.98 · 262.6 | 13.96 · 122.7 | 13.96 · 122.7 | 6.08 · 287.8 | 13.96 · 122.7 | 6.21 · 291.9 | 11.81 · 169.5 |
-| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 0 · 380.7 | 11.6 · 338 | 7.5 · 291.6 | 15.76 · 322.6 | 15.76 · 322.6 | 7.71 · 333.4 | 15.76 · 322.6 | 8.6 · 304.4 | 12.67 · 310.7 |
-| NCR Cryo Ray -> Rattlestake, self Compound Guard | 0 · 224.2 | 5.7 · 174.7 | 3.14 · 190.8 | 14.05 · 197 | 14.13 · 198.4 | 3.21 · 189.5 | 14.05 · 197 | 2.58 · 219.2 | 9.4 · 244.3 |
-| DC Cryo Ray + Kodiax focus -> Humpacked, self Barrier + ally Ember | 0 · 241.6 | 8.28 · 81.6 | 6.48 · 178.9 | 5.8 · 202.3 | 5.8 · 202.3 | 4.19 · 205.7 | 5.8 · 202.3 | 3.1 · 200.3 | 4.44 · 200.2 |
-| CK-B Crackett vs ally Blockade | 0 · 213.8 | 0.25 · 190.9 | 2.06 · 226.8 | 0.25 · 195.9 | 0.25 · 196 | 0.24 · 192.5 | 0.25 · 195.9 | 2.01 · 266.8 | 2.17 · 268.4 |
+| cell | none | engine | P | F | C |
+|---|---|---|---|---|---|
+| SC Seam Cut T1 -> Deghoul, ally Ember | 0 · 179.3 | 2.06 · 138.4 | 2.01 · 173.7 | 2.11 · 171.1 | 2.12 · 172.6 |
+| CR-H Cryo Ray -> Crackett, ally Humpacked Buffer Barrier | 0 · 217.1 | 1.69 · 186.3 | 1.95 · 304.4 | 0.97 · 251 | 0.98 · 252.5 |
+| DD Deep Dig -> Keyper, ally Ember | 0 · 259.7 | 2.75 · 306.4 | 2 · 332.3 | 2.61 · 300.6 | 2.6 · 313 |
+| DD-B Deep Dig -> Keyper, GP + ally Blockade | 0 · 393.4 | 6.96 · 378.8 | 6.32 · 365.5 | 10.45 · 349.5 | 10.45 · 349.5 |
+| DD-I Deep Dig -> Keyper, GP + ally Ice Wall | 0 · 360.4 | 2.5 · 323.9 | 6.21 · 291.9 | 7.04 · 242.5 | 7.04 · 242.5 |
+| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 0 · 380.7 | 11.6 · 338 | 8.6 · 304.4 | 13.71 · 287.7 | 13.71 · 287.7 |
+| NCR Cryo Ray -> Rattlestake, self Compound Barrier | 0 · 224.2 | 5.7 · 174.7 | 2.58 · 219.2 | 4.1 · 194.5 | 4.1 · 194.5 |
+| DC Cryo Ray + Kodiax focus -> Humpacked, self Buffer Barrier + ally Ember | 0 · 241.6 | 8.28 · 81.6 | 3.1 · 200.3 | 2.61 · 223.5 | 2.63 · 222 |
+| CK-B Crackett vs ally Blockade | 0 · 213.8 | 0.25 · 190.9 | 2.01 · 266.8 | 0.25 · 192.6 | 0.27 · 193.4 |
 
-### T-DC  Double coverage: turns per battle with both categories covered on the target · turns where every hit on the target was blocked
+### T-DC  Double coverage: turns per battle with both categories covered on the target · blocked casts that reached resolution per battle
 
-| cell | none | engine | R | V1 | V2 | V3 | V4 | P |
-|---|---|---|---|---|---|---|---|---|
-| DC | 0 · 0 | 0 · 0 | 0 · 1.78 | 1.1 · 1.31 | 1.1 · 1.31 | 0.61 · 0 | 1.1 · 1.31 | 1.02 · 0.97 |
-| DC/strict | 0 · 0 | 0 · 0 | 0 · 1.78 | 0.33 · 0.65 | 0.33 · 0.65 | 0.11 · 0 | 0.33 · 0.65 | 0.86 · 0.95 |
+| cell | none | engine | P | F | C |
+|---|---|---|---|---|---|
+| DC | 0 · 0 | 0 · 0 | 1.02 · 0 | 0 · 0 | 0 · 0 |
+| DC/naive | 0 · 0 | 0 · 0 | 1.02 · 0 | 0 · 0.24 | 0 · 0 |
+| DC/strict | 0 · 0 | 0 · 0 | 0.86 · 0 | 0 · 0 | 0 · 0 |
 
-### T-PRIO  Priority hits on the target per battle · of those, landed before a same-turn wall on it
+### T-PRIO  Priority hits on the target per battle · of those, landed before a same-turn block on it
 
-| cell | none | engine | R | V1 | V2 | V3 | V4 | P |
-|---|---|---|---|---|---|---|---|---|
-| CK-E/jab | 0 · 0 | 0.95 · 0 | 0.98 · 0 | 0.98 · 0.98 | 0.98 · 0.97 | 0.95 · 0.95 | 0.98 · 0.98 | 0.95 · 0.95 |
+| cell | none | engine | P | F | C |
+|---|---|---|---|---|---|
+| CK-E/jab | 0 · 0 | 0.95 · 0 | 0.95 · 0.95 | 0.98 · 0.98 | 1.65 · 1.14 |
 
-### T-WIN  Attacking-team win % (AI-dependent; read with section 4.6)
+### T-WIN  Attacking-team win % (AI-dependent; direction only)
 
-| cell | none | engine | R | V1 | V2 | V3 | V4 | P |
-|---|---|---|---|---|---|---|---|---|
-| STALL self-Ember Cinislug vs Hard Fork + Hammer Sync | 22.6 | 99.8 | 5.1 | 3.9 | 3.9 | 30.8 | 3.9 | 3.9 |
-| STALL, wall every legal turn | 22.6 | 99.8 | 5.1 | 30.6 | 30.6 | 28.9 | 30.6 | 31.8 |
-| MULTI Blade Flurry (3 hits) vs self-Ember | 31.2 | 99.9 | 45.4 | 45.1 | 45.4 | 41.7 | 58.5 | 57 |
-| SC Seam Cut T1 -> Deghoul, ally Ember | 99.9 | 100 | 99.4 | 99.8 | 99.4 | 100 | 99.8 | 99.9 |
-| PF Seam Cut + Hammer Sync focus -> Deghoul, ally Ember | 98.8 | 100 | 95.2 | 95.3 | 95.2 | 97.2 | 95.3 | 97.6 |
-| PS Partition Shot (ranged) T1 -> Deghoul, ally Ember | 98.7 | 99.8 | 79.2 | 99 | 96.7 | 99.5 | 99 | 99.5 |
-| CR Cryo Ray (ranged) -> Crackett, ally Ember | 99.1 | 100 | 97.2 | 99.1 | 99.1 | 99.1 | 99.1 | 99.1 |
-| CR-H Cryo Ray -> Crackett, ally Humpacked (Barrier Wall) | 100 | 100 | 100 | 100 | 100 | 100 | 100 | 100 |
-| DD Deep Dig -> Keyper, ally Ember | 96.9 | 96.9 | 79.2 | 79.3 | 79.3 | 92.2 | 79.3 | 76.6 |
-| DD-B Deep Dig -> Keyper, GP + ally Blockade | 22.4 | 29.3 | 42.3 | 96.3 | 96.3 | 18.7 | 96.3 | 28.6 |
-| DD-I Deep Dig -> Keyper, GP + ally Ice Wall | 63.7 | 87 | 97.3 | 100 | 100 | 96.2 | 100 | 90.6 |
-| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 13.8 | 51.2 | 83.7 | 37.6 | 37.6 | 61.5 | 37.6 | 62.8 |
-| NCR Cryo Ray -> Rattlestake, self Compound Guard | 98.9 | 99 | 98.9 | 96.7 | 96.6 | 98.8 | 96.7 | 97.5 |
-| NHF Hard Fork -> Rattlestake, Compound Guard + Blockade | 99.1 | 100 | 99.1 | 99.7 | 99.7 | 99.8 | 99.7 | 97.1 |
-| NHFh Hard Fork (melee) -> Humpacked, self Barrier Wall | 61.2 | 83.5 | 84.2 | 61.2 | 61.2 | 61.2 | 61.2 | 61.2 |
-| DC Cryo Ray + Kodiax focus -> Humpacked, self Barrier + ally Ember | 98.2 | 100 | 99.2 | 99.6 | 99.6 | 99.6 | 99.6 | 99.4 |
-| DC, defenders wall only vs >=40% HP threats | 98.2 | 100 | 99.2 | 97.3 | 97.3 | 98.4 | 97.3 | 95.5 |
-
+| cell | none | engine | P | F | C |
+|---|---|---|---|---|---|
+| STALL self-Ember Cinislug vs Hard Fork + Hammer Sync | 22.6 | 99.8 | 3.9 | 9.9 | 9.5 |
+| STALL, wall every legal turn | 22.6 | 99.8 | 31.8 | 32 | 56.1 |
+| MULTI Blade Flurry (3 hits) vs self-Ember | 31.2 | 99.9 | 57 | 60.8 | 60.9 |
+| SC Seam Cut T1 -> Deghoul, ally Ember | 99.9 | 100 | 99.9 | 99.9 | 99.9 |
+| PF Seam Cut + Hammer Sync focus -> Deghoul, ally Ember | 98.8 | 100 | 97.6 | 98.1 | 97.3 |
+| PS Partition Shot (ranged) T1 -> Deghoul, ally Ember | 98.7 | 99.8 | 99.5 | 99.7 | 99.7 |
+| CR Cryo Ray (ranged) -> Crackett, ally Ember | 99.1 | 100 | 99.1 | 99.1 | 99.1 |
+| CR-H Cryo Ray -> Crackett, ally Humpacked Buffer Barrier | 100 | 100 | 100 | 100 | 100 |
+| DD Deep Dig -> Keyper, ally Ember | 96.9 | 96.9 | 76.6 | 93.8 | 88 |
+| DD-B Deep Dig -> Keyper, GP + ally Blockade | 22.4 | 29.3 | 28.6 | 30.7 | 30.7 |
+| DD-I Deep Dig -> Keyper, GP + ally Ice Wall | 63.7 | 87 | 90.6 | 96 | 96 |
+| HS-B Hammer Sync -> Deghoul, GP + ally Blockade | 13.8 | 51.2 | 62.8 | 64.4 | 64.4 |
+| NCR Cryo Ray -> Rattlestake, self Compound Barrier | 98.9 | 99 | 97.5 | 99 | 99 |
+| NHF Hard Fork -> Rattlestake, Compound Barrier + ally Blockade | 99.1 | 100 | 97.1 | 100 | 99.7 |
+| NHFh Hard Fork (melee) -> Humpacked, self Buffer Barrier | 61.2 | 83.5 | 61.2 | 61.2 | 61.2 |
+| DC Cryo Ray + Kodiax focus -> Humpacked, self Buffer Barrier + ally Ember | 98.2 | 100 | 99.4 | 99.5 | 99.4 |
+| DC, AI plans both blocks (F: 2nd cancelled on resolution; C: denied at selection) | 98.2 | 100 | 99.4 | 99.5 | 99.4 |
+| DC, defenders block only vs >=40% current-HP threats | 98.2 | 100 | 95.5 | 97.7 | 97.8 |
 
 ## 11. Reproduce and checker
 
 ```
 cd /workspace/balance/out
-python3 walls_pvp_v2_sim.py /workspace/balance/s10 4000   # ~3.5 min, writes walls_pvp_v2_sim.out.json (450 cells)
+python3 walls_pvp_v2_sim.py /workspace/balance/s10 4000   # ~2 min, writes walls_pvp_v2_sim.out.json (248 cells)
 python3 walls_pvp_v2_tables.py > walls_pvp_v2_tables.md
-python3 walls_pvp_v2_check.py                              # engine facts, regression, every table and prose number
+python3 walls_pvp_v2_check.py                              # engine facts, data rules, regression, every table and prose number
 ```
 
-Checker result (2026-10-20, run against s10 and walls_pvp_v2_sim.out.json): **858 PASS, 0 FAIL**. A mutation test (one table cell, one headline cell and one prose number edited) gave 3 FAIL, as expected.
+Checker result (2026-10-20 21:31 CT, run against s10 and the 248-cell JSON): **5077 PASS, 0 FAIL**. That includes a replay of the 4 capped CK-E/deny battles and the plan's data rows against section 5.1. A mutation test (one card's duration line, one rarity, one headline cell and two prose numbers edited) gave 5 FAIL, as expected.

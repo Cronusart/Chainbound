@@ -14,7 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: blockade
   displayName: Blockade
-  description: Give ally 25% mitigation for 2 turns.
+  description: "**Greater Wall \xB7 3 AP \xB7 [PRIOR] \xB7 Recharge 1.** The next
+    melee hit on an ally or yourself deals 60% less. Lasts until it blocks 1 hit
+    or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first
+    hit. Ranged attacks are not blocked. Only one Wall or Barrier can be on a Chainling
+    at a time."
   category: 3
   baseType: 3
   rarity: 1
@@ -25,21 +29,22 @@ MonoBehaviour:
   accuracy: 0
   hitCountMin: 1
   hitCountMax: 1
-  rechargeTurns: 0
+  rechargeTurns: 2
   statusEffects: []
   stageChanges: []
   tags:
   - SUP
+  - PRIOR
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
   utilityEffects:
-  - effectType: 0
-    magnitude: 0.25
+  - effectType: 31
+    magnitude: 0.6
     turnBudget: 2
-    hitBudget: -1
+    hitBudget: 1
     apGain: 0
-    stackKey: blockade
+    stackKey: wall_blockade
     statusId: 0
     statusDuration: 0
     targetOverride: 0
@@ -54,7 +59,7 @@ MonoBehaviour:
     healPercentMaxHP: 0
     counterDamagePercentMaxHP: 0
     affectAllAllies: 0
-    contactFilter: 0
+    contactFilter: 1
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -137,7 +142,7 @@ MonoBehaviour:
   hpCostPercent: 0
   presentationTrack: {fileID: 0}
   wallPresentation:
-    wallSfxId: 
+    wallSfxId: wall_blockade
     wallSprite: {fileID: 0}
     wallMaterial: {fileID: 0}
     wallSpriteScale: {x: 0, y: 0}

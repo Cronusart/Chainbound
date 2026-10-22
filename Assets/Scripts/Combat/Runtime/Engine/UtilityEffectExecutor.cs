@@ -2,6 +2,13 @@ using System;
 
 namespace Chainbound.Combat
 {
+    public enum UtilityEffectExecutionOrigin
+    {
+        Move = 0,
+        Passive = 1,
+        Modifier = 2,
+    }
+
     public sealed class UtilityEffectExecutionContext
     {
         public CombatState state;
@@ -10,6 +17,7 @@ namespace Chainbound.Combat
         public TurnActionLedger ledger;
         public int damageDealt;
         public int lastStatusStripCount;
+        public UtilityEffectExecutionOrigin origin;
     }
 
     /// <summary>
@@ -62,8 +70,19 @@ namespace Chainbound.Combat
                         ApplyMitigationWindow(source, target, move, effect, turn);
                         break;
 
+                    case UtilityEffectType.BlockWindow:
+                        ApplyBlockWindow(source, target, move, effect, turn, context);
+                        break;
+
+                    case UtilityEffectType.BlockReflect:
+                        // Metadata consumed while the paired block payload is installed.
+                        break;
+
                     case UtilityEffectType.GainApOnDamageIfSpeedHigher:
-                        ApplyReactiveApWindow(source, target, move, effect, turn);
+                        // A BlockWindow binds this rider to that block's one consume.
+                        // Non-block moves retain the standalone reactive window behavior.
+                        if (!CombatWallStateUtility.MovePlacesBlock(move))
+                            ApplyReactiveApWindow(source, target, move, effect, turn);
                         break;
 
                     case UtilityEffectType.FullAbsorbBarrier:
@@ -877,6 +896,9 @@ namespace Chainbound.Combat
             UtilityEffectPayload effect,
             int turn)
         {
+            if (CombatWallStateUtility.MovePlacesBlock(move))
+                return;
+
             int apGain = effect.apGain > 0 ? effect.apGain : 1;
             int turns = effect.turnBudget > 0 ? effect.turnBudget : 1;
             string stackKey = !string.IsNullOrWhiteSpace(effect.stackKey)
@@ -893,6 +915,57 @@ namespace Chainbound.Combat
             _log?.LogMessage(
                 CombatEventType.SystemMessage,
                 $"{target.displayName} gained reactive AP window (+{apGain} AP, {turns} turn).",
+                turn);
+        }
+
+        private void ApplyBlockWindow(
+            ChainlingInstance source,
+            ChainlingInstance target,
+            MoveInstance move,
+            UtilityEffectPayload effect,
+            int turn,
+            UtilityEffectExecutionContext context)
+        {
+            float mitigation = effect.magnitude > 1f ? effect.magnitude / 100f : effect.magnitude;
+            if (mitigation <= 0f)
+                return;
+
+            int turns = effect.turnBudget > 0 ? effect.turnBudget : 2;
+            string stackKey = !string.IsNullOrWhiteSpace(effect.stackKey)
+                ? effect.stackKey.Trim()
+                : $"{move.definitionId}:{effect.effectType}";
+            BlockKind kind = effect.contactFilter == UtilityContactFilter.Contact
+                ? BlockKind.Wall
+                : effect.contactFilter == UtilityContactFilter.Projectile
+                    ? BlockKind.Barrier
+                    : BlockKind.None;
+            if (kind == BlockKind.None)
+                return;
+
+            bool overrideExisting = context != null &&
+                (context.origin == UtilityEffectExecutionOrigin.Passive ||
+                 context.origin == UtilityEffectExecutionOrigin.Modifier);
+            bool added = target.AddBlock(new MitigationSource
+            {
+                mitigation = mitigation,
+                turnsRemaining = turns,
+                hitsRemaining = 1,
+                sourceTag = move.definitionId ?? move.displayName,
+                sourceMoveId = move.definitionId ?? move.instanceId,
+                stackKey = stackKey,
+                attackerApDrainOnHit = CombatWallEffectUtility.ResolveWallHitApDrainFromMove(move),
+                apGainOnConsumeIfFaster = CombatWallEffectUtility.ResolveBlockApGainIfFasterFromMove(move),
+                reflectPercent = CombatWallEffectUtility.ResolveBlockReflectPercentFromMove(move),
+                contactFilter = effect.contactFilter,
+                blockKind = kind,
+            }, @override: overrideExisting);
+
+            if (!added)
+                return;
+
+            _log?.LogMessage(
+                CombatEventType.SystemMessage,
+                $"{target.displayName} gained a {kind} ({MathfRoundPercent(mitigation)}, {turns}T/1 hit).",
                 turn);
         }
 

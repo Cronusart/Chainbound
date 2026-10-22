@@ -918,7 +918,7 @@ namespace Chainbound.Combat
                 priorityPillText.fontSize = 14f;
                 priorityPillText.alignment = TextAlignmentOptions.Center;
                 priorityPillText.color = priorityPillTextColor;
-                priorityPillText.enableWordWrapping = false;
+                priorityPillText.textWrappingMode = TextWrappingModes.NoWrap;
                 priorityPillText.raycastTarget = false;
                 if (selectedNameText.font != null)
                     priorityPillText.font = selectedNameText.font;
@@ -1105,7 +1105,7 @@ namespace Chainbound.Combat
             selectedModifierText = EnsureText("SelectedModifiers", details, 0f, 0.37f, 1f, 0.52f, 20, TextAlignmentOptions.Left, new Color(0.76f, 0.84f, 0.89f, 1f), "Mods: None");
             modifierListRoot = EnsureModifierListRoot(selectedModifierText != null ? selectedModifierText.transform : details);
             selectedDescriptionText = EnsureText("SelectedDescription", details, 0f, 0f, 1f, 0.38f, 18, TextAlignmentOptions.TopLeft, new Color(0.86f, 0.88f, 0.90f, 1f), "No move description available.");
-            selectedDescriptionText.enableWordWrapping = true;
+            selectedDescriptionText.textWrappingMode = TextWrappingModes.Normal;
 
             footerPromptText = EnsureText("FooterPrompt", root, 0.02f, 0.02f, 0.98f, 0.16f, 18, TextAlignmentOptions.Center, new Color(0.82f, 0.9f, 0.95f, 1f), "Confirm=Select   Cancel=Back   Info=Details");
             EnsureAuthoringColorsCached();
@@ -1473,7 +1473,7 @@ namespace Chainbound.Combat
             iconImage.raycastTarget = false;
 
             var label = EnsureText("Label", contentRect, 0.12f, 0f, 0.78f, 1f, 20, TextAlignmentOptions.Left, Color.white, "--");
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
 
             var row = rowGo.GetComponent<CombatMoveRowItemUGUI>();
             if (row != null)
@@ -1586,7 +1586,7 @@ namespace Chainbound.Combat
             description.fontSize = 22f;
             description.alignment = TextAlignmentOptions.Left;
             description.color = new Color(0.86f, 0.88f, 0.90f, 1f);
-            description.enableWordWrapping = true;
+            description.textWrappingMode = TextWrappingModes.Normal;
             description.raycastTarget = false;
             if (generatedModifierRowFont != null)
                 description.font = generatedModifierRowFont;
@@ -1709,7 +1709,7 @@ namespace Chainbound.Combat
                 text.fontSize = size;
                 text.alignment = align;
                 text.color = color;
-                text.enableWordWrapping = false;
+                text.textWrappingMode = TextWrappingModes.NoWrap;
             }
             text.raycastTarget = false;
             if (string.IsNullOrEmpty(text.text))

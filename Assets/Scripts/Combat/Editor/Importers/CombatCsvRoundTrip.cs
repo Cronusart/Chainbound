@@ -547,6 +547,27 @@ namespace Chainbound.Combat.Editor
                         e.targetOverride,
                         e.stackKey ?? string.Empty);
 
+                case UtilityEffectType.BlockWindow:
+                {
+                    string category = e.contactFilter == UtilityContactFilter.Contact
+                        ? "Melee"
+                        : e.contactFilter == UtilityContactFilter.Projectile ? "Ranged" : "Any";
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "BlockWindow:{0}:{1}:{2}:{3}",
+                        FormatPercentToken(e.magnitude),
+                        category,
+                        e.turnBudget,
+                        e.stackKey ?? string.Empty);
+                }
+
+                case UtilityEffectType.BlockReflect:
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "BlockReflect:{0}:{1}",
+                        FormatPercentToken(e.reflectPercent),
+                        e.stackKey ?? string.Empty);
+
                 case UtilityEffectType.StripBuffs:
                     return string.Format(
                         CultureInfo.InvariantCulture,

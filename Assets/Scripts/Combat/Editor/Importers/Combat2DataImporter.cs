@@ -1699,6 +1699,23 @@ namespace Chainbound.Combat.Editor
                         effect.hitBudget = ParseInt(p3);
                         break;
 
+                    case UtilityEffectType.BlockWindow:
+                        effect.magnitude = ParsePercentOrFloat(p1);
+                        effect.contactFilter = string.Equals(p2, "Melee", StringComparison.OrdinalIgnoreCase)
+                            ? UtilityContactFilter.Contact
+                            : string.Equals(p2, "Ranged", StringComparison.OrdinalIgnoreCase)
+                                ? UtilityContactFilter.Projectile
+                                : ParseEnum(p2, UtilityContactFilter.Any);
+                        effect.turnBudget = ParseInt(p3, 2);
+                        effect.hitBudget = 1;
+                        effect.stackKey = p4;
+                        break;
+
+                    case UtilityEffectType.BlockReflect:
+                        effect.reflectPercent = ParsePercentOrFloat(p1);
+                        effect.stackKey = p2;
+                        break;
+
                     case UtilityEffectType.GainApOnDamageIfSpeedHigher:
                         effect.apGain = ParseInt(p1, 1);
                         effect.turnBudget = ParseInt(p2, 1);

@@ -244,12 +244,14 @@ namespace Chainbound.Combat
                 return false;
 
             bool applied = false;
+            int appliedAmount = 0;
 
             if (IsApGain(modRef))
             {
                 int apGain = ResolveApGain(modRef);
                 CombatApService ap = apService ?? new CombatApService(log);
-                applied = ap.Gain(target, apGain, turn, $"SwapModifier.{modRef.sectionId}") > 0;
+                appliedAmount = ap.Gain(target, apGain, turn, $"SwapModifier.{modRef.sectionId}");
+                applied = appliedAmount > 0;
             }
             else if (IsRandomStage(modRef))
             {
@@ -263,11 +265,14 @@ namespace Chainbound.Combat
                 int newStage = target.GetStage(stat);
                 int delta = newStage - oldStage;
                 if (delta != 0)
+                {
                     log.LogStageChange(turn, target.instanceId, stat, delta, newStage);
+                    appliedAmount = Math.Abs(delta);
+                }
                 else if (requested == 0)
                     log.LogMessage(
                         CombatEventType.BuffBlocked,
-                        $"Cipher Lock blocked {target.displayName}'s {stat} +1.",
+                        $"Cipher Lock blocked {log.Name(target.instanceId)}'s {GetReadableStatName(stat)} +1.",
                         turn);
 
                 log.LogForensic(
@@ -294,6 +299,7 @@ namespace Chainbound.Combat
                     $"{target.displayName} gained +{accuracyBonus * 100f:F1}% accuracy for the rest of this turn ({modRef.sectionId})",
                     turn);
                 applied = true;
+                appliedAmount = (int)Math.Round(accuracyBonus * 100f);
             }
             else if (IsMitigation(modRef))
             {
@@ -310,6 +316,7 @@ namespace Chainbound.Combat
                         $"{target.displayName} gained {mitigationValue * 100f:F1}% mitigation for the rest of this turn ({modRef.sectionId})",
                         turn);
                     applied = true;
+                    appliedAmount = (int)Math.Round(mitigationValue * 100f);
                 }
             }
 
@@ -317,6 +324,9 @@ namespace Chainbound.Combat
             {
                 string sourceId = source != null ? source.instanceId : string.Empty;
                 string targetId = target.instanceId;
+                string modifierName = modRef.definition != null ? modRef.definition.GetDisplayName() : string.Empty;
+                if (string.Equals(modifierName, modRef.sectionId, StringComparison.OrdinalIgnoreCase))
+                    modifierName = string.Empty;
                 log.Log(ModifierOutcomePayload.CreateEvent(
                     turn,
                     modRef.sectionId,
@@ -328,10 +338,24 @@ namespace Chainbound.Combat
                     $"Swap modifier triggered for {target.displayName}",
                     sourceId,
                     targetId,
-                    modRef.sourceMove != null ? modRef.sourceMove.instanceId : string.Empty));
+                    modRef.sourceMove != null ? modRef.sourceMove.instanceId : string.Empty,
+                    modifierName,
+                    appliedAmount));
             }
 
             return applied;
+        }
+
+        private static string GetReadableStatName(CoreStat stat)
+        {
+            switch (stat)
+            {
+                case CoreStat.MeleeAtk: return "Melee Attack";
+                case CoreStat.MeleeDef: return "Melee Defense";
+                case CoreStat.RangedAtk: return "Ranged Attack";
+                case CoreStat.RangedDef: return "Ranged Defense";
+                default: return stat.ToString();
+            }
         }
 
         private static bool TargetsAlly(SwapModifierRef modRef)

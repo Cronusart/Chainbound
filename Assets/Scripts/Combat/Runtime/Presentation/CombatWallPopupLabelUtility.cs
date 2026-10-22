@@ -44,6 +44,7 @@ namespace Chainbound.Combat
 
                     switch (effect.effectType)
                     {
+                        case UtilityEffectType.BlockWindow:
                         case UtilityEffectType.MitigationWindow:
                             mitigationLabel = FormatPercentMitigation(effect.magnitude);
                             break;
@@ -125,6 +126,89 @@ namespace Chainbound.Combat
             return FormatReflectPercent(reflectPercent);
         }
 
+        public static string FormatDefenseCardBadge(MoveInstance move)
+        {
+            if (move == null)
+                return string.Empty;
+
+            if (TryResolveBlockEffect(move, out UtilityEffectPayload effect))
+            {
+                float mitigation = effect.magnitude > 1f ? effect.magnitude / 100f : effect.magnitude;
+                BlockKind kind = effect.contactFilter == UtilityContactFilter.Contact
+                    ? BlockKind.Wall
+                    : BlockKind.Barrier;
+                BlockTier tier = ResolveTier(mitigation);
+                string priority = MoveSelectDisplayUtility.HasPriorityTag(move) ? " · PRIOR" : string.Empty;
+                return $"{kind.ToString().ToUpperInvariant()} · {tier.ToString().ToUpperInvariant()}{priority}";
+            }
+
+            if (HasTag(move, "ARMOR"))
+                return "ARMOR";
+            return string.Empty;
+        }
+
+        public static string FormatHolderChip(ChainlingInstance chainling)
+        {
+            if (chainling?.mitigationSources == null)
+                return string.Empty;
+
+            for (int i = chainling.mitigationSources.Count - 1; i >= 0; i--)
+            {
+                MitigationSource source = chainling.mitigationSources[i];
+                if (source == null || source.blockKind == BlockKind.None ||
+                    source.turnsRemaining <= 0 || source.hitsRemaining == 0)
+                {
+                    continue;
+                }
+
+                int percent = Math.Max(0, (int)Math.Round(source.mitigation * 100f));
+                string category = source.blockKind == BlockKind.Wall ? "MELEE" : "RANGED";
+                int hits = Math.Max(1, source.hitsRemaining);
+                int turns = Math.Max(1, source.turnsRemaining);
+                return $"{source.blockKind.ToString().ToUpperInvariant()} {percent}% · {category} · " +
+                       $"{hits} hit{(hits == 1 ? string.Empty : "s")} · {turns} turn{(turns == 1 ? string.Empty : "s")}";
+            }
+
+            return string.Empty;
+        }
+
+        private static bool TryResolveBlockEffect(MoveInstance move, out UtilityEffectPayload block)
+        {
+            block = null;
+            if (move?.utilityEffects == null)
+                return false;
+            for (int i = 0; i < move.utilityEffects.Count; i++)
+            {
+                UtilityEffectPayload effect = move.utilityEffects[i];
+                if (effect != null && effect.effectType == UtilityEffectType.BlockWindow)
+                {
+                    block = effect;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static BlockTier ResolveTier(float mitigation)
+        {
+            float percent = mitigation <= 1f ? mitigation * 100f : mitigation;
+            if (percent <= 30f)
+                return BlockTier.Lower;
+            return percent <= 50f ? BlockTier.Mid : BlockTier.Greater;
+        }
+
+        private static bool HasTag(MoveInstance move, string expected)
+        {
+            if (move?.tags == null)
+                return false;
+            for (int i = 0; i < move.tags.Count; i++)
+            {
+                if (string.Equals(move.tags[i], expected, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
         private static string ResolveMitigationLabelFromActiveState(ChainlingInstance chainling)
         {
             if (chainling?.barriers != null)
@@ -152,7 +236,8 @@ namespace Chainbound.Combat
                         continue;
                     if (source.mitigation <= 0f)
                         continue;
-                    if (!CombatWallStateUtility.IsWallTag(source.sourceTag) &&
+                    if (source.blockKind == BlockKind.None &&
+                        !CombatWallStateUtility.IsWallTag(source.sourceTag) &&
                         !CombatWallStateUtility.IsWallTag(source.stackKey))
                     {
                         continue;

@@ -170,6 +170,7 @@ Use the enum name exactly as written (e.g., `Pumped`, `FUD`, `GlitchedMind`, `Fi
 | Targeting | Targeting slot-type (max 1 per inscription) |
 | Barrier | Post-cast barrier-grant slot-type (max 1 per inscription) |
 | Durability | Passive MaxHP% durability slot-type (max 1 per inscription) |
+| StatSubstitution | Stat-substitution slot-type (max 1 per stamped move; damaging moves only) |
 
 ### PassiveTriggerCondition
 
@@ -263,7 +264,7 @@ Examples:
 
 ### Tags (Moves.csv)
 
-Pipe-separated tag strings: `DMG|MULTI|AOE|PRIO|PRIOR|TRIG|APMAN|STAT|UTIL|SUP|PAS|HEAL`
+Pipe-separated tag strings: `DMG|MULTI|AOE|PRIO|PRIOR|TRIG|APMAN|STAT|UTIL|SUP|PAS|HEAL|ARMOR`
 
 | Tag | Meaning |
 |------|---------|
@@ -279,6 +280,7 @@ Pipe-separated tag strings: `DMG|MULTI|AOE|PRIO|PRIOR|TRIG|APMAN|STAT|UTIL|SUP|P
 | SUP | Support move (ally heal, barrier, transfer) |
 | PAS | Passive ability |
 | HEAL | Healing effect |
+| ARMOR | Generic hit-limited mitigation that stacks with one Wall or Barrier |
 | SpendRemainingAp | Spend all currently available AP. This is intentionally the only mixed-case tag because existing assets persist the string. |
 | BOSS_ONLY | Authored encounter-kit move that cannot enter player pools, grants, captures, PvP parties, candy rolls, or the card catalog. Implies `NO_CANDY`. |
 | NO_CANDY | Excluded from candy-machine and Known-card rolls. |
@@ -342,6 +344,8 @@ Separate payloads with `|`. Percent tokens accept `25%` or a fraction such as `0
 | Opcode | Parameter format |
 |---|---|
 | `MitigationWindow` | `percent:turns:hits:stackKey` |
+| `BlockWindow` | `percent:category:turns:stackKey` (`category` is `Melee` or `Ranged`; hit budget is fixed at 1) |
+| `BlockReflect` | `percent:stackKey` (reflects this share of damage prevented by the paired block) |
 | `FullAbsorbBarrier` | `turns:hits:stackKey` |
 | `DamageThresholdBarrier` | `capacity:turns:hits:reflectPercent:stackKey` |
 | `WallHitRetaliation` | `attackerApDrain:stackKey` |
@@ -390,7 +394,7 @@ Armed triggers are `FoeKO`, `EnemyMiss`, `IncomingDebuff`, `IncomingHit`, and `O
 - `PowerCap`: integer cap on move power (`0` = no cap)
 - `APCostCap`: integer cap on move AP cost (`0` = no cap)
 - `ForbiddenTags`: pipe-separated move tags that disallow the modifier (e.g., `MULTI|PRIOR`)
-- `SlotType`: `None`, `INIT`, `ActionEconomy`, or `Targeting` for one-per-inscription caps
+- `SlotType`: `None`, `INIT`, `ActionEconomy`, `Targeting`, `Barrier`, `Durability`, or `StatSubstitution` for one-per-inscription caps
 - `LowHpThreshold` (optional): HP % threshold for `OnLowHP` triggers. Defaults to `30` when omitted.
 - `Weight` (optional, trailing): within-tier relative drop weight for vending candidate pools (`ModifierDefinitionSO.weight`). Defaults to `1` when omitted. Integer ≥ 0. Export writes `LowHpThreshold,Weight` after `SlotType`; older rows without `Weight` remain valid.
 
