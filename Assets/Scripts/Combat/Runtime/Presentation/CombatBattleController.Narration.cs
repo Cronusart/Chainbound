@@ -11,6 +11,19 @@ namespace Chainbound.Combat
 
         public CombatNarrationProfileSO NarrationPolicy => narrationProfile;
 
+        private void QueueBattleStartNarrationOnce()
+        {
+            if (_battleStartNarrationQueued)
+                return;
+
+            _battleStartNarrationQueued = true;
+            ComposeAndQueueNarration(
+                _battleStartNarrationFrom,
+                _battleStartNarrationTo,
+                0,
+                -1);
+        }
+
         private bool ComposeAndQueueNarration(
             int fromEventIndex,
             int toEventExclusive,

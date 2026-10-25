@@ -37,7 +37,7 @@ public class Step_PromptNameInput : SequenceStep
         if (enableDebugLogs)
         {
             Debug.Log(
-                $"[Step_PromptNameInput] Resolved {nameInputUI.name} (instanceId={nameInputUI.GetInstanceID()}). " +
+                $"[Step_PromptNameInput] Resolved {nameInputUI.name} (instanceId={nameInputUI.GetEntityId()}). " +
                 $"activeSelf={nameInputUI.gameObject.activeSelf}, activeInHierarchy={nameInputUI.gameObject.activeInHierarchy}.",
                 nameInputUI);
         }

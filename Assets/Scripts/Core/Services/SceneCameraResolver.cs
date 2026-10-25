@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public static class SceneCameraResolver
 {
-    private static readonly Dictionary<int, Camera> CamerasBySceneHandle = new Dictionary<int, Camera>();
+    private static readonly Dictionary<SceneHandle, Camera> CamerasBySceneHandle = new Dictionary<SceneHandle, Camera>();
     private static Camera persistentGameplayCamera;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

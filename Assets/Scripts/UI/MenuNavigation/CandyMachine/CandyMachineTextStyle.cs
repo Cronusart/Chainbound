@@ -14,7 +14,7 @@ namespace SignalJam.UI.MenuNavigation
                 return;
 
             text.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
-            text.enableWordWrapping = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Ellipsis;
             if (!string.IsNullOrEmpty(text.text))
                 text.text = text.text.ToUpperInvariant();

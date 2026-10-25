@@ -35,10 +35,10 @@ SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCatego
 # 5.1 Type Infusion (1 entry x 14 types)
 5.1-a,Type Infusion,TRX,Active,Rare,0,0,DamagingMelee|DamagingRanged,,0,true,false,MeleeAtk,None,0,Change move type to chosen Type (Damaging only),0,0,,None,
 # 5.2 Stat Substitution
-5.2-a,Iron Fist,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,MeleeDef,None,0,Damage scales with MeleeDef instead of MeleeAtk,0,0,,None,
-5.2-b,Fleet Strike,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,Speed,None,0,Damage scales with Speed instead of MeleeAtk,0,0,,None,
-5.2-c,Crosswire,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,RangedAtk,None,0,Damage scales with RangedAtk for melee moves,0,0,,None,
-5.2-d,Soft Hands,TRX,Active,Mythic,0,0,DamagingMelee|DamagingRanged,,0,false,true,MeleeAtk,None,0,Damage scales inversely with Atk (higher Atk = lower damage),0,0,,None,
+5.2-a,Iron Fist,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,MeleeDef,None,0,Damage scales with MeleeDef instead of MeleeAtk,0,0,,StatSubstitution,
+5.2-b,Fleet Strike,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,Speed,None,0,Damage scales with Speed instead of MeleeAtk,0,0,,StatSubstitution,
+5.2-c,Crosswire,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,RangedAtk,None,0,Damage scales with RangedAtk for melee moves,0,0,,StatSubstitution,
+5.2-d,Soft Hands,TRX,Active,Mythic,0,0,DamagingMelee|DamagingRanged,,0,false,true,MeleeAtk,None,0,Damage scales inversely with Atk (higher Atk = lower damage),0,0,,StatSubstitution,
 # Section 6 ? Trigger (TRG)
 # 6.1 On-Hit
 6.1-a,Leech,TRG,Active,Rare,12,16,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnHit,1.0,Heal 12-16% of damage dealt,0,0,,None,
@@ -54,7 +54,7 @@ SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCatego
 # 6.3 Conditional
 6.3-a,Execute,TRG,Active,Rare,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,+25-35% damage if target HP < 50%,0,0,,None,
 6.3-b,Underdog,TRG,Active,Rare,25,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,+25-35% damage if your HP < target,0,0,,None,
-6.3-c,Grit Guard,TRG,Active,Rare,15,25,,,0,false,false,MeleeAtk,OnHPBelow30,1.0,When HP < 30%: gain 15-25% mitigation for the rest of this turn,0,0,,None,
+6.3-c,Grit Guard,TRG,Active,Rare,15,25,,,0,false,false,MeleeAtk,OnHPBelow30,1.0,When HP < 30%: gain 15-25% mitigation through the end of the following turn,0,0,,None,
 6.3-d,Revenge Spark,TRG,Active,Epic,20,30,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnAllyKO,1.0,After an ally is knocked out, your later moves this turn deal +20-30% power,0,0,,None
 6.3-e,Punish Miss,TRG,Active,Rare,20,20,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,1.0,If target missed last turn: +20% accuracy +15% power,0,0,,None,
 # 6.4 Swap-In
@@ -105,9 +105,14 @@ SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCatego
 4.6-a,Slipstream,AUG,Active,Rare,20,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,20-35% chance to bypass barrier on first hit,0,0,,None,
 4.7-a,Bleedthrough,AUG,Active,Epic,20,35,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,None,0,20-35% of damage penetrates barrier absorption,0,0,,None,
 # Section 5 ? Stat Interaction Extension
-5.2-e,Speed Check,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,Speed,None,0,Use Speed instead of MeleeAtk when Speed is higher,0,0,,None,
-5.2-f,Ranged Rewrite,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,RangedAtk,None,0,Use RangedAtk instead of MeleeAtk for melee moves,0,0,,None,
-5.2-g,Guard Convert,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,MeleeDef,None,0,Conditional MeleeDef substitution variant,0,0,,None,
+5.2-e,Speed Check,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,Speed,None,0,Use Speed instead of MeleeAtk when Speed is higher,0,0,,StatSubstitution,
+5.2-f,Ranged Rewrite,TRX,Active,Epic,0,0,DamagingMelee,,0,false,true,RangedAtk,None,0,Use RangedAtk instead of MeleeAtk for melee moves,0,0,,StatSubstitution,
+5.2-g,Guard Convert,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,MeleeDef,None,0,Conditional MeleeDef substitution variant,0,0,,StatSubstitution,
+5.2-h,Cover Strike,TRX,Active,Legendary,0,0,DamagingMelee,,0,false,true,RangedDef,None,0,Damage uses Ranged Defense instead of Melee Attack,0,0,,StatSubstitution,
+5.2-i,Heavy Signal,TRX,Active,Legendary,0,0,DamagingRanged,,0,false,true,MeleeAtk,None,0,Damage uses Melee Attack instead of Ranged Attack,0,0,,StatSubstitution,
+5.2-j,Armor Beam,TRX,Active,Legendary,0,0,DamagingRanged,,0,false,true,MeleeDef,None,0,Damage uses Melee Defense instead of Ranged Attack,0,0,,StatSubstitution,
+5.2-k,Cover Fire,TRX,Active,Epic,0,0,DamagingRanged,,0,false,true,RangedDef,None,0,Damage uses Ranged Defense instead of Ranged Attack,0,0,,StatSubstitution,
+5.2-l,Snap Shot,TRX,Active,Epic,0,0,DamagingRanged,,0,false,true,Speed,None,0,Damage uses Speed instead of Ranged Attack,0,0,,StatSubstitution,
 # Section 6 ? Tactical Trigger Extension
 6.5-a,Finisher Fee,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnKO,1.0,On KO restore 1 AP,0,0,,None,
 6.5-b,Momentum,TRG,Active,Rare,1,1,DamagingMelee|DamagingRanged,,0,false,false,MeleeAtk,OnKO,1.0,On KO gain +1 Speed stage,0,0,,None,

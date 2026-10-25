@@ -42,7 +42,7 @@ namespace SignalJam.UI.MobileControls
         [SerializeField] private GameboyButton selectButton;
 
         [Header("Wallet")]
-        [Tooltip("Deprecated: wallet/change-wallet is routed through Select in the six-button layout.")]
+        [Tooltip("Deprecated wallet button. Select opens the RAM shop; this button still raises OnWalletPressed.")]
         [SerializeField] private GameboyButton solanaButton;
 
         [Header("Settings")]
@@ -94,7 +94,7 @@ namespace SignalJam.UI.MobileControls
         public event Action OnPrimaryInteract;
         /// <summary>Start button: system menu / pause.</summary>
         public event Action OnStartPressed;
-        /// <summary>Select button: wallet connect in gameplay, guide in menus.</summary>
+        /// <summary>Select button. Gameplay routes it to the RAM shop where the player menu is allowed.</summary>
         public event Action OnSelectPressed;
         /// <summary>Wallet button.</summary>
         public event Action OnWalletPressed;

@@ -33,6 +33,7 @@ namespace Chainbound.Combat
             public RarityTier mod2Rarity;
             public int apCost;
             public int currentAp;
+            public bool isPassive;
             public string roleLabel;
             public int direction;
 
@@ -118,11 +119,12 @@ namespace Chainbound.Combat
         [SerializeField] private float landingZDegrees = 4f;
         [SerializeField] private float pipStagger = 0.03f;
         [SerializeField] private float pipPopDuration = 0.09f;
+        [SerializeField] private Color passiveHeaderMutedColor = new Color(0.74f, 0.74f, 0.74f, 0.85f);
 
         readonly List<Sprite> spawned = new List<Sprite>();
         readonly List<Image> pipPool = new List<Image>();
         readonly List<Tween> pipTweens = new List<Tween>();
-        readonly Dictionary<int, List<Sprite>> departingSprites = new Dictionary<int, List<Sprite>>();
+        readonly Dictionary<EntityId, List<Sprite>> departingSprites = new Dictionary<EntityId, List<Sprite>>();
         static Sprite circleSprite;
         TMP_Text apCostLabel;
         TMP_Text roleLabel;
@@ -135,6 +137,7 @@ namespace Chainbound.Combat
         Vector3 restScale;
         float landedZ;
         Color authoredApColor = Color.white;
+        Color authoredRoleColor = Color.white;
         bool headerResolved;
         bool restCached;
         bool apColorCached;
@@ -298,7 +301,7 @@ namespace Chainbound.Combat
             cardRoot.localRotation = Quaternion.Euler(pose.enterEuler);
             cardRoot.localScale = restScale;
 
-            int departingId = departing.GetInstanceID();
+            EntityId departingId = departing.GetEntityId();
             int version = ++carouselVersion;
             float exitDuration = cardExitDuration > 0.01f ? cardExitDuration : 0.12f;
             float enterDuration = cardEnterDuration > 0.01f ? cardEnterDuration : 0.15f;
@@ -311,7 +314,7 @@ namespace Chainbound.Combat
             carousel.OnKill(() => SettleCarousel(version, departingId, departing, snapLiveCard: false));
         }
 
-        void SettleCarousel(int version, int departingId, GameObject departing, bool snapLiveCard)
+        void SettleCarousel(int version, EntityId departingId, GameObject departing, bool snapLiveCard)
         {
             if (carouselSettling || version != carouselVersion)
                 return;
@@ -495,6 +498,8 @@ namespace Chainbound.Combat
                 authoredApColor = apCostLabel.color;
                 apColorCached = true;
             }
+            if (roleLabel != null)
+                authoredRoleColor = roleLabel.color;
 
             headerResolved = apCostLabel != null || roleLabel != null || apPipRoot != null;
         }
@@ -504,7 +509,9 @@ namespace Chainbound.Combat
             if (apCostLabel != null)
             {
                 apCostLabel.text = "AP:";
-                apCostLabel.color = IsApShort(presentation.apCost, presentation.currentAp)
+                apCostLabel.color = presentation.isPassive
+                    ? passiveHeaderMutedColor
+                    : IsApShort(presentation.apCost, presentation.currentAp)
                     ? ShortApColor
                     : authoredApColor;
                 PlayTypewriter(apCostLabel);
@@ -515,6 +522,7 @@ namespace Chainbound.Combat
                 roleLabel.text = string.IsNullOrWhiteSpace(presentation.roleLabel)
                     ? string.Empty
                     : presentation.roleLabel.Trim();
+                roleLabel.color = presentation.isPassive ? passiveHeaderMutedColor : authoredRoleColor;
                 PlayTypewriter(roleLabel);
             }
 
@@ -734,10 +742,10 @@ namespace Chainbound.Combat
 
             var held = new List<Sprite>(spawned);
             spawned.Clear();
-            departingSprites[departing.GetInstanceID()] = held;
+            departingSprites[departing.GetEntityId()] = held;
         }
 
-        void ReleaseDeparting(int id, GameObject departing)
+        void ReleaseDeparting(EntityId id, GameObject departing)
         {
             if (!departingSprites.TryGetValue(id, out List<Sprite> held))
             {
@@ -756,7 +764,7 @@ namespace Chainbound.Combat
             if (departingSprites.Count == 0)
                 return;
 
-            var ids = new List<int>(departingSprites.Keys);
+            var ids = new List<EntityId>(departingSprites.Keys);
             for (int i = 0; i < ids.Count; i++)
                 ReleaseDeparting(ids[i], null);
         }

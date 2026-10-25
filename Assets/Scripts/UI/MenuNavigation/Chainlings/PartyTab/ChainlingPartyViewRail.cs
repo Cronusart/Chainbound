@@ -774,7 +774,7 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
             label.fontWeight = collapsedButtonLabel.fontWeight;
             label.alignment = collapsedButtonLabel.alignment;
             label.color = collapsedButtonLabel.color;
-            label.enableWordWrapping = collapsedButtonLabel.enableWordWrapping;
+            label.textWrappingMode = collapsedButtonLabel.textWrappingMode;
             label.overflowMode = collapsedButtonLabel.overflowMode;
             label.characterSpacing = collapsedButtonLabel.characterSpacing;
             label.wordSpacing = collapsedButtonLabel.wordSpacing;

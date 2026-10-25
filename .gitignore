@@ -148,3 +148,9 @@ Signal%20Jam/
 **/supabase/.temp/
 %USERPROFILE%*
 
+
+# Claude Code (local agent config, mirrors .cursor/ + AGENTS.md policy above)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json

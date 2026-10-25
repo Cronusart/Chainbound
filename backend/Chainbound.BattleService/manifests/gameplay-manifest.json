@@ -2296,7 +2296,7 @@
                 "conditionalDamageConditions": "",
                 "conditionalDamageRequireAll": true,
                 "conditionalDamageScalingCondition": "Target:StatusCountAtLeast:0:None:MeleeAtk:MeleeAtk",
-                "conditionalDamageBonusPerCount": 0.15000000596046449,
+                "conditionalDamageBonusPerCount": 0.15000000596046448,
                 "conditionalDamageMaxMultiplier": 2.0,
                 "randomDamageMultipliers": ""
             },
@@ -3125,7 +3125,7 @@
                 "conditionalDamageConditions": "",
                 "conditionalDamageRequireAll": true,
                 "conditionalDamageScalingCondition": "Self:BuffedPartnerCountAtLeast:0:None:MeleeAtk:MeleeAtk",
-                "conditionalDamageBonusPerCount": 0.15000000596046449,
+                "conditionalDamageBonusPerCount": 0.15000000596046448,
                 "conditionalDamageMaxMultiplier": 1.149999976158142,
                 "randomDamageMultipliers": ""
             },
@@ -5880,8 +5880,8 @@
                 "conditionalDamageConditions": "",
                 "conditionalDamageRequireAll": true,
                 "conditionalDamageScalingCondition": "Self:BuffedPartnerCountAtLeast:0:None:MeleeAtk:MeleeAtk",
-                "conditionalDamageBonusPerCount": 0.20000000298023225,
-                "conditionalDamageMaxMultiplier": 1.2000000476837159,
+                "conditionalDamageBonusPerCount": 0.20000000298023224,
+                "conditionalDamageMaxMultiplier": 1.2000000476837158,
                 "randomDamageMultipliers": ""
             },
             "accuracyTuning": {

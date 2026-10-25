@@ -447,8 +447,8 @@ public sealed class MartNpcAuthoringTests
             Assert.That(pcBinding.PresenceId, Is.EqualTo(ChainlingPcTerminalIds.UnlockFlagKey));
             Assert.That(introBinding.ActiveWhenTrue, Is.False);
             Assert.That(pcBinding.ActiveWhenTrue, Is.True);
-            Assert.That(introBinding.Target.GetInstanceID(), Is.EqualTo(monitor.GetInstanceID()));
-            Assert.That(pcBinding.Target.GetInstanceID(), Is.EqualTo(pc.GetInstanceID()));
+            Assert.That(introBinding.Target.GetEntityId(), Is.EqualTo(monitor.GetEntityId()));
+            Assert.That(pcBinding.Target.GetEntityId(), Is.EqualTo(pc.GetEntityId()));
         }
         finally
         {

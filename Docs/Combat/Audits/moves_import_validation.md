@@ -1,7 +1,7 @@
 # Moves.csv Import Validation
 
 - Source: `Docs/Specs/Combat/Data/Moves.csv`
-- Generated: 2026-10-19 09:26:37
+- Generated: 2026-10-21 06:24:03
 - Errors: 0
 - Warnings: 0
 - Infos: 0

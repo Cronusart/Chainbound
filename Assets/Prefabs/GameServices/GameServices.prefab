@@ -17591,7 +17591,7 @@ MonoBehaviour:
   openOnMenuButton: 1
   routeStartToPauseMenu: 1
   toggleMenuButton: 1
-  openOnSelectButton: 0
+  openOnSelectButton: 1
   closeOnBackButton: 0
   enableInputActions: 1
   inputActions: {fileID: -944628639613478452, guid: e315850a770634346b2154cbce6e65f7, type: 3}

@@ -2698,7 +2698,7 @@ public class MainMenuSequenceController2 : MonoBehaviour
         label.fontSize = pressStartFontSize;
         label.alignment = TextAlignmentOptions.Center;
         label.color = Color.white;
-        label.enableWordWrapping = false;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
         label.overflowMode = TextOverflowModes.Overflow;
         label.raycastTarget = false;
 

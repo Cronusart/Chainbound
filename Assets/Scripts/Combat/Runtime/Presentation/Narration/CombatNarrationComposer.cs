@@ -13,11 +13,49 @@ namespace Chainbound.Combat
             public int hitCount;
             public bool critical;
             public bool knockedOut;
+            public readonly List<string> modifierPrefixes = new List<string>();
         }
 
         private sealed class HealSummary
         {
             public string targetId;
+            public int amount;
+        }
+
+        private enum ModifierNarrationFamily
+        {
+            Fallback,
+            Prefix,
+            Heal,
+            ApGain,
+            ApDrain,
+            StageRaise,
+            StageLower,
+            Status,
+            Cleanse,
+            Damage,
+            Guard,
+            Accuracy,
+            BarrierHits,
+            BarrierPool,
+            Cast,
+            Reflect,
+            Share,
+            BonusAction,
+        }
+
+        private sealed class EffectRecord
+        {
+            public int eventIndex;
+            public CombatEvent evt;
+            public int consequenceIndex = -1;
+        }
+
+        private sealed class ModifierNarrationAggregate
+        {
+            public ModifierOutcomePayload payload;
+            public ModifierNarrationFamily family;
+            public CombatEvent effectEvent;
             public int amount;
         }
 
@@ -58,12 +96,25 @@ namespace Chainbound.Combat
             var primarySentences = new List<string>();
             var consequenceSentences = new List<string>();
             var transcriptOnlySentences = new List<string>();
+            var modifierAggregates = new Dictionary<string, ModifierNarrationAggregate>(StringComparer.Ordinal);
+            var modifierAggregateOrder = new List<string>();
             var koTargets = new HashSet<string>(StringComparer.Ordinal);
             var koTargetOrder = new List<string>();
+            string lastDrainTargetId = string.Empty;
+            int lastDrainAmount = 0;
+            EffectRecord lastEffect = null;
 
             for (int i = fromIndex; i < toExclusive; i++)
             {
                 CombatEvent evt = events[i];
+                if (evt.eventType == CombatEventType.APSpent &&
+                    string.Equals(evt.apMutationSource, CombatApMutationSource.Drain.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    lastDrainTargetId = evt.targetId;
+                    lastDrainAmount = Math.Abs(evt.intValue);
+                }
+                if (IsModifierEffectEvent(evt.eventType))
+                    lastEffect = new EffectRecord { eventIndex = i, evt = evt };
                 CombatNarrationDelivery delivery = ResolveDelivery(profile, evt.eventType);
                 if (IsReadableActionInterruption(evt))
                     delivery = CombatNarrationDelivery.Live;
@@ -126,6 +177,15 @@ namespace Chainbound.Combat
                         AppendWallInterceptNarration(evt, log, profile, wallSentences, consequenceSentences);
                         break;
 
+                    case CombatEventType.WallExpired:
+                        AppendWallExpiredNarration(evt, log, wallSentences);
+                        break;
+
+                    case CombatEventType.BlockIgnoredDot:
+                        if (!string.IsNullOrWhiteSpace(evt.message))
+                            primarySentences.Add(NormalizeSentence(evt.message));
+                        break;
+
                     case CombatEventType.SwapPerformed:
                     case CombatEventType.AutoSwapIn:
                         primarySentences.Add(Format(Get(profile, p => p.SwapResultTemplate, "{target} entered the battle."),
@@ -134,11 +194,15 @@ namespace Chainbound.Combat
 
                     case CombatEventType.StatusApplied:
                     case CombatEventType.ChemistryStatusApplied:
+                        if (lastEffect != null && lastEffect.eventIndex == i)
+                            lastEffect.consequenceIndex = consequenceSentences.Count;
                         consequenceSentences.Add(Format(Get(profile, p => p.StatusAppliedTemplate, "{target} became {status}."),
                             evt, log, evt.intValue, 0));
                         break;
 
                     case CombatEventType.StatusRefreshed:
+                        if (lastEffect != null && lastEffect.eventIndex == i)
+                            lastEffect.consequenceIndex = consequenceSentences.Count;
                         consequenceSentences.Add(Format(Get(profile, p => p.StatusRefreshedTemplate, "{target}'s {status} was refreshed."),
                             evt, log, evt.intValue, 0));
                         break;
@@ -150,6 +214,8 @@ namespace Chainbound.Combat
 
                     case CombatEventType.StatusCleansed:
                     case CombatEventType.StatusConsumed:
+                        if (lastEffect != null && lastEffect.eventIndex == i)
+                            lastEffect.consequenceIndex = consequenceSentences.Count;
                         consequenceSentences.Add(Format(Get(profile, p => p.StatusCleansedTemplate, "{target} was cleansed of {status}."),
                             evt, log, evt.intValue, 0));
                         break;
@@ -159,6 +225,8 @@ namespace Chainbound.Combat
                         break;
 
                     case CombatEventType.StageChanged:
+                        if (lastEffect != null && lastEffect.eventIndex == i)
+                            lastEffect.consequenceIndex = consequenceSentences.Count;
                         consequenceSentences.Add(Format(Get(profile, p => p.StageChangedTemplate, "{target}'s {stat} changed by {amount}."),
                             evt, log, evt.intValue, 0));
                         break;
@@ -172,9 +240,28 @@ namespace Chainbound.Combat
                     {
                         if (TrySetupFeedSentence(evt, out string setupFeedSentence))
                             consequenceSentences.Add(setupFeedSentence);
-                        else
-                            consequenceSentences.Add(Format(Get(profile, p => p.ModifierTemplate, "A combat modifier changed the outcome."),
-                                evt, log, 0, 0));
+                        else if (ModifierOutcomePayload.TryFromEvent(evt, out ModifierOutcomePayload modifierPayload))
+                        {
+                            if (!modifierPayload.gameplayApplied)
+                            {
+                                string unmet = FormatUnmetConditional(modifierPayload, log);
+                                if (!string.IsNullOrWhiteSpace(unmet))
+                                    transcriptOnlySentences.Add(unmet);
+                            }
+                            else if (IsNarratedModifierCategory(modifierPayload.category))
+                            {
+                                AddModifierNarration(
+                                    modifierPayload,
+                                    lastEffect,
+                                    damageByTarget,
+                                    healsByTarget,
+                                    consequenceSentences,
+                                    modifierAggregates,
+                                    modifierAggregateOrder,
+                                    log);
+                            }
+                        }
+                        lastEffect = null;
                         break;
                     }
 
@@ -190,9 +277,26 @@ namespace Chainbound.Combat
                         break;
 
                     case CombatEventType.APStolen:
-                        consequenceSentences.Add(Format(Get(profile, p => p.ApStolenTemplate, "{target} lost {amount} AP."),
-                            evt, log, Math.Abs(evt.intValue), 0));
+                    {
+                        int amount = Math.Max(Math.Abs(evt.intValue), lastDrainAmount);
+                        if (lastEffect != null && lastEffect.eventIndex == i)
+                            lastEffect.consequenceIndex = consequenceSentences.Count;
+                        if (!string.IsNullOrWhiteSpace(lastDrainTargetId))
+                        {
+                            string victim = ResolveName(log, lastDrainTargetId);
+                            string template = Get(profile, p => p.ApStealTemplate, "{actor} stole {amount} AP from {target}.");
+                            var stealEvent = new CombatEvent { sourceId = evt.targetId, targetId = lastDrainTargetId };
+                            consequenceSentences.Add(Format(template, stealEvent, log, amount, 0));
+                        }
+                        else
+                        {
+                            string template = Get(profile, p => p.ApStolenTemplate, "{target} stole {amount} AP.");
+                            consequenceSentences.Add(Format(template, evt, log, amount, 0));
+                        }
+                        lastDrainTargetId = string.Empty;
+                        lastDrainAmount = 0;
                         break;
+                    }
 
                     case CombatEventType.MoveRecharging:
                         consequenceSentences.Add(!string.IsNullOrWhiteSpace(evt.message)
@@ -229,16 +333,49 @@ namespace Chainbound.Combat
             var resolutionSentences = new List<string>(wallSentences.Count + damageTargetOrder.Count + primarySentences.Count + 4);
             resolutionSentences.AddRange(wallSentences);
             for (int i = 0; i < damageTargetOrder.Count; i++)
-                resolutionSentences.Add(FormatDamage(damageByTarget[damageTargetOrder[i]], log, profile));
+            {
+                DamageSummary damage = damageByTarget[damageTargetOrder[i]];
+                if (damage.damage > 0)
+                    resolutionSentences.Add(FormatDamage(damage, log, profile));
+            }
             resolutionSentences.AddRange(primarySentences);
 
             for (int i = 0; i < healTargetOrder.Count; i++)
             {
                 HealSummary heal = healsByTarget[healTargetOrder[i]];
+                if (heal.amount <= 0)
+                    continue;
                 var evt = new CombatEvent { targetId = heal.targetId };
                 resolutionSentences.Add(Format(Get(profile, p => p.HealTemplate, "{target} recovered {amount} HP."),
                     evt, log, heal.amount, 0));
             }
+
+            int liveModifierConsequences = 0;
+            var modifierConsequenceSentences = new List<string>();
+            for (int i = 0; i < modifierAggregateOrder.Count; i++)
+            {
+                ModifierNarrationAggregate aggregate = modifierAggregates[modifierAggregateOrder[i]];
+                string sentence = FormatModifierAggregate(aggregate, log, profile);
+                if (string.IsNullOrWhiteSpace(sentence))
+                    continue;
+
+                if (aggregate.family == ModifierNarrationFamily.Heal ||
+                    aggregate.family == ModifierNarrationFamily.Damage)
+                {
+                    resolutionSentences.Add(sentence);
+                }
+                else if (liveModifierConsequences < 3)
+                {
+                    modifierConsequenceSentences.Add(sentence);
+                    liveModifierConsequences++;
+                }
+                else
+                {
+                    transcriptOnlySentences.Add(sentence);
+                }
+            }
+            if (modifierConsequenceSentences.Count > 0)
+                consequenceSentences.InsertRange(0, modifierConsequenceSentences);
 
             string actionText = BuildActionText(actionEvent, log, profile, IsMultiStrikeAction(events, fromIndex, toExclusive));
             string resolutionText = JoinSentences(resolutionSentences);
@@ -378,7 +515,307 @@ namespace Chainbound.Combat
             string text = Format(template, evt, log, damage.damage, damage.hitCount);
             if (damage.critical)
                 text = Get(profile, p => p.CriticalPrefix, "Critical hit! ") + text;
+            if (damage.modifierPrefixes.Count > 0)
+                text = string.Join("! ", damage.modifierPrefixes) + "! " + text;
             return text;
+        }
+
+        private static bool IsModifierEffectEvent(CombatEventType type)
+        {
+            return type == CombatEventType.HealApplied ||
+                   type == CombatEventType.StageChanged ||
+                   type == CombatEventType.StatusApplied ||
+                   type == CombatEventType.ChemistryStatusApplied ||
+                   type == CombatEventType.StatusRefreshed ||
+                   type == CombatEventType.StatusCleansed ||
+                   type == CombatEventType.APGained ||
+                   type == CombatEventType.APRefunded ||
+                   type == CombatEventType.APStolen ||
+                   type == CombatEventType.HPDotDamage ||
+                   type == CombatEventType.PassiveDamageDealt ||
+                   type == CombatEventType.BonusActionGranted;
+        }
+
+        private static void AddModifierNarration(
+            ModifierOutcomePayload payload,
+            EffectRecord effect,
+            Dictionary<string, DamageSummary> damageByTarget,
+            Dictionary<string, HealSummary> healsByTarget,
+            List<string> consequenceSentences,
+            Dictionary<string, ModifierNarrationAggregate> aggregates,
+            List<string> aggregateOrder,
+            CombatEventLog log)
+        {
+            ModifierNarrationFamily family = ResolveModifierFamily(payload, effect);
+            if (family == ModifierNarrationFamily.Prefix)
+            {
+                if (!string.IsNullOrWhiteSpace(payload.targetChainlingId) &&
+                    damageByTarget.TryGetValue(payload.targetChainlingId, out DamageSummary damage) &&
+                    damage.damage > 0)
+                {
+                    string prefix = ResolveModifierLabel(payload, log);
+                    if (!string.IsNullOrWhiteSpace(prefix) && !damage.modifierPrefixes.Contains(prefix))
+                        damage.modifierPrefixes.Add(prefix);
+                }
+                return;
+            }
+
+            CombatEvent effectEvent = effect != null ? effect.evt : default;
+            int amount = payload.amount > 0 ? payload.amount : Math.Abs(effectEvent.intValue);
+            if (effect != null && effect.consequenceIndex >= 0 && effect.consequenceIndex < consequenceSentences.Count &&
+                IsFoldFamily(family))
+            {
+                consequenceSentences[effect.consequenceIndex] = string.Empty;
+            }
+
+            if (family == ModifierNarrationFamily.Heal)
+            {
+                string healedId = !string.IsNullOrWhiteSpace(effectEvent.targetId)
+                    ? effectEvent.targetId
+                    : payload.sourceChainlingId;
+                SubtractHeal(healsByTarget, healedId, amount);
+            }
+            else if (family == ModifierNarrationFamily.Damage)
+            {
+                string damagedId = !string.IsNullOrWhiteSpace(effectEvent.targetId)
+                    ? effectEvent.targetId
+                    : payload.targetChainlingId;
+                SubtractDamage(damageByTarget, damagedId, amount);
+            }
+
+            string key = string.Concat(
+                payload.sourceChainlingId ?? string.Empty, "|",
+                payload.sectionId ?? string.Empty, "|",
+                payload.targetChainlingId ?? string.Empty, "|",
+                family.ToString());
+            if (!aggregates.TryGetValue(key, out ModifierNarrationAggregate aggregate))
+            {
+                aggregate = new ModifierNarrationAggregate
+                {
+                    payload = payload,
+                    family = family,
+                    effectEvent = effectEvent,
+                };
+                aggregates.Add(key, aggregate);
+                aggregateOrder.Add(key);
+            }
+
+            aggregate.amount += Math.Max(0, amount);
+            if (effect != null)
+                aggregate.effectEvent = effectEvent;
+        }
+
+        private static ModifierNarrationFamily ResolveModifierFamily(
+            ModifierOutcomePayload payload,
+            EffectRecord effect)
+        {
+            string section = payload.sectionId ?? string.Empty;
+            if (IsDamagePrefixSection(section))
+                return ModifierNarrationFamily.Prefix;
+            if (section.StartsWith("6.7-", StringComparison.OrdinalIgnoreCase))
+                return section.Equals("6.7-c", StringComparison.OrdinalIgnoreCase)
+                    ? ModifierNarrationFamily.BarrierPool
+                    : ModifierNarrationFamily.BarrierHits;
+            if (section.Equals("6.3-c", StringComparison.OrdinalIgnoreCase) ||
+                section.Equals("7.1-b", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(payload.displayText, "MITIGATE", StringComparison.OrdinalIgnoreCase))
+                return ModifierNarrationFamily.Guard;
+            if (section.Equals("6.8-g", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(payload.displayText, "ACCURACY", StringComparison.OrdinalIgnoreCase))
+                return ModifierNarrationFamily.Accuracy;
+            if (section.Equals("6.8-b", StringComparison.OrdinalIgnoreCase) ||
+                section.Equals("6.8-c", StringComparison.OrdinalIgnoreCase))
+                return ModifierNarrationFamily.Cast;
+            if (section.Equals("6.8-d", StringComparison.OrdinalIgnoreCase))
+                return ModifierNarrationFamily.Reflect;
+            if (section.Equals("7.1-d", StringComparison.OrdinalIgnoreCase) ||
+                section.Equals("7.3-a", StringComparison.OrdinalIgnoreCase))
+                return ModifierNarrationFamily.Share;
+
+            CombatEventType effectType = effect != null ? effect.evt.eventType : default;
+            if (effectType == CombatEventType.HealApplied)
+                return ModifierNarrationFamily.Heal;
+            if (effectType == CombatEventType.APStolen)
+                return ModifierNarrationFamily.ApDrain;
+            if (effectType == CombatEventType.APGained || effectType == CombatEventType.APRefunded)
+                return ModifierNarrationFamily.ApGain;
+            if (effectType == CombatEventType.StageChanged)
+                return effect.evt.intValue < 0 ? ModifierNarrationFamily.StageLower : ModifierNarrationFamily.StageRaise;
+            if (effectType == CombatEventType.StatusApplied || effectType == CombatEventType.ChemistryStatusApplied ||
+                effectType == CombatEventType.StatusRefreshed)
+                return ModifierNarrationFamily.Status;
+            if (effectType == CombatEventType.StatusCleansed)
+                return ModifierNarrationFamily.Cleanse;
+            if (effectType == CombatEventType.HPDotDamage || effectType == CombatEventType.PassiveDamageDealt)
+                return ModifierNarrationFamily.Damage;
+            if (effectType == CombatEventType.BonusActionGranted)
+                return ModifierNarrationFamily.BonusAction;
+
+            return ModifierNarrationFamily.Fallback;
+        }
+
+        private static bool IsDamagePrefixSection(string section)
+        {
+            return string.Equals(section, "6.3-a", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(section, "6.3-b", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(section, "6.3-d", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(section, "6.3-e", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(section, "7.1-a", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(section, "7.2-a", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(section, "7.2-b", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsFoldFamily(ModifierNarrationFamily family)
+        {
+            return family == ModifierNarrationFamily.Heal ||
+                   family == ModifierNarrationFamily.ApGain ||
+                   family == ModifierNarrationFamily.ApDrain ||
+                   family == ModifierNarrationFamily.StageRaise ||
+                   family == ModifierNarrationFamily.StageLower ||
+                   family == ModifierNarrationFamily.Status ||
+                   family == ModifierNarrationFamily.Cleanse ||
+                   family == ModifierNarrationFamily.Damage ||
+                   family == ModifierNarrationFamily.BonusAction;
+        }
+
+        private static void SubtractHeal(Dictionary<string, HealSummary> healsByTarget, string targetId, int amount)
+        {
+            if (amount <= 0 || string.IsNullOrWhiteSpace(targetId) ||
+                !healsByTarget.TryGetValue(targetId, out HealSummary heal))
+                return;
+            heal.amount = Math.Max(0, heal.amount - amount);
+        }
+
+        private static void SubtractDamage(Dictionary<string, DamageSummary> damageByTarget, string targetId, int amount)
+        {
+            if (amount <= 0 || string.IsNullOrWhiteSpace(targetId) ||
+                !damageByTarget.TryGetValue(targetId, out DamageSummary damage))
+                return;
+            damage.damage = Math.Max(0, damage.damage - amount);
+            if (damage.damage == 0)
+                damage.hitCount = 0;
+        }
+
+        private static string FormatModifierAggregate(
+            ModifierNarrationAggregate aggregate,
+            CombatEventLog log,
+            CombatNarrationProfileSO profile)
+        {
+            if (aggregate == null || aggregate.payload == null)
+                return string.Empty;
+
+            ModifierOutcomePayload payload = aggregate.payload;
+            CombatEvent effect = aggregate.effectEvent;
+            string ownerId = payload.sourceChainlingId;
+            string targetId = !string.IsNullOrWhiteSpace(effect.targetId)
+                ? effect.targetId
+                : payload.targetChainlingId;
+            bool selfTarget = string.Equals(ownerId, targetId, StringComparison.Ordinal);
+            string template;
+            switch (aggregate.family)
+            {
+                case ModifierNarrationFamily.Heal:
+                    template = selfTarget
+                        ? Get(profile, p => p.ModifierHealTemplate, "{owner}'s {modifier} restored {amount} HP.")
+                        : Get(profile, p => p.ModifierHealOtherTemplate, "{owner}'s {modifier} restored {amount} HP to {target}.");
+                    break;
+                case ModifierNarrationFamily.ApGain:
+                    template = selfTarget
+                        ? Get(profile, p => p.ModifierApGainTemplate, "{owner}'s {modifier} granted {amount} AP.")
+                        : Get(profile, p => p.ModifierApGainOtherTemplate, "{owner}'s {modifier} granted {target} {amount} AP.");
+                    break;
+                case ModifierNarrationFamily.ApDrain:
+                    targetId = payload.targetChainlingId;
+                    template = Get(profile, p => p.ModifierApDrainTemplate, "{owner}'s {modifier} drained {amount} AP from {target}.");
+                    break;
+                case ModifierNarrationFamily.StageRaise:
+                    template = Get(profile, p => p.ModifierStageRaisedTemplate, "{owner}'s {modifier} raised {target}'s {stat} by {amount}.");
+                    break;
+                case ModifierNarrationFamily.StageLower:
+                    template = Get(profile, p => p.ModifierStageLoweredTemplate, "{owner}'s {modifier} lowered {target}'s {stat} by {amount}.");
+                    break;
+                case ModifierNarrationFamily.Status:
+                    template = Get(profile, p => p.ModifierStatusTemplate, "{owner}'s {modifier} made {target} {status}.");
+                    break;
+                case ModifierNarrationFamily.Cleanse:
+                    template = Get(profile, p => p.ModifierCleanseTemplate, "{owner}'s {modifier} cleansed {target} of {status}.");
+                    break;
+                case ModifierNarrationFamily.Damage:
+                    template = Get(profile, p => p.ModifierDamageTemplate, "{owner}'s {modifier} dealt {amount} damage to {target}.");
+                    break;
+                case ModifierNarrationFamily.Guard:
+                    targetId = payload.targetChainlingId;
+                    selfTarget = string.Equals(ownerId, targetId, StringComparison.Ordinal);
+                    template = selfTarget
+                        ? Get(profile, p => p.ModifierGuardTemplate, "{owner}'s {modifier} put up a guard for the rest of the turn.")
+                        : Get(profile, p => p.ModifierGuardOtherTemplate, "{owner}'s {modifier} guarded {target} for the rest of the turn.");
+                    break;
+                case ModifierNarrationFamily.Accuracy:
+                    targetId = payload.targetChainlingId;
+                    template = Get(profile, p => p.ModifierAccuracyTemplate, "{owner}'s {modifier} sharpened {target}'s aim.");
+                    break;
+                case ModifierNarrationFamily.BarrierHits:
+                    template = Get(profile, p => p.ModifierBarrierHitsTemplate, "{owner}'s {modifier} raised a barrier. Blocks {amount} {hitWord}.");
+                    break;
+                case ModifierNarrationFamily.BarrierPool:
+                    template = Get(profile, p => p.ModifierBarrierPoolTemplate, "{owner}'s {modifier} raised a barrier. Absorbs up to {amount} damage.");
+                    break;
+                case ModifierNarrationFamily.Cast:
+                    template = Get(profile, p => p.ModifierCastTemplate, "{owner}'s {modifier} cast {move}!");
+                    break;
+                case ModifierNarrationFamily.Reflect:
+                    targetId = payload.targetChainlingId;
+                    template = Get(profile, p => p.ModifierReflectTemplate, "{owner}'s {modifier} reflected the effect back to {target}.");
+                    break;
+                case ModifierNarrationFamily.Share:
+                    targetId = payload.targetChainlingId;
+                    template = Get(profile, p => p.ModifierShareTemplate, "{owner}'s {modifier} shared the buffs with {target}.");
+                    break;
+                case ModifierNarrationFamily.BonusAction:
+                    template = Get(profile, p => p.ModifierBonusActionTemplate, "{owner}'s {modifier} granted another action.");
+                    break;
+                default:
+                    template = Get(profile, p => p.ModifierTemplate, "{owner}'s {modifier} activated.");
+                    break;
+            }
+
+            string text = template;
+            text = Replace(text, "owner", ResolveName(log, ownerId));
+            text = Replace(text, "target", ResolveName(log, targetId));
+            text = Replace(text, "move", ResolveName(log, payload.moveId));
+            text = Replace(text, "modifier", ResolveModifierLabel(payload, log));
+            text = Replace(text, "amount", Math.Max(0, aggregate.amount).ToString());
+            text = Replace(text, "hitWord", aggregate.amount == 1 ? "hit" : "hits");
+            text = Replace(text, "status", Humanize(effect.statusId.ToString()));
+            text = Replace(text, "stat", Humanize(effect.coreStat.ToString()));
+            return NormalizeSentence(text);
+        }
+
+        private static string FormatUnmetConditional(ModifierOutcomePayload payload, CombatEventLog log)
+        {
+            string target = ResolveName(log, payload.targetChainlingId);
+            string owner = ResolveName(log, payload.sourceChainlingId);
+            string reason;
+            switch (payload.sectionId)
+            {
+                case "6.3-a": reason = $"{target} was not below half HP"; break;
+                case "6.3-b": reason = $"{owner}'s HP was not lower than {target}'s"; break;
+                case "6.3-c": reason = $"{owner} was not below 30% HP"; break;
+                case "6.3-d": reason = "no ally had fainted this turn"; break;
+                case "6.3-e": reason = $"{target} did not miss last turn"; break;
+                case "7.1-a": reason = "no partner was buffed"; break;
+                case "7.2-a": reason = "no ally had attacked earlier this turn"; break;
+                case "7.2-b": reason = $"{target} had not been hit earlier this turn"; break;
+                default: return string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(payload.reason) ||
+                payload.reason.IndexOf("condition", StringComparison.OrdinalIgnoreCase) < 0 &&
+                payload.reason.IndexOf("No ", StringComparison.OrdinalIgnoreCase) < 0 &&
+                payload.reason.IndexOf("not ", StringComparison.OrdinalIgnoreCase) < 0)
+                return string.Empty;
+
+            return NormalizeSentence($"{ResolveModifierLabel(payload, log)} did not trigger: {reason}.");
         }
 
         private static void AppendWallInterceptNarration(
@@ -448,7 +885,7 @@ namespace Chainbound.Combat
 
                 case WallInterceptMode.WallBrokenThrough:
                     return FormatWallToken(
-                        Get(profile, p => p.WallBrokenTemplate, "{wall} broke and absorbed {amount} damage."),
+                        Get(profile, p => p.WallBrokenTemplate, "{actor} broke {target}'s {wall} (-{amount})."),
                         evt, log, payload, absorbed);
 
                 case WallInterceptMode.WallHitNoDamage:
@@ -477,6 +914,23 @@ namespace Chainbound.Combat
             string text = Format(template, evt, log, amount, 0);
             text = Replace(text, "wall", ResolveWallName(log, payload != null ? payload.wallSourceTag : null));
             return NormalizeSentence(text);
+        }
+
+        private static void AppendWallExpiredNarration(
+            CombatEvent evt,
+            CombatEventLog log,
+            List<string> wallSentences)
+        {
+            string sourceTag = evt.moveId;
+            if (WallInterceptPayload.TryFromEvent(evt, out WallInterceptPayload payload) && payload != null &&
+                !string.IsNullOrWhiteSpace(payload.wallSourceTag))
+            {
+                sourceTag = payload.wallSourceTag;
+            }
+
+            string targetName = ResolveName(log, evt.targetId);
+            string wallName = ResolveWallName(log, sourceTag);
+            wallSentences.Add(NormalizeSentence($"{targetName}'s {wallName} faded."));
         }
 
         private static string ResolveWallName(CombatEventLog log, string wallSourceTag)
@@ -692,6 +1146,38 @@ namespace Chainbound.Combat
                    (message.StartsWith("Kindled burns ", StringComparison.Ordinal) ||
                     message.StartsWith("Rugged scorches ", StringComparison.Ordinal) ||
                     message.StartsWith("Leaked taxes ", StringComparison.Ordinal));
+        }
+
+        private static bool IsNarratedModifierCategory(string category)
+        {
+            return string.Equals(category, ModifierCategory.TRG.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(category, ModifierCategory.SYN.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatModifierActivation(
+            ModifierOutcomePayload payload,
+            CombatEvent evt,
+            CombatEventLog log)
+        {
+            string owner = ResolveName(log, payload.sourceChainlingId);
+            string modifier = ResolveModifierLabel(payload, log);
+            return NormalizeSentence($"{owner}'s {modifier} activated.");
+        }
+
+        private static string ResolveModifierLabel(ModifierOutcomePayload payload, CombatEventLog log)
+        {
+            if (payload == null)
+                return "stamp";
+
+            string modifier = payload.modifierName;
+            if (!string.IsNullOrWhiteSpace(modifier) &&
+                !string.Equals(modifier, payload.sectionId, StringComparison.OrdinalIgnoreCase))
+                return modifier.Trim();
+
+            string move = string.IsNullOrWhiteSpace(payload.moveId) ? string.Empty : log.Name(payload.moveId);
+            return !string.IsNullOrWhiteSpace(move) && !string.Equals(move, payload.moveId, StringComparison.Ordinal)
+                ? move + " stamp"
+                : "stamp";
         }
 
         private static bool TrySetupFeedSentence(CombatEvent evt, out string sentence)

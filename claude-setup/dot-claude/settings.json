@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./%USERPROFILE%.keystores/**)",
+      "Read(./**/*.keystore)",
+      "Read(./**/id.json)",
+      "Read(./**/keypair.json)",
+      "Read(./.cursor/debug.log)",
+      "Read(./Library/**)",
+      "Read(./Temp/**)",
+      "Read(./node_modules/**)"
+    ]
+  }
+}

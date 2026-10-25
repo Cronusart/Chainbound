@@ -195,9 +195,9 @@ Deno.test("Stamp lifecycle snapshots and returns the authoritative Known acquisi
     Deno.readTextFile(new URL("../ownership_confirm_stamp/index.ts", import.meta.url)),
     Deno.readTextFile(new URL("../ownership_reconcile_stamp/index.ts", import.meta.url)),
     Deno.readTextFile(new URL("../ownership_get_inventory/index.ts", import.meta.url)),
-  ]);
+  ]).then((sources) => sources.map((source) => source.replaceAll("\r\n", "\n")));
   assertStringIncludes(prepare, "const acquisition = normalizeAcquisition(str(known.acquisition))");
-  assertStringIncludes(prepare, "acquisition,\n      onchain_instance_id");
+  assertStringIncludes(prepare, "acquisition,\n      known_source: built.knownSource,\n      onchain_instance_id");
   assertStringIncludes(confirm, "acquisition: normalizeAcquisition(str(operation.acquisition)");
   assertStringIncludes(reconcile, "acquisition: normalizeAcquisition(str(operation.acquisition)");
   assertStringIncludes(inventory, "stamped_asset_address,acquisition");

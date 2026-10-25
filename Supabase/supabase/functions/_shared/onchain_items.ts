@@ -137,8 +137,7 @@ export async function prepareCoreItemConsume(
 
   // Unsigned Core burn tx construction is deferred to program/IDL wiring.
   // Intent row still registers the consume so Unity can exercise prepare → sign → finalize.
-  const actionSummary =
-    `Burn Core item ${normalizedItemId} (${normalizedAssetId}) on ${cluster}. ` +
+  const actionSummary = `Burn Core item ${normalizedItemId} (${normalizedAssetId}) on ${cluster}. ` +
     `Fees/program shown at wallet sign time when unsigned_tx_base64 is populated.`;
 
   const { data: intent, error: intentError } = await supabase

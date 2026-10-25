@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   serviceBaseUrl: https://chainbound-battle-devnet-1049191619203.us-central1.run.app
   authoritativePveCaptureEnabled: 1
-  gameplayManifestHash: e72a0d6f3229738b12a4c8ce12071468a54e76d6c497009e1ac41d0edda28308
+  gameplayManifestHash: 2f07d56edb2d9fb67149d585a4fb87482b8858819e81d72accad8ddf8b25a8b8
   requestTimeoutSeconds: 12
   allowLocalPracticeInEditor: 0

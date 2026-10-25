@@ -30,10 +30,12 @@ export function playerDisplayNamesConflict(
   requestedName: string,
   existingName: string | null | undefined,
 ): boolean {
-  if (existingName == null)
+  if (existingName == null) {
     return false;
-  if (ownerProfileId && otherProfileId && ownerProfileId === otherProfileId)
+  }
+  if (ownerProfileId && otherProfileId && ownerProfileId === otherProfileId) {
     return false;
+  }
 
   const requested = playerDisplayNameKey(requestedName);
   const existing = playerDisplayNameKey(existingName);
@@ -61,12 +63,14 @@ export function isPlayerDisplayNameClaimBlocked(
   requestedName: string,
   otherNames: Array<string | null | undefined>,
 ): boolean {
-  if (isOwnDisplayNameReset(ownerCurrentName, requestedName))
+  if (isOwnDisplayNameReset(ownerCurrentName, requestedName)) {
     return false;
+  }
 
   const requested = playerDisplayNameKey(requestedName);
-  if (requested.length === 0)
+  if (requested.length === 0) {
     return false;
+  }
 
   return otherNames.some((name) => playerDisplayNameKey(name ?? "") === requested);
 }
@@ -81,8 +85,9 @@ export function shouldStampDisplayNameClaim(
   otherNames: Array<string | null | undefined>,
 ): boolean {
   const requested = playerDisplayNameKey(requestedName);
-  if (requested.length === 0)
+  if (requested.length === 0) {
     return false;
+  }
 
   return !otherNames.some((name) => playerDisplayNameKey(name ?? "") === requested);
 }
@@ -90,10 +95,12 @@ export function shouldStampDisplayNameClaim(
 export function isPlayerDisplayNameUniqueViolation(
   error: { code?: string; message?: string; details?: string } | null | undefined,
 ): boolean {
-  if (!error)
+  if (!error) {
     return false;
-  if (error.code === "23505")
+  }
+  if (error.code === "23505") {
     return true;
+  }
 
   const haystack = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
   return haystack.includes(PLAYER_DISPLAY_NAME_INDEX) || haystack.includes("duplicate key");

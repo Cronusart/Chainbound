@@ -29,28 +29,61 @@ MonoBehaviour:
   damageTemplate: '{target} took {amount} damage.'
   multiHitDamageTemplate: '{target} was hit {hits} times for {amount} damage!'
   damageKoTemplate: '{target} took {amount} damage and was knocked out!'
-  multiHitDamageKoTemplate: '{target} was hit {hits} times for {amount} damage and was knocked out!'
+  multiHitDamageKoTemplate: '{target} was hit {hits} times for {amount} damage and
+    was knocked out!'
   criticalPrefix: 'Critical hit! '
   healTemplate: '{target} recovered {amount} HP.'
-  missTemplate: "{actor}'s attack missed {target}."
+  missTemplate: '{actor}''s attack missed {target}.'
   dodgeTemplate: '{target} dodged the attack.'
-  barrierTemplate: "{target}'s barrier blocked the attack."
+  barrierTemplate: '{target}''s barrier blocked the attack.'
+  wallBlockedTemplate: '{wall} blocked all {amount} damage.'
+  wallMitigatedTemplate: '{wall} blocked {amount} damage.'
+  wallBrokenTemplate: '{actor} broke {target}''s {wall} (-{amount}).'
+  wallHeldTemplate: '{wall} held firm.'
   koTemplate: '{target} was knocked out!'
   swapResultTemplate: '{target} entered the battle.'
   statusAppliedTemplate: '{target} became {status}.'
-  statusRefreshedTemplate: "{target}'s {status} was refreshed."
+  statusRefreshedTemplate: '{target}''s {status} was refreshed.'
   statusImmuneTemplate: '{target} resisted {status}.'
   statusCleansedTemplate: '{target} was cleansed of {status}.'
-  statusExpiredTemplate: "{target}'s {status} ended."
-  stageChangedTemplate: "{target}'s {stat} changed by {amount}."
-  passiveTemplate: "{actor}'s passive activated."
-  modifierTemplate: A combat modifier changed the outcome.
+  statusExpiredTemplate: '{target}''s {status} ended.'
+  stageChangedTemplate: '{target}''s {stat} changed by {amount}.'
+  passiveTemplate: '{actor}''s passive activated.'
+  modifierTemplate: '{owner}''s {modifier} activated.'
   apBlockedTemplate: '{target} could not gain AP.'
-  apStolenTemplate: '{target} lost {amount} AP.'
+  apStolenTemplate: '{target} stole {amount} AP.'
+  apStealTemplate: '{actor} stole {amount} AP from {target}.'
+  wallReflectTemplate: '{actor} took {amount} reflected damage.'
+  wallApDrainTemplate: '{actor} lost {amount} AP.'
   rechargingTemplate: '{move} began recharging.'
   bonusActionTemplate: '{actor} gained another action.'
-  victoryTemplate: 'Victory! Your team won in {turns} turns.'
-  defeatTemplate: 'Defeat. The opposing team won in {turns} turns.'
-  drawTemplate: 'The battle ended in a draw after {turns} turns.'
+  modifierHealTemplate: '{owner}''s {modifier} restored {amount} HP.'
+  modifierHealOtherTemplate: '{owner}''s {modifier} restored {amount} HP to {target}.'
+  modifierApGainTemplate: '{owner}''s {modifier} granted {amount} AP.'
+  modifierApGainOtherTemplate: '{owner}''s {modifier} granted {target} {amount} AP.'
+  modifierApDrainTemplate: '{owner}''s {modifier} drained {amount} AP from {target}.'
+  modifierStageRaisedTemplate: '{owner}''s {modifier} raised {target}''s {stat} by
+    {amount}.'
+  modifierStageLoweredTemplate: '{owner}''s {modifier} lowered {target}''s {stat}
+    by {amount}.'
+  modifierStatusTemplate: '{owner}''s {modifier} made {target} {status}.'
+  modifierCleanseTemplate: '{owner}''s {modifier} cleansed {target} of {status}.'
+  modifierDamageTemplate: '{owner}''s {modifier} dealt {amount} damage to {target}.'
+  modifierGuardTemplate: '{owner}''s {modifier} put up a guard for the rest of the
+    turn.'
+  modifierGuardOtherTemplate: '{owner}''s {modifier} guarded {target} for the rest
+    of the turn.'
+  modifierAccuracyTemplate: '{owner}''s {modifier} sharpened {target}''s aim.'
+  modifierBarrierHitsTemplate: '{owner}''s {modifier} raised a barrier. Blocks {amount}
+    {hitWord}.'
+  modifierBarrierPoolTemplate: '{owner}''s {modifier} raised a barrier. Absorbs up
+    to {amount} damage.'
+  modifierCastTemplate: '{owner}''s {modifier} cast {move}!'
+  modifierReflectTemplate: '{owner}''s {modifier} reflected the effect back to {target}.'
+  modifierShareTemplate: '{owner}''s {modifier} shared the buffs with {target}.'
+  modifierBonusActionTemplate: '{owner}''s {modifier} granted another action.'
+  victoryTemplate: Victory! Your team won in {turns} turns.
+  defeatTemplate: Defeat. The opposing team won in {turns} turns.
+  drawTemplate: The battle ended in a draw after {turns} turns.
   fledTemplate: Your team withdrew from battle.
   eventRules: []

@@ -46,7 +46,7 @@ namespace SignalJam.Narrative.Combat
                 _isArmed = armedOnEnable;
 
             LogTrace(
-                $"Awake (instanceId={GetInstanceID()}): activeInHierarchy={gameObject.activeInHierarchy}, " +
+                $"Awake (instanceId={GetEntityId()}): activeInHierarchy={gameObject.activeInHierarchy}, " +
                 $"componentEnabled={enabled}, armedOnEnable={armedOnEnable}, _armedSetExternally={_armedSetExternally}, " +
                 $"_isArmed={_isArmed}, battleController={(battleController != null ? battleController.name : "null")}");
         }
@@ -61,7 +61,7 @@ namespace SignalJam.Narrative.Combat
                 battleController.OnBattleStarted += HandleBattleStarted;
                 LogTrace(
                     $"OnEnable: subscribed to OnBattleStarted on '{battleController.name}' " +
-                    $"(instanceId={GetInstanceID()}, _isArmed={_isArmed})");
+                    $"(instanceId={GetEntityId()}, _isArmed={_isArmed})");
             }
             else
             {
@@ -87,7 +87,7 @@ namespace SignalJam.Narrative.Combat
             _armedSetExternally = true;
             bool was = _isArmed;
             _isArmed = armed;
-            LogTrace($"SetArmed: {was} -> {armed} (instanceId={GetInstanceID()}, go='{gameObject.name}')");
+            LogTrace($"SetArmed: {was} -> {armed} (instanceId={GetEntityId()}, go='{gameObject.name}')");
             if (!armed)
                 CancelPendingFlee();
         }

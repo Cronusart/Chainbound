@@ -111,6 +111,33 @@ namespace Chainbound.Combat.Tests
             Assert.AreEqual(ModifierPopupMoment.OnKoTrigger, payload.moment);
             Assert.IsTrue(payload.gameplayApplied);
         }
+
+        [Test]
+        public void ModifierOutcomePayload_RoundTripsNameAndAmount_AndParsesOldJson()
+        {
+            ModifierOutcomePayload authored = ModifierOutcomePayload.Create(
+                "6.1-a",
+                ModifierCategory.TRG,
+                "HEAL",
+                "attacker",
+                ModifierPopupMoment.OnHitApplied,
+                true,
+                "On-hit heal applied",
+                "attacker",
+                "target",
+                "move",
+                "Leech",
+                7);
+
+            Assert.IsTrue(ModifierOutcomePayload.TryParse(authored.ToJson(), out ModifierOutcomePayload roundTrip));
+            Assert.AreEqual("Leech", roundTrip.modifierName);
+            Assert.AreEqual(7, roundTrip.amount);
+
+            const string oldJson = "{\"schemaVersion\":1,\"sectionId\":\"6.1-a\",\"category\":\"TRG\",\"gameplayApplied\":true}";
+            Assert.IsTrue(ModifierOutcomePayload.TryParse(oldJson, out ModifierOutcomePayload oldPayload));
+            Assert.IsTrue(string.IsNullOrEmpty(oldPayload.modifierName));
+            Assert.AreEqual(0, oldPayload.amount);
+        }
     }
 
     public class PotencyModifierMomentTests : CombatModifierResolverTestBase
@@ -232,7 +259,7 @@ namespace Chainbound.Combat.Tests
                 new List<CombatAction> { CombatAction.Pass(1) });
 
             CombatEvent evt = resolver.Log.Events.First(e => e.eventType == CombatEventType.ModifierTriggered && e.boolValue);
-            AssertPayload(evt, "7.2-a", "SYNC", comboUser.instanceId, ModifierPopupMoment.OnSynergyMet);
+            AssertPayload(evt, "7.2-a", "TAG", comboUser.instanceId, ModifierPopupMoment.OnSynergyMet);
         }
     }
 
@@ -258,6 +285,78 @@ namespace Chainbound.Combat.Tests
                 e.message.Contains("Speed")));
             CombatEvent evt = resolver.Log.Events.First(e => e.eventType == CombatEventType.ModifierTriggered && e.boolValue);
             AssertPayload(evt, "5.2-e", "SPEED", attacker.instanceId, ModifierPopupMoment.OnHitApplied);
+        }
+
+        [Test]
+        public void CoverStrike_UsesRangedDefenseOnMeleeDamage()
+        {
+            var definition = Modifier("5.2-h", ModifierCategory.TRX, "Damage uses Ranged Defense instead of Melee Attack", 0f, 0f);
+            definition.substitutionStat = CoreStat.RangedDef;
+            var catalog = CreateModifierCatalog(definition);
+            var resolver = CreateResolver(catalog);
+            var attacker = CreateChainling("cover", 0, 20);
+            attacker.baseMeleeAtk = 15;
+            attacker.baseRangedDef = 120;
+            var defender = CreateChainling("target", 0, 10);
+            var move = CreateMove("cover_hit", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 0, 40, 100);
+            AddModifier(move, "5.2-h", ModifierCategory.TRX, 0f, 0f);
+            move.modifiers[0].substitutionStat = CoreStat.RangedDef;
+            attacker.moves.Add(move);
+
+            var state = resolver.InitializeBattle(CreateTeam(0, attacker), CreateTeam(1, defender));
+            resolver.ExecuteTurn(state, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
+
+            Assert.IsTrue(resolver.Log.Events.Any(e =>
+                e.eventType == CombatEventType.StatBreakdown &&
+                e.message.Contains("RangedDef")));
+        }
+
+        [Test]
+        public void HeavySignal_UsesMeleeAttackOnRangedDamage()
+        {
+            var definition = Modifier("5.2-i", ModifierCategory.TRX, "Damage uses Melee Attack instead of Ranged Attack", 0f, 0f);
+            definition.substitutionStat = CoreStat.MeleeAtk;
+            var catalog = CreateModifierCatalog(definition);
+            var resolver = CreateResolver(catalog);
+            var attacker = CreateChainling("signal", 0, 20);
+            attacker.baseMeleeAtk = 90;
+            attacker.baseRangedAtk = 12;
+            var defender = CreateChainling("target", 0, 10);
+            var move = CreateMove("signal_hit", MoveCategory.DamagingRanged, MoveTargeting.SingleEnemy, 0, 40, 100);
+            AddModifier(move, "5.2-i", ModifierCategory.TRX, 0f, 0f);
+            move.modifiers[0].substitutionStat = CoreStat.MeleeAtk;
+            attacker.moves.Add(move);
+
+            var state = resolver.InitializeBattle(CreateTeam(0, attacker), CreateTeam(1, defender));
+            resolver.ExecuteTurn(state, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
+
+            CombatEvent breakdown = resolver.Log.Events.First(e => e.eventType == CombatEventType.StatBreakdown);
+            StringAssert.Contains("MeleeAtk", breakdown.message);
+            StringAssert.DoesNotContain("RangedAtk", breakdown.message);
+        }
+
+        [Test]
+        public void CoverStrike_DoesNotSwapStatsOnUtilityMoves()
+        {
+            var definition = Modifier("5.2-h", ModifierCategory.TRX, "Damage uses Ranged Defense instead of Melee Attack", 0f, 0f);
+            definition.substitutionStat = CoreStat.RangedDef;
+            var catalog = CreateModifierCatalog(definition);
+            var resolver = CreateResolver(catalog);
+            var attacker = CreateChainling("cover", 2, 20);
+            attacker.baseRangedDef = 120;
+            var defender = CreateChainling("target", 0, 10);
+            var move = CreateMove("cover_utility", MoveCategory.StatusUtility, MoveTargeting.SingleEnemy, 0, 0, 100);
+            AddModifier(move, "5.2-h", ModifierCategory.TRX, 0f, 0f);
+            move.modifiers[0].substitutionStat = CoreStat.RangedDef;
+            attacker.moves.Add(move);
+
+            var state = resolver.InitializeBattle(CreateTeam(0, attacker), CreateTeam(1, defender));
+            resolver.ExecuteTurn(state, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
+
+            Assert.IsFalse(resolver.Log.Events.Any(e =>
+                e.eventType == CombatEventType.StatBreakdown &&
+                e.message != null &&
+                e.message.Contains(": RangedDef")));
         }
     }
 
@@ -479,7 +578,18 @@ namespace Chainbound.Combat.Tests
             var resolver = CreateResolver(catalog);
             var attacker = CreateChainling("breaker", 2, 40);
             var defender = CreateChainling("walled", 0, 10);
-            defender.AddBarrier(BarrierType.SingleHit, hitsRemaining: 1, damageThreshold: 0, turnsRemaining: 3, sourceTag: "test_wall");
+            defender.AddMitigationSource(0.25f, 2, 1, "guard_posture", "armor_guard_posture");
+            defender.AddBlock(new MitigationSource
+            {
+                mitigation = 0.5f,
+                turnsRemaining = 2,
+                hitsRemaining = 1,
+                sourceTag = "ember_wall",
+                sourceMoveId = "ember_wall",
+                stackKey = "wall_ember",
+                contactFilter = UtilityContactFilter.Contact,
+                blockKind = BlockKind.Wall,
+            });
             var move = CreateMove("smash", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 1, 40, 100);
             AddModifier(move, "4.8-a", ModifierCategory.AUG, 0f, 0f);
             attacker.moves.Add(move);
@@ -488,6 +598,9 @@ namespace Chainbound.Combat.Tests
             resolver.ExecuteTurn(state, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
 
             Assert.Less(defender.currentHP, defender.EffectiveMaxHP);
+            Assert.IsTrue(defender.HasIntactBlock(), "Ignore Walls skips the block without consuming it.");
+            Assert.IsFalse(defender.mitigationSources.Any(x => x.stackKey == "armor_guard_posture"),
+                "Armor still applies and spends its hit budget on the bypassed hit.");
             Assert.IsTrue(resolver.Log.Events.Any(e =>
                 e.eventType == CombatEventType.ModifierTriggered &&
                 e.boolValue &&

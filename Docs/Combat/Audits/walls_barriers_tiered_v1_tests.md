@@ -93,3 +93,23 @@ Authoritative gameplay manifest SHA-256:
 `D0AA02FE2DA0DC48F0DCC0528422DC487D9DC70465E120524AF8A58C9181BF37`
 
 The final added cases passed: Compound Barrier recast stacking, AI safety-net non-fire, and selector back-navigation conflict clearing. Final walls/barriers focused acceptance status: **green**. The broad live-Editor runner limitation and unrelated baseline failures remain explicitly excluded from that focused gate.
+
+## 2026-10-22 audit follow-up
+
+The post-completion audit found and closed three implementation gaps:
+
+- Passive- and modifier-origin `BlockWindow` execution now routes through `AddBlock(..., override: true)`; ordinary move casts remain non-overriding.
+- The resolver safety net now evaluates the turn-start block snapshot plus slot-order teammate reservations, so a block breaking before a later cast does not make that cast legal retroactively.
+- Both server rule copies now resolve omitted block targets with the same implicit SingleAlly rule as Unity before checking duplicates.
+
+Verification:
+
+| Check | Result |
+|---|---|
+| Unity script compile (6000.6.6f1) | Completed, 0 compile errors |
+| `WallsBarriersTieredV1Tests` | 29 passed, 0 failed |
+| Duplicate-block Deno regression, both `_shared` trees | 2 passed, 0 failed |
+| Canonical `pvp_matchmaking_test.ts` | 11 passed, 0 failed |
+| Nested `pvp_matchmaking_test.ts` | Gameplay cases passed; the pre-existing missing nested migration fixture remains |
+
+An all-project async EditMode run remained in `running` state for roughly ten minutes and was cancelled. A subsequent `Chainbound.Combat.Tests` run reached the Pipeline command's 300-second timeout without returning a result payload. These runner timeouts are not counted as passes; the focused wall/barrier acceptance gate above is green.

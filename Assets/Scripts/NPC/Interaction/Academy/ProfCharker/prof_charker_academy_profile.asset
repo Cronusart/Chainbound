@@ -25,7 +25,6 @@ MonoBehaviour:
   activeFallbackNpcBehavior:
     mode: 1
     behaviorOverride: {fileID: 0}
-  designerNotes: Default Academy line while the bindery basement is flooded. A later
-    bindery quest can add a profile rule without replacing this NPC.
+  designerNotes: Default Academy line while the bindery basement is flooded. A later bindery quest can add a profile rule without replacing this NPC.
   activateQuestOnInactiveInteract: 0
   completeObjectiveOnActivate: 

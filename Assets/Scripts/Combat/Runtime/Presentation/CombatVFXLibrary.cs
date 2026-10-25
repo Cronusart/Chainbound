@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -250,6 +251,8 @@ namespace Chainbound.Combat
             public string moveDefinitionId;
             public bool isCategoryFallback;
             public MoveCategory fallbackCategory;
+            [Tooltip("When set on the winning base entry, missing phases stay missing instead of being filled from later fallback slots.")]
+            public bool suppressPhaseFill;
 
             [Header("Impact Timing")]
             [Tooltip("Seconds after the attacker fire frame before the move impact lands. " +
@@ -295,6 +298,24 @@ namespace Chainbound.Combat
                 return IsUsablePhaseConfig(config);
             }
 
+            public VFXEntry Clone()
+            {
+                return new VFXEntry
+                {
+                    moveDefinitionId = moveDefinitionId,
+                    isCategoryFallback = isCategoryFallback,
+                    fallbackCategory = fallbackCategory,
+                    suppressPhaseFill = suppressPhaseFill,
+                    impactDelay = impactDelay,
+                    castVfx = castVfx != null ? castVfx.Clone() : null,
+                    strikeVfx = strikeVfx != null ? strikeVfx.Clone() : null,
+                    projectileVfx = projectileVfx != null ? projectileVfx.Clone() : null,
+                    impactVfx = impactVfx != null ? impactVfx.Clone() : null,
+                    impactSound = impactSound,
+                    missSound = missSound
+                };
+            }
+
             private VFXPhaseConfig GetPhaseConfig(VFXPhase phase)
             {
                 switch (phase)
@@ -327,7 +348,17 @@ namespace Chainbound.Combat
 
         [SerializeField] private VFXEntry[] entries = new VFXEntry[0];
 
+        [Header("Fallback Resolution")]
+        [SerializeField] private CombatVFXFallbacks fallbacks;
+        [SerializeField] private bool logResolution;
+
+        [NonSerialized] private Dictionary<VfxMoveKey, VfxResolution> resolutionCache;
+        [NonSerialized] private int cachedFallbacksVersion = int.MinValue;
+
         public float WorldScaleMultiplier => Mathf.Max(0.01f, worldScaleMultiplier);
+        public IReadOnlyList<VFXEntry> Entries => entries;
+        public CombatVFXFallbacks Fallbacks => fallbacks;
+        public bool LogResolution => logResolution;
 
         public float GetEffectivePhaseScaleMultiplier(VFXPhaseConfig config)
         {
@@ -346,9 +377,10 @@ namespace Chainbound.Combat
             {
                 for (int i = 0; i < entries.Length; i++)
                 {
-                    if (!entries[i].isCategoryFallback &&
-                        entries[i].moveDefinitionId == moveDefinitionId)
-                        return entries[i];
+                    VFXEntry entry = entries[i];
+                    if (entry != null && !entry.isCategoryFallback &&
+                        entry.moveDefinitionId == moveDefinitionId)
+                        return entry;
                 }
             }
 
@@ -357,24 +389,44 @@ namespace Chainbound.Combat
 
         public VFXEntry GetEntryWithFallback(string moveDefinitionId, MoveCategory category)
         {
-            var exact = GetEntry(moveDefinitionId);
-            if (exact != null)
-                return exact;
+            MoveVfxRole role = category == MoveCategory.DamagingMelee || category == MoveCategory.DamagingRanged
+                ? MoveVfxRole.Damage
+                : category == MoveCategory.Passive
+                    ? MoveVfxRole.Passive
+                    : category == MoveCategory.StatusUtility
+                        ? MoveVfxRole.Debuff
+                        : MoveVfxRole.Buff;
+            return Resolve(new VfxMoveKey(moveDefinitionId, category, ChainlingType.None, role)).entry;
+        }
 
-            if (entries == null)
-                return null;
-
-            for (int i = 0; i < entries.Length; i++)
+        public VfxResolution Resolve(VfxMoveKey key)
+        {
+            int version = fallbacks != null ? fallbacks.Version : 0;
+            if (resolutionCache == null || cachedFallbacksVersion != version)
             {
-                if (entries[i].isCategoryFallback && entries[i].fallbackCategory == category)
-                    return entries[i];
+                resolutionCache = new Dictionary<VfxMoveKey, VfxResolution>();
+                cachedFallbacksVersion = version;
             }
 
-            return null;
+            if (!resolutionCache.TryGetValue(key, out VfxResolution resolution))
+            {
+                resolution = CombatVfxResolver.Resolve(key, entries, fallbacks);
+                resolutionCache[key] = resolution;
+            }
+
+            if (logResolution)
+            {
+                Debug.Log(
+                    $"[VFX] {key.definitionId} -> {resolution.debugTrace}",
+                    this);
+            }
+            return resolution;
         }
 
         private void OnValidate()
         {
+            resolutionCache = null;
+            cachedFallbacksVersion = int.MinValue;
             worldScaleMultiplier = Mathf.Max(0.01f, worldScaleMultiplier);
 
             if (entries == null)

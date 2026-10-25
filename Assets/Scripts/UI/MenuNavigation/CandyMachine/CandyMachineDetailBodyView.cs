@@ -31,7 +31,7 @@ namespace SignalJam.UI.MenuNavigation
             hint = hintText;
             if (body != null)
             {
-                body.enableWordWrapping = true;
+                body.textWrappingMode = TextWrappingModes.Normal;
                 body.overflowMode = TextOverflowModes.Overflow;
             }
         }

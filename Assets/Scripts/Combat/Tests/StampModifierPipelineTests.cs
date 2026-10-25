@@ -76,6 +76,28 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void StatSubstitution_AllowsOneOnDamagingMovesOnly()
+        {
+            ModifierDefinitionSO ironFist = CreateModifier("5.2-a", 0f, 0f, MoveCategory.DamagingMelee);
+            ironFist.slotType = ModifierSlotType.StatSubstitution;
+            ModifierDefinitionSO fleetStrike = CreateModifier("5.2-b", 0f, 0f, MoveCategory.DamagingMelee);
+            fleetStrike.slotType = ModifierSlotType.StatSubstitution;
+            MoveDefinitionSO melee = CreateMove("jab", "Jab", MoveCategory.DamagingMelee);
+            MoveDefinitionSO utility = CreateMove("cleanse", "Cleanse", MoveCategory.StatusUtility);
+
+            Assert.IsTrue(ModifierValidationService.CanApply(ironFist, melee).isValid);
+            Assert.IsFalse(ModifierValidationService.CanApply(ironFist, utility).isValid);
+
+            ModifierValidationResult second = ModifierValidationService.CanApply(
+                fleetStrike,
+                melee,
+                CreateCatalog(ironFist),
+                new[] { "5.2-a" });
+            Assert.IsFalse(second.isValid);
+            StringAssert.Contains("StatSubstitution", second.reason);
+        }
+
+        [Test]
         public void RevealFormatter_SubstitutesLockedTokenN()
         {
             ModifierDefinitionSO definition = CreateModifier("1.3-a", 5f, 12f, MoveCategory.StatusUtility);

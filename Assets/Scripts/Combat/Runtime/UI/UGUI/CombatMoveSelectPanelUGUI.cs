@@ -21,6 +21,7 @@ namespace Chainbound.Combat
             public string label;
             public Sprite typeIcon;
             public bool isUsable;
+            public bool isPassive;
             public bool hasPriority;
         }
 
@@ -36,11 +37,15 @@ namespace Chainbound.Combat
             public Color roleTextColor;
             public bool hasRoleTextColor;
             public bool isUsable;
+            public bool isPassive;
             public bool insufficientAp;
             public bool hasPriority;
             public string modifierSummary;
             public IReadOnlyList<ModifierOverviewRowData> modifierRows;
             public string shortDescription;
+            public string readableTypeValue;
+            public string readablePowerValue;
+            public string readableAccuracyValue;
             public Sprite typeIcon;
         }
 
@@ -185,11 +190,20 @@ namespace Chainbound.Combat
         private TextAlignmentOptions _authoredDescriptionAlignment;
         private TextOverflowModes _authoredDescriptionOverflow;
         private bool _descriptionLayoutCached;
+        private bool _readableDetailsResolved;
+        private TMP_Text _readableTypeValue;
+        private TMP_Text _readablePowerValue;
+        private TMP_Text _readableAccuracyValue;
+        private TMP_Text _readableDescription;
         private bool _restDescriptionLayoutActive;
         private Tween _panelNudgeTween;
         private MonoBehaviour _cachedUiSfxBehaviour;
         private MonoBehaviour _cachedAudioBridgeBehaviour;
         private readonly List<GameObject> _hiddenForTargetingPrompt = new List<GameObject>(8);
+        // Graphics on the panel root itself (e.g. the device_bottom_panelframe Image) that were disabled
+        // while target selection holds the panel open for its prompt. Child objects are covered by
+        // _hiddenForTargetingPrompt; the root's own graphics are not, so the frame needs its own list.
+        private readonly List<Graphic> _rootGraphicsHiddenForTargetingPrompt = new List<Graphic>(2);
 
         private void Awake()
         {
@@ -211,8 +225,10 @@ namespace Chainbound.Combat
 
         /// <summary>
         /// Keeps this panel active so the shared targeting label can show, and hides the move-list chrome.
+        /// When <paramref name="hidePanelFrame"/> is true (target selection), graphics on the panel root
+        /// itself, such as the panel frame image, are hidden too so only the prompt remains.
         /// </summary>
-        public void HoldOpenForTargetingPrompt(GameObject promptObject)
+        public void HoldOpenForTargetingPrompt(GameObject promptObject, bool hidePanelFrame = false)
         {
             EnsureBuilt();
             RestoreTargetingPromptHide();
@@ -249,16 +265,60 @@ namespace Chainbound.Combat
                 child.SetActive(false);
                 _hiddenForTargetingPrompt.Add(child);
             }
+
+            if (hidePanelFrame)
+                HideRootGraphicsForTargetingPrompt(promptObject);
+        }
+
+        private void HideRootGraphicsForTargetingPrompt(GameObject promptObject)
+        {
+            Graphic[] rootGraphics = root.GetComponents<Graphic>();
+            for (int i = 0; i < rootGraphics.Length; i++)
+            {
+                Graphic graphic = rootGraphics[i];
+                if (graphic == null || !graphic.enabled)
+                    continue;
+                // Never hide the prompt text itself if it happens to live on the panel root.
+                if (promptObject == root.gameObject && graphic is TMP_Text)
+                    continue;
+
+                graphic.enabled = false;
+                _rootGraphicsHiddenForTargetingPrompt.Add(graphic);
+            }
         }
 
         public void SetVisible(bool visible)
         {
             EnsureBuilt();
-            RestoreTargetingPromptHide();
+            bool wasHeldForTargetingPrompt = IsHeldForTargetingPrompt;
             if (root == null)
+            {
+                RestoreTargetingPromptHide();
                 return;
+            }
 
             var effect = projectedReveal != null ? projectedReveal : GetComponent<ProjectedPanelReveal>();
+
+            if (!visible && wasHeldForTargetingPrompt)
+            {
+                // Target selection already hid the panel chrome (frame included). Deactivate the root first,
+                // then restore the children/frame underneath it, so leaving target selection does not flash
+                // the full move panel back on just to fade it out.
+                KillTypewriterDelay();
+                KillTypewriters();
+                KillDetailsPopTween();
+                KillPanelNudgeTween(restorePosition: true);
+                ResetAllRowSelectionVisuals();
+                _lastSelectedIndex = -1;
+                _pendingDetailsPop = false;
+                if (effect != null)
+                    effect.CancelHideKeepVisible();
+                root.gameObject.SetActive(false);
+                RestoreTargetingPromptHide();
+                return;
+            }
+
+            RestoreTargetingPromptHide();
 
             if (visible)
             {
@@ -307,7 +367,18 @@ namespace Chainbound.Combat
             }
 
             _hiddenForTargetingPrompt.Clear();
+
+            for (int i = 0; i < _rootGraphicsHiddenForTargetingPrompt.Count; i++)
+            {
+                if (_rootGraphicsHiddenForTargetingPrompt[i] != null)
+                    _rootGraphicsHiddenForTargetingPrompt[i].enabled = true;
+            }
+
+            _rootGraphicsHiddenForTargetingPrompt.Clear();
         }
+
+        private bool IsHeldForTargetingPrompt =>
+            _hiddenForTargetingPrompt.Count > 0 || _rootGraphicsHiddenForTargetingPrompt.Count > 0;
 
         private void ScheduleTypewriters()
         {
@@ -432,7 +503,14 @@ namespace Chainbound.Combat
                 row.SetVisible(true);
                 var entry = rows[i];
                 bool selected = i == selectedIndex;
-                row.SetData(entry.label, entry.typeIcon, entry.isUsable, selected, hideTypeIcon: false, entry.hasPriority);
+                row.SetData(
+                    entry.label,
+                    entry.typeIcon,
+                    entry.isUsable,
+                    selected,
+                    hideTypeIcon: false,
+                    entry.hasPriority,
+                    entry.isPassive);
                 row.ApplySelectionNudge(selected, selectionChanged, selectionTuning);
                 if (selected && selectionChanged)
                     row.PlaySelectBounce(selectionTuning);
@@ -466,11 +544,15 @@ namespace Chainbound.Combat
             SetMoveStatFieldsVisible(true);
             RestoreDescriptionLayout();
             bool muted = !details.isUsable;
-            Color bodyColor = muted ? detailsMutedTextColor : _authoredNameColor;
-            Color roleColor = muted
+            bool keepReadable = details.isPassive;
+            bool muteReadableBody = muted && !keepReadable;
+            Color bodyColor = muteReadableBody ? detailsMutedTextColor : _authoredNameColor;
+            Color roleColor = muted || details.isPassive
                 ? detailsMutedTextColor
                 : details.hasRoleTextColor ? details.roleTextColor : _authoredRoleColor;
-            Color apColor = details.insufficientAp
+            Color apColor = details.isPassive
+                ? detailsMutedTextColor
+                : details.insufficientAp
                 ? insufficientApCostColor
                 : _authoredApColor;
 
@@ -516,14 +598,14 @@ namespace Chainbound.Combat
                         ? "Mods: None"
                         : details.modifierSummary;
                 }
-                selectedModifierText.color = muted ? detailsMutedTextColor : _authoredModifierColor;
+                selectedModifierText.color = muteReadableBody ? detailsMutedTextColor : _authoredModifierColor;
             }
 
-            SetModifierOverviewRows(details.modifierRows, muted);
+            SetModifierOverviewRows(details.modifierRows, muteReadableBody);
             if (selectedDescriptionText != null)
             {
                 selectedDescriptionText.text = string.IsNullOrEmpty(details.shortDescription) ? "No move description available." : details.shortDescription;
-                selectedDescriptionText.color = muted ? detailsMutedTextColor : _authoredDescriptionColor;
+                selectedDescriptionText.color = muteReadableBody ? detailsMutedTextColor : _authoredDescriptionColor;
             }
 
             if (selectedTypeIconImage != null)
@@ -531,10 +613,11 @@ namespace Chainbound.Combat
                 selectedTypeIconImage.sprite = details.typeIcon;
                 selectedTypeIconImage.enabled = details.typeIcon != null;
                 var iconColor = selectedTypeIconImage.color;
-                iconColor.a = muted ? 0.45f : 1f;
+                iconColor.a = muteReadableBody ? 0.45f : 1f;
                 selectedTypeIconImage.color = iconColor;
             }
 
+            ApplyReadableDetails(details);
             PlayDetailsPopIfLegacyPanelIsShowing();
         }
 
@@ -713,6 +796,46 @@ namespace Chainbound.Combat
                 detailsCanvasGroup = detailsRoot.GetComponent<CanvasGroup>();
         }
 
+        private void ApplyReadableDetails(MoveDetailData details)
+        {
+            ResolveReadableDetails();
+            SetReadableText(_readableTypeValue, details.readableTypeValue);
+            SetReadableText(_readablePowerValue, details.readablePowerValue);
+            SetReadableText(_readableAccuracyValue, details.readableAccuracyValue);
+            SetReadableText(_readableDescription, details.shortDescription);
+        }
+
+        private void ResolveReadableDetails()
+        {
+            if (_readableDetailsResolved)
+                return;
+
+            _readableDetailsResolved = true;
+            EnsureDetailsReferences();
+            Transform details2 = detailsRoot != null ? detailsRoot.Find("Details2") : null;
+            if (details2 == null)
+                return;
+
+            _readableTypeValue = FindReadableText(details2, "MoveStats/MoveType/Value");
+            _readablePowerValue = FindReadableText(details2, "MoveStats/MovePower/Value");
+            _readableAccuracyValue = FindReadableText(details2, "MoveStats/MoveAccuracy/Value");
+            _readableDescription = FindReadableText(details2, "MoveDetails/MoveDescription/Description");
+        }
+
+        private static TMP_Text FindReadableText(Transform root, string path)
+        {
+            Transform target = root.Find(path);
+            return target != null ? target.GetComponent<TMP_Text>() : null;
+        }
+
+        private static void SetReadableText(TMP_Text label, string value)
+        {
+            if (label == null)
+                return;
+
+            label.text = string.IsNullOrEmpty(value) ? string.Empty : value;
+        }
+
         private void ResolveLibraryCard()
         {
             if (libraryCardView != null)
@@ -776,6 +899,8 @@ namespace Chainbound.Combat
                     : details.shortDescription;
                 selectedDescriptionText.color = _authoredDescriptionColor;
             }
+
+            ApplyReadableDetails(details);
         }
 
         private void CacheDescriptionLayout()

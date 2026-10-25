@@ -15,6 +15,7 @@ namespace SignalJam.UI.MenuNavigation
     public class ChainlingsPartyScreen : MenuScreen
     {
         public SpeciesDatabaseSO SpeciesDatabase => speciesDatabase;
+        public EncounterCatalogSourceSO EncounterCatalog => encounterCatalog;
 
         private const int PartySlotCount = CombatConstants.ROSTER_SIZE;
         private const float ViewModeDebounceSeconds = 0.15f;
@@ -37,6 +38,7 @@ namespace SignalJam.UI.MenuNavigation
 
         [Header("Data")]
         [SerializeField] private SpeciesDatabaseSO speciesDatabase;
+        [SerializeField] private EncounterCatalogSourceSO encounterCatalog;
         [SerializeField] private CombatVisualDatabaseSO visualDatabase;
         [SerializeField] private ChainlingVisualIdentityDatabaseSO identityDatabase;
         [SerializeField] private MoveDatabaseSO moveDatabase;
@@ -930,7 +932,8 @@ namespace SignalJam.UI.MenuNavigation
                 null,
                 progressionRewardTables,
                 progressionEventCatalog,
-                speciesDatabase);
+                speciesDatabase,
+                encounterCatalog);
         }
 
         private void HandleViewModeSelected(ChainlingPartyViewMode mode)
@@ -1291,6 +1294,82 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (activeInputContext != null)
                 ConfigureInputContext(activeInputContext);
+        }
+
+        public void CopyOwnedSpeciesIds(ICollection<string> destination)
+        {
+            if (destination == null)
+                return;
+
+            AddOwnedSpeciesIds(destination, rosterCache);
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session == null)
+                return;
+            if (PlayerProfileReadStore.ResolveOrCreate().TryGetRoster(
+                    session.PlayerProfileId,
+                    session.WalletAddress,
+                    out PlayerRosterSnapshot stored))
+                AddOwnedSpeciesIds(destination, stored);
+        }
+
+        public bool TryOpenOwnedSpeciesDossier(string speciesId)
+        {
+            PlayerRosterEntry entry = FindOwnedEntry(speciesId);
+            if (entry == null)
+                return false;
+
+            OpenDetail(entry);
+            return true;
+        }
+
+        static void AddOwnedSpeciesIds(ICollection<string> destination, PlayerRosterSnapshot roster)
+        {
+            if (roster == null || roster.chainlings == null)
+                return;
+
+            for (int i = 0; i < roster.chainlings.Count; i++)
+            {
+                string speciesId = roster.chainlings[i]?.snapshot?.speciesId;
+                if (!string.IsNullOrWhiteSpace(speciesId))
+                    destination.Add(speciesId.Trim());
+            }
+        }
+
+        PlayerRosterEntry FindOwnedEntry(string speciesId)
+        {
+            if (string.IsNullOrWhiteSpace(speciesId))
+                return null;
+
+            PlayerRosterEntry cached = FindOwnedEntry(rosterCache, speciesId);
+            if (cached != null)
+                return cached;
+
+            GameSessionContext session = GameSessionContext.Instance;
+            if (session == null)
+                return null;
+            if (!PlayerProfileReadStore.ResolveOrCreate().TryGetRoster(
+                    session.PlayerProfileId,
+                    session.WalletAddress,
+                    out PlayerRosterSnapshot stored))
+                return null;
+
+            return FindOwnedEntry(stored, speciesId);
+        }
+
+        static PlayerRosterEntry FindOwnedEntry(PlayerRosterSnapshot roster, string speciesId)
+        {
+            if (roster == null || roster.chainlings == null)
+                return null;
+
+            for (int i = 0; i < roster.chainlings.Count; i++)
+            {
+                PlayerRosterEntry entry = roster.chainlings[i];
+                string id = entry?.snapshot?.speciesId;
+                if (string.Equals(id, speciesId, StringComparison.OrdinalIgnoreCase))
+                    return entry;
+            }
+
+            return null;
         }
 
         private void OpenDetail(PlayerRosterEntry rosterEntry)

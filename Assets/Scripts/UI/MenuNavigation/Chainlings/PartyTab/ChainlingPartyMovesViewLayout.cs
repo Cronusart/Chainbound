@@ -675,7 +675,7 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
                     slotCountText.font = rowFont;
                 slotCountText.fontSize = rowFontSize;
                 slotCountText.alignment = TextAlignmentOptions.MidlineLeft;
-                slotCountText.enableWordWrapping = false;
+                slotCountText.textWrappingMode = TextWrappingModes.NoWrap;
                 slotCountText.overflowMode = TextOverflowModes.Ellipsis;
             }
 

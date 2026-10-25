@@ -191,7 +191,7 @@ namespace Chainbound.Combat.Tests
 
             CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 2, 0);
 
-            StringAssert.Contains("Ice Wall broke and absorbed 12 damage.", plan.resolutionPage.text);
+            StringAssert.Contains("Validape broke Kitsauto's Ice Wall (-12).", plan.resolutionPage.text);
             StringAssert.Contains("Kitsauto took 28 damage.", plan.resolutionPage.text);
         }
 
@@ -459,6 +459,256 @@ namespace Chainbound.Combat.Tests
             Assert.AreEqual(
                 "Setup Feed faded. The ally's next action was not a power move, so the 12% boost was lost.",
                 plan.consequencePage.text);
+        }
+
+        [Test]
+        public void ComposeAction_SkipsModifierOutcomeThatWasNotApplied()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.LogDamage(1, "actor", "target", "move", 10, false, 1f);
+            log.Log(ModifierEvent("6.3-a", "Execute", false, "Target HP condition not met", "target"));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            Assert.IsNull(plan.consequencePage);
+            Assert.That(plan.resolutionPage.text, Does.Not.Contain("modifier").IgnoreCase);
+        }
+
+        [Test]
+        public void ComposeAction_QuietTierModifierAddsNoLine()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.LogDamage(1, "actor", "target", "move", 10, false, 1f);
+            log.Log(ModifierEvent("2.1-a", "Power", true, "Power applied", "target", ModifierCategory.POT));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            Assert.AreEqual("Kitsauto took 10 damage.", plan.resolutionPage.text);
+            Assert.IsNull(plan.consequencePage);
+        }
+
+        [Test]
+        public void ComposeAction_ModifierBarrierUsesRegisteredName()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.RegisterName("modifier.6.7-a", "Afterguard");
+            log.Log(new CombatEvent { eventType = CombatEventType.MoveUsed, sourceId = "actor", targetId = "target", moveId = "move" });
+            var payload = WallInterceptPayload.Create(
+                hitIndex: 1,
+                totalHits: 1,
+                mode: WallInterceptMode.WallBlocked,
+                wallActiveBeforeHit: true,
+                wallActiveAfterHit: true,
+                bypassBarrier: false,
+                bypassReason: string.Empty,
+                contactType: ContactType.Contact,
+                moveCategory: MoveCategory.DamagingMelee,
+                mitigationPercent: 1f,
+                incomingDamage: 14,
+                finalHpDamage: 0,
+                barrierFullyBlocked: true,
+                mitigationSourcesExpired: 0,
+                barriersExpired: 0,
+                wallExpiredThisStep: false,
+                partialPenetration: false,
+                wallSourceTag: "modifier.6.7-a",
+                damageAbsorbed: 14);
+            log.LogBarrierBlocked(1, "actor", "target", "move", payload.ToJson());
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            StringAssert.Contains("Afterguard blocked all 14 damage.", plan.resolutionPage.text);
+            Assert.That(plan.resolutionPage.text, Does.Not.Contain("Modifier 6.7"));
+        }
+
+        [Test]
+        public void ComposeAction_ApStealNamesThiefAndVictim()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.Log(new CombatEvent
+            {
+                eventType = CombatEventType.APSpent,
+                targetId = "target",
+                intValue = -1,
+                apMutationSource = CombatApMutationSource.Drain.ToString(),
+            });
+            log.Log(new CombatEvent { eventType = CombatEventType.APStolen, targetId = "actor", intValue = 1 });
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            Assert.AreEqual("Validape stole 1 AP from Kitsauto.", plan.consequencePage.text);
+            Assert.That(plan.consequencePage.text, Does.Not.Contain("Validape lost"));
+        }
+
+        [Test]
+        public void ComposeAction_FoldsAndCoalescesMultiHitLeech()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.LogDamage(1, "actor", "target", "move", 10, false, 1f);
+            log.Log(new CombatEvent { eventType = CombatEventType.HealApplied, sourceId = "actor", targetId = "actor", moveId = "move", intValue = 3 });
+            log.Log(ModifierEvent("6.1-a", "Leech", true, "On-hit heal applied", "target", amount: 3));
+            log.LogDamage(1, "actor", "target", "move", 10, false, 1f);
+            log.Log(new CombatEvent { eventType = CombatEventType.HealApplied, sourceId = "actor", targetId = "actor", moveId = "move", intValue = 4 });
+            log.Log(ModifierEvent("6.1-a", "Leech", true, "On-hit heal applied", "target", amount: 4));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            StringAssert.Contains("Validape's Leech restored 7 HP.", plan.resolutionPage.text);
+            Assert.That(plan.resolutionPage.text, Does.Not.Contain("recovered"));
+            Assert.AreEqual(1, CountOccurrences(plan.resolutionPage.text, "Leech"));
+        }
+
+        [Test]
+        public void ComposeAction_ApSiphonFoldsIntoDrainLine()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.Log(new CombatEvent { eventType = CombatEventType.APSpent, targetId = "target", intValue = -1, apMutationSource = CombatApMutationSource.Drain.ToString() });
+            log.Log(new CombatEvent { eventType = CombatEventType.APStolen, targetId = "actor", intValue = 1 });
+            log.Log(ModifierEvent("6.1-b", "AP Siphon", true, "On-hit AP drain applied", "target", amount: 1));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            Assert.AreEqual("Validape's AP Siphon drained 1 AP from Kitsauto.", plan.consequencePage.text);
+        }
+
+        [Test]
+        public void ComposeAction_OpponentReactionNamesOwner()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.Log(new CombatEvent
+            {
+                eventType = CombatEventType.StatusApplied,
+                sourceId = "target",
+                targetId = "actor",
+                moveId = "move",
+                statusId = StatusId.Staggered,
+            });
+            log.Log(ModifierOutcomePayload.CreateEvent(
+                turn: 1,
+                sectionId: "6.8-c",
+                category: ModifierCategory.TRG,
+                displayText: "RIPOSTE",
+                anchorChainlingId: "target",
+                moment: ModifierPopupMoment.OnStatusApplied,
+                gameplayApplied: true,
+                reason: "Riposte cast",
+                sourceChainlingId: "target",
+                targetChainlingId: "actor",
+                moveId: "move",
+                modifierName: "Riposte"));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            StringAssert.StartsWith("Kitsauto's Riposte cast Snap Strike!", plan.consequencePage.text);
+            StringAssert.Contains("Validape became Staggered.", plan.consequencePage.text);
+        }
+
+        [Test]
+        public void ComposeAction_StageFoldStatesDirectionAndSize()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.Log(new CombatEvent { eventType = CombatEventType.StageChanged, targetId = "target", coreStat = CoreStat.MeleeDef, intValue = -2 });
+            log.Log(ModifierEvent("6.2-b", "Crit Shatter", true, "Crit defense stage drop applied", "target", amount: 2));
+            log.Log(new CombatEvent { eventType = CombatEventType.StageChanged, targetId = "target", coreStat = CoreStat.MeleeDef, intValue = -2 });
+            log.Log(ModifierEvent("6.2-b", "Crit Shatter", true, "Crit defense stage drop applied", "target", amount: 2));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            Assert.AreEqual("Validape's Crit Shatter lowered Kitsauto's Melee Def by 4.", plan.consequencePage.text);
+        }
+
+        [Test]
+        public void ComposeAction_PrefixesOnlyTheTargetAndStacksBeforeCritical()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.RegisterName("target2", "Gilarime");
+            log.LogDamage(1, "actor", "target", "move", 12, true, 1f);
+            log.Log(ModifierEvent("6.3-a", "Execute", true, "Damage modifier applied after hit proof", "target"));
+            log.LogDamage(1, "actor", "target2", "move", 9, false, 1f);
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            StringAssert.StartsWith("Execute! Critical hit! Kitsauto took 12 damage.", plan.resolutionPage.text);
+            StringAssert.Contains("Gilarime took 9 damage.", plan.resolutionPage.text);
+            Assert.AreEqual(1, CountOccurrences(plan.resolutionPage.text, "Execute!"));
+        }
+
+        [Test]
+        public void ComposeAction_NotMetConditionalGoesToTranscriptOnly()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.Log(ModifierEvent("6.3-a", "Execute", false, "Target HP condition not met", "target"));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            Assert.IsNull(plan.consequencePage);
+            Assert.AreEqual(1, plan.transcriptEntries.Count);
+            Assert.AreEqual(CombatNarrationPageKind.System, plan.transcriptEntries[0].kind);
+            Assert.AreEqual("Execute did not trigger: Kitsauto was not below half HP.", plan.transcriptEntries[0].text);
+        }
+
+        [Test]
+        public void ComposeAction_ModifierNameFallbackNeverShowsSectionId()
+        {
+            CombatEventLog log = NewNamedLog();
+            log.Log(ModifierEvent("6.1-c", string.Empty, true, "Staggered applied", "target"));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            StringAssert.Contains("Validape's Snap Strike stamp", plan.consequencePage.text);
+            Assert.That(plan.consequencePage.text, Does.Not.Contain("6.1-c"));
+        }
+
+        [Test]
+        public void ComposeAction_ModifierLinesRespectLiveCap()
+        {
+            CombatEventLog log = NewNamedLog();
+            for (int i = 0; i < 5; i++)
+                log.Log(ModifierEvent($"6.4-{(char)('a' + i)}", $"Trigger {i + 1}", true, "Applied", "target"));
+
+            CombatNarrationActionPlan plan = CombatNarrationComposer.ComposeAction(log, 0, log.EventCount, null, 1, 0);
+
+            Assert.AreEqual(3, CountOccurrences(plan.consequencePage.text, "activated"));
+            Assert.AreEqual(2, plan.transcriptEntries.Count(entry => entry.kind == CombatNarrationPageKind.System));
+        }
+
+        private static CombatEvent ModifierEvent(
+            string section,
+            string name,
+            bool applied,
+            string reason,
+            string target,
+            ModifierCategory category = ModifierCategory.TRG,
+            int amount = 0)
+        {
+            return ModifierOutcomePayload.CreateEvent(
+                1,
+                section,
+                category,
+                "TRIGGER",
+                "actor",
+                ModifierPopupMoment.OnProcSucceeded,
+                applied,
+                reason,
+                "actor",
+                target,
+                "move",
+                name,
+                amount);
+        }
+
+        private static int CountOccurrences(string text, string value)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(value))
+                return 0;
+            int count = 0;
+            int index = 0;
+            while ((index = text.IndexOf(value, index, System.StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += value.Length;
+            }
+            return count;
         }
 
         private static CombatEventLog NewNamedLog()

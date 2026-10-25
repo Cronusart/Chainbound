@@ -163,7 +163,11 @@ namespace Chainbound.Combat
         private readonly Dictionary<string, Combat2ChainlingView> _viewById = new Dictionary<string, Combat2ChainlingView>();
         private readonly Dictionary<string, MovePresentationContext> _moveContextByMoveId = new Dictionary<string, MovePresentationContext>();
         private readonly Dictionary<string, bool> _barrierActiveByInstanceId = new Dictionary<string, bool>();
+        private readonly Dictionary<string, string> _wallSourceByInstanceId = new Dictionary<string, string>();
+        private readonly Dictionary<string, GameObject> _wallLoopVfxByInstanceId = new Dictionary<string, GameObject>();
         private readonly HashSet<string> _wallBreakPendingByInstanceId = new HashSet<string>();
+        private readonly HashSet<string> _wallRaisePendingByInstanceId = new HashSet<string>();
+        private readonly HashSet<string> _wallExpirePresentedKeys = new HashSet<string>();
         private readonly Queue<CombatEvent> _eventQueue = new Queue<CombatEvent>();
         private readonly Queue<IEnumerator> _feedbackQueue = new Queue<IEnumerator>();
         private int _lastPresentedCombatEventTimestamp = -1;
@@ -254,6 +258,7 @@ namespace Chainbound.Combat
             public MoveCategory category;
             public MoveDefinitionSO moveDefinition;
             public CombatVFXLibrary.VFXEntry vfxEntry;
+            public VfxResolveTier vfxResolveTier;
         }
 
         // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
@@ -353,7 +358,11 @@ namespace Chainbound.Combat
             ForceClearCombatPostFx();
             _moveContextByMoveId.Clear();
             _barrierActiveByInstanceId.Clear();
+            _wallSourceByInstanceId.Clear();
+            ClearAllWallLoopVfx();
             _wallBreakPendingByInstanceId.Clear();
+            _wallRaisePendingByInstanceId.Clear();
+            _wallExpirePresentedKeys.Clear();
             _lastPresentedCombatEventTimestamp = -1;
             _batchedOutcomeSfxEventTimestamps.Clear();
             _pendingResetToDefault = false;
@@ -439,7 +448,10 @@ namespace Chainbound.Combat
                 SyncWallVisual(team1Slot0, null);
                 SyncWallVisual(team1Slot1, null);
                 _barrierActiveByInstanceId.Clear();
+                _wallSourceByInstanceId.Clear();
+                ClearAllWallLoopVfx();
                 _wallBreakPendingByInstanceId.Clear();
+                _wallRaisePendingByInstanceId.Clear();
                 RebuildViewLookup();
                 return;
             }
@@ -589,6 +601,7 @@ namespace Chainbound.Combat
             bool hasBarrier = CombatWallStateUtility.HasActiveWallState(chainling);
             bool wasActive = _barrierActiveByInstanceId.TryGetValue(instanceId, out var prev) && prev;
             bool breakPending = _wallBreakPendingByInstanceId.Contains(instanceId);
+            bool pendingMoveRaise = _wallRaisePendingByInstanceId.Contains(instanceId) || HasQueuedWallMoveForTarget(instanceId);
 
             // Event presentation owns wall raise/break timing. Poll sync must not restart tweens
             // (especially after KO locks keep a fainted chainling on-slot while engine actives change).
@@ -603,14 +616,19 @@ namespace Chainbound.Combat
                 string sourceTag = CombatWallStateUtility.ResolveLatestWallSourceTag(chainling);
                 CombatWallVisual wall = view.GetWallVisual();
                 bool missingVisual = wall == null;
+                _wallSourceByInstanceId.TryGetValue(instanceId, out string previousSourceTag);
+                bool sourceChanged = wasActive && CombatWallPresentationPlanner.ShouldRefreshArt(
+                    previousSourceTag,
+                    sourceTag,
+                    true);
 
                 // Only EnsureWallVisual (ApplyArt) when creating/first-activating.
                 // Polling Ensure every RefreshSlotBindings tick was resetting scale and
                 // cancelling DOTween raise/hit/break mid-animation.
-                if (missingVisual || !wasActive)
-                    wall = EnsureWallVisual(view, sourceTag);
+                if (missingVisual || !wasActive || sourceChanged)
+                    wall = EnsureWallVisual(view, sourceTag, chainling);
 
-                if (!wasActive)
+                if (CombatWallPresentationPlanner.ShouldPollRaise(hasBarrier, wasActive, pendingMoveRaise))
                 {
                     // Always Raise on first activation. !wasActive already gates once-per-barrier;
                     // do NOT skip Raise when _sequenceRoutine is running — Instantiate leaves the
@@ -631,6 +649,12 @@ namespace Chainbound.Combat
                     if (_sequenceRoutine == null)
                         QueueBarrierFeedback(view, chainling, preferBarrierAnchor: true, isBroken: false);
                 }
+                else if (sourceChanged && wall != null)
+                {
+                    wall.PlayRefresh();
+                    SpawnWallStatePhase(view, null, sourceTag, chainling, WallStatePhase.Raise);
+                    SpawnWallStatePhase(view, null, sourceTag, chainling, WallStatePhase.Loop);
+                }
                 else if (missingVisual && wall != null)
                 {
                     // Barrier still active but the visual was destroyed — restore with a raise.
@@ -643,6 +667,8 @@ namespace Chainbound.Combat
                         -1,
                         0f);
                 }
+
+                _wallSourceByInstanceId[instanceId] = sourceTag ?? string.Empty;
             }
             else
             {
@@ -666,6 +692,36 @@ namespace Chainbound.Combat
             }
 
             _barrierActiveByInstanceId[instanceId] = hasBarrier;
+        }
+
+        private enum WallStatePhase
+        {
+            Raise,
+            Loop,
+            Hit,
+            Break,
+            Expire,
+        }
+
+        private bool HasQueuedWallMoveForTarget(string instanceId)
+        {
+            if (string.IsNullOrEmpty(instanceId))
+                return false;
+
+            CombatState state = _stateSource != null ? _stateSource.State : null;
+            foreach (CombatEvent queued in _eventQueue)
+            {
+                if (queued.eventType != CombatEventType.MoveUsed ||
+                    !string.Equals(queued.targetId, instanceId, StringComparison.Ordinal))
+                    continue;
+
+                MoveInfo info = ResolveMoveInfo(state, queued.moveId);
+                if (CombatWallStateUtility.MovePlacesBlock(info.instance) ||
+                    CombatWallStateUtility.MoveDefinitionPlacesWall(info.definition))
+                    return true;
+            }
+
+            return false;
         }
 
         private void PruneBarrierTrackingToActive(params ChainlingInstance[] activeChainlings)
@@ -706,6 +762,8 @@ namespace Chainbound.Combat
                     return;
 
                 _barrierActiveByInstanceId.Clear();
+                _wallSourceByInstanceId.Clear();
+                ClearAllWallLoopVfx();
                 return;
             }
 
@@ -717,6 +775,8 @@ namespace Chainbound.Combat
                     continue;
 
                 _barrierActiveByInstanceId.Remove(key);
+                _wallSourceByInstanceId.Remove(key);
+                StopWallLoopVfx(key);
             }
         }
 
@@ -827,6 +887,8 @@ namespace Chainbound.Combat
         private void HandleBattleStarted(CombatState state)
         {
             ResolveUxFallbacks();
+            _wallExpirePresentedKeys.Clear();
+            _wallRaisePendingByInstanceId.Clear();
 
             if (_battleIntroRoutine != null)
             {
@@ -2234,6 +2296,11 @@ namespace Chainbound.Combat
             var state = _stateSource != null ? _stateSource.State : null;
             var sourceView = GetView(evt.sourceId);
             var targetView = GetView(evt.targetId);
+            MoveInfo moveInfo = ResolveMoveInfo(state, evt.moveId);
+            bool presentsWallRaise = CombatWallStateUtility.MovePlacesBlock(moveInfo.instance) ||
+                                     CombatWallStateUtility.MoveDefinitionPlacesWall(moveInfo.definition);
+            if (presentsWallRaise && !string.IsNullOrEmpty(evt.targetId))
+                _wallRaisePendingByInstanceId.Add(evt.targetId);
 
             _pendingResetToDefault = false;
             FocusActionSource(sourceView);
@@ -2252,20 +2319,34 @@ namespace Chainbound.Combat
 
             if (state == null || sourceView == null)
             {
+                if (!string.IsNullOrEmpty(evt.targetId))
+                    _wallRaisePendingByInstanceId.Remove(evt.targetId);
                 if (sourceView != null)
                     sourceView.SetHighlighted(false);
                 yield break;
             }
 
-            var moveInfo = ResolveMoveInfo(state, evt.moveId);
             var category = moveInfo.category;
             string definitionId = moveInfo.definitionId;
             MoveDefinitionSO moveDefinition = moveInfo.definition;
             bool initialTargetsWall = ResolveInitialWallRoutingForMove(evt, state);
 
-            CombatVFXLibrary.VFXEntry vfxEntry = null;
+            VfxResolution vfxResolution = default;
             if (vfxLibrary != null)
-                vfxEntry = vfxLibrary.GetEntryWithFallback(definitionId, category);
+            {
+                VfxMoveKey key = moveInfo.instance != null
+                    ? VfxMoveKey.From(moveInfo.instance)
+                    : moveDefinition != null
+                        ? VfxMoveKey.From(moveDefinition)
+                        : new VfxMoveKey(definitionId, category, ChainlingType.None,
+                            category == MoveCategory.DamagingMelee || category == MoveCategory.DamagingRanged
+                                ? MoveVfxRole.Damage
+                                : category == MoveCategory.StatusUtility
+                                    ? MoveVfxRole.Debuff
+                                    : category == MoveCategory.Passive ? MoveVfxRole.Passive : MoveVfxRole.Buff);
+                vfxResolution = vfxLibrary.Resolve(key);
+            }
+            CombatVFXLibrary.VFXEntry vfxEntry = vfxResolution.entry;
 
             if (!string.IsNullOrEmpty(evt.moveId))
             {
@@ -2277,7 +2358,8 @@ namespace Chainbound.Combat
                     initialTargetsWall = initialTargetsWall,
                     category = category,
                     moveDefinition = moveDefinition,
-                    vfxEntry = vfxEntry
+                    vfxEntry = vfxEntry,
+                    vfxResolveTier = vfxResolution.tier
                 };
             }
 
@@ -2366,9 +2448,14 @@ namespace Chainbound.Combat
                 float castHold = ResolveUtilityCastHold();
                 if (castHold > 0f)
                     yield return new WaitForSeconds(castHold);
+
+                if (presentsWallRaise)
+                    PresentWallRaise(targetView, moveInfo.instance, moveDefinition, evt.timestamp, evt.sourceId);
             }
             finally
             {
+                if (!string.IsNullOrEmpty(evt.targetId))
+                    _wallRaisePendingByInstanceId.Remove(evt.targetId);
                 if (sourceView != null)
                     sourceView.SetHighlighted(false);
 
@@ -2601,15 +2688,19 @@ namespace Chainbound.Combat
                 _moveContextByMoveId.TryGetValue(evt.moveId, out moveContext);
 
             WallInterceptPayload.TryFromEvent(evt, out var wallPayload);
-            bool impactTargetsWall = wallPayload != null
-                ? wallPayload.RoutesAttackToWall()
-                : moveContext != null && moveContext.initialTargetsWall;
-            bool breakBeforeBody = wallPayload != null && wallPayload.Mode == WallInterceptMode.WallBrokenThrough;
+            bool bodyHitReaction = ShouldPlayBodyHitReaction(evt, wallPayload);
+            IReadOnlyList<CombatWallPresentationBeat> wallPlan = CombatWallPresentationPlanner.PlanImpact(
+                wallPayload,
+                bodyHitReaction);
+            bool impactTargetsWall = CombatWallPresentationPlanner.Contains(
+                wallPlan,
+                CombatWallPresentationBeat.AttackerImpactAtWall);
+            if (wallPayload == null && moveContext != null && moveContext.initialTargetsWall)
+                impactTargetsWall = true;
+            bool breakBeforeBody = CombatWallPresentationPlanner.Contains(
+                wallPlan,
+                CombatWallPresentationBeat.WallBreak) && bodyHitReaction;
             bool pendingDirectKo = HasQueuedDirectKoForDamage(evt);
-            float wallDuration = PlayWallOutcome(targetView, wallPayload, evt.timestamp, evt.sourceId);
-
-            if (breakBeforeBody && wallDuration > 0f)
-                yield return new WaitForSeconds(wallDuration);
 
             FocusImpactTarget(targetView, impactTargetsWall);
 
@@ -2626,8 +2717,13 @@ namespace Chainbound.Combat
                     impactTargetsWall);
             }
 
+            float wallDuration = PlayWallOutcome(targetView, wallPayload, evt.timestamp, evt.sourceId);
+
+            if (breakBeforeBody && wallDuration > 0f)
+                yield return new WaitForSeconds(wallDuration);
+
             float hitDuration = 0f;
-            if (targetView != null && ShouldPlayBodyHitReaction(evt, wallPayload))
+            if (targetView != null && bodyHitReaction)
             {
                 hitDuration = pendingDirectKo
                     ? targetView.PlayHitImpactOnly()
@@ -2737,11 +2833,17 @@ namespace Chainbound.Combat
             }
 
             WallInterceptPayload.TryFromEvent(evt, out var wallPayload);
-            float wallDuration = PlayWallOutcome(targetView, wallPayload, evt.timestamp, evt.sourceId);
-
-            FocusImpactTarget(targetView, true);
+            IReadOnlyList<CombatWallPresentationBeat> wallPlan = CombatWallPresentationPlanner.PlanImpact(
+                wallPayload,
+                false);
+            bool impactTargetsWall = CombatWallPresentationPlanner.Contains(
+                wallPlan,
+                CombatWallPresentationBeat.AttackerImpactAtWall);
+            FocusImpactTarget(targetView, impactTargetsWall);
             if (targetView != null)
-                SpawnPhaseVfx(CombatVFXLibrary.VFXPhase.Impact, entry, sourceView, targetView, true);
+                SpawnPhaseVfx(CombatVFXLibrary.VFXPhase.Impact, entry, sourceView, targetView, impactTargetsWall);
+
+            float wallDuration = PlayWallOutcome(targetView, wallPayload, evt.timestamp, evt.sourceId);
 
             if (targetView != null)
             {
@@ -2773,9 +2875,9 @@ namespace Chainbound.Combat
             var targetView = GetView(evt.targetId);
             WallInterceptPayload.TryFromEvent(evt, out var wallPayload);
             FocusImpactTarget(targetView, true);
-            float duration = PlayWallOutcome(targetView, wallPayload, evt.timestamp, evt.sourceId);
+            float duration = PlayWallExpire(targetView, wallPayload, evt.timestamp, evt.sourceId);
             if (targetView != null)
-                SpawnCategoryPopup(targetView, CombatPopupCategory.WallBroken, "BROKEN", preferBarrierAnchor: true);
+                SpawnCategoryPopup(targetView, CombatPopupCategory.WallBroken, CombatWallPresentationPlanner.ExpirePopupLabel, preferBarrierAnchor: true);
             SyncDisplayVitalsForChainling(evt.targetId);
             if (duration > 0f)
                 yield return new WaitForSeconds(duration);
@@ -2878,6 +2980,14 @@ namespace Chainbound.Combat
                 ? EnsureWallVisual(targetView, payload.wallSourceTag)
                 : targetView.GetWallVisual();
 
+            if (payload.HasWallOnHitFeedback())
+            {
+                ChainlingInstance chainling = FindChainlingByInstanceId(
+                    _stateSource != null ? _stateSource.State : null,
+                    targetView.InstanceId);
+                SpawnWallStatePhase(targetView, GetView(sourceId), payload.wallSourceTag, chainling, WallStatePhase.Hit);
+            }
+
             switch (payload.Mode)
             {
                 case WallInterceptMode.WallMitigated:
@@ -2948,6 +3058,47 @@ namespace Chainbound.Combat
                 yield return new WaitForSeconds(delay);
 
             PlayWallBreak(view, wallSourceTag, eventTimestamp, sourceId);
+        }
+
+        private float PlayWallExpire(
+            Combat2ChainlingView view,
+            WallInterceptPayload payload,
+            int eventTimestamp,
+            string sourceId)
+        {
+            if (view == null)
+                return 0f;
+
+            string sourceTag = payload != null ? payload.wallSourceTag : string.Empty;
+            string key = $"{view.InstanceId}:{eventTimestamp}:{sourceTag}";
+            if (!_wallExpirePresentedKeys.Add(key))
+                return 0f;
+
+            MarkWallBreakPending(view);
+            CombatWallVisual wall = view.GetWallVisual();
+            if (wall == null)
+                wall = EnsureWallVisual(view, sourceTag);
+
+            ChainlingInstance chainling = FindChainlingByInstanceId(
+                _stateSource != null ? _stateSource.State : null,
+                view.InstanceId);
+            SpawnWallStatePhase(view, GetView(sourceId), sourceTag, chainling, WallStatePhase.Expire);
+            PlayWallCue(
+                CombatWallSfxCue.Break,
+                view,
+                null,
+                sourceTag,
+                eventTimestamp,
+                0f,
+                sourceId);
+
+            if (wall == null)
+            {
+                ClearWallTracking(view);
+                return 0f;
+            }
+
+            return wall.PlayBreak(() => ClearWallTracking(view));
         }
 
         private float ResolveWallBreakDuration()
@@ -3043,16 +3194,151 @@ namespace Chainbound.Combat
             return null;
         }
 
-        private CombatWallVisual EnsureWallVisual(Combat2ChainlingView view, string wallSourceTag)
+        private CombatWallVisual EnsureWallVisual(
+            Combat2ChainlingView view,
+            string wallSourceTag,
+            ChainlingInstance chainling = null,
+            BlockKind preferredKind = BlockKind.None,
+            BlockTier preferredTier = BlockTier.None)
         {
             if (view == null)
                 return null;
 
             MoveWallPresentation art = ResolveWallPresentation(wallSourceTag);
+            ResolveWallKindAndTier(
+                wallSourceTag,
+                chainling,
+                ref preferredKind,
+                ref preferredTier);
+            if (vfxLibrary != null && vfxLibrary.Fallbacks != null)
+                art = vfxLibrary.Fallbacks.ResolveWallArt(preferredKind, preferredTier, art);
             string key = string.IsNullOrWhiteSpace(wallSourceTag)
                 ? $"wall_{view.InstanceId}"
                 : $"wall_{view.InstanceId}_{wallSourceTag.Trim()}";
             return view.EnsureWallVisual(wallVisualPrefab, key, wallVisualProfile, art, view.ResolvePopupFacingSign());
+        }
+
+        private void PresentWallRaise(
+            Combat2ChainlingView targetView,
+            MoveInstance move,
+            MoveDefinitionSO definition,
+            int eventTimestamp,
+            string sourceId)
+        {
+            if (targetView == null)
+                return;
+
+            string sourceTag = !string.IsNullOrWhiteSpace(move?.definitionId)
+                ? move.definitionId.Trim()
+                : definition != null ? definition.moveId : string.Empty;
+            BlockKind kind = BlockKind.None;
+            BlockTier tier = BlockTier.None;
+            CombatWallStateUtility.TryResolveMoveBlockProfile(move, out kind, out tier);
+
+            ChainlingInstance chainling = FindChainlingByInstanceId(
+                _stateSource != null ? _stateSource.State : null,
+                targetView.InstanceId);
+            CombatWallVisual wall = EnsureWallVisual(targetView, sourceTag, chainling, kind, tier);
+            if (wall == null)
+                return;
+
+            wall.Raise();
+            TrackWallState(targetView, true);
+            _wallSourceByInstanceId[targetView.InstanceId] = sourceTag ?? string.Empty;
+            PlayWallCue(
+                CombatWallSfxCue.Raise,
+                targetView,
+                null,
+                sourceTag,
+                eventTimestamp,
+                0f,
+                sourceId);
+            SpawnWallStatePhase(targetView, null, sourceTag, chainling, WallStatePhase.Raise, kind, tier);
+            SpawnWallStatePhase(targetView, null, sourceTag, chainling, WallStatePhase.Loop, kind, tier);
+            QueueBarrierFeedback(targetView, chainling, preferBarrierAnchor: true, isBroken: false);
+        }
+
+        private void ResolveWallKindAndTier(
+            string wallSourceTag,
+            ChainlingInstance chainling,
+            ref BlockKind kind,
+            ref BlockTier tier)
+        {
+            if (kind != BlockKind.None && tier != BlockTier.None)
+                return;
+
+            if (CombatWallStateUtility.TryResolveLatestBlockProfile(chainling, out BlockKind activeKind,
+                    out BlockTier activeTier, out _))
+            {
+                if (kind == BlockKind.None)
+                    kind = activeKind;
+                if (tier == BlockTier.None)
+                    tier = activeTier;
+                return;
+            }
+
+            MoveDefinitionSO definition = ResolveMoveDefinitionAsset(wallSourceTag);
+            if (definition == null || definition.utilityEffects == null)
+                return;
+
+            var transient = new MoveInstance { utilityEffects = definition.utilityEffects };
+            if (CombatWallStateUtility.TryResolveMoveBlockProfile(transient, out BlockKind moveKind, out BlockTier moveTier))
+            {
+                if (kind == BlockKind.None)
+                    kind = moveKind;
+                if (tier == BlockTier.None)
+                    tier = moveTier;
+            }
+        }
+
+        private void SpawnWallStatePhase(
+            Combat2ChainlingView targetView,
+            Combat2ChainlingView sourceView,
+            string wallSourceTag,
+            ChainlingInstance chainling,
+            WallStatePhase phase,
+            BlockKind kind = BlockKind.None,
+            BlockTier tier = BlockTier.None)
+        {
+            CombatVFXFallbacks fallbacks = vfxLibrary != null ? vfxLibrary.Fallbacks : null;
+            if (fallbacks == null || targetView == null)
+                return;
+
+            ResolveWallKindAndTier(wallSourceTag, chainling, ref kind, ref tier);
+            CombatVFXFallbacks.WallStateRow row = fallbacks.ResolveWallState(kind, tier);
+            if (row == null)
+                return;
+
+            CombatVFXLibrary.VFXPhaseConfig config;
+            switch (phase)
+            {
+                case WallStatePhase.Raise: config = row.raiseVfx; break;
+                case WallStatePhase.Loop: config = row.loopVfx; break;
+                case WallStatePhase.Hit: config = row.hitVfx; break;
+                case WallStatePhase.Break: config = row.breakVfx; break;
+                case WallStatePhase.Expire: config = row.expireVfx; break;
+                default: return;
+            }
+
+            if (config == null)
+                return;
+            var entry = new CombatVFXLibrary.VFXEntry { impactVfx = config };
+            if (phase == WallStatePhase.Loop && config.spawnDelay <= 0f &&
+                entry.TryGetPhaseConfig(CombatVFXLibrary.VFXPhase.Impact, out CombatVFXLibrary.VFXPhaseConfig usableLoop))
+            {
+                StopWallLoopVfx(targetView.InstanceId);
+                GameObject loop = SpawnPhaseVfxNow(
+                    CombatVFXLibrary.VFXPhase.Impact,
+                    usableLoop,
+                    sourceView,
+                    targetView,
+                    true,
+                    1f);
+                if (loop != null && !string.IsNullOrEmpty(targetView.InstanceId))
+                    _wallLoopVfxByInstanceId[targetView.InstanceId] = loop;
+                return;
+            }
+            SpawnPhaseVfx(CombatVFXLibrary.VFXPhase.Impact, entry, sourceView, targetView, true);
         }
 
         private void TrackWallState(Combat2ChainlingView view, bool isActive)
@@ -3089,9 +3375,30 @@ namespace Chainbound.Combat
             {
                 _wallBreakPendingByInstanceId.Remove(view.InstanceId);
                 _barrierActiveByInstanceId[view.InstanceId] = false;
+                _wallSourceByInstanceId.Remove(view.InstanceId);
+                StopWallLoopVfx(view.InstanceId);
             }
 
             view.ForceHideWall();
+        }
+
+        private void StopWallLoopVfx(string instanceId)
+        {
+            if (string.IsNullOrEmpty(instanceId) || !_wallLoopVfxByInstanceId.TryGetValue(instanceId, out GameObject loop))
+                return;
+            _wallLoopVfxByInstanceId.Remove(instanceId);
+            if (loop != null)
+                Destroy(loop);
+        }
+
+        private void ClearAllWallLoopVfx()
+        {
+            foreach (GameObject loop in _wallLoopVfxByInstanceId.Values)
+            {
+                if (loop != null)
+                    Destroy(loop);
+            }
+            _wallLoopVfxByInstanceId.Clear();
         }
 
         private float PlayWallBreak(
@@ -3122,6 +3429,11 @@ namespace Chainbound.Combat
                 eventTimestamp,
                 0f,
                 sourceId);
+
+            ChainlingInstance chainling = FindChainlingByInstanceId(
+                _stateSource != null ? _stateSource.State : null,
+                view.InstanceId);
+            SpawnWallStatePhase(view, GetView(sourceId), wallSourceTag, chainling, WallStatePhase.Break);
 
             return wall.PlayBreak(() => ClearWallTracking(view));
         }
@@ -3255,7 +3567,7 @@ namespace Chainbound.Combat
             SpawnPhaseVfxNow(phase, config, sourceView, targetView, targetWall, phaseAudioVolumeScale);
         }
 
-        private void SpawnPhaseVfxNow(
+        private GameObject SpawnPhaseVfxNow(
             CombatVFXLibrary.VFXPhase phase,
             CombatVFXLibrary.VFXPhaseConfig config,
             Combat2ChainlingView sourceView,
@@ -3264,7 +3576,7 @@ namespace Chainbound.Combat
             float phaseAudioVolumeScale = 1f)
         {
             if (config == null)
-                return;
+                return null;
 
             bool usesTravel = config.travel != null && config.travel.enabled;
             bool mirrorX = ResolveVfxMirror(sourceView);
@@ -3310,7 +3622,7 @@ namespace Chainbound.Combat
                 PlayCombatPostFx(config.postFxCue);
 
             if (config.vfxPrefab == null)
-                return;
+                return null;
 
             Vector3 spawnPos = usesTravel ? travelStartPos : staticSpawnPos;
             Transform rotationAnchor = usesTravel ? travelStartAnchor : staticAnchor;
@@ -3377,13 +3689,15 @@ namespace Chainbound.Combat
 
                 ApplyVfxRootMirror(go, mirrorX);
                 if (usesTravel)
-                    return;
+                    return go;
 
                 if (attachTarget == null || config.attachPolicy == CombatVFXLibrary.VFXAttachPolicy.World)
-                    return;
+                    return go;
 
                 go.transform.SetParent(attachTarget, true);
             }
+
+            return go;
         }
 
         private Vector3 ResolveTravelEndpoint(
@@ -3545,6 +3859,7 @@ namespace Chainbound.Combat
             public MoveCategory category;
             public string definitionId;
             public MoveDefinitionSO definition;
+            public MoveInstance instance;
         }
 
         private MoveInfo ResolveMoveInfo(CombatState state, string moveInstanceId)
@@ -3554,6 +3869,7 @@ namespace Chainbound.Combat
                 category = MoveCategory.Support,
                 definitionId = string.Empty,
                 definition = null,
+                instance = null,
             };
 
             if (state == null || string.IsNullOrEmpty(moveInstanceId))
@@ -3568,6 +3884,7 @@ namespace Chainbound.Combat
                 info.category = result.category;
                 info.definitionId = result.definitionId;
                 info.definition = ResolveMoveDefinitionAsset(result.definitionId);
+                info.instance = result;
             }
 
             return info;

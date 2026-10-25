@@ -25,7 +25,8 @@ namespace SignalJam.UI.MenuNavigation
         [SerializeField] private bool openOnMenuButton = true;
         [SerializeField] private bool routeStartToPauseMenu = true;
         [SerializeField] private bool toggleMenuButton = true;
-        [SerializeField] private bool openOnSelectButton = false;
+        [Tooltip("Select opens the embedded RAM shop, using the same scene and availability gates as the player menu.")]
+        [SerializeField] private bool openOnSelectButton = true;
         [SerializeField] private bool closeOnBackButton = false;
 
         [Header("Input Actions")]
@@ -497,13 +498,7 @@ namespace SignalJam.UI.MenuNavigation
             if (menu == null)
                 return;
 
-            if (menu.IsOpen)
-            {
-                LogMenuOwnedRouteIgnored("Select");
-                return;
-            }
-
-            menu.Open();
+            menu.OpenRamShop();
         }
 
         private void HandleBackButton()

@@ -37,6 +37,9 @@ namespace Chainbound.Combat.Editor
         private bool _includeAuthoredTrack = true;
         private bool _showAnchors = true;
         private bool _deterministicAudio = true;
+        private bool _defenderHasWall;
+        private BlockKind _defenderWallKind = BlockKind.Wall;
+        private BlockTier _defenderWallTier = BlockTier.Lower;
         private PresentationAnchorTarget _selectedAnchor = PresentationAnchorTarget.Impact;
         private Vector2 _leftPanelScroll;
         private Vector2 _rightPanelScroll;
@@ -166,6 +169,12 @@ namespace Chainbound.Combat.Editor
                 _includeAuthoredTrack = EditorGUILayout.ToggleLeft("Replay Authored Tracks", _includeAuthoredTrack);
                 _showAnchors = EditorGUILayout.ToggleLeft("Show Anchor Overlay", _showAnchors);
                 _deterministicAudio = EditorGUILayout.ToggleLeft("Deterministic Audio", _deterministicAudio);
+                _defenderHasWall = EditorGUILayout.ToggleLeft("Defender Has Wall", _defenderHasWall);
+                if (_defenderHasWall)
+                {
+                    _defenderWallKind = (BlockKind)EditorGUILayout.EnumPopup("Wall Kind", _defenderWallKind);
+                    _defenderWallTier = (BlockTier)EditorGUILayout.EnumPopup("Wall Tier", _defenderWallTier);
+                }
                 if (EditorGUI.EndChangeCheck())
                     PushWindowStateToSession();
 
@@ -793,6 +802,7 @@ namespace Chainbound.Combat.Editor
             _session.SetFlipX(_flipX);
             _session.SetIncludeAuthoredTrack(_includeAuthoredTrack);
             _session.SetDeterministicAudio(_deterministicAudio);
+            _session.SetDefenderWall(_defenderHasWall, _defenderWallKind, _defenderWallTier);
             PushPhaseOverridesToSession();
         }
 

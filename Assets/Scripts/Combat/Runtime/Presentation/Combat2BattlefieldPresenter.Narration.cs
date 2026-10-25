@@ -7,6 +7,7 @@ namespace Chainbound.Combat
     public partial class Combat2BattlefieldPresenter
     {
         private readonly Queue<CombatNarrationActionPlan> _narrationQueue = new Queue<CombatNarrationActionPlan>();
+        private readonly HashSet<string> _activeNarrationModifierPopupKeys = new HashSet<string>(StringComparer.Ordinal);
         private CombatNarrationActionPlan _activeNarrationPlan;
         private CombatNarrationBoxController _narrationController;
 
@@ -60,6 +61,7 @@ namespace Chainbound.Combat
             if (_activeNarrationPlan != null || _narrationQueue.Count == 0)
                 return false;
             _activeNarrationPlan = _narrationQueue.Dequeue();
+            _activeNarrationModifierPopupKeys.Clear();
             return true;
         }
 
@@ -81,6 +83,7 @@ namespace Chainbound.Combat
                     yield return _narrationController.PresentPage(page);
             }
             _activeNarrationPlan = null;
+            _activeNarrationModifierPopupKeys.Clear();
         }
 
         private IEnumerator CompleteActiveNarrationWithoutEvent()
@@ -94,6 +97,7 @@ namespace Chainbound.Combat
                     yield return _narrationController.PresentPage(page);
             }
             _activeNarrationPlan = null;
+            _activeNarrationModifierPopupKeys.Clear();
         }
 
         private void HideNarrationBox()
@@ -105,7 +109,21 @@ namespace Chainbound.Combat
         {
             _narrationQueue.Clear();
             _activeNarrationPlan = null;
+            _activeNarrationModifierPopupKeys.Clear();
             HideNarrationBox();
+        }
+
+        private bool IsRepeatedModifierPopupInActiveNarration(
+            CombatEvent evt,
+            ModifierOutcomePayload payload)
+        {
+            if (_activeNarrationPlan == null || payload == null || !_activeNarrationPlan.HasEventRange ||
+                evt.timestamp < _activeNarrationPlan.firstEventTimestamp ||
+                evt.timestamp > _activeNarrationPlan.lastEventTimestamp)
+                return false;
+
+            string key = (payload.sectionId ?? string.Empty) + "|" + (payload.anchorChainlingId ?? string.Empty);
+            return !_activeNarrationModifierPopupKeys.Add(key);
         }
     }
 }

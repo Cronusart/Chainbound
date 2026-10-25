@@ -65,7 +65,8 @@ namespace SignalJam.UI.MenuNavigation
             IReadOnlyList<MenuMoveItem> moveInventory = null,
             ChainlingProgressionRewardTablesSO progressionRewardTables = null,
             ChainlingProgressionEventCatalogSO progressionEventCatalog = null,
-            SpeciesDatabaseSO speciesDatabase = null)
+            SpeciesDatabaseSO speciesDatabase = null,
+            EncounterCatalogSourceSO encounterCatalog = null)
         {
             return new ChainlingPartyColumnContext
             {
@@ -82,6 +83,7 @@ namespace SignalJam.UI.MenuNavigation
                 progressionEventCatalog = progressionEventCatalog,
                 badgeCatalog = badgeCatalog,
                 moveInventory = moveInventory,
+                encounterCatalog = encounterCatalog,
             };
         }
 

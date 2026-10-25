@@ -9,8 +9,8 @@ using UnityEngine.Rendering;
 /// </summary>
 public sealed class RuntimeVolumeProfileHandle
 {
-    private static readonly Dictionary<int, RuntimeVolumeProfileHandle> handlesByVolumeId =
-        new Dictionary<int, RuntimeVolumeProfileHandle>();
+    private static readonly Dictionary<EntityId, RuntimeVolumeProfileHandle> handlesByVolumeId =
+        new Dictionary<EntityId, RuntimeVolumeProfileHandle>();
 
     private Volume volume;
     private VolumeProfile authoredSharedProfile;
@@ -30,7 +30,7 @@ public sealed class RuntimeVolumeProfileHandle
         if (volume == null)
             return null;
 
-        int id = volume.GetInstanceID();
+        EntityId id = volume.GetEntityId();
         if (!handlesByVolumeId.TryGetValue(id, out RuntimeVolumeProfileHandle handle))
         {
             handle = new RuntimeVolumeProfileHandle();
@@ -78,9 +78,9 @@ public sealed class RuntimeVolumeProfileHandle
         if (retainCount > 0)
             return;
 
-        int id = volume != null ? volume.GetInstanceID() : 0;
+        EntityId id = volume != null ? volume.GetEntityId() : EntityId.None;
         Restore();
-        if (id != 0)
+        if (id != EntityId.None)
             handlesByVolumeId.Remove(id);
     }
 

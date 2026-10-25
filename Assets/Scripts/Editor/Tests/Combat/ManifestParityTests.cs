@@ -64,6 +64,31 @@ namespace Chainbound.Combat.Tests
             }
         }
 
+        [Test]
+        public void ExporterHashUsesBattleServiceCanonicalAlgorithm()
+        {
+            // Golden value from Chainbound.BattleService CanonicalJsonHash (System.Text.Json): numbers keep their
+            // written text and '+'/'<' are escaped as \u002B/\u003C.
+            const string json = "{\"b\":1.10,\"a\":[0.15000000596046449,\"x+y<z\"],\"c\":true}";
+            Assert.That(AuthoritativeGameplayManifestExporter.HashCanonicalJson(json),
+                Is.EqualTo("94fc1f9c4a30ab58d92aff747db3203cb86af9e218543ab2f97c36f58dcd73d0"));
+        }
+
+        [Test]
+        public void ClientConfigHashMatchesCommittedGameplayManifest()
+        {
+            string path = Path.GetFullPath(Path.Combine(
+                Application.dataPath,
+                "../backend/Chainbound.BattleService/manifests/gameplay-manifest.json"));
+            Assert.That(File.Exists(path), Is.True, $"Missing gameplay manifest: {path}");
+            var config = AssetDatabase.LoadAssetAtPath<AuthoritativeCombatServiceConfigSO>(
+                "Assets/Data/Combat/Capture/AuthoritativeCombatServiceConfig.asset");
+            Assert.That(config, Is.Not.Null);
+            string manifestHash = AuthoritativeGameplayManifestExporter.HashCanonicalJson(
+                File.ReadAllText(path, System.Text.Encoding.UTF8));
+            Assert.That(config.gameplayManifestHash, Is.EqualTo(manifestHash),
+                "Re-run Tools/Chainbound/Capture/Export Authoritative Manifests.");
+        }
         private static void AssertMove(MoveDefinitionSO move, JObject dto)
         {
             Assert.That((string)dto["displayName"], Is.EqualTo(move.displayName), move.moveId);

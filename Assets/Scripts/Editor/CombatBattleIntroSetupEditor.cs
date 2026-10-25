@@ -363,7 +363,7 @@ namespace Chainbound.Editor
             text.fontStyle = fontStyle;
             text.alignment = alignment;
             text.color = color;
-            text.enableWordWrapping = wordWrap;
+            text.textWrappingMode = wordWrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
             text.raycastTarget = false;
 
             var layout = text.GetComponent<LayoutElement>();

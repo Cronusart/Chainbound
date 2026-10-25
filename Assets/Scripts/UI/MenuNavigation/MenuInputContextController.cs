@@ -781,8 +781,6 @@ namespace SignalJam.UI.MenuNavigation
             mobileInputManager.OnXPressed += HandleMobileXPressed;
             mobileInputManager.OnStartPressed -= HandleMobileStartPressed;
             mobileInputManager.OnStartPressed += HandleMobileStartPressed;
-            mobileInputManager.OnSelectPressed -= HandleMobileSelectPressed;
-            mobileInputManager.OnSelectPressed += HandleMobileSelectPressed;
         }
 
         private void UnsubscribeMobileHudInput()
@@ -794,7 +792,6 @@ namespace SignalJam.UI.MenuNavigation
             mobileInputManager.OnYPressed -= HandleMobileYPressed;
             mobileInputManager.OnXPressed -= HandleMobileXPressed;
             mobileInputManager.OnStartPressed -= HandleMobileStartPressed;
-            mobileInputManager.OnSelectPressed -= HandleMobileSelectPressed;
         }
 
         private void HandleMobileAPressed()
@@ -821,11 +818,6 @@ namespace SignalJam.UI.MenuNavigation
         private void HandleMobileStartPressed()
         {
             HandleCloseMenu();
-        }
-
-        private void HandleMobileSelectPressed()
-        {
-            HandleAdvancedInput(MenuInputIntent.Guide, PlayerMenuSfxCue.Confirm, handler => handler.TryHandleGuide());
         }
 
         private void RefreshHudButtonAudioSuppression()

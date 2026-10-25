@@ -2,6 +2,8 @@
 
 Date: 2026-10-19. Index of the combat audit and design notes on this branch. Detail stays in the linked section; implemented rows remain unverified until the manual battle smoke is recorded. Reconciliation plan: `C:\Users\mando\.cursor\plans\audit_reconciliation_v1.plan.md`; automated evidence: [audit_reconciliation_v1_tests.md](Audits/audit_reconciliation_v1_tests.md).
 
+> **2026-10-22 update:** see [Moves with no working effect: implement or rewrite (2026-10-22)](#moves-with-no-working-effect-implement-or-rewrite-2026-10-22) at the end of this page. It holds the decided All-In spec, PROPOSAL verdicts for every move with no working effect, and the stale rows to refresh. Checker: `Docs/Combat/no_effect_moves_check.py`.
+
 ## How to use
 
 Pick up a row. Read the linked section before editing code or data. This page is the list. The source section is the spec.
@@ -289,3 +291,311 @@ Uplink and Kindling are in the resolver and the pools. Their rows stay here unti
 |---|---|---|---|---|---|
 | APR-RELAY | Uncommon Node passive `uplink`. When this Chainling applies a buff to an ally, that ally gains +1 AP once per ally per turn. It is granted on Validape in place of `ap_router`; it is not Group Hug. | approved proposal | implemented, unverified | none | [Reconciliation tests](Audits/audit_reconciliation_v1_tests.md) |
 | APR-KIND | Uncommon Burned passive `kindling`, approved at 6% MaxHP. A damaging hit that leaves a living foe applies Kindled for one end step. Keep the stack with Rugged. The optional shared-end-step trim was not adopted. Sear Echo was not chosen. | approved proposal | implemented, unverified | both | [Kindling](Design/TYPE_GAP_PROPOSALS.md#kindling-recommended), [Approval](Design/TYPE_GAP_PROPOSALS.md#guardrails-and-the-recommendation) |
+
+## Moves with no working effect: implement or rewrite (2026-10-22)
+
+Snapshot: local tree, 2026-10-22 ~09:30 CDT. Every move fact below (rarity, type, AP, power, payload, pool membership, species tier) is asserted by `Docs/Combat/no_effect_moves_check.py`, which reads `Docs/Specs/Combat/Data/Moves.csv`, `SpeciesMovePools.csv`, `Statuses.csv`, the species assets, and greps `Assets/Scripts/Combat/Runtime` for id literals. Run it from the repo root with `python Docs/Combat/no_effect_moves_check.py`.
+
+**Status.** All-In is **decided** (Cronus, 2026-10-22) and is written as an implementation spec. Every other recommendation in this section is a **PROPOSAL**. It is not approved and nothing here is implemented. None of the rows above were changed. They are listed for refresh in [Stale master items (to refresh)](#stale-master-items-to-refresh).
+
+**Hard constraints used.**
+- Learn pools follow `C:\Users\mando\.cursor\plans\learn_pool_rarity_6d7ff36f.plan.md`:
+  - A wild pool is five moves: three at the body tier or lower, one at that tier or one step higher, and a signature that is strictly the highest rarity.
+  - Starters only need a unique top-rarity signature. Ghost and Cofi Lootwak are outside the rule.
+  - Moves stay inside the type profile and species role. The plan uses existing moves only.
+- No self-damage. Typed moves beat typeless. Build out empty moves rather than pulling them.
+- Rarity tracks power and availability (BAL-61). A lower-rarity move must not rival a higher-rarity one.
+- Type identities are from `Docs/Specs/Combat/COMBAT_TypeProfiles.md` (summary table).
+
+### Sweep: what does nothing or only part of its card
+
+Method:
+- A non-damaging row counts as blank when `StatusEffects`, `StageChanges`, `UtilityEffects` and `HealPercentMaxHP` are all empty.
+- It also needs no `"move_id"` string literal anywhere under `Assets/Scripts/Combat/Runtime`. Passives and the 2v2 supports are id-driven, so the literal is how they run.
+- Damaging rows with no payload were read by hand.
+
+| Result | Moves |
+|---|---|
+| Card does nothing | `script_loop`, `viral_surge`, `wildcard_swap`, `extraction_hit` (passive) |
+| Already retired, no action | `status_resistance` (MV-status_resistance, deprecated; text says "Retired. No effect.") |
+| Half the card runs | `deflation_mark`. Atk −1 runs. `BurnedTokens` has no body: its `Statuses.csv` row has no stage effects, 0 end-of-turn damage and AP, and is neither buff nor debuff. `StatusId.BurnedTokens` appears nowhere in Runtime code. |
+| Works today, in scope by request | `all_in` (decided change below), `recoil_strike` / Hard Fork |
+| Blank payload but the card is a plain hit, so it works | `quick_lunge` (PRIOR), `chain_fork`, `shard_scatter`, `hype_train`, `combustive_shift` and other riderless hits |
+
+Also seen, not in scope here:
+- `hype_train` and `combustive_shift` are riderless Legendaries (BAL-EMPTY, `rarity_rivals.md`).
+- `hype_train` and `ore_strike` carry a `TRIG` tag with no trigger.
+
+**Meme reaches no one.** Four of the seven moves below are Meme. No Meme move is in any learn pool. The only Meme species is Ghost, which is outside the pool rule and has no `SpeciesMovePools.csv` row. Meme is also outside the chemistry pass (`COMBAT_TypeProfiles.md`). Under the "stay inside the type profile" rule, every Meme verdict below only matters once a Meme body exists, or a rule exception is granted. That is an open question, not a proposal.
+
+### Verdict table
+
+| Move (id) | Rarity · type · AP · power | Learned by | Verdict | Proposed effect (one line) | Engine cost |
+|---|---|---|---|---|---|
+| All-In (`all_in`) | Epic · Meme · 4 (min) · 98 · recharge 2 | No pool | **DECIDED: change** | On cast, drain all AP from the caster and its active ally; enemy AP untouched | Small (one branch) |
+| Script Loop (`script_loop`) | Common · Bot · 1 · 0 | No pool | PROPOSAL: implement, trimmed | If the target has 2+ General debuffs, add 1 turn to its shortest General debuff; RechargeTurns 2 (1-turn recharge) | Small (new opcode) |
+| Viral Surge (`viral_surge`) | Mythic · Meme · 1 · 0 | No pool | PROPOSAL: rewrite | Gain Surging (next hit +25%) and +1 to a random stat; 50% chance to gain +2 AP | None (data) |
+| Wildcard Swap (`wildcard_swap`) | Common · Meme · 2 · 0 | No pool | PROPOSAL: rewrite | Lower one random foe stat by 1 and raise one random own stat by 1 | None (data) |
+| Extraction Hit (`extraction_hit`) | Rare · Mined · passive | No pool (left Kodiax in the pool plan) | PROPOSAL: implement as written | First landed damaging hit each turn: Atk +1, passive cap +3; the first time Atk reaches +3, Speed +1 | Small (passive-by-id pattern) |
+| Deflation Mark (`deflation_mark`) | Rare · Burned · 1 · 0 | No pool (left Cinislug in the pool plan) | PROPOSAL: implement as written | Burned Tokens body: end-of-turn DoT on the marked foe heals the marker for 50% of the tick; keep Atk −1 | New hook |
+| Hard Fork (`recoil_strike`) | Uncommon · Forked · 4 · 72 | Balloom, off-type only | PROPOSAL: keep as is | No recoil. The Forked profile asks for cleanup "without recoil stacking" | None |
+
+### All-In: DECIDED, implementation spec (Codex)
+
+**Decision.** On cast, All-In drains **all** AP from the caster **and** its active ally. Enemy AP is untouched. This is the full wipe, not the 2 AP partial.
+
+**Today.**
+- `Moves.csv` row `all_in`: Epic, Meme, DamagingMelee, power 98, APCost 4, RechargeTurns 2.
+- Tags `DMG|APMAN|SpendRemainingAp`. `UtilityEffects` and `ResolveUtilityTiming` are blank.
+- `CombatResolver.cs:1740` pays the cost. Lines 1757–1761 then spend the remainder, so the caster is already at 0.
+- RechargeTurns 2 is the one-turn lock. Test: `ApCostLadderTests.AllIn_SpendsRemainingApAndSkipsTheNextTurn` (`Assets/Scripts/Combat/Tests/ApCostLadderTests.cs:133`).
+
+**Why it cancels a slower ally's move.** AP is checked again and paid when an action executes, not when it is queued.
+- `ResolveMove` calls `EvaluateMoveSelection` (`CombatResolver.cs:1636`).
+- That returns `InsufficientAP` when cost > current AP (`Assets/Scripts/Combat/Runtime/Engine/CombatActionEligibilityService.cs:58-60`).
+- The resolver then logs `LogNoApActionFailed` (`CombatResolver.cs:1641`, body at `:1907`), sets `hasActedThisTurn`, and returns before paying (`:1740`).
+
+So a slower ally at 0 AP fails **any** move that costs 1 AP or more. Only 0-AP moves survive: `ap_boost`, `fuel_surge`, `crystal_focus`, `ap_reserve`. AP Reserve then banks 0. Swaps resolve earlier in the turn, so they are unaffected.
+
+**Engine change.** In `Assets/Scripts/Combat/Runtime/Engine/UtilityEffectExecutor.cs`, `DrainApEffect` (lines 1041–1078), add a branch after the `AllEnemies` block (1053–1073) and before `ResolveUtilityTarget` (1075):
+
+```csharp
+if (effect != null && effect.targetOverride == MoveTargeting.AllAllies)
+{
+    TeamState allies = context?.sourceTeam;
+    if (allies == null)
+        return;
+    List<ChainlingInstance> actives = allies.GetActiveChainlings();
+    for (int i = 0; i < actives.Count; i++)
+    {
+        ChainlingInstance ally = actives[i];
+        if (ally == null || !ally.isAlive)
+            continue;
+        int drained = _apService.Drain(ally, amount, turn, move.definitionId);
+        LogDrain(source, ally, move, drained, turn);
+    }
+    return;
+}
+```
+
+- **Return early, or the drain hits the enemy.** `ResolveUtilityTarget` (1214–1232) has no ally case and falls back to the move's target, which is the enemy. Authoring `DrainAP:…:AllAllies` without this branch would wipe the foe.
+- **The caster is included on purpose.** It is already 0 after `SpendRemainingAp`, so the drain is a no-op that keeps the log honest.
+- `context.sourceTeam` is filled by `ApplyDamagingMoveUtilityEffects` through `CreateUtilityContext` (`CombatResolver.cs:3593-3606`).
+- `Drain` floors at 0 (`Assets/Scripts/Combat/Runtime/Engine/CombatApService.cs:101-115`). The amount 10 equals `apCap: 10` in `Assets/Data/Combat/Config/CombatResolverConfig_Default.asset`, so it wipes any bank.
+- **Timing.** `ResolveBeforeFirstHit` runs at `CombatResolver.cs:2103-2104`, before the hit-chance roll at 2112, so the wipe fires even on a miss. Bounce targets are excluded at 2084–2088. All-In is single-target, so the effect runs once.
+- No new effect id. `DrainAP` and `MoveTargeting.AllAllies` both exist. The importer already parses `AllAllies` for `DrainAP` (`Assets/Scripts/Combat/Editor/Importers/Combat2DataImporter.cs:1744-1756`).
+
+**Data change.** Edit the `all_in` row in `Docs/Specs/Combat/Data/Moves.csv`:
+- `UtilityEffects` = `DrainAP:10:100%:AllAllies:all_in`
+- `ResolveUtilityTiming` = `ResolveBeforeFirstHit`
+- `Description` = `Spends all your AP (min 4). On cast, your ally's AP also drops to 0. Can't use All-In again next turn.`
+- Power, AP, recharge, rarity, type and tags stay as they are. `move_ap.ts` is unchanged at 4.
+
+**Then:**
+1. Run the Combat Data Importer.
+2. Run the CSV/asset parity audit (`Assets/Scripts/Combat/Editor/Importers/CombatMovesCsvParityAuditor.cs` → `Docs/Combat/Audits/moves_csv_asset_parity.md`; expect 0 field diffs).
+3. Re-export the gameplay manifest. `AuthoritativeGameplayManifestExporter.cs:373` writes the utility string.
+4. Run `ManifestParityTests` (`Assets/Scripts/Editor/Tests/Combat/ManifestParityTests.cs`) and the Deno `move_ap_parity_test.ts`.
+
+**Optional AI penalty.**
+- `Assets/Scripts/Combat/Runtime/AI/UtilityStatusAI.cs` already prices `SpendRemainingAp` at the caster's current AP (`ResolveScoringCost`, line 154; used at 84).
+- Add a score penalty for living active allies' `currentAP`, and a larger one when `queuedBySlot` (lines 23–62) holds an ally action that costs 1+ AP and that ally is slower.
+- Leave the other AIs alone. Low priority while All-In is in no pool.
+
+**Tests (6).** Add these to `ApCostLadderTests.cs`, next to the existing All-In tests at :133, :530 and :690.
+1. A slower ally's queued 1+ AP move fails with the no-AP failure after All-In. The ally ends at 0 AP and is marked acted.
+2. A faster ally in the normal block, and a PRIOR ally, both resolve normally. Only their leftover AP is wiped.
+3. A slower ally's 0-AP move (`ap_boost`) still resolves after the wipe.
+4. A forced miss on All-In still wipes the ally's AP (`ResolveBeforeFirstHit`).
+5. Both foes' AP is unchanged.
+6. With no ally (1v1), behavior is unchanged and the existing `AllIn_SpendsRemainingApAndSkipsTheNextTurn` still passes. The imported `all_in` asset carries `DrainAP`, `AllAllies`, amount 10, timing `ResolveBeforeFirstHit`.
+
+**Interactions.**
+- **Turn order** is swaps, then the PRIOR block, then normal, then capture (`CombatResolver.cs:984-1005`).
+  - Ally PRIOR moves resolve before All-In and keep their effect. That covers the whole wall/barrier family, Rapid Strike, Blink Lunge, Bean Sip and Position Swap.
+  - A PRIOR wall or barrier on the All-In user is the natural pairing.
+- **A faster ally** has already paid and only loses its leftover bank.
+- **Swaps.** A voluntary swap copies the outgoing AP to the incoming Chainling, and swaps resolve first. The incoming active is what gets wiped. Benched Chainlings are untouched.
+- **Next turn.** Regen is +2 (`StatusProcessor.cs:457`), so the ally restarts at 2 and any saved bank is lost. AP gained after the wipe in the same turn still lands, for example Group Hug or Uplink.
+- **Not a lock.** It only touches your own team, and RechargeTurns 2 blocks a back-to-back cast. It is an AP drawback, not HP, so it complies with SD-SHELF.
+- **1v1** is unchanged. The drawback only exists in 2v2.
+- **Rarity flag.** Epic All-In at 98 power is above Legendary Hammer Sync at 80 (4 AP, ×1.2 with a buffed partner, so 96). The whole-bank spend, the ally wipe and the recharge are the price. Keep that in mind in the next rarity-rivals review.
+- **Narration.** The ally's failure uses the generic no-AP message. The `LogDrain` line is the only All-In attribution. A clearer line is optional.
+- **Open question: pool.** `all_in` is in no species pool. It is referenced only by `MoveDatabase.asset`, so the change reaches no one until it is pooled. Under the pool plan it could only join a Meme body (see "Meme reaches no one" above). No placement is proposed here.
+
+### Script Loop: PROPOSAL, implement (trimmed)
+
+- **Card.** "If target has 2+ debuffs extend all by 1 turn." Common, Bot, StatusUtility, 1 AP, SingleEnemy. Payload is blank.
+- **Bot profile.** Automated pressure: AP denial, multi-hit attrition. Keywords: automation, AP denial, multi-thread, attrition. Statuses: BotSwarm, MEV Extracted, ThreadLock.
+- **Bot pool today:**
+  - Debuff Script (Common, 1 AP, Atk −1 and Def −1 as stages)
+  - Bot Swarm (Epic, 2 AP, BotSwarm)
+  - MEV Extract (Rare, 2 AP, MEVExtracted)
+  - Automated Pressure (Rare passive, random foe stat −1 each end of turn)
+  - Multi-Thread Shot (Uncommon, 2 AP, power 12 × 2–3, 10% +1 AP)
+  - Automation Burst (Uncommon, 4 AP, power 38 AOE, 25% random stat)
+  - Recursive Backup (Common, heal 20% below 50% HP)
+  - Thread Lock (Legendary, 2 AP)
+  - Self-Repair Protocol (Uncommon, heal 15%)
+  - Blade Flurry (Common, power 12 × 3)
+  - Fox Feint (Epic, dodge and counter once)
+  - Packet Skim (Common, 1 AP, drain 1)
+- **What's missing.** Bot applies debuffs but has nothing that amplifies or extends them. Script Loop would be distinct. It is the only debuff extender in the game; Node's Extend Protocol extends ally buffs.
+- **Learned by.** No pool. The only Bot body is Kitsauto, a starter with a full five-move pool and Fox Feint (Epic) as its unique top. A Common is legal there as a non-signature slot, but placement is not proposed.
+- **Rarity conflict as written.** Extending **all** debuffs at Common, recharge 0, would beat Epic Extend Protocol, which adds 1 turn to one ally buff at 1 AP with recharge 2. Trim it to one debuff.
+- **Proposed effect.** Gate on `ResolveConditions` = `Target:DebuffCountAtLeast:2:None:MeleeAtk:MeleeAtk` (the same predicate as `bug_payoff` / `momentum_drill`). Add 1 turn to the target's shortest General **debuff**. `RechargeTurns` 2.
+  - Common gated ≤ Epic ungated, so no conflict.
+  - It only counts and extends debuff *statuses*. Confirm in a test that stage-only debuffs (Debuff Script) are not counted.
+- **Engine (small):**
+  1. Append `ExtendDebuff` at the **end** of `UtilityEffectType` (`Assets/Scripts/Combat/Runtime/Data/MoveEnums.cs:263-319`, after `BlockReflect`) so serialized ints stay stable.
+  2. Add `StatusProcessor.TryExtendShortestDebuff`, mirroring `TryExtendShortestBuff` (`Assets/Scripts/Combat/Runtime/Engine/StatusProcessor.cs:711-758`) with `def.isDebuff` and General origin, and no Cipher Lock gate.
+  3. Add an executor case beside `ExtendBuff` (`UtilityEffectExecutor.cs:180-185`).
+  4. Add the parse case in `Combat2DataImporter.cs` and the format case in `Assets/Scripts/Combat/Editor/Importers/CombatCsvRoundTrip.cs` (near 504). The manifest carries the string.
+  5. Data: `UtilityEffects` `ExtendDebuff:script_loop`, plus `ResolveConditions` and RechargeTurns as above.
+  6. Tests: gate fails at 1 debuff; extends the shortest; logs when there is none; recharge.
+
+### Viral Surge: PROPOSAL, rewrite
+
+- **Card.** "Randomly gain +2 AP or lose 1 AP; always gain +1 random stat." Mythic, Meme, StatusUtility, Self, 1 AP. Payload is blank.
+- **Meme profile.** Universal wildcard: random, hype effects, all-in plays. Statuses: Staggered, Surging. Outside the chemistry pass.
+- **Meme pool today:**
+  - Jackpot Shot (Mythic, 2 AP, power 58, ×2 / ×1 / ×0.5)
+  - All-In (Epic, 98)
+  - Lucky Scatter (Common, 3 AP, power 17 × 1–4, 25% random self buff per hit)
+  - Double-or-Nothing (Mythic passive, end of turn 60% +1 AP / 40% −1 AP)
+  - Meme Momentum (Mythic passive)
+  - Hype Train (Legendary, power 52, riderless)
+  - Dice Roll (Common, ally heal 20%)
+  - Meme Magic (Uncommon, ally heal 20%)
+  - Wildcard Swap (blank)
+- **As written it duplicates other Meme moves.** The AP coin flip is Double-or-Nothing on an active. The random +1 is Lucky Scatter's rider. It also needs an exclusive either/or AP branch, which no opcode does; independent rolls give four outcomes.
+- **Rarity conflict as written.** Net expected value is +0.5 AP plus one random stat for 1 AP. That is below Epic AP Boost (0 AP, +2 AP, recharge 3), so a Mythic would sit under an Epic.
+- **Proposed effect.**
+  - `StatusEffects` = `Surging:1:1.0:Self`
+  - `UtilityEffects` = `RandomStageChange:1:1:100%:Self:6:viral_surge|GainAP:2:50%:Self:viral_surge_ap`
+  - Card: "Gain Surging (next hit +25%) and +1 to a random stat; 50% chance to gain +2 AP."
+- **Why this version.** It uses Meme's own Surging status, which no Meme move produces today. It sits next to Mythic Leverage Up (Atk +2, Def −1, Surging, 1 AP) rather than under an Epic. No self-damage.
+- **Engine.** None. Every piece is authored elsewhere: Surging on Self (`risk_spike`), `RandomStageChange` on Self (`lucky_scatter`), chance-gated `GainAP` (`multi_thread_shot`).
+- **Pool.** None. See "Meme reaches no one."
+
+### Wildcard Swap: PROPOSAL, rewrite
+
+- **Card.** "Randomly swap one of your stage changes with target." Common, Meme, StatusUtility, SingleEnemy, 2 AP. Payload is blank.
+- **As written it is distinct** (nothing swaps stages), but it is a new hook. Stages owned by statuses revert on expiry (E-15). Swapping an owned stage between two Chainlings breaks that bookkeeping, so it needs ownership transfer rules, not just a new opcode.
+- **Proposed effect.** `UtilityEffects` = `RandomStageChange:-1:-1:100%:SingleEnemy:-6:wildcard_swap_foe|RandomStageChange:1:1:100%:Self:6:wildcard_swap_self`. Card: "Lower one random foe stat by 1 and raise one random own stat by 1."
+  - It reads as a stat "swap", keeps Meme's randomness, and Meme has no foe-facing debuff today.
+  - Bot (Automated Pressure, Automation Burst) and Glitched (Bit Rot) already roll random foe stats. This version is two-sided, which keeps it Meme.
+- **Rarity check.** Common, 2 AP, two random ±1 stages. That is below Common Debuff Script (1 AP, two chosen −1s) per AP, and far below Epic Pivot Line or Mythic Data Scramble. No conflict.
+- **Engine.** None.
+- **Pool.** None. See "Meme reaches no one."
+
+### Extraction Hit: PROPOSAL, implement as written
+
+- **Card.** "Passive - hits can raise Atk; at Atk +3 also gain Speed." Rare, Mined, Passive. Payload is blank, and there is no `"extraction_hit"` literal in Runtime.
+- **Mined profile.** Ramp attacker; crashes tanks. Keywords: physical ramp, extraction, scaling. Status: FOMO.
+- **Mined pool today:**
+  - Pickaxe Flurry (Common, 3 AP, power 14 × 2–4, Atk +1 per hit, cap +2)
+  - Deep Dig (Uncommon, 4 AP, power 72)
+  - Ore Strike (Rare, 2 AP, power 52)
+  - Exploit Window (Rare, ExploitMark)
+  - Refinery (Rare, Def +1, Yield)
+  - Momentum Drill (Epic, 2 AP, power 54, ×1.25 vs debuffed)
+  - Majority Pressure (Epic, AOE Speed −1)
+  - Deep Reap (Legendary, 2 AP, power 58, 20% lifesteal)
+  - Crystal Extraction (Common)
+  - Ore Restoration (Uncommon)
+- **Fit.** Ramp is the type's core, but only one Common move ramps today, and Mined has no working passive. A ramp passive is on-profile and distinct, because it rewards any hit, not one multi-hit move.
+- **Proposed effect.** The first landed damaging hit each turn gives Atk +1, up to a passive cap of +3. The first time Atk reaches +3, Speed +1, once per battle. Numbers are tunable. "Can raise" did not name a chance, so once per turn keeps multi-hits in check.
+- **Rarity check.** Rare passive ramp vs Uncommon Kindling (6% DoT mark) and Legendary Immutable Ledger or Conductive Counter. No conflict.
+- **Engine (small, existing pattern).**
+  - Add a `TryApplyExtractionHit` beside `TryApplyKindling` (`CombatResolver.cs:5550`, called at 2380). Use `HasEquippedPassive`, `MarkOncePerTurn` (as `shattered_armor` does at `CombatResolver.cs:4519`), and the normal stage write so Cipher Lock still blocks it.
+  - Card text only in the CSV.
+  - Tests: one raise per turn, cap +3, Speed once, Cipher Lock blocks.
+- **Learn-pool check (hard rule).**
+  - Kodiax (Uncommon body) **cannot** take it as-is. Its signature is Ore Strike (Rare), so a second Rare breaks "strictly highest". That is why the plan removed it.
+  - Minefolk (Rare body, signature Deep Reap, Legendary) could legally hold it in a ≤Rare slot or the Rare/Epic slot, but the pool is full. No placement is proposed.
+
+### Deflation Mark (Burned Tokens): PROPOSAL, implement as written
+
+- **Card.** "Apply Burned Tokens so enemy DoT heals you; lower Atk -1." Rare, Burned, StatusUtility, SingleEnemy, 1 AP. `StatusEffects` `BurnedTokens:2:1.0:` and `StageChanges` `MeleeAtk:-1:1.0:false`. Only the Atk −1 runs (E-13).
+- **Burned profile.** DoT pressure; wins long attrition lanes. Keywords: DoT, burn, coating setups. Key statuses: **BurnedTokens**, FUD.
+- **Burned pool today:**
+  - Cinder Burst (Common, 3 AP, power 15 × 2–4, 20% Atk −1)
+  - Hype Burst (Common)
+  - Kindling (Uncommon passive, Kindled 6%)
+  - Ember Shower (Uncommon, 4 AP, power 38 AOE)
+  - Ash Barrier (Uncommon, Mid Barrier, heals 5%)
+  - Scorch Shot (Rare, power 52)
+  - Sear Field (Epic)
+  - Flame Charge (Epic, power 52)
+  - Finish Burn (Legendary, power 60, ×1.5 below 40%)
+  - Ember Wall (Legendary)
+- **Fit.** Burned Tokens is a named profile status with no producer that works. Burned has burn pressure but almost no payoff for its own DoT. Healing off the burn is a distinct attrition-sustain role and pairs with Kindling.
+- **Proposed effect.** While a foe holds Burned Tokens (2 turns), each end-of-turn DoT tick on it heals the status source for 50% of the damage dealt. Keep Atk −1.
+  - Set `BurnedTokens` `IsDebuff` = true in `Statuses.csv`, so cleanses and debuff counts see it.
+  - Card: "Mark a foe for 2 turns: DoT it takes heals you for half. Lower its Atk −1."
+- **Rarity check.** Kindled 6% gives a 3% MaxHP heal per tick, under Legendary Deep Reap's 20% lifesteal. No conflict.
+- **Engine (new hook).**
+  - Heal the source in `StatusProcessor.ApplyEndOfTurnDamage` (`Assets/Scripts/Combat/Runtime/Engine/StatusProcessor.cs:34`; Kindled's tick calls it at 93).
+  - `StatusInstance.sourceId` exists (`Assets/Scripts/Combat/Runtime/Data/StatusInstance.cs:33`). The processor needs a way to resolve that id to a living Chainling.
+  - Tests: heal equals half the tick, no heal after expiry or source KO, cleanse removes it.
+- **Cheaper fallback (PROPOSAL, data only).** Replace `BurnedTokens` with `HealSelfPerTargetDebuff:5:100%:deflation_mark`. It is less distinct, because it is Crystal Extraction's opcode without the cleanse.
+- **Learn-pool check (hard rule).**
+  - The only Burned body is Cinislug (Common). Its non-signature slots allow Common, plus one Common or Uncommon (Kindling). A Rare does not fit, which is why the plan removed it.
+  - No Burned body can hold it today. Placement is an open question.
+
+### Hard Fork (formerly Recoil Strike): PROPOSAL, keep as is
+
+- **Card.** "Heavy contact hit; then remove one debuff from yourself." Uncommon, Forked, DamagingMelee, 4 AP, power 72. `Cleanse:1:100%:Self:hard_fork`, `AfterMoveComplete`. It works. HP recoil was shelved (SD-SHELF).
+- **Forked profile.** "Infrastructure spreader. Chain splits propagate pressure or route a defensive cleanup **without recoil stacking**."
+- **Forked pool today:**
+  - Rapid Strike (Rare, 1 AP, power 26, PRIOR)
+  - Fork Split (Legendary, 4 AP, power 56 AOE)
+  - Chain Fork (Common, 2 AP, power 12 × 2–4)
+  - Voltage Rush (Mythic)
+  - Leverage Up (Mythic)
+  - Pivot Line (Epic)
+  - Conductive Counter (Legendary passive)
+  - Charged Relay (Epic)
+  - Surge Recovery (Uncommon)
+- **Fit.** Hard Fork is Forked's only single-target heavy, and its self-cleanse is the profile's "defensive cleanup". It is distinct.
+- **Optional recoil flavor (not recommended).** Add a self Def −1 stage, `MeleeDef:-1:1.0:true` as Key Rotation authors it. That is not HP and not a debuff status, so the Cleanse won't undo it. It would match Gas War's drawback, but the type profile explicitly avoids recoil.
+- **Rarity.** All three Uncommon 4 AP power-72 heavies share a rarity: Hard Fork (cleanse), Deep Dig (none) and Gas War (+1 surcharge). Hard Fork is the best of the three, but that is not a cross-rarity conflict.
+- **Learn-pool.** Off-type exception on Balloom only. The plan says "Hard Fork stays off-type only". No Forked body learns it.
+
+### Rarity conflicts found
+
+- Viral Surge **as written**: a Mythic under Epic AP Boost. The rewrite fixes it.
+- Script Loop **as written**: a Common that would beat Epic Extend Protocol. The one-debuff trim with RechargeTurns 2 fixes it.
+- All-In **today and after the change**: Epic power 98 is above Legendary Hammer Sync at 80. This is priced by the drawback, not fixed here.
+- None of the proposals creates a new conflict.
+
+### Stale master items (to refresh)
+
+The rows above were not rewritten. Line numbers are current, after the two-line pointer insert; the pre-insert number is in brackets. Values are from `Moves.csv` on 2026-10-22.
+
+| Where | Master says | Current value |
+|---|---|---|
+| L25 [L23] rule; L272 [L270] E-17 | Ash Guard, Compound Guard, Ice Wall and Blockade use `hitsRemaining == -1` (unlimited) | Eight-move `BlockWindow` family. Walls block melee, barriers block ranged. 1 hit, 2 turns, PRIOR, RechargeTurns 2 (1-turn recharge), one block per Chainling. Renamed Ash Barrier, Compound Barrier, Lattice Barrier, Buffer Barrier (`barrier_wall`). |
+| L96 [L94] E-16 | Ice Wall uses the unlimited budget | Mid Wall `BlockWindow:40%:Melee`, 2 AP, +1 AP to the holder if faster (once) |
+| L168 [L166] MV-blockade | Common, 3 AP, 25% for two turns, unlimited hits | Uncommon, 3 AP, Greater Wall `BlockWindow:60%:Melee`, 1 hit, PRIOR |
+| Missing | No Armor row | `guard_posture` tag `ARMOR`, key `armor_guard_posture`, 25% for 1 hit or 2 turns, stacks with a block. Flat Armor 12/16 is only a proposal (`Design/ARMOR_MECHANIC_V1_ANALYSIS.md`). |
+| Missing | No AP-denial rows | Chained Memory Leak is a true lock. V3 proposals: Memory Leak recharge, Transaction Tax to `DrainAP:1`, no drain cap (`Design/AP_DENIAL_ENDGAME_ANALYSIS.md`, `Design/COMBAT_ISSUES_DECISION_BRIEF_V3.md`) |
+| Missing | No typeless row | Typeless rule decided but not built; V3 reports `ResolveAttackType` still uses the attacker's type |
+| L165 [L163] | ap_drain Common | Uncommon |
+| L170 [L168] | network_sync Common | Epic (Node) |
+| L174 [L172] | viral_surge Common | Mythic |
+| L175 [L173] | wildcard_swap 1 AP | 2 AP |
+| L190 [L188] | jackpot_shot power 64 | Mythic, power 58 |
+| L192 [L190] | lucky_scatter Rare, power 18 | Common, power 17, 3 AP |
+| L159 [L157] | shard_scatter power 18 | Legendary, power 22, 4 AP |
+| L197 [L195] | ap_siphon power 56, drain doesn't run | Rare, power 54, `DrainAP:1:50%` authored |
+| L199 [L197] | momentum_drill power 64, no +25% | Epic, power 54, ×1.25 vs debuffed authored |
+| L203 [L201] | interest_strike Rare, no AP grant | Epic, conditional `GainAP` authored |
+| L204 [L202] | rallying_slam Rare, power 64, no AP grant | Epic, power 52, conditional `GainAP` authored |
+| L205 [L203] | pickaxe_flurry power 16, no Atk raise | Common, power 14, 3 AP, Atk +1 per hit, cap +2 |
+| L208 [L206] | glitch_feedback cleanse doesn't run | `Cleanse:1` authored |
+| L154–156 [L152–154] | chain_seal, key_rotation, zip_step: Evasion half doesn't run | `ChangeStage:Evasion` authored on all three |
+| L142–148 [L140–146] | Accuracy/Evasion rows "empty payload", Work = data | `ChangeStage:Accuracy` / `Evasion` authored; Work should be `none` |
+| L261 [L259] BAL-EPIC | bulwark_blow is the only Epic damage move (index 45) | bulwark_blow power 50, 3 AP. Nine Epic damaging moves. |
+| L3 header; Counts block L58–85 [L56–83] | Dated 2026-10-19 | Counts change once the rows above are refreshed |

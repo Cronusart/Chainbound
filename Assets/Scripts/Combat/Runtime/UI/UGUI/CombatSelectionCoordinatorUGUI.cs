@@ -82,6 +82,7 @@ namespace Chainbound.Combat
         private readonly CombatActionEligibilityService _eligibilityService = new CombatActionEligibilityService();
 
         private int _moveCursor;
+        private int _passiveCount;
         private int _swapCursor;
         private int _targetCursor;
         private int _libraryCardDirection;
@@ -166,9 +167,7 @@ namespace Chainbound.Combat
             SetContext(state, teamIndex, slotIndex, actor, onCommit, onCancel);
             _reservedSwapBenchIndices.Clear();
             BuildMoveEntries();
-            _moveCursor = FirstUsableMoveIndex();
-            if (_moveCursor < 0)
-                _moveCursor = GetMoveListRowCount() > 0 ? _moves.Count : 0;
+            _moveCursor = MoveListNav.DefaultCursor(_moves, entry => entry.usable);
             _targetCursor = 0;
             _mode = Mode.MoveSelect;
 
@@ -280,7 +279,7 @@ namespace Chainbound.Combat
             if (_mode == Mode.MoveSelect && GetMoveListRowCount() > 0)
             {
                 _libraryCardDirection = step;
-                _moveCursor = Wrap(_moveCursor + step, GetMoveListRowCount());
+                _moveCursor = MoveListNav.Step(_moveCursor, step, _passiveCount, _moves.Count);
                 RefreshMoveUI();
                 RefreshPreviewTargets();
                 PlayUiCue(CombatUiSfxCue.Navigate);
@@ -331,6 +330,12 @@ namespace Chainbound.Combat
                     return;
 
                 var entry = _moves[_moveCursor];
+                if (entry.move != null && entry.move.category == MoveCategory.Passive)
+                {
+                    moveSelectPanel?.PlayUnavailableMoveFeedback();
+                    return;
+                }
+
                 if (!entry.usable)
                 {
                     moveSelectPanel?.PlayUnavailableMoveFeedback();
@@ -491,6 +496,7 @@ namespace Chainbound.Combat
             _activeTargetingPromptMessage = null;
 
             _moves.Clear();
+            _passiveCount = 0;
             _swaps.Clear();
             _targetCandidates.Clear();
             _previewTargets.Clear();
@@ -531,9 +537,11 @@ namespace Chainbound.Combat
         private void BuildMoveEntries()
         {
             _moves.Clear();
+            _passiveCount = 0;
             if (_actor == null || _actor.moves == null)
                 return;
 
+            var equippedEntries = new List<MoveEntry>(_actor.moves.Count);
             for (int i = 0; i < _actor.moves.Count; i++)
             {
                 var move = _actor.moves[i];
@@ -549,7 +557,7 @@ namespace Chainbound.Combat
                         extraAvailableAp: _projectedGiftAp,
                         queuedBySlot: _queuedActionsBySlot,
                         actorSlot: _actingSlotIndex);
-                _moves.Add(new MoveEntry
+                equippedEntries.Add(new MoveEntry
                 {
                     move = move,
                     moveIndex = i,
@@ -560,6 +568,11 @@ namespace Chainbound.Combat
                         : PassiveDisplayState.Active,
                 });
             }
+
+            _moves.AddRange(MoveListOrdering.PassivesFirst(
+                equippedEntries,
+                entry => entry.move != null && entry.move.category == MoveCategory.Passive,
+                out _passiveCount));
         }
 
         private void BuildSwapEntries()
@@ -597,6 +610,7 @@ namespace Chainbound.Combat
                     label = entry.move.displayName,
                     typeIcon = ResolveMoveIconByType(resolvedType),
                     isUsable = entry.usable,
+                    isPassive = entry.move.category == MoveCategory.Passive,
                     hasPriority = MoveSelectDisplayUtility.HasPriorityTag(entry.move),
                 });
             }
@@ -649,6 +663,8 @@ namespace Chainbound.Combat
             var entry = _moves[_moveCursor];
             var move = entry.move;
             var resolvedType = ResolveMoveType(move);
+            MoveSelectDisplayUtility.ReadableStatValues readable =
+                MoveSelectDisplayUtility.FormatReadableStats(move, resolvedType);
             var def = FindDefinition(move);
             string shortDesc = def != null && !string.IsNullOrEmpty(def.description) ? def.description : "No description available.";
             if (shortDesc.Length > 180) shortDesc = shortDesc.Substring(0, 180).TrimEnd() + "...";
@@ -676,11 +692,15 @@ namespace Chainbound.Combat
                 roleTextColor = roleColor,
                 hasRoleTextColor = true,
                 isUsable = entry.usable,
+                isPassive = move.category == MoveCategory.Passive,
                 insufficientAp = !entry.usable && entry.blockReason == MoveSelectDisplayUtility.InsufficientApReason,
                 hasPriority = MoveSelectDisplayUtility.HasPriorityTag(move),
                 modifierSummary = BuildModifierSummary(move),
                 modifierRows = BuildModifierOverviewRows(move),
                 shortDescription = shortDesc,
+                readableTypeValue = readable.typeValue,
+                readablePowerValue = readable.powerValue,
+                readableAccuracyValue = readable.accuracyValue,
                 typeIcon = ResolveMoveIconByType(resolvedType),
             };
         }
@@ -717,6 +737,7 @@ namespace Chainbound.Combat
                 moveRarity = move.rarity,
                 apCost = move.apCost,
                 currentAp = ProjectedCurrentAp(),
+                isPassive = move.category == MoveCategory.Passive,
                 roleLabel = ResolveLibraryCardRoleLabel(move),
                 direction = direction,
             };
@@ -1026,7 +1047,12 @@ namespace Chainbound.Combat
         {
             hudController?.SetBottomActionPanelVisible(true);
             var label = EnsureTargetingPromptLabel();
-            moveSelectPanel?.HoldOpenForTargetingPrompt(label != null ? label.gameObject : null);
+            // During target selection the whole move panel, frame included, stays hidden; the slot circles
+            // and HUD cards are the target indicators. Other prompts (e.g. "already has a block" in move
+            // select) keep the frame so the message still sits on the panel.
+            moveSelectPanel?.HoldOpenForTargetingPrompt(
+                label != null ? label.gameObject : null,
+                hidePanelFrame: _mode == Mode.TargetSelect);
             if (label == null) return;
 
             label.text = !string.IsNullOrWhiteSpace(_activeTargetingPromptMessage)
@@ -1102,7 +1128,8 @@ namespace Chainbound.Combat
             moveInfoPanel?.SetVisible(false);
             _mode = _returnModeAfterInfo;
             _returnModeAfterInfo = Mode.None;
-            if (_mode == Mode.MoveSelect || _mode == Mode.TargetSelect) { ShowMovePanel(); RefreshMoveUI(); RefreshPreviewTargets(); }
+            if (_mode == Mode.MoveSelect) { ShowMovePanel(); RefreshMoveUI(); RefreshPreviewTargets(); }
+            else if (_mode == Mode.TargetSelect) { ShowTargetingPrompt(); RefreshMoveUI(); RefreshPreviewTargets(); }
             else if (_mode == Mode.SwapSelect) { ShowSwapPanel(); RefreshSwapUI(); }
             else HidePanels();
         }
@@ -1401,18 +1428,6 @@ namespace Chainbound.Combat
             if (uiAnimTuning == null && hudController != null) uiAnimTuning = hudController.GetComponentInParent<CombatUiAnimTuning>(true);
             if (uiAnimTuning == null) uiAnimTuning = FindObjectOfType<CombatUiAnimTuning>(true);
             if (battlefieldPresenter == null) battlefieldPresenter = FindObjectOfType<Combat2BattlefieldPresenter>(true);
-        }
-
-        private int FirstUsableMoveIndex()
-        {
-            for (int i = 0; i < _moves.Count; i++)
-            {
-                if (_moves[i].usable)
-                    return i;
-            }
-
-            // No affordable/legal moves: let the caller land on Rest.
-            return -1;
         }
 
         private bool AllEquippedMovesUnusableForAp()

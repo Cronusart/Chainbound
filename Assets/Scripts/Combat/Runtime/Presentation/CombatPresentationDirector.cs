@@ -382,7 +382,7 @@ namespace Chainbound.Combat
                 ? $"{evt.family}:{evt.animationState}:{evt.frameIndex}"
                 : evt.eventId;
 
-            return $"{visual.GetInstanceID()}:{eventKey}";
+            return $"{visual.GetEntityId()}:{eventKey}";
         }
 
         private void StopAllActiveLoops()

@@ -456,7 +456,7 @@ namespace SignalJam.Narrative.Combat
                 Debug.Log(
                     $"[CombatSceneInstaller] ConfigureIntroAutoEscaper: armIntroAutoEscaper={selection.armIntroAutoEscaper}, " +
                     $"SetArmed on escaper go='{introAutoEscaper.gameObject.name}', " +
-                    $"instanceId={introAutoEscaper.GetInstanceID()}, enabled={introAutoEscaper.enabled}.",
+                    $"instanceId={introAutoEscaper.GetEntityId()}, enabled={introAutoEscaper.enabled}.",
                     introAutoEscaper);
             }
         }

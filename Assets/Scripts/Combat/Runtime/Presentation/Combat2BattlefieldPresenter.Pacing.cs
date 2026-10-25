@@ -358,7 +358,8 @@ namespace Chainbound.Combat
                 : ResolveModifierLabel(evt.message);
             SpawnCategoryPopup(targetView, CombatPopupCategory.Modifier, label);
 
-            float hold = ResolveModifierLabelHold();
+            bool repeatInNarrationRange = hasPayload && IsRepeatedModifierPopupInActiveNarration(evt, payload);
+            float hold = repeatInNarrationRange ? 0f : ResolveModifierLabelHold();
             if (hold > 0f)
                 yield return new WaitForSeconds(hold);
         }

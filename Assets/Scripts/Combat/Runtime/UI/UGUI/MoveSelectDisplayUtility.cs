@@ -190,6 +190,42 @@ namespace Chainbound.Combat
             return $"Accuracy {move.accuracy}";
         }
 
+        public readonly struct ReadableStatValues
+        {
+            public readonly string typeValue;
+            public readonly string powerValue;
+            public readonly string accuracyValue;
+
+            public ReadableStatValues(string typeValue, string powerValue, string accuracyValue)
+            {
+                this.typeValue = typeValue ?? string.Empty;
+                this.powerValue = powerValue ?? string.Empty;
+                this.accuracyValue = accuracyValue ?? string.Empty;
+            }
+
+            public static ReadableStatValues Empty => new ReadableStatValues(string.Empty, string.Empty, string.Empty);
+        }
+
+        public static bool ReadablePowerApplies(MoveCategory category) =>
+            category == MoveCategory.DamagingMelee || category == MoveCategory.DamagingRanged;
+
+        public static string FormatReadablePowerValue(MoveCategory category, int power) =>
+            ReadablePowerApplies(category) ? power.ToString() : string.Empty;
+
+        public static string FormatReadableAccuracyValue(int accuracy) =>
+            accuracy > 0 ? accuracy.ToString() + "%" : string.Empty;
+
+        public static ReadableStatValues FormatReadableStats(MoveInstance move, ChainlingType resolvedType)
+        {
+            if (move == null)
+                return ReadableStatValues.Empty;
+
+            return new ReadableStatValues(
+                FormatTypeLabel(move.baseType, resolvedType),
+                FormatReadablePowerValue(move.category, move.basePower),
+                FormatReadableAccuracyValue(move.baseAccuracy));
+        }
+
         public static string FormatApCostLine(int apCost) => $"AP Cost {apCost}";
 
         public static string FormatApCostLine(int apCost, int currentAp) =>
@@ -199,6 +235,7 @@ namespace Chainbound.Combat
         public const string PriorityTagPrior = "PRIOR";
         public const string PriorityTagPrio = "PRIO";
         public const string PriorityPillLabel = "PRIOR";
+        public const string PassivePillLabel = "PAS";
 
         public static bool HasPriorityTag(MoveInstance move)
         {

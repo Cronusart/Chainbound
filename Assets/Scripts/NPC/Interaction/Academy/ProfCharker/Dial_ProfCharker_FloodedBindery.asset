@@ -16,8 +16,7 @@ MonoBehaviour:
   playerFacingPolicy: 1
   lines:
   - speakerName: 
-    text: One moment. If I don't write this down now, it'll wander off before I ever
-      see my desk again
+    text: One moment. If I don't write this down now, it'll wander off before I ever see my desk again
     typeSpeed: 48
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 21300000, guid: 08e74a2ba7871d5489c461279793bb19, type: 3}
@@ -29,8 +28,7 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Prof. Charker
-    text: Professor Charker. Binding is my work. Bring me a book worth the ink, and
-      I'll gladly put it through the press
+    text: Professor Charker. Binding is my work. Bring me a book worth the ink, and I'll gladly put it through the press
     typeSpeed: 48
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 21300000, guid: 08e74a2ba7871d5489c461279793bb19, type: 3}
@@ -42,8 +40,7 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Prof. Charker
-    text: It would have to wait, though. The basement is flooded, so the workshop
-      has taken up swimming
+    text: It would have to wait, though. The basement is flooded, so the workshop has taken up swimming
     typeSpeed: 48
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 21300000, guid: 08e74a2ba7871d5489c461279793bb19, type: 3}
@@ -55,8 +52,7 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Prof. Charker
-    text: The old sewer pipes are acting up again. That's the story I'm telling myself,
-      anyway
+    text: The old sewer pipes are acting up again. That's the story I'm telling myself, anyway
     typeSpeed: 48
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 21300000, guid: 08e74a2ba7871d5489c461279793bb19, type: 3}
@@ -68,8 +64,7 @@ MonoBehaviour:
       targetTag: 
     choices: []
   - speakerName: Prof. Charker
-    text: Plumbers should be on their way. Check back once the water gets bored and
-      leaves.
+    text: Plumbers should be on their way. Check back once the water gets bored and leaves.
     typeSpeed: 48
     soundEvent: {fileID: 11400000, guid: 0410f7133cabfcc46a12e20a38f8f44c, type: 2}
     portraitSprite: {fileID: 21300000, guid: 08e74a2ba7871d5489c461279793bb19, type: 3}

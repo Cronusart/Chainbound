@@ -47,7 +47,7 @@ namespace Chainbound.Combat
         [SerializeField] private string barrierTemplate = "{target}'s barrier blocked the attack.";
         [SerializeField] private string wallBlockedTemplate = "{wall} blocked all {amount} damage.";
         [SerializeField] private string wallMitigatedTemplate = "{wall} blocked {amount} damage.";
-        [SerializeField] private string wallBrokenTemplate = "{wall} broke and absorbed {amount} damage.";
+        [SerializeField] private string wallBrokenTemplate = "{actor} broke {target}'s {wall} (-{amount}).";
         [SerializeField] private string wallHeldTemplate = "{wall} held firm.";
         [SerializeField] private string koTemplate = "{target} was knocked out!";
         [SerializeField] private string swapResultTemplate = "{target} entered the battle.";
@@ -60,13 +60,35 @@ namespace Chainbound.Combat
         [SerializeField] private string statusExpiredTemplate = "{target}'s {status} ended.";
         [SerializeField] private string stageChangedTemplate = "{target}'s {stat} changed by {amount}.";
         [SerializeField] private string passiveTemplate = "{actor}'s passive activated.";
-        [SerializeField] private string modifierTemplate = "A combat modifier changed the outcome.";
+        [SerializeField] private string modifierTemplate = "{owner}'s {modifier} activated.";
         [SerializeField] private string apBlockedTemplate = "{target} could not gain AP.";
-        [SerializeField] private string apStolenTemplate = "{target} lost {amount} AP.";
+        [SerializeField] private string apStolenTemplate = "{target} stole {amount} AP.";
+        [SerializeField] private string apStealTemplate = "{actor} stole {amount} AP from {target}.";
         [SerializeField] private string wallReflectTemplate = "{actor} took {amount} reflected damage.";
         [SerializeField] private string wallApDrainTemplate = "{actor} lost {amount} AP.";
         [SerializeField] private string rechargingTemplate = "{move} began recharging.";
         [SerializeField] private string bonusActionTemplate = "{actor} gained another action.";
+
+        [Header("Modifier Templates")]
+        [SerializeField] private string modifierHealTemplate = "{owner}'s {modifier} restored {amount} HP.";
+        [SerializeField] private string modifierHealOtherTemplate = "{owner}'s {modifier} restored {amount} HP to {target}.";
+        [SerializeField] private string modifierApGainTemplate = "{owner}'s {modifier} granted {amount} AP.";
+        [SerializeField] private string modifierApGainOtherTemplate = "{owner}'s {modifier} granted {target} {amount} AP.";
+        [SerializeField] private string modifierApDrainTemplate = "{owner}'s {modifier} drained {amount} AP from {target}.";
+        [SerializeField] private string modifierStageRaisedTemplate = "{owner}'s {modifier} raised {target}'s {stat} by {amount}.";
+        [SerializeField] private string modifierStageLoweredTemplate = "{owner}'s {modifier} lowered {target}'s {stat} by {amount}.";
+        [SerializeField] private string modifierStatusTemplate = "{owner}'s {modifier} made {target} {status}.";
+        [SerializeField] private string modifierCleanseTemplate = "{owner}'s {modifier} cleansed {target} of {status}.";
+        [SerializeField] private string modifierDamageTemplate = "{owner}'s {modifier} dealt {amount} damage to {target}.";
+        [SerializeField] private string modifierGuardTemplate = "{owner}'s {modifier} put up a guard for the rest of the turn.";
+        [SerializeField] private string modifierGuardOtherTemplate = "{owner}'s {modifier} guarded {target} for the rest of the turn.";
+        [SerializeField] private string modifierAccuracyTemplate = "{owner}'s {modifier} sharpened {target}'s aim.";
+        [SerializeField] private string modifierBarrierHitsTemplate = "{owner}'s {modifier} raised a barrier. Blocks {amount} {hitWord}.";
+        [SerializeField] private string modifierBarrierPoolTemplate = "{owner}'s {modifier} raised a barrier. Absorbs up to {amount} damage.";
+        [SerializeField] private string modifierCastTemplate = "{owner}'s {modifier} cast {move}!";
+        [SerializeField] private string modifierReflectTemplate = "{owner}'s {modifier} reflected the effect back to {target}.";
+        [SerializeField] private string modifierShareTemplate = "{owner}'s {modifier} shared the buffs with {target}.";
+        [SerializeField] private string modifierBonusActionTemplate = "{owner}'s {modifier} granted another action.";
 
         [Header("Battle Result Templates")]
         [SerializeField] private string victoryTemplate = "Victory! Your team won in {turns} turns.";
@@ -117,10 +139,30 @@ namespace Chainbound.Combat
         internal string ModifierTemplate => modifierTemplate;
         internal string ApBlockedTemplate => apBlockedTemplate;
         internal string ApStolenTemplate => apStolenTemplate;
+        internal string ApStealTemplate => apStealTemplate;
         internal string WallReflectTemplate => wallReflectTemplate;
         internal string WallApDrainTemplate => wallApDrainTemplate;
         internal string RechargingTemplate => rechargingTemplate;
         internal string BonusActionTemplate => bonusActionTemplate;
+        internal string ModifierHealTemplate => modifierHealTemplate;
+        internal string ModifierHealOtherTemplate => modifierHealOtherTemplate;
+        internal string ModifierApGainTemplate => modifierApGainTemplate;
+        internal string ModifierApGainOtherTemplate => modifierApGainOtherTemplate;
+        internal string ModifierApDrainTemplate => modifierApDrainTemplate;
+        internal string ModifierStageRaisedTemplate => modifierStageRaisedTemplate;
+        internal string ModifierStageLoweredTemplate => modifierStageLoweredTemplate;
+        internal string ModifierStatusTemplate => modifierStatusTemplate;
+        internal string ModifierCleanseTemplate => modifierCleanseTemplate;
+        internal string ModifierDamageTemplate => modifierDamageTemplate;
+        internal string ModifierGuardTemplate => modifierGuardTemplate;
+        internal string ModifierGuardOtherTemplate => modifierGuardOtherTemplate;
+        internal string ModifierAccuracyTemplate => modifierAccuracyTemplate;
+        internal string ModifierBarrierHitsTemplate => modifierBarrierHitsTemplate;
+        internal string ModifierBarrierPoolTemplate => modifierBarrierPoolTemplate;
+        internal string ModifierCastTemplate => modifierCastTemplate;
+        internal string ModifierReflectTemplate => modifierReflectTemplate;
+        internal string ModifierShareTemplate => modifierShareTemplate;
+        internal string ModifierBonusActionTemplate => modifierBonusActionTemplate;
         internal string VictoryTemplate => victoryTemplate;
         internal string DefeatTemplate => defeatTemplate;
         internal string DrawTemplate => drawTemplate;
@@ -156,6 +198,8 @@ namespace Chainbound.Combat
                 case CombatEventType.Miss:
                 case CombatEventType.Dodge:
                 case CombatEventType.BarrierBlocked:
+                case CombatEventType.WallExpired:
+                case CombatEventType.BlockIgnoredDot:
                 case CombatEventType.ChainlingKO:
                 case CombatEventType.AutoSwapIn:
                 case CombatEventType.StatusApplied:
@@ -177,7 +221,6 @@ namespace Chainbound.Combat
                 case CombatEventType.StatusExpired:
                 case CombatEventType.StatusConsumed:
                 case CombatEventType.MoveRechargeComplete:
-                case CombatEventType.WallExpired:
                     return CombatNarrationDelivery.TranscriptOnly;
 
                 case CombatEventType.HitCheck:

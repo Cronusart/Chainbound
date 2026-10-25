@@ -324,6 +324,9 @@ namespace Chainbound.Combat
         private bool _isWaitingForPlayerActions;
         private bool _waitingForBattleIntro;
         private bool _resumeAutoRunAfterIntro;
+        private int _battleStartNarrationFrom;
+        private int _battleStartNarrationTo;
+        private bool _battleStartNarrationQueued;
 
         // Replay recording (passive â€” does not affect gameplay)
         private CombatReplayData _replayData;
@@ -505,13 +508,17 @@ namespace Chainbound.Combat
             _cpuAI = CreateAI(cpuPersonality);
 
             // Initialize battle
+            _battleStartNarrationFrom = _resolver.Log != null ? _resolver.Log.EventCount : 0;
             _state = _resolver.InitializeBattle(
                 team0,
                 team1,
                 encounter != null && encounter.difficulty == EncounterDifficulty.Boss);
+            _battleStartNarrationTo = _resolver.Log != null ? _resolver.Log.EventCount : _battleStartNarrationFrom;
+            _battleStartNarrationQueued = false;
             if (_casualPvp == null && authoritativeState != null && authoritativeState.vitals != null && authoritativeState.vitals.Count > 0)
                 ApplyAuthoritativeCheckpoint(authoritativeState, authoritativeState.hasActionCheckpoint);
             _battleStarted = true;
+            ChainlingDexRecords.RecordWildEncounter(encounter, IsPvP || IsCasualPvpSession);
             _turnCount = authoritativeState != null && authoritativeState.hasActionCheckpoint
                 ? Mathf.Max(1, authoritativeState.turnNumber)
                 : 0;
@@ -552,6 +559,8 @@ namespace Chainbound.Combat
 
             OnBattleStarted?.Invoke(_state);
             EmitVitalsChangedIfNeeded(forceEmitAll: true);
+            if (!shouldWaitForIntro)
+                QueueBattleStartNarrationOnce();
 
             if (usePlayerInput && !autoRunTurns)
             {
@@ -1066,6 +1075,9 @@ namespace Chainbound.Combat
             _pendingPlayerActions = null;
             _playerActionsReady = false;
             _isWaitingForPlayerActions = false;
+            _battleStartNarrationFrom = 0;
+            _battleStartNarrationTo = 0;
+            _battleStartNarrationQueued = false;
             ClearBattleIntroState();
             _replayData = null;
         }
@@ -1088,6 +1100,7 @@ namespace Chainbound.Combat
             _waitingForBattleIntro = false;
             bool resumeAutoRun = _resumeAutoRunAfterIntro;
             _resumeAutoRunAfterIntro = false;
+            QueueBattleStartNarrationOnce();
 
             if (resumeAutoRun && autoRunTurns && _battleStarted && _state != null && _state.isActive)
                 StartAutoRunCoroutine();
@@ -1234,6 +1247,9 @@ namespace Chainbound.Combat
 
         private void RecordSuccessfulCapture(ChainlingInstance target, CaptureOutcome outcome)
         {
+            if (target != null)
+                ChainlingDexRecords.RecordCaught(target.speciesId);
+
             float duration = outcome != null ? outcome.DurationSeconds : 0f;
             if (duration <= 0f && outcome != null && outcome.ElapsedTicks > 0)
                 duration = outcome.ElapsedTicks / 30f;

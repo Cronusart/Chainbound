@@ -27,7 +27,7 @@ MonoBehaviour:
   powerCap: 0
   apCostCap: 0
   forbiddenTags: []
-  slotType: 0
+  slotType: 6
   isTypeInfusion: 0
   isStatSubstitution: 1
   substitutionStat: 2

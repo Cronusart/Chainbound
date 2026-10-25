@@ -42,7 +42,14 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
             summary.combatRoleLabel = SpeciesCombatRoleResolver.FormatLabel(summary.combatRole);
             summary.descriptionHook = TruncateDescription(species.description);
             summary.signatureMove = BuildSignatureMove(species);
-            summary.encountersSummaryLine = BuildEncountersSummaryLine(species, null);
+            IReadOnlyList<string> zoneNames = null;
+            if (!species.isStarter && ctx.encounterCatalog != null)
+            {
+                EncounterCatalogIndex catalog = EncounterCatalogIndex.Build(ctx.encounterCatalog);
+                zoneNames = catalog.ZoneDisplayNamesFor(species.speciesId);
+            }
+
+            summary.encountersSummaryLine = BuildEncountersSummaryLine(species, zoneNames);
             summary.supportsDrillDown = true;
 
             // Sparse debug lines only — Entry layout binds typed fields.
@@ -97,11 +104,32 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
             drillDown.bodyText = string.IsNullOrWhiteSpace(ctx.species.description)
                 ? ""
                 : ctx.species.description;
-            drillDown.encounterRows.Add(new ChainlingPartyEncounterRow
+            if (ctx.encounterCatalog == null)
             {
-                zoneName = "Unavailable",
-                detail = "Encounter zone lookup is not available yet.",
-            });
+                drillDown.encounterRows.Add(new ChainlingPartyEncounterRow
+                {
+                    zoneName = "Unavailable",
+                    detail = "Encounter zone lookup is not available yet.",
+                });
+                return;
+            }
+
+            EncounterCatalogIndex catalog = EncounterCatalogIndex.Build(ctx.encounterCatalog);
+            List<EncounterCatalogSpecies> slots = catalog.FindSpecies(ctx.species.speciesId);
+            for (int i = 0; i < slots.Count; i++)
+            {
+                EncounterCatalogSpecies slot = slots[i];
+                if (slot == null || slot.isLabOrigin)
+                    continue;
+
+                drillDown.encounterRows.Add(new ChainlingPartyEncounterRow
+                {
+                    zoneName = slot.zoneDisplayName,
+                    detail = EncounterCatalogIndex.FormatFrequency(slot.weight, slot.zoneTotalWeight)
+                        + " · "
+                        + EncounterCatalogIndex.FormatTime(slot.allowedSegments),
+                });
+            }
         }
 
         public static string BuildEncountersSummaryLine(

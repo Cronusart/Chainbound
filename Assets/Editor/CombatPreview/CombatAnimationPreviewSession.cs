@@ -41,6 +41,9 @@ namespace Chainbound.Combat.Editor
         private bool _flipX;
         private bool _includeAuthoredTrack = true;
         private bool _deterministicAudio = true;
+        private bool _defenderHasWall;
+        private BlockKind _defenderWallKind = BlockKind.Wall;
+        private BlockTier _defenderWallTier = BlockTier.Lower;
         private bool _restartRequested;
         private double _lastUpdateTime;
         private float _zoom = DefaultPreviewZoom;
@@ -58,6 +61,9 @@ namespace Chainbound.Combat.Editor
         public CombatPresentationTrackSO MoveTrack => _moveDefinition != null ? _moveDefinition.presentationTrack : null;
         public bool IsPlaying => _isPlaying;
         public bool HasDefender => _defenderSubject != null;
+        public bool DefenderHasWall => _defenderHasWall;
+        public BlockKind DefenderWallKind => _defenderWallKind;
+        public BlockTier DefenderWallTier => _defenderWallTier;
         public bool CanPlayAttackPair => _subject != null
             && _subject.Visual != null
             && _defenderSubject != null
@@ -141,6 +147,18 @@ namespace Chainbound.Combat.Editor
                 return;
 
             _moveCategory = moveCategory;
+            ClearSpawnedPreview();
+        }
+
+        public void SetDefenderWall(bool hasWall, BlockKind kind, BlockTier tier)
+        {
+            if (_defenderHasWall == hasWall && _defenderWallKind == kind && _defenderWallTier == tier)
+                return;
+
+            StopPairInternal(false, false);
+            _defenderHasWall = hasWall;
+            _defenderWallKind = kind == BlockKind.None ? BlockKind.Wall : kind;
+            _defenderWallTier = tier == BlockTier.None ? BlockTier.Lower : tier;
             ClearSpawnedPreview();
         }
 
@@ -318,8 +336,14 @@ namespace Chainbound.Combat.Editor
 
             if (CanPlayAttackPair)
             {
-                CombatVFXLibrary.VFXEntry entry = _vfxLibrary.GetEntryWithFallback(_moveDefinition.moveId, _moveCategory);
-                timing = CombatPreviewPairOrchestrator.ResolveTiming(_subject, _defenderSubject, entry, _moveCategory);
+                CombatVFXLibrary.VFXEntry entry = _vfxLibrary.Resolve(VfxMoveKey.From(_moveDefinition)).entry;
+                timing = CombatPreviewPairOrchestrator.ResolveTiming(
+                    _subject,
+                    _defenderSubject,
+                    entry,
+                    _moveCategory,
+                    null,
+                    _defenderHasWall);
                 return true;
             }
 
@@ -1060,7 +1084,10 @@ namespace Chainbound.Combat.Editor
                 _vfxLibrary,
                 _moveCategory,
                 _phaseOverrides,
-                previewCamera);
+                previewCamera,
+                _defenderHasWall,
+                _defenderWallKind,
+                _defenderWallTier);
             orchestrator.FireFrameTriggered += HandlePairFireFrame;
             orchestrator.ImpactTriggered += HandlePairImpact;
             return orchestrator;

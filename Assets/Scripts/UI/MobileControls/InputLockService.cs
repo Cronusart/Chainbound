@@ -59,7 +59,7 @@ public class InputLockService : MonoBehaviour
         public InputLockChannel channel;
         public UnityEngine.Object owner;
         public bool hasOwner;
-        public int ownerSceneHandle;
+        public SceneHandle ownerSceneHandle;
         public bool ownerWasPersistent;
     }
     
@@ -79,7 +79,7 @@ public class InputLockService : MonoBehaviour
         UnityEngine.Object owner = null)
     {
         int id = nextHandleId++;
-        ResolveOwnerScene(owner, out int ownerSceneHandle, out bool ownerWasPersistent);
+        ResolveOwnerScene(owner, out SceneHandle ownerSceneHandle, out bool ownerWasPersistent);
         activeLocks[id] = new LockRequest
         {
             reason = reason,
@@ -236,10 +236,10 @@ public class InputLockService : MonoBehaviour
 
     private static void ResolveOwnerScene(
         UnityEngine.Object owner,
-        out int sceneHandle,
+        out SceneHandle sceneHandle,
         out bool isPersistent)
     {
-        sceneHandle = -1;
+        sceneHandle = SceneHandle.None;
         isPersistent = false;
         if (owner == null)
             return;

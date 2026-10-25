@@ -22,7 +22,12 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
 {
     private const string PanelLockReason = "StarterSelection";
     private const float RuntimeTypeIconSize = 64f;
+    private const float NameEntryPreviewInset = 1000f;
+    private const float NameEntryFrameDrop = 30f;
+    private const float NameEntryInputPosY = -15f;
+    private const float NameEntryLayoutDuration = 0.36f;
     private static readonly Vector2 PanelScanlineTiling = new Vector2(0.4f, 0.4f);
+    private static readonly Color DigitalAccent = new Color(0.62f, 0.96f, 1f, 1f);
 
     private enum PresentationMode
     {
@@ -104,6 +109,10 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
     private Tween dimOverlayRevealTween;
     private Tween titleRevealTween;
     private Tween namingPresentationTween;
+    private Tween nameEntryLayoutTween;
+    private Sequence confirmDigitalTween;
+    private Sequence backDigitalTween;
+    private Sequence typeIconDigitalTween;
     private MobileInputManager mobileInputManager;
     private Vector2 lastMobileNavigation;
     private float nextMobileNavigationTime;
@@ -117,6 +126,8 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
     private Vector2 visualFrameAnchoredPosition;
     private Vector2 visualFrameSizeDelta;
     private Vector2 visualFramePivot;
+    private Color visualFrameRestColor;
+    private bool visualFrameColorCaptured;
     private bool portraitReveal;
     private CombatVisualProfileSO portraitProfile;
     private Sprite portraitFallback;
@@ -130,6 +141,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
     private Vector2 speciesNameAnchoredPosition;
     private Vector2 speciesNameSizeDelta;
     private Vector2 speciesNamePivot;
+    private Vector3 speciesNameLocalScale;
     private TextAlignmentOptions speciesNameAlignment;
     private float speciesNameCharacterSpacing;
     private bool speciesNameSpacingCaptured;
@@ -141,6 +153,27 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
     private bool starterNameInputUsesAuthoredPose;
     private bool starterNameTextAuthored;
     private bool starterNamePlaceholderAuthored;
+    private bool nameEntryLayoutApplied;
+    private bool previewInsetCaptured;
+    private Vector2 previewOffsetMin;
+    private Vector2 previewOffsetMax;
+    private bool nameInputPoseCaptured;
+    private Vector2 nameInputAnchoredPosition;
+    private float nameEntryInsetTween;
+    private bool digitalChromeRestCaptured;
+    private int digitalChromeToken;
+    private Color confirmDigitalRestColor;
+    private Color backDigitalRestColor;
+    private bool confirmDigitalRestValid;
+    private bool backDigitalRestValid;
+    private Vector2 typeIconRestPosition;
+    private Vector3 typeIconRestScale;
+    private Color typeIconRestColor;
+    private bool typeIconRestValid;
+    private RectTransform confirmLabelRect;
+    private RectTransform backLabelRect;
+    private Vector2 confirmLabelRestPosition;
+    private Vector2 backLabelRestPosition;
 
     public StarterPreviewVisual PreviewVisual => previewVisual;
     public TMP_InputField StarterNameInputField => starterNameInputField;
@@ -332,6 +365,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         presentationMode = PresentationMode.Naming;
         panelInputArmed = false;
         StopSelectRoutine();
+        StopDigitalChrome();
         ClearPanelSelection();
         HideStarterNameInput();
         ResolveDetailsPanel();
@@ -371,6 +405,32 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         ConfigureStarterNameInput();
         starterNameInputField.SetTextWithoutNotify(string.Empty);
         starterNameInputField.gameObject.SetActive(true);
+        starterNameInputField.readOnly = false;
+        CanvasGroup inputGroup = starterNameInputField.GetComponent<CanvasGroup>();
+        if (inputGroup == null)
+            inputGroup = starterNameInputField.gameObject.AddComponent<CanvasGroup>();
+        inputGroup.alpha = 1f;
+        inputGroup.interactable = false;
+        inputGroup.blocksRaycasts = false;
+
+        PlayNameEntryLayout();
+        return true;
+    }
+
+    /// <summary>
+    /// Keeps the confirmed name on screen through the victory chime. The field
+    /// closes later with the panel.
+    /// </summary>
+    public void RetainStarterNameInput()
+    {
+        if (starterNameInputField == null || !starterNameInputField.gameObject.activeSelf)
+            return;
+
+        starterNameInputField.readOnly = true;
+        starterNameInputField.DeactivateInputField();
+        if (starterNameInputField.placeholder != null)
+            starterNameInputField.placeholder.enabled = string.IsNullOrEmpty(starterNameInputField.text);
+
         CanvasGroup inputGroup = starterNameInputField.GetComponent<CanvasGroup>();
         if (inputGroup != null)
         {
@@ -378,8 +438,6 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             inputGroup.interactable = false;
             inputGroup.blocksRaycasts = false;
         }
-
-        return true;
     }
 
     public void HideStarterNameInput()
@@ -387,6 +445,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         if (starterNameInputField == null)
             return;
 
+        starterNameInputField.readOnly = false;
         starterNameInputField.DeactivateInputField();
         starterNameInputField.gameObject.SetActive(false);
         starterNameInputField.SetTextWithoutNotify(string.Empty);
@@ -401,7 +460,6 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         presentationMode = PresentationMode.Closing;
         panelInputArmed = false;
         StopSelectRoutine();
-        HideStarterNameInput();
         if (portraitReveal)
             yield return ExitPortraitBanner();
         StopPanelPresentation(restorePortraitBanner: false);
@@ -1133,6 +1191,10 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             group.blocksRaycasts = true;
         }
 
+        StartDigitalChrome();
+        if (portraitReveal)
+            PlayPortraitLayout();
+
         if (!portraitReveal)
             yield return RevealTitle();
 
@@ -1335,6 +1397,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
 
         RevealTitleImmediately();
         StartTypewriter();
+        StartDigitalChrome();
     }
 
     private void StartPreviewVisualPlayback()
@@ -1374,6 +1437,9 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         titleRevealTween = null;
         namingPresentationTween?.Kill();
         namingPresentationTween = null;
+        nameEntryLayoutTween?.Kill();
+        nameEntryLayoutTween = null;
+        StopDigitalChrome();
 
         Transform previewContainer = ResolvePreviewContainer();
         if (previewContainer != null)
@@ -1624,6 +1690,8 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         if (backButton != null)
             backButton.gameObject.SetActive(false);
         HideStarterNameInput();
+        if (!Application.isPlaying)
+            PlayPortraitLayout();
     }
 
     private void PlaceSpeciesNameAbovePortrait(string speciesName)
@@ -1641,6 +1709,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             speciesNameAnchoredPosition = nameRect.anchoredPosition;
             speciesNameSizeDelta = nameRect.sizeDelta;
             speciesNamePivot = nameRect.pivot;
+            speciesNameLocalScale = nameRect.localScale;
             speciesNameAlignment = speciesNameText.alignment;
             speciesNameCharacterSpacing = speciesNameText.characterSpacing;
             speciesNameSpacingCaptured = true;
@@ -1683,11 +1752,13 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             nameRect.SetSiblingIndex(Mathf.Clamp(speciesNameSiblingIndex, 0, speciesNameParent.childCount - 1));
         }
 
+        nameRect.DOKill();
         nameRect.anchorMin = speciesNameAnchorMin;
         nameRect.anchorMax = speciesNameAnchorMax;
         nameRect.pivot = speciesNamePivot;
         nameRect.anchoredPosition = speciesNameAnchoredPosition;
         nameRect.sizeDelta = speciesNameSizeDelta;
+        nameRect.localScale = speciesNameLocalScale == Vector3.zero ? Vector3.one : speciesNameLocalScale;
         speciesNameText.alignment = speciesNameAlignment;
         if (speciesNameSpacingCaptured)
             speciesNameText.characterSpacing = speciesNameCharacterSpacing;
@@ -1790,6 +1861,457 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         activePortraitDuck = default;
     }
 
+    private void PlayPortraitLayout()
+    {
+        if (nameEntryLayoutApplied)
+            return;
+
+        RectTransform preview = ResolvePreviewContainer() as RectTransform;
+        CachePreviewInsets(preview);
+        nameEntryLayoutApplied = true;
+
+        if (!Application.isPlaying)
+        {
+            if (preview != null)
+                SetHorizontalInsets(preview, NameEntryPreviewInset);
+            return;
+        }
+
+        RectTransform banner = speciesNameText != null ? speciesNameText.rectTransform : null;
+        Vector2 bannerRest = banner != null ? banner.anchoredPosition : Vector2.zero;
+        Image frameImage = visualFrameRect != null ? visualFrameRect.GetComponent<Image>() : null;
+        if (frameImage != null && !visualFrameColorCaptured)
+        {
+            visualFrameRestColor = frameImage.color;
+            visualFrameColorCaptured = true;
+        }
+
+        nameEntryLayoutTween?.Kill();
+        Sequence sequence = DOTween.Sequence().SetUpdate(true);
+        if (preview != null)
+        {
+            nameEntryInsetTween = preview.offsetMin.x;
+            sequence.Insert(0f, DOTween.To(
+                    () => nameEntryInsetTween,
+                    value =>
+                    {
+                        nameEntryInsetTween = value;
+                        SetHorizontalInsets(preview, value);
+                    },
+                    NameEntryPreviewInset,
+                    NameEntryLayoutDuration)
+                .SetEase(Ease.OutExpo)
+                .SetUpdate(true));
+        }
+
+        if (visualFrameRect != null)
+        {
+            float restX = visualFrameRect.anchoredPosition.x;
+            visualFrameRect.localScale = Vector3.one * 1.06f;
+            sequence.Insert(0f, visualFrameRect.DOScale(Vector3.one, 0.28f).SetEase(Ease.OutExpo).SetUpdate(true));
+
+            Sequence glitch = DOTween.Sequence().SetUpdate(true);
+            glitch.Append(visualFrameRect.DOAnchorPosX(restX + 3f, 0.045f).SetEase(Ease.OutQuad));
+            glitch.Append(visualFrameRect.DOAnchorPosX(restX - 2f, 0.04f).SetEase(Ease.OutQuad));
+            glitch.Append(visualFrameRect.DOAnchorPosX(restX, 0.05f).SetEase(Ease.InQuad));
+            sequence.Insert(0.18f, glitch);
+
+            if (frameImage != null)
+            {
+                Color pulse = Color.Lerp(visualFrameRestColor, DigitalAccent, 0.35f);
+                pulse.a = visualFrameRestColor.a;
+                sequence.Insert(0.18f, frameImage.DOColor(pulse, 0.05f).SetEase(Ease.OutQuad).SetUpdate(true));
+                sequence.Insert(0.23f, frameImage.DOColor(visualFrameRestColor, 0.1f).SetEase(Ease.InQuad).SetUpdate(true));
+            }
+        }
+
+        if (banner != null)
+        {
+            banner.localScale = Vector3.one * 1.05f;
+            banner.anchoredPosition = bannerRest + new Vector2(0f, 16f);
+            sequence.Insert(0.04f, banner.DOAnchorPos(bannerRest, 0.3f).SetEase(Ease.OutExpo).SetUpdate(true));
+            sequence.Insert(0.04f, banner.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutExpo).SetUpdate(true));
+        }
+
+        nameEntryLayoutTween = sequence;
+    }
+
+    private void PlayNameEntryLayout()
+    {
+        if (nameEntryLayoutApplied)
+            return;
+
+        RectTransform preview = ResolvePreviewContainer() as RectTransform;
+        CachePreviewInsets(preview);
+        CacheVisualFramePose();
+        CacheNameInputPose();
+
+        if (Application.isPlaying && namingPresentationTween != null && namingPresentationTween.IsActive())
+        {
+            namingPresentationTween.Complete(true);
+            namingPresentationTween = null;
+        }
+
+        RectTransform frame = visualFrameRect;
+        RectTransform nameRect = starterNameInputField != null
+            ? starterNameInputField.transform as RectTransform
+            : null;
+        float frameTargetY = frame != null ? frame.anchoredPosition.y - NameEntryFrameDrop : 0f;
+        nameEntryLayoutApplied = true;
+
+        if (!Application.isPlaying)
+        {
+            if (preview != null)
+                SetHorizontalInsets(preview, NameEntryPreviewInset);
+            if (frame != null)
+                frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, frameTargetY);
+            if (nameRect != null)
+                nameRect.anchoredPosition = new Vector2(nameRect.anchoredPosition.x, NameEntryInputPosY);
+            return;
+        }
+
+        nameEntryLayoutTween?.Kill();
+        namingPresentationTween?.Kill();
+        namingPresentationTween = null;
+
+        Sequence sequence = DOTween.Sequence().SetUpdate(true);
+        if (preview != null)
+        {
+            preview.DOKill();
+            nameEntryInsetTween = preview.offsetMin.x;
+            sequence.Insert(0f, DOTween.To(
+                    () => nameEntryInsetTween,
+                    value =>
+                    {
+                        nameEntryInsetTween = value;
+                        SetHorizontalInsets(preview, value);
+                    },
+                    NameEntryPreviewInset,
+                    NameEntryLayoutDuration)
+                .SetEase(Ease.OutExpo)
+                .SetUpdate(true));
+        }
+
+        if (frame != null)
+        {
+            frame.DOKill();
+            sequence.Insert(0.04f, frame
+                .DOAnchorPosY(frameTargetY, NameEntryLayoutDuration)
+                .SetEase(Ease.OutExpo)
+                .SetUpdate(true));
+        }
+
+        if (nameRect != null)
+        {
+            nameRect.DOKill();
+            sequence.Insert(0.08f, nameRect
+                .DOAnchorPosY(NameEntryInputPosY, 0.28f)
+                .SetEase(Ease.OutExpo)
+                .SetUpdate(true));
+
+            CanvasGroup group = starterNameInputField.GetComponent<CanvasGroup>();
+            if (group != null)
+            {
+                group.alpha = 0f;
+                sequence.Insert(0.06f, group.DOFade(1f, 0.2f).SetEase(Ease.OutQuad).SetUpdate(true));
+            }
+        }
+
+        nameEntryLayoutTween = sequence;
+    }
+
+    private void CachePreviewInsets(RectTransform preview)
+    {
+        if (preview == null || previewInsetCaptured)
+            return;
+
+        previewOffsetMin = preview.offsetMin;
+        previewOffsetMax = preview.offsetMax;
+        previewInsetCaptured = true;
+    }
+
+    private void CacheNameInputPose()
+    {
+        if (nameInputPoseCaptured || starterNameInputField == null)
+            return;
+
+        RectTransform nameRect = starterNameInputField.transform as RectTransform;
+        if (nameRect == null)
+            return;
+
+        nameInputAnchoredPosition = nameRect.anchoredPosition;
+        nameInputPoseCaptured = true;
+    }
+
+    private void RestoreNameEntryLayout()
+    {
+        nameEntryLayoutTween?.Kill();
+        nameEntryLayoutTween = null;
+        nameEntryLayoutApplied = false;
+
+        RectTransform preview = ResolvePreviewContainer() as RectTransform;
+        if (preview != null)
+            preview.DOKill();
+        if (previewInsetCaptured && preview != null)
+        {
+            preview.offsetMin = previewOffsetMin;
+            preview.offsetMax = previewOffsetMax;
+        }
+
+        previewInsetCaptured = false;
+
+        if (visualFrameRect != null)
+        {
+            visualFrameRect.DOKill();
+            Image frameImage = visualFrameRect.GetComponent<Image>();
+            if (frameImage != null)
+                frameImage.DOKill();
+        }
+
+        if (starterNameInputField != null)
+        {
+            RectTransform nameRect = starterNameInputField.transform as RectTransform;
+            if (nameRect != null)
+            {
+                nameRect.DOKill();
+                if (nameInputPoseCaptured)
+                    nameRect.anchoredPosition = nameInputAnchoredPosition;
+            }
+        }
+
+        nameInputPoseCaptured = false;
+    }
+
+    private static void SetHorizontalInsets(RectTransform rect, float inset)
+    {
+        if (rect == null)
+            return;
+
+        Vector2 min = rect.offsetMin;
+        Vector2 max = rect.offsetMax;
+        min.x = inset;
+        max.x = -inset;
+        rect.offsetMin = min;
+        rect.offsetMax = max;
+    }
+
+    private void StartDigitalChrome()
+    {
+        if (!Application.isPlaying || !isShowing || portraitReveal || presentationMode != PresentationMode.Browse)
+            return;
+
+        CaptureDigitalChromeRest();
+        RestoreDigitalChromeRest();
+        KillDigitalChromeTweens();
+        int token = ++digitalChromeToken;
+
+        confirmDigitalTween = StartButtonDigital(confirmButton, confirmDigitalRestColor, confirmDigitalRestValid, 0f, token);
+        backDigitalTween = StartButtonDigital(backButton, backDigitalRestColor, backDigitalRestValid, 0.08f, token);
+        typeIconDigitalTween = StartTypeIconDigital(token);
+    }
+
+    private void StopDigitalChrome()
+    {
+        digitalChromeToken++;
+        KillDigitalChromeTweens();
+        RestoreDigitalChromeRest();
+    }
+
+    private void CaptureDigitalChromeRest()
+    {
+        if (digitalChromeRestCaptured)
+            return;
+
+        if (TryGetButtonImage(confirmButton, out Image confirmImage))
+        {
+            confirmDigitalRestColor = confirmImage.color;
+            confirmDigitalRestValid = true;
+        }
+
+        if (TryGetButtonImage(backButton, out Image backImage))
+        {
+            backDigitalRestColor = backImage.color;
+            backDigitalRestValid = true;
+        }
+
+        if (typeIcon != null)
+        {
+            RectTransform iconRect = typeIcon.rectTransform;
+            typeIconRestPosition = iconRect.anchoredPosition;
+            typeIconRestScale = iconRect.localScale;
+            typeIconRestColor = typeIcon.color;
+            typeIconRestValid = true;
+        }
+
+        confirmLabelRect = FindButtonLabel(confirmButton);
+        backLabelRect = FindButtonLabel(backButton);
+        if (confirmLabelRect != null)
+            confirmLabelRestPosition = confirmLabelRect.anchoredPosition;
+        if (backLabelRect != null)
+            backLabelRestPosition = backLabelRect.anchoredPosition;
+
+        digitalChromeRestCaptured = true;
+    }
+
+    private void RestoreDigitalChromeRest()
+    {
+        if (!digitalChromeRestCaptured)
+            return;
+
+        if (confirmDigitalRestValid && TryGetButtonImage(confirmButton, out Image confirmImage))
+            confirmImage.color = confirmDigitalRestColor;
+        if (backDigitalRestValid && TryGetButtonImage(backButton, out Image backImage))
+            backImage.color = backDigitalRestColor;
+        if (confirmLabelRect != null)
+            confirmLabelRect.anchoredPosition = confirmLabelRestPosition;
+        if (backLabelRect != null)
+            backLabelRect.anchoredPosition = backLabelRestPosition;
+
+        if (!typeIconRestValid || typeIcon == null)
+            return;
+
+        RectTransform iconRect = typeIcon.rectTransform;
+        iconRect.anchoredPosition = typeIconRestPosition;
+        iconRect.localScale = typeIconRestScale;
+        typeIcon.color = typeIconRestColor;
+    }
+
+    private void KillDigitalChromeTweens()
+    {
+        confirmDigitalTween?.Kill();
+        confirmDigitalTween = null;
+        backDigitalTween?.Kill();
+        backDigitalTween = null;
+        typeIconDigitalTween?.Kill();
+        typeIconDigitalTween = null;
+
+        if (TryGetButtonImage(confirmButton, out Image confirmImage))
+            confirmImage.DOKill();
+        if (TryGetButtonImage(backButton, out Image backImage))
+            backImage.DOKill();
+        if (typeIcon != null)
+        {
+            typeIcon.DOKill();
+            typeIcon.rectTransform.DOKill();
+        }
+
+        if (confirmLabelRect != null)
+            confirmLabelRect.DOKill();
+        if (backLabelRect != null)
+            backLabelRect.DOKill();
+    }
+
+    private Sequence StartButtonDigital(Button button, Color rest, bool hasRest, float delay, int token)
+    {
+        if (!hasRest || !TryGetButtonImage(button, out Image image))
+            return null;
+
+        Color pulse = Color.Lerp(rest, DigitalAccent, 0.28f);
+        pulse.a = rest.a;
+        image.color = Color.Lerp(rest, pulse, 0.7f);
+        RectTransform label = button == confirmButton ? confirmLabelRect : backLabelRect;
+        Vector2 labelRest = button == confirmButton ? confirmLabelRestPosition : backLabelRestPosition;
+        if (label != null)
+            label.anchoredPosition = labelRest + new Vector2(0f, 8f);
+
+        Sequence boot = DOTween.Sequence().SetUpdate(true).SetDelay(delay);
+        boot.Append(image.DOColor(rest, 0.22f).SetEase(Ease.OutExpo));
+        if (label != null)
+            boot.Join(label.DOAnchorPos(labelRest, 0.22f).SetEase(Ease.OutExpo));
+        boot.OnComplete(() =>
+        {
+            if (token != digitalChromeToken)
+                return;
+
+            Sequence idle = BuildButtonDigitalIdle(image, rest, pulse, label, labelRest);
+            if (button == confirmButton)
+                confirmDigitalTween = idle;
+            else if (button == backButton)
+                backDigitalTween = idle;
+        });
+        return boot;
+    }
+
+    private static Sequence BuildButtonDigitalIdle(
+        Image image,
+        Color rest,
+        Color pulse,
+        RectTransform label,
+        Vector2 labelRest)
+    {
+        Sequence idle = DOTween.Sequence().SetUpdate(true);
+        idle.AppendInterval(1.7f);
+        if (label != null)
+        {
+            idle.Append(label.DOAnchorPosX(labelRest.x + 2f, 0.04f).SetEase(Ease.OutQuad));
+            idle.Append(label.DOAnchorPosX(labelRest.x - 1.5f, 0.035f).SetEase(Ease.OutQuad));
+            idle.Append(label.DOAnchorPosX(labelRest.x, 0.05f).SetEase(Ease.InQuad));
+        }
+
+        idle.Append(image.DOColor(pulse, 0.05f).SetEase(Ease.OutQuad));
+        idle.Append(image.DOColor(rest, 0.08f).SetEase(Ease.InQuad));
+        idle.SetLoops(-1, LoopType.Restart);
+        return idle;
+    }
+
+    private Sequence StartTypeIconDigital(int token)
+    {
+        if (!typeIconRestValid || typeIcon == null)
+            return null;
+
+        RectTransform iconRect = typeIcon.rectTransform;
+        Color pulse = Color.Lerp(typeIconRestColor, DigitalAccent, 0.55f);
+        pulse.a = typeIconRestColor.a;
+        iconRect.localScale = typeIconRestScale * 1.08f;
+
+        Sequence boot = DOTween.Sequence().SetUpdate(true);
+        boot.Append(iconRect.DOScale(typeIconRestScale, 0.22f).SetEase(Ease.OutExpo));
+        boot.OnComplete(() =>
+        {
+            if (token != digitalChromeToken || typeIcon == null)
+                return;
+
+            typeIconDigitalTween = BuildTypeIconDigitalIdle(iconRect, pulse);
+        });
+        return boot;
+    }
+
+    private Sequence BuildTypeIconDigitalIdle(RectTransform iconRect, Color pulse)
+    {
+        Sequence idle = DOTween.Sequence().SetUpdate(true);
+        idle.AppendInterval(1.05f);
+        idle.Append(iconRect.DOAnchorPosX(typeIconRestPosition.x + 3f, 0.045f).SetEase(Ease.OutQuad));
+        idle.Append(iconRect.DOAnchorPosX(typeIconRestPosition.x - 2f, 0.04f).SetEase(Ease.OutQuad));
+        idle.Append(iconRect.DOAnchorPosX(typeIconRestPosition.x, 0.05f).SetEase(Ease.InQuad));
+        idle.Append(typeIcon.DOColor(pulse, 0.05f).SetEase(Ease.OutQuad));
+        idle.Append(typeIcon.DOColor(typeIconRestColor, 0.08f).SetEase(Ease.InQuad));
+        idle.Append(iconRect.DOScale(typeIconRestScale * 1.035f, 0.8f).SetEase(Ease.InOutSine));
+        idle.Append(iconRect.DOScale(typeIconRestScale, 0.8f).SetEase(Ease.InOutSine));
+        idle.SetLoops(-1, LoopType.Restart);
+        return idle;
+    }
+
+    private static bool TryGetButtonImage(Button button, out Image image)
+    {
+        image = null;
+        if (button == null)
+            return false;
+
+        image = button.targetGraphic as Image;
+        if (image == null)
+            image = button.GetComponent<Image>();
+        return image != null;
+    }
+
+    private static RectTransform FindButtonLabel(Button button)
+    {
+        if (button == null)
+            return null;
+
+        Transform label = button.transform.Find("Label");
+        return label as RectTransform;
+    }
+
     private void CacheVisualFramePose()
     {
         if (visualFrameRect == null)
@@ -1854,6 +2376,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         presentationMode = PresentationMode.Browse;
         namingPresentationTween?.Kill();
         namingPresentationTween = null;
+        RestoreNameEntryLayout();
         HideStarterNameInput();
         SetPanelTitleVisible(true);
 
@@ -1873,7 +2396,16 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             visualFrameRect.anchoredPosition = visualFrameAnchoredPosition;
             visualFrameRect.sizeDelta = visualFrameSizeDelta;
             visualFrameRect.pivot = visualFramePivot;
+            visualFrameRect.localScale = Vector3.one;
         }
+
+        if (visualFrameColorCaptured && visualFrameRect != null)
+        {
+            Image frameImage = visualFrameRect.GetComponent<Image>();
+            if (frameImage != null)
+                frameImage.color = visualFrameRestColor;
+        }
+        visualFrameColorCaptured = false;
 
         RestoreSpeciesNamePose();
         RestorePortraitPanelPlate();
@@ -2276,7 +2808,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
             TextAlignmentOptions.MidlineLeft,
             "");
         typeLabel.rectTransform.sizeDelta = new Vector2(320f, RuntimeTypeIconSize);
-        typeLabel.enableWordWrapping = false;
+        typeLabel.textWrappingMode = TextWrappingModes.NoWrap;
         typeLabel.color = Color.white;
 
         roleText = CreateText(
@@ -2426,7 +2958,7 @@ public class StarterSelectionUI : MonoBehaviour, ICaptureSuccessPortraitPresente
         tmp.fontStyle = style;
         tmp.alignment = alignment;
         tmp.text = value;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
         return tmp;
     }
 

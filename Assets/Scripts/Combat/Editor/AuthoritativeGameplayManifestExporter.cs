@@ -5,8 +5,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Chainbound.Combat.Core;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -502,26 +500,170 @@ namespace Chainbound.Combat.Editor
         }
 
         private static void WriteUtf8(string path, string value) => File.WriteAllText(path, value, new UTF8Encoding(false));
-        private static string HashCanonicalJson(string json)
+        /// <summary>
+        /// Mirrors Chainbound.BattleService CanonicalJsonHash (System.Text.Json): object keys sorted ordinally,
+        /// no whitespace, numbers kept exactly as written (never re-parsed as doubles), strings re-escaped with
+        /// System.Text.Json's default JavaScriptEncoder rules. Hash = lowercase SHA-256 of the UTF-8 canonical text.
+        /// </summary>
+        public static string HashCanonicalJson(string json)
         {
-            JToken parsed = JToken.Parse(json);
-            string canonical = Canonicalize(parsed).ToString(Formatting.None);
-            return BitConverter.ToString(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(canonical)))
-                .Replace("-", "").ToLowerInvariant();
+            if (json == null) throw new ArgumentNullException(nameof(json));
+            int index = 0;
+            if (json.Length > 0 && json[0] == '\uFEFF') index = 1;
+            var builder = new StringBuilder(json.Length);
+            SkipJsonWhitespace(json, ref index);
+            WriteCanonicalValue(json, ref index, builder);
+            SkipJsonWhitespace(json, ref index);
+            if (index != json.Length) throw new FormatException($"Unexpected trailing JSON content at {index}.");
+            using (SHA256 sha = SHA256.Create())
+                return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(builder.ToString())))
+                    .Replace("-", "").ToLowerInvariant();
         }
 
-        private static JToken Canonicalize(JToken token)
+        private static void WriteCanonicalValue(string json, ref int index, StringBuilder output)
         {
-            if (token is JObject sourceObject)
+            if (index >= json.Length) throw new FormatException("Unexpected end of JSON.");
+            char c = json[index];
+            if (c == '{')
             {
-                var result = new JObject();
-                foreach (JProperty property in sourceObject.Properties().OrderBy(x => x.Name, StringComparer.Ordinal))
-                    result.Add(property.Name, Canonicalize(property.Value));
-                return result;
+                index++;
+                var members = new List<KeyValuePair<string, string>>();
+                SkipJsonWhitespace(json, ref index);
+                if (index < json.Length && json[index] == '}') { index++; }
+                else
+                {
+                    while (true)
+                    {
+                        SkipJsonWhitespace(json, ref index);
+                        string key = ReadJsonString(json, ref index);
+                        SkipJsonWhitespace(json, ref index);
+                        ExpectJsonChar(json, ref index, ':');
+                        SkipJsonWhitespace(json, ref index);
+                        var value = new StringBuilder();
+                        WriteCanonicalValue(json, ref index, value);
+                        members.Add(new KeyValuePair<string, string>(key, value.ToString()));
+                        SkipJsonWhitespace(json, ref index);
+                        if (index < json.Length && json[index] == ',') { index++; continue; }
+                        ExpectJsonChar(json, ref index, '}');
+                        break;
+                    }
+                }
+                output.Append('{');
+                bool first = true;
+                foreach (KeyValuePair<string, string> member in members.OrderBy(x => x.Key, StringComparer.Ordinal))
+                {
+                    if (!first) output.Append(',');
+                    first = false;
+                    AppendServiceEscapedString(output, member.Key);
+                    output.Append(':').Append(member.Value);
+                }
+                output.Append('}');
+                return;
             }
-            if (token is JArray sourceArray)
-                return new JArray(sourceArray.Select(Canonicalize));
-            return token.DeepClone();
+            if (c == '[')
+            {
+                index++;
+                output.Append('[');
+                SkipJsonWhitespace(json, ref index);
+                if (index < json.Length && json[index] == ']') { index++; output.Append(']'); return; }
+                bool first = true;
+                while (true)
+                {
+                    SkipJsonWhitespace(json, ref index);
+                    if (!first) output.Append(',');
+                    first = false;
+                    WriteCanonicalValue(json, ref index, output);
+                    SkipJsonWhitespace(json, ref index);
+                    if (index < json.Length && json[index] == ',') { index++; continue; }
+                    ExpectJsonChar(json, ref index, ']');
+                    break;
+                }
+                output.Append(']');
+                return;
+            }
+            if (c == '"') { AppendServiceEscapedString(output, ReadJsonString(json, ref index)); return; }
+            if (c == '-' || (c >= '0' && c <= '9'))
+            {
+                int start = index;
+                while (index < json.Length && "+-0123456789.eE".IndexOf(json[index]) >= 0) index++;
+                output.Append(json, start, index - start); // number text exactly as written
+                return;
+            }
+            foreach (string literal in new[] { "true", "false", "null" })
+            {
+                if (string.CompareOrdinal(json, index, literal, 0, literal.Length) == 0)
+                {
+                    index += literal.Length;
+                    output.Append(literal);
+                    return;
+                }
+            }
+            throw new FormatException($"Unexpected JSON character '{c}' at {index}.");
+        }
+
+        private static string ReadJsonString(string json, ref int index)
+        {
+            ExpectJsonChar(json, ref index, '"');
+            var value = new StringBuilder();
+            while (true)
+            {
+                if (index >= json.Length) throw new FormatException("Unterminated JSON string.");
+                char c = json[index++];
+                if (c == '"') return value.ToString();
+                if (c != '\\') { value.Append(c); continue; }
+                if (index >= json.Length) throw new FormatException("Unterminated JSON escape.");
+                char e = json[index++];
+                switch (e)
+                {
+                    case '"': value.Append('"'); break;
+                    case '\\': value.Append('\\'); break;
+                    case '/': value.Append('/'); break;
+                    case 'b': value.Append('\b'); break;
+                    case 'f': value.Append('\f'); break;
+                    case 'n': value.Append('\n'); break;
+                    case 'r': value.Append('\r'); break;
+                    case 't': value.Append('\t'); break;
+                    case 'u':
+                        value.Append((char)Convert.ToInt32(json.Substring(index, 4), 16));
+                        index += 4;
+                        break;
+                    default: throw new FormatException($"Invalid JSON escape '\\{e}'.");
+                }
+            }
+        }
+
+        // System.Text.Json default encoder: only printable ASCII outside the HTML-sensitive set passes through.
+        private static void AppendServiceEscapedString(StringBuilder output, string value)
+        {
+            output.Append('"');
+            foreach (char c in value)
+            {
+                switch (c)
+                {
+                    case '\\': output.Append("\\\\"); continue;
+                    case '\n': output.Append("\\n"); continue;
+                    case '\r': output.Append("\\r"); continue;
+                    case '\t': output.Append("\\t"); continue;
+                    case '\b': output.Append("\\b"); continue;
+                    case '\f': output.Append("\\f"); continue;
+                }
+                bool passThrough = c >= 0x20 && c <= 0x7E && c != '"' && c != '<' && c != '>' && c != '&' && c != '\'' && c != '+' && c != '`';
+                if (passThrough) output.Append(c);
+                else output.Append("\\u").Append(((int)c).ToString("X4"));
+            }
+            output.Append('"');
+        }
+
+        private static void SkipJsonWhitespace(string json, ref int index)
+        {
+            while (index < json.Length && (json[index] == ' ' || json[index] == '\t' || json[index] == '\n' || json[index] == '\r')) index++;
+        }
+
+        private static void ExpectJsonChar(string json, ref int index, char expected)
+        {
+            if (index >= json.Length || json[index] != expected)
+                throw new FormatException($"Expected '{expected}' at {index}.");
+            index++;
         }
         private static int ReadArray(int[] values, int index) => values != null && index >= 0 && index < values.Length ? values[index] : 0;
         private static int[] CopyArray(int[] source) { var result = new int[6]; if (source != null) Array.Copy(source, result, Math.Min(6, source.Length)); return result; }

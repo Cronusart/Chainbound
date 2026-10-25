@@ -251,7 +251,7 @@ public class SpawnService : MonoBehaviour
             foreach (var p in uniqueRootPlayers)
             {
                 string sceneInfo = p.scene.name == "DontDestroyOnLoad" ? "DontDestroyOnLoad" : p.scene.name;
-                Debug.Log($"[SpawnService]   - Root: {p.name} in scene: {sceneInfo}, InstanceID: {p.GetInstanceID()}");
+                Debug.Log($"[SpawnService]   - Root: {p.name} in scene: {sceneInfo}, InstanceID: {p.GetEntityId()}");
             }
         }
         
@@ -271,7 +271,7 @@ public class SpawnService : MonoBehaviour
                     if (persistedPlayer == null)
                     {
                         persistedPlayer = p;
-                        Debug.Log($"[SpawnService] Keeping persisted player root: {p.name} (InstanceID: {p.GetInstanceID()})");
+                        Debug.Log($"[SpawnService] Keeping persisted player root: {p.name} (InstanceID: {p.GetEntityId()})");
                     }
                     else
                     {

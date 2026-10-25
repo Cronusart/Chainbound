@@ -502,7 +502,7 @@ namespace SignalJam.UI.MenuNavigation
             bool distinct = given.Length > 0
                 && !string.Equals(given, species, System.StringComparison.OrdinalIgnoreCase);
             nameLabel.alignment = TextAlignmentOptions.TopLeft;
-            nameLabel.enableWordWrapping = false;
+            nameLabel.textWrappingMode = TextWrappingModes.NoWrap;
             nameLabel.overflowMode = TextOverflowModes.Ellipsis;
             nameLabel.richText = true;
             nameLabel.lineSpacing = distinct ? -6f : 0f;

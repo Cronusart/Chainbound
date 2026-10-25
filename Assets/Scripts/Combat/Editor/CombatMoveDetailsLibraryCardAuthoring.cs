@@ -97,6 +97,7 @@ namespace Chainbound.Combat.Editor
             Transform existing = details.Find("Details2");
             if (existing != null)
             {
+                // Details2 is authored, including MoveStats and MoveDetails. Do not rebuild it.
                 card = existing.GetComponent<CombatMoveLibraryCardView>();
                 return false;
             }

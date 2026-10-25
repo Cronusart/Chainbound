@@ -620,7 +620,7 @@ namespace SignalJam.UI.MenuNavigation.Editor
                 label.alignment = TextAlignmentOptions.MidlineLeft;
                 label.color = WireframeInk;
                 label.fontSize = 18f;
-                label.enableWordWrapping = true;
+                label.textWrappingMode = TextWrappingModes.Normal;
                 label.raycastTarget = false;
                 if (font != null)
                 {
