@@ -51,7 +51,74 @@ namespace Chainbound.Combat.Editor
                 ["move_ap.ts"] = BuildMoveAp(header, moves),
                 ["move_flags.generated.ts"] = BuildMoveFlags(header, moves),
                 ["known_pool.generated.ts"] = BuildKnownPools(header, byId),
+                ["stamp_rules.generated.ts"] = BuildStampRules(header, moves),
             };
+        }
+
+        // Server copy of the ModifierValidationService.CanApply inputs, so the stamp roller
+        // only picks modifiers that do something on the host move and stack with each other.
+        private static string BuildStampRules(string header, List<MoveDefinitionSO> moves)
+        {
+            List<ModifierDefinitionSO> modifiers = LoadAll<ModifierDefinitionSO>()
+                .Where(x => !string.IsNullOrWhiteSpace(x.sectionId))
+                .GroupBy(x => x.sectionId.Trim(), StringComparer.Ordinal)
+                .Select(x => x.First())
+                .OrderBy(x => x.sectionId.Trim(), StringComparer.Ordinal)
+                .ToList();
+
+            var sb = new StringBuilder(header);
+            sb.AppendLine("export interface StampModifierRule {");
+            sb.AppendLine("  readonly allowedCategories: readonly string[];");
+            sb.AppendLine("  readonly forbiddenTags: readonly string[];");
+            sb.AppendLine("  readonly forbiddenCombos: readonly string[];");
+            sb.AppendLine("  readonly slotType: string;");
+            sb.AppendLine("  readonly trigger: string;");
+            sb.AppendLine("  readonly powerCap: number;");
+            sb.AppendLine("  readonly apCostCap: number;");
+            sb.AppendLine("  readonly weight: number;");
+            sb.AppendLine("  readonly requiresMultiHit: boolean;");
+            sb.AppendLine("}");
+            sb.AppendLine();
+            sb.AppendLine("export const STAMP_MODIFIER_RULES: Readonly<Record<string, StampModifierRule>> = {");
+            foreach (ModifierDefinitionSO mod in modifiers)
+            {
+                string id = mod.sectionId.Trim();
+                string allowed = StringArray((mod.allowedCategories ?? Array.Empty<MoveCategory>()).Select(x => x.ToString()));
+                sb.AppendLine($"  \"{Escape(id)}\": {{ allowedCategories: {allowed}, forbiddenTags: {StringArray(mod.forbiddenTags)}, " +
+                    $"forbiddenCombos: {StringArray(mod.forbiddenCombinations)}, slotType: \"{mod.slotType}\", trigger: \"{mod.triggerCondition}\", " +
+                    $"powerCap: {Mathf.Max(0, mod.powerCap)}, apCostCap: {Mathf.Max(0, mod.apCostCap)}, weight: {Mathf.Max(0, mod.weight)}, " +
+                    $"requiresMultiHit: {(ModifierValidationService.RequiresMultiHitHost(id) ? "true" : "false")} }},");
+            }
+            sb.AppendLine("};");
+            sb.AppendLine();
+            sb.AppendLine("export interface StampHostMove {");
+            sb.AppendLine("  readonly category: string;");
+            sb.AppendLine("  readonly power: number;");
+            sb.AppendLine("  readonly apCost: number;");
+            sb.AppendLine("  readonly tags: readonly string[];");
+            sb.AppendLine("  readonly multiHit: boolean;");
+            sb.AppendLine("}");
+            sb.AppendLine();
+            sb.AppendLine("export const STAMP_HOST_MOVES: Readonly<Record<string, StampHostMove>> = {");
+            foreach (MoveDefinitionSO move in moves)
+            {
+                bool multiHit = ModifierValidationService.IsMultiHitHost(move.hitCountMin, move.hitCountMax, move.tags);
+                sb.AppendLine($"  \"{Escape(move.moveId)}\": {{ category: \"{move.category}\", power: {move.power}, apCost: {move.apCost}, " +
+                    $"tags: {StringArray(move.tags)}, multiHit: {(multiHit ? "true" : "false")} }},");
+            }
+            sb.AppendLine("};");
+            return sb.ToString();
+        }
+
+        private static string StringArray(IEnumerable<string> values)
+        {
+            if (values == null)
+                return "[]";
+            List<string> items = values
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => $"\"{Escape(x.Trim())}\"")
+                .ToList();
+            return items.Count == 0 ? "[]" : $"[{string.Join(", ", items)}]";
         }
 
         private static List<MoveDefinitionSO> LoadMoves()

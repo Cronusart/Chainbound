@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Chainbound.Combat.Tests
@@ -60,6 +61,61 @@ namespace Chainbound.Combat.Tests
             Assert.AreEqual(0, AppliedCount(battle, "6.1-a"));
             Assert.IsTrue(battle.Foe.statuses.Exists(status => status.statusId == StatusId.Staggered && !status.IsExpired),
                 "The same blocked hit still applies the move's status.");
+        }
+
+        [Test]
+        public void FullBarrierBlock_StillProcsOnHitAndOnCritModifiers()
+        {
+            ModifierDefinitionSO siphon = Modifier("6.1-b", ModifierCategory.TRG, "On hit: 15-25% chance to drain 1 AP", 100f, 100f, ModifierTriggerCondition.OnHit);
+            siphon.triggerChance = 0.2f;
+            ModifierDefinitionSO wallet = Modifier("6.2-a", ModifierCategory.TRG, "On crit: +1 AP", 1f, 1f, ModifierTriggerCondition.OnCrit);
+            Battle battle = Start("user", "foe", CreateModifierCatalog(siphon, wallet), 5);
+            battle.Foe.currentAP = 3;
+            battle.Foe.AddBarrier(BarrierType.SingleHit, 1, 0, 2, "audit-wall");
+            int foeHp = battle.Foe.currentHP;
+            MoveInstance strike = DamageMove("strike", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 30);
+            strike.resolveProfile.crit = new MoveCritTuning { forceCrit = true };
+            AddModifier(strike, "6.1-b", ModifierCategory.TRG, 100f, 100f, ModifierTriggerCondition.OnHit);
+            strike.modifiers[0].effectValueLocked = true;
+            AddModifier(strike, "6.2-a", ModifierCategory.TRG, 1f, 1f, ModifierTriggerCondition.OnCrit);
+            battle.User.moves.Add(strike);
+            battle.Resolver.ExecuteTurn(battle.State, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
+
+            Assert.AreEqual(foeHp, battle.Foe.currentHP, "The barrier absorbed the whole hit.");
+            Assert.AreEqual(1, AppliedCount(battle, "6.1-b"), "A connected hit procs on-hit stamps even at 0 damage.");
+            Assert.AreEqual(1, AppliedCount(battle, "6.2-a"), "A connected crit procs on-crit stamps even at 0 damage.");
+        }
+
+        [Test]
+        public void RedirectedMiss_CountsAsAMissForPunishMiss()
+        {
+            ModifierDefinitionSO punish = Modifier("6.3-e", ModifierCategory.TRG, "If target missed last turn: +20% accuracy and +15% power", 15f, 15f);
+            Battle battle = Start("user", "foe", CreateModifierCatalog(punish), 13);
+            battle.Partner = CreateChainling("partner", 3, 20);
+            battle.State.team0.chainlings.Add(battle.Partner);
+            MoveInstance probe = DamageMove("probe", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 20);
+            AddModifier(probe, "6.3-e", ModifierCategory.TRG, 15f, 15f);
+            battle.User.moves.Add(probe);
+            battle.Partner.moves.Add(DamageMove("poke", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 10));
+            MoveInstance whiff = DamageMove("whiff", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 10);
+            whiff.resolveProfile.accuracy = new MoveAccuracyTuning { forceMiss = true };
+            battle.Foe.moves.Add(whiff);
+            battle.State = battle.Resolver.InitializeBattle(battle.State.team0, battle.State.team1);
+            battle.Partner.AddBarrier(BarrierType.SingleHit, 1, 0, 2, "audit-wall");
+            battle.User.statuses.Add(new StatusInstance(StatusId.DamageIntercept, StatusClass.Consumed, StatusOrigin.General, 1, "audit"));
+            battle.User.redirectInterceptor = battle.Partner;
+
+            battle.Resolver.ExecuteTurn2v2(battle.State,
+                new List<CombatAction> { CombatAction.Pass(0), CombatAction.Pass(0) },
+                new List<CombatAction> { CombatAction.UseMove(1, 0, 0, 0) });
+            Assert.IsTrue(battle.Resolver.Log.Events.Any(e =>
+                e.eventType == CombatEventType.Miss && e.sourceId == "foe" && e.targetId == "partner"),
+                "The foe's attack was redirected onto the walled partner and missed.");
+
+            battle.Resolver.ExecuteTurn2v2(battle.State,
+                new List<CombatAction> { CombatAction.UseMove(0, 0, 1, 0), CombatAction.Pass(0) },
+                new List<CombatAction> { CombatAction.Pass(1) });
+            Assert.AreEqual(1, AppliedCount(battle, "6.3-e"), "A miss on a redirected target still counts for miss-reading stamps.");
         }
 
         [Test]

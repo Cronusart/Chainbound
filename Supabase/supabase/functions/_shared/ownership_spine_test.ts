@@ -310,6 +310,7 @@ Deno.test("two-modifier Stamp never repeats a modifier", async () => {
     2,
     1,
     EXPECTED_MODIFIER_POOL_HASH,
+    "baseline_striker",
   );
   assertEquals(result.modifierIds.length, 2);
   assertNotEquals(result.modifierIds[0], result.modifierIds[1]);
@@ -324,14 +325,14 @@ Deno.test("Stamp entropy is bound to the Known and excludes client idempotency",
   assertEquals(deriveSource.includes("stamp:v2:"), true);
 
   const secret = Uint8Array.from({ length: 64 }, (_, index) => index);
-  const first = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH);
-  const retry = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH);
+  const first = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH, "baseline_striker");
+  const retry = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH, "baseline_striker");
   assertEquals(retry, first);
 });
 
 Deno.test("Stamp lock uses leftover digest bytes and stays inside catalog min/max", async () => {
   const secret = Uint8Array.from({ length: 64 }, (_, index) => index);
-  const result = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH);
+  const result = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH, "baseline_striker");
   assertEquals(result.modifierEffectValues.length, 1);
   const bounds = MODIFIER_EFFECT_BOUNDS[result.modifierIds[0] as keyof typeof MODIFIER_EFFECT_BOUNDS];
   const min = Math.min(bounds.min, bounds.max);

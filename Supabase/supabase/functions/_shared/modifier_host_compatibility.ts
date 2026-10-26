@@ -1,114 +1,65 @@
 import { MODIFIER_POOL } from "./modifier_pool.generated.ts";
-import { MOVE_CARD_CATALOG } from "./ownership_card_catalog.generated.ts";
+import { STAMP_HOST_MOVES, STAMP_MODIFIER_RULES } from "./stamp_rules.generated.ts";
+import type { StampHostMove, StampModifierRule } from "./stamp_rules.generated.ts";
 
-// Mirrors the non-empty AllowedCategories cells in Modifiers.csv. Empty rows are
-// intentionally unrestricted. Keep this map covered by the pool-compatibility test
-// when the generated modifier pool changes.
-const ALLOWED_HOST_CATEGORIES: Readonly<Record<string, readonly string[]>> = {
-  "2.1-a": ["DamagingMelee", "DamagingRanged"],
-  "2.1-b": ["DamagingMelee", "DamagingRanged"],
-  "2.1-c": ["DamagingMelee", "DamagingRanged"],
-  "2.1-d": ["DamagingMelee", "DamagingRanged"],
-  "2.1-e": ["DamagingMelee", "DamagingRanged"],
-  "2.3-a": ["DamagingMelee", "DamagingRanged"],
-  "2.3-b": ["DamagingMelee", "DamagingRanged"],
-  "2.3-c": ["DamagingMelee", "DamagingRanged"],
-  "2.3-d": ["DamagingMelee", "DamagingRanged"],
-  "2.3-e": ["DamagingMelee", "DamagingRanged"],
-  "3.2-a": ["DamagingMelee", "DamagingRanged", "StatusUtility"],
-  "4.2-a": ["DamagingMelee", "DamagingRanged"],
-  "4.3-a": ["DamagingMelee", "DamagingRanged"],
-  "4.3-b": ["DamagingMelee", "DamagingRanged"],
-  "5.1-a": ["DamagingMelee", "DamagingRanged"],
-  "5.2-a": ["DamagingMelee"],
-  "5.2-b": ["DamagingMelee"],
-  "5.2-c": ["DamagingMelee"],
-  "5.2-d": ["DamagingMelee", "DamagingRanged"],
-  "6.1-a": ["DamagingMelee", "DamagingRanged"],
-  "6.1-b": ["DamagingMelee", "DamagingRanged"],
-  "6.1-c": ["DamagingMelee", "DamagingRanged"],
-  "6.1-d": ["DamagingMelee", "DamagingRanged"],
-  "6.1-e": ["DamagingMelee", "DamagingRanged"],
-  "6.1-f": ["DamagingMelee", "DamagingRanged"],
-  "6.2-a": ["DamagingMelee", "DamagingRanged"],
-  "6.2-b": ["DamagingMelee", "DamagingRanged"],
-  "6.2-c": ["DamagingMelee", "DamagingRanged"],
-  "6.3-a": ["DamagingMelee", "DamagingRanged"],
-  "6.3-b": ["DamagingMelee", "DamagingRanged"],
-  "6.3-d": ["DamagingMelee", "DamagingRanged"],
-  "6.3-e": ["DamagingMelee", "DamagingRanged"],
-  "6.4-d": ["Support"],
-  "6.4-e": ["Support"],
-  "6.4-h": ["Support"],
-  "6.4-i": ["Support"],
-  "7.1-a": ["DamagingMelee", "DamagingRanged"],
-  "7.1-b": ["Support"],
-  "7.1-c": ["Support"],
-  "7.1-d": ["StatusUtility"],
-  "7.2-a": ["DamagingMelee", "DamagingRanged"],
-  "7.2-b": ["DamagingMelee", "DamagingRanged"],
-  "7.2-c": ["StatusUtility"],
-  "10.1-a": ["DamagingMelee", "DamagingRanged"],
-  "10.1-b": ["DamagingMelee", "DamagingRanged"],
-  "10.1-c": ["DamagingMelee", "DamagingRanged"],
-  "10.1-d": ["Passive"],
-  "1.1-a": ["DamagingMelee", "DamagingRanged"],
-  "1.2-a": ["DamagingMelee", "DamagingRanged"],
-  "2.4-a": ["StatusUtility", "Support"],
-  "2.5-a": ["StatusUtility", "Support"],
-  "2.5-b": ["StatusUtility", "Support"],
-  "2.6-a": ["DamagingMelee", "DamagingRanged"],
-  "3.3-a": ["DamagingMelee", "DamagingRanged", "StatusUtility"],
-  "4.4-a": ["DamagingMelee", "DamagingRanged"],
-  "4.5-a": ["Support"],
-  "4.6-a": ["DamagingMelee", "DamagingRanged"],
-  "4.7-a": ["DamagingMelee", "DamagingRanged"],
-  "5.2-e": ["DamagingMelee"],
-  "5.2-f": ["DamagingMelee"],
-  "5.2-g": ["DamagingMelee"],
-  "6.5-a": ["DamagingMelee", "DamagingRanged"],
-  "6.5-b": ["DamagingMelee", "DamagingRanged"],
-  "6.6-a": ["DamagingMelee", "DamagingRanged"],
-  "6.6-b": ["DamagingMelee", "DamagingRanged"],
-  "6.7-a": ["DamagingMelee", "DamagingRanged"],
-  "6.7-b": ["DamagingMelee", "DamagingRanged"],
-  "6.7-c": ["DamagingMelee", "DamagingRanged"],
-  "8.1-a": ["Passive"],
-  "8.1-b": ["Passive"],
-  "8.1-c": ["Passive"],
-  "8.1-d": ["Passive"],
-  "8.1-e": ["Passive"],
-  "1.3-a": ["StatusUtility", "Support", "Passive"],
-  "1.3-b": ["StatusUtility"],
-  "4.8-a": ["DamagingMelee", "DamagingRanged"],
-  "6.8-a": ["StatusUtility", "Support"],
-  "6.8-b": ["StatusUtility", "Support", "Passive"],
-  "6.8-c": ["StatusUtility", "Support", "Passive"],
-  "6.8-d": ["Passive"],
-  "6.8-e": ["StatusUtility", "Support", "Passive"],
-  "6.8-f": ["StatusUtility", "Support", "Passive"],
-  "6.8-g": ["Support", "StatusUtility"],
-  "7.3-a": ["StatusUtility", "Support"],
-};
+// Server mirror of ModifierValidationService.CanApply. The rules come from the
+// imported Unity assets (CombatServerTablesExporter), so the roller and the client
+// trust check read the same AllowedCategories, ForbiddenTags, ForbiddenCombos,
+// SlotType, caps, and Extra Hit's multi-hit requirement. Weight 0 rows (retired)
+// stay in the pinned pool but are never rolled.
 
-function normalizeCategory(value: string): string {
-  return value.replace(/[^A-Za-z0-9]/g, "");
+function ruleFor(sectionId: string): StampModifierRule {
+  const rule = STAMP_MODIFIER_RULES[sectionId];
+  if (!rule) throw new Error("unknown_stamp_modifier");
+  return rule;
 }
 
-export function eligibleModifierPoolForMove(moveId: string): readonly string[] {
-  const catalog = MOVE_CARD_CATALOG as Record<string, { categoryName: string }>;
-  const move = catalog[moveId];
-  if (!move) throw new Error("unknown_stamp_host_move");
+function hostFor(moveId: string): StampHostMove {
+  const host = STAMP_HOST_MOVES[(moveId ?? "").trim()];
+  if (!host) throw new Error("unknown_stamp_host_move");
+  return host;
+}
 
-  const hostCategory = normalizeCategory(move.categoryName);
-  const eligible = MODIFIER_POOL.filter((sectionId) => {
-    const allowed = ALLOWED_HOST_CATEGORIES[sectionId];
-    return !allowed || allowed.includes(hostCategory);
-  });
+function sameText(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+function fitsHost(rule: StampModifierRule, host: StampHostMove): boolean {
+  if (rule.weight <= 0) return false;
+  if (rule.allowedCategories.length > 0 && !rule.allowedCategories.includes(host.category)) return false;
+  if (rule.powerCap > 0 && host.power > rule.powerCap) return false;
+  if (rule.apCostCap > 0 && host.apCost > rule.apCostCap) return false;
+  if (rule.requiresMultiHit && !host.multiHit) return false;
+  return !rule.forbiddenTags.some((tag) => host.tags.some((hostTag) => sameText(tag, hostTag)));
+}
+
+/** True when two modifiers can share one stamp: no forbidden combo, slot type, or swap trigger clash. */
+export function canPairModifiers(firstId: string, secondId: string): boolean {
+  if (sameText(firstId, secondId)) return false;
+  const first = ruleFor(firstId);
+  const second = ruleFor(secondId);
+  if (first.forbiddenCombos.some((id) => sameText(id, secondId))) return false;
+  if (second.forbiddenCombos.some((id) => sameText(id, firstId))) return false;
+  if (first.slotType !== "None" && first.slotType === second.slotType) return false;
+  if (first.trigger === "OnSwapIn" && second.trigger === "OnSwapIn") return false;
+  if (first.trigger === "OnSwapOut" && second.trigger === "OnSwapOut") return false;
+  return true;
+}
+
+/** Pool rows that work on this host move, in pinned pool order. */
+export function eligibleModifierPoolForMove(moveId: string): readonly string[] {
+  const host = hostFor(moveId);
+  const eligible = MODIFIER_POOL.filter((sectionId) => fitsHost(ruleFor(sectionId), host));
   if (eligible.length === 0) throw new Error("no_compatible_modifiers");
   return eligible;
 }
 
+/** Second-modifier candidates for a two-modifier stamp whose first roll is firstId. */
+export function eligibleSecondModifiersForMove(moveId: string, firstId: string): readonly string[] {
+  return eligibleModifierPoolForMove(moveId).filter((sectionId) => canPairModifiers(firstId, sectionId));
+}
+
 export function allowedHostCategoriesForModifier(sectionId: string): readonly string[] | null {
-  return ALLOWED_HOST_CATEGORIES[sectionId] ?? null;
+  const rule = STAMP_MODIFIER_RULES[sectionId];
+  return rule && rule.allowedCategories.length > 0 ? rule.allowedCategories : null;
 }
