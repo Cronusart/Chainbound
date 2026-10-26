@@ -75,16 +75,63 @@ Don't rely on the Unity logs alone.
 
 ### 4. Negative cases
 
-| Case | How | Expected |
-|---|---|---|
-| Consume replay | Call consume again on the same PDA | Fails, `InvalidEncounterStatus` |
-| Same seed twice | Request again with the same seed context | Fails at PDA `init` (account exists) |
-| Wrong owner | Consume from a second wallet | Fails, `InvalidAuthority` (seed/has_one mismatch) |
-| Forged callback | Call `fulfill_encounter` directly from the test wallet | Fails: missing VRF identity signer |
+Detailed plan, 2026-10-26. Most of these cases cost nothing: they run through `simulateTransaction` against PDA `57BTELf5…` from run 1, which is already Consumed. They need no signature and spend nothing. The one case that needs a known seed runs after step 5, using a seed the latency script recorded.
+
+Facts these checks rely on (from the IDL and the pinned SDK at `60761a7`):
+
+- `InvalidAuthority` = **6012**, `InvalidEncounterStatus` = **6036**.
+- `consume_encounter_randomness` derives the PDA from `["encounter_request", owner, request_seed]` with `has_one = owner`, so a different signer fails the **seeds** constraint first (Anchor 2006).
+- `#[vrf_callback]` injects `#[account(address = scoped_vrf_identity(&crate::ID))] vrf_program_identity: Signer`. The IDL can't show this address because it's computed by a function. For this program it is `DYXgVktMgrs4x5Xft9KnbtEtmjHqzGUdvQyK5HWAwCDS` (seeds `["identity", program]` under `Vrf1RNUj…`). Run 1's fulfill passed exactly this account to `FulfillEncounter`.
+
+| # | Case | How | Expected | Cost |
+|---|---|---|---|---|
+| N1 | Consume replay | Simulate `consume_encounter_randomness` on `57BTELf5…` with owner `GcrG…3qbx` | `Custom(6036)` `InvalidEncounterStatus` | free |
+| N2 | Wrong owner | Same, signed as a different wallet (`7oBf…M5Pj`) | Anchor `2006 ConstraintSeeds`; if the PDA were passed with a matching seed, `6012` instead | free |
+| N3 | Forged callback, wrong identity | Simulate `fulfill_encounter` on `57BTELf5…` with `vrf_program_identity` = the test wallet (a real signer) | Anchor `2012 ConstraintAddress`; the handler never runs | free |
+| N4 | Forged callback, right identity | `DYXg…` as signer without the VRF program | Can't be built: nobody holds a key for a PDA. **Don't simulate it with `sigVerify: false`**, which skips signature checks and would falsely "pass". Covered by the runtime and by run 1 | n/a |
+| N5 | Duplicate fulfill | Already observed: 3 oracle resubmissions in run 1 failed inside `Vrf1RNUj…` (`0x1`) and never reached the program | Recorded, no rerun | free |
+| N6 | Same seed twice | After step 5, simulate `request_encounter` with a seed from a finished run | System program `allocate` fails, account already in use | free |
+| N7 | Consume before fulfill (optional) | During step 5, simulate consume right after the request confirms, before the oracle answers | `Custom(6036)`; skip if the oracle has already answered (it took about 1 s in run 1) | free |
+
+Pass when each simulated case returns exactly its expected error, the program's logs never show a handler running past its constraints, and N1–N3 leave `57BTELf5…` unchanged (status Consumed, same bytes).
+
+How to run: one small script, `tools/vrf-efficacy/negative.cjs`, alongside the existing `vrf_preflight.cjs` logic. It builds each transaction, calls `simulateTransaction` with `sigVerify: false` and `replaceRecentBlockhash: true`, and asserts the error code. It needs no keypair, so I can run it directly.
 
 ### 5. Latency sample
 
-Repeat step 2 ten times with fresh seed contexts. Record request → fulfilled and request → consumed times (min, median, max) and whether any request never fulfilled. These numbers set the roll_request timeout and how long the Candy Machine reveal must cover.
+Detailed plan, 2026-10-26.
+
+**Approach: a CLI loop, not ten Editor runs.** Ten harness runs mean 20 Phantom approvals, and the human approval time swamps the oracle time. Run 1 already measured the Editor path (10.7 s to fulfilled, 14.4 s total). A CLI loop signs locally and measures the chain and the oracle cleanly.
+
+- Script: `tools/vrf-efficacy/latency.cjs` (`@solana/web3.js` from `backend/chainbound_game/node_modules`).
+- Signer: the `7oBf…M5Pj` keypair file, passed by path. **You run it**, so the secret key never leaves your machine or enters this chat.
+- RPC: public `https://api.devnet.solana.com`. This is operator tooling, not the game client, so it doesn't go through the authenticated proxy, and no provider key is involved.
+- Cost: about 1,780,000 lamports per run (5,000 + rent 1,270,000 + MagicBlock 500,000 + 5,000; no priority fee). Ten runs ≈ 0.018 SOL; the wallet has 10 SOL. The rent stays locked (no close instruction).
+
+Per run, sequentially, with a 5 s gap between runs:
+
+1. Fresh random 32-byte seed; build and sign `request_encounter`; send; record `t0`, the signature and the slot.
+2. Subscribe to the PDA (`accountSubscribe`, confirmed) with a 250 ms polling fallback. Record `t_fulfilled_confirmed` when the status byte becomes Fulfilled, then `t_fulfilled_finalized`.
+3. From `getSignaturesForAddress(PDA)`: the fulfill signature, its slot, its signer (must be a MagicBlock oracle), and the count of duplicate oracle submissions.
+4. Send `consume_encounter_randomness`; record `t_consumed`; read the account and assert Consumed with non-zero bytes.
+5. Write one JSON line per run. On a 60 s timeout, record `timeout` and continue; stop after 3 timeouts in a row.
+
+Output: `results.jsonl` plus a summary table. Paste it here and I'll verify a sample of the signatures from RPC and record it.
+
+| Metric | Proposed pass bar |
+|---|---|
+| Runs fulfilled | 10 / 10 |
+| Request slot → fulfill slot | p90 ≤ 8 slots (about 3 s) |
+| Send → fulfilled, confirmed | p90 ≤ 5 s |
+| Send → fulfilled, finalized | recorded only (sets the Unity polling choice) |
+| Consume | 10 / 10 Consumed, bytes non-zero |
+| Fulfill signer | always a MagicBlock oracle; the callback identity is always `DYXg…` |
+
+What the numbers decide:
+
+- **roll_request timeout:** `max(10 s, 3 × p90 confirmed latency)` before showing "still rolling".
+- **Unity polling:** if confirmed is reliably much faster than finalized, poll at confirmed (or subscribe) and settle at finalized. The current 2 s poll at finalized is most of run 1's 10.7 s.
+- **Candy Machine reveal length:** sized to cover the confirmed p90.
 
 ### 6. Clean up and record
 
