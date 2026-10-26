@@ -143,9 +143,9 @@ Public audit tool: given an operation ID, it fetches the PDA, recomputes the res
 | Oracle never fulfills | **Open question:** does MagicBlock support re-requesting for an existing PDA? If not, after a long deadline cancel the operation and release the RAM reservation. Never fall back to HMAC entropy for the same operation |
 | Settle fails after fulfill | Reconcile retries; settlement is idempotent on the operation ID |
 
-## Cost (to be filled from the efficacy run)
+## Cost (measured in efficacy run 1)
 
-Per roll: the `request_roll` and `consume_roll` fees (result authority), plus `RollRequest` rent (191 bytes with the discriminator, about 1.6M lamports at the measured Devnet rate, refunded by `close_roll`), plus any MagicBlock fee, which isn't documented yet. The fulfill fee is the oracle's.
+Per roll: the `request_roll` and `consume_roll` fees (result authority), plus `RollRequest` rent (191 bytes with the discriminator, about 1.6M lamports at the measured Devnet rate, refunded by `close_roll`), plus the MagicBlock request charge (500,000 lamports, measured on Devnet). The fulfill fee is the oracle's. Run 1 measured the oracle at about 1 s, so most of the wait the player sees is polling and the confirmation level.
 
 ## Work breakdown (after approval)
 

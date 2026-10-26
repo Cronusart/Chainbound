@@ -853,7 +853,9 @@ Expected polling defaults are 2 seconds with a 30-second timeout. Failures inclu
 simulation, wallet cancellation, request transaction failure, missing/wrong-owned request PDA,
 invalid discriminator/status, callback delay, RPC timeout, and consume replay.
 
-There is no successful Devnet VRF request signature yet; VRF remains outside this deployment slice
+**2026-10-26: first successful Devnet round trip.** Request `3wsH59XY…`, fulfill `2xWD6kTe…` (MagicBlock oracle `vrfkfM4u…`, about 1 s after the request), consume `4pUfX8ns…`; PDA `57BTELf5…` verified Consumed with 32 non-zero bytes. Cost 1,930,000 lamports, including a 500,000-lamport MagicBlock request charge and 1,270,000 locked rent. Full record: [MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md](../Solana/MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md#run-1-results-2026-10-26-verified-from-devnet-rpc).
+
+Before that run there was no successful Devnet VRF request signature; VRF remains outside this deployment slice
 and must not absorb fee design. Stamp continues to use its approved authority-server entropy.
 Future Stamp VRF integration must
 feed the fulfilled bytes into the existing compatibility/`CanApply` selection and lock

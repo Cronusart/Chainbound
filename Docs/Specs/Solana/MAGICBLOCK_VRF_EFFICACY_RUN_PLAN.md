@@ -1,6 +1,6 @@
 # MagicBlock VRF Devnet efficacy run — plan
 
-> **Status:** plan only, not run. Drafted 2026-10-26. Results go in the "MagicBlock VRF efficacy track" section of [OWNERSHIP_SPINE_PHASE1_DEVNET.md](../Economy/OWNERSHIP_SPINE_PHASE1_DEVNET.md). The follow-on design is [ROLL_REQUEST_VRF_DESIGN_v1.md](../Economy/ROLL_REQUEST_VRF_DESIGN_v1.md).
+> **Status:** first round trip **PASSED** on 2026-10-26 (steps 0–3; see "Run 1 results"). Steps 4–5, the negative cases and the latency sample, are still to run. Results go in the "MagicBlock VRF efficacy track" section of [OWNERSHIP_SPINE_PHASE1_DEVNET.md](../Economy/OWNERSHIP_SPINE_PHASE1_DEVNET.md). The follow-on design is [ROLL_REQUEST_VRF_DESIGN_v1.md](../Economy/ROLL_REQUEST_VRF_DESIGN_v1.md).
 
 ## Goal
 
@@ -100,3 +100,32 @@ Repeat step 2 ten times with fresh seed contexts. Record request → fulfilled a
 | Request lands, never fulfills | Oracle not serving this queue on Devnet | Check MagicBlock status or Discord; retry later; record the time |
 | Fulfill lands, callback fails | Callback account metas or discriminator mismatch | Fulfill transaction logs; the request ix must pass the request PDA as the writable callback account |
 | Wallet rejects in the browser bridge | Wrong cluster in the wallet | Switch the wallet to Devnet |
+
+## Run 1 results (2026-10-26, verified from Devnet RPC)
+
+Payer `GcrGhPrxRS9y1hKCtXU4cVbMbeAtw96xdqdg7LKY3qbx`, connected through the Editor browser bridge (Phantom, sign-and-send).
+
+| Item | Value |
+|---|---|
+| Request PDA | `57BTELf5oweTjMCS12tE1LofmyZya1T8LCK7XGpyfXod` |
+| Request tx | `3wsH59XYpkLKiHJB7WB9uoosfftXM133147eLsS2Sh7BBJxCqiGjVjk7trbfoMqx2a3dtPqJ53XixLWfrYxiNKTk`, slot 515,481,760, finalized, no error, 43,148 CUs; logs show `RequestEncounter` → system (PDA init) → `Vrf1RNUj…` → system transfer |
+| Fulfill tx | `2xWD6kTemxrnCqfeY1wffidWYFbfe6MQ5yVEygSYxRPhdkwQpUFa726nsvhKKSihjLsG8Tdra6Nt1qP1GQNbNRXD`, slot 515,481,763 (+3 slots, about 1 s), signed by MagicBlock oracle `vrfkfM4uoisXZQPrFiS2brY4oMkU9EWjyvmvqaFd5AS`, `Vrf1RNUj…` → `FulfillEncounter`, 32,423 CUs |
+| Consume tx | `4pUfX8nst7d8pYYP8SgAH6Qq1AaKU5WqPssDk11nZ67Yo5nT46SWhFdQaDBCQoDSaRZcUtxx74q25eJa5aZeq3S3`, slot 515,481,788, `ConsumeEncounterRandomness`, 3,618 CUs |
+| Account state | Owner = Chainbound program, `EncounterRequest` discriminator correct, status **Consumed**, 32 non-zero bytes equal to the logged `a86c95f4…f83ebe32` |
+| Duplicate oracle submissions | 3 more oracle transactions one slot after the fulfill, all `custom program error: 0x1` inside `Vrf1RNUj…`; they never reached the Chainbound program, and the oracle paid their fees |
+| Latency (Unity) | request → fulfilled 10,713 ms; request → consumed 14,403 ms. On-chain the fulfill landed about 1 s after the request; the rest is the 2 s poll interval, finalized commitment, and the second wallet approval |
+
+Cost to the payer (balance 15,000,000,000 → 14,998,070,000 lamports, total **1,930,000**):
+
+| Part | Lamports |
+|---|---:|
+| Request fee (Phantom adds a priority fee) | 80,000 |
+| `EncounterRequest` rent (locked: there is no close instruction) | 1,270,000 |
+| MagicBlock VRF request charge (the system transfer inside the VRF CPI) | 500,000 |
+| Consume fee | 80,000 |
+
+Fixes needed to get here, all on `sync/local-20261020`:
+
+- `70bb590d`: unscoped transactions were labelled `legacy-configured` and the cluster guard rejected all of them.
+- `79f22ccc`: the Editor bridge was sign-only and sent through the RPC proxy, which correctly refuses `sendTransaction`; it now uses the wallet's sign-and-send.
+- Editor setup, not code: the stale Supabase dev session was cleared, and the test wallet was added to `beta_allowlist`.
