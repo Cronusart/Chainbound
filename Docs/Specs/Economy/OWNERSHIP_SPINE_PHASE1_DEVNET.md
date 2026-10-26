@@ -831,6 +831,8 @@ feature flag, second Stamp, Archive Binding, mainnet, or Closed Beta enablement.
 
 This track is separate from economy/fee design.
 
+> Run plan: [MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md](../Solana/MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md) (2026-10-26). Follow-on Known/Stamp design: [ROLL_REQUEST_VRF_DESIGN_v1.md](ROLL_REQUEST_VRF_DESIGN_v1.md).
+
 | Pin | Value |
 |---|---|
 | MagicBlock base-layer VRF program | `Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz` |
