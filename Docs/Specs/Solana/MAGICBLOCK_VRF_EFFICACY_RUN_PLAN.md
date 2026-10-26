@@ -97,6 +97,17 @@ Pass when each simulated case returns exactly its expected error, the program's 
 
 How to run: one small script, `tools/vrf-efficacy/negative.cjs`, alongside the existing `vrf_preflight.cjs` logic. It builds each transaction, calls `simulateTransaction` with `sigVerify: false` and `replaceRecentBlockhash: true`, and asserts the error code. It needs no keypair, so I can run it directly.
 
+**Results, 2026-10-26** (`node tools/vrf-efficacy/negative.cjs --pda 57BTELf5… --owner GcrG… --other 7oBf…`): **4/4 PASS**
+
+| Case | Result |
+|---|---|
+| N1 consume replay | `6036 InvalidEncounterStatus`, raised at `lib.rs:2142` |
+| N2 wrong owner | `2006 ConstraintSeeds` on `encounter_request` |
+| N3 forged callback, wrong identity | `2012 ConstraintAddress` on `vrf_program_identity`; the handler never ran |
+| PDA after N1–N3 | Unchanged: Consumed, same bytes |
+
+N6 runs after step 5 (`--seeds <latency results file>`). N7 is recorded per run by the latency script.
+
 ### 5. Latency sample
 
 Detailed plan, 2026-10-26.
