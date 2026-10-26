@@ -342,6 +342,8 @@ Also seen, not in scope here:
 
 ### All-In: DECIDED, implementation spec (Codex)
 
+> **Implemented 2026-10-25.** `DrainApEffect` has the `AllAllies` branch, the `all_in` row carries `DrainAP:10:100%:AllAllies:all_in` with `ResolveBeforeFirstHit`, and the asset, gameplay manifest, and server move tables are regenerated (CSV/asset parity: 0 diffs). Tests: four `AllIn_*` 2v2 tests in `ApCostLadderTests.cs` (slower ally fails for no AP and foes keep AP; faster and PRIOR allies resolve; a 0-AP ally move resolves; a miss still wipes). The optional AI penalty is not done. Pool placement is still open.
+
 **Decision.** On cast, All-In drains **all** AP from the caster **and** its active ally. Enemy AP is untouched. This is the full wipe, not the 2 AP partial.
 
 **Today.**

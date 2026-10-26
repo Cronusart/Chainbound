@@ -188,7 +188,7 @@ shard_scatter,Shard Scatter,DamagingRanged,Shard,Legendary,AllEnemies,Projectile
 viral_surge,Viral Surge,StatusUtility,Meme,Mythic,Self,None,0,1,0,1,1,0,,,UTIL|APMAN,None,0,false,,Randomly gain +2 AP or lose 1 AP; always gain +1 random stat.,,,,,,,,,,,,,,,,,,,,,,,,
 dice_roll,Dice Roll,StatusUtility,Meme,Common,SingleAlly,None,0,1,0,1,1,0,,,UTIL,None,0,false,20,Heal an ally for 20% MaxHP.,,,,,,,,,,,,,,,,,,,,,,,,
 jackpot_shot,Jackpot Shot,DamagingRanged,Meme,Mythic,SingleEnemy,Projectile,58,2,95,1,1,0,,,DMG,None,0,false,,Ranged hit rolls for double; normal; or half damage.,,,,,,,,,,,,,,,,,,,,,,2|1|0.5,,
-all_in,All-In,DamagingMelee,Meme,Epic,SingleEnemy,Contact,98,4,95,1,1,2,,,DMG|APMAN|SpendRemainingAp,None,0,false,,Spends all your AP (min 4). Can't use All-In again next turn.,,,,,,,,,,,,,,,,,,,,,,,,
+all_in,All-In,DamagingMelee,Meme,Epic,SingleEnemy,Contact,98,4,95,1,1,2,,,DMG|APMAN|SpendRemainingAp,None,0,false,,"Spends all your AP (min 4). On cast, your ally's AP also drops to 0. Can't use All-In again next turn.",,,,DrainAP:10:100%:AllAllies:all_in,,,ResolveBeforeFirstHit,,,,,,,,,,,,,,,,,
 wildcard_swap,Wildcard Swap,StatusUtility,Meme,Common,SingleEnemy,None,0,2,0,1,1,0,,,UTIL,None,0,false,,Randomly swap one of your stage changes with target.,,,,,,,,,,,,,,,,,,,,,,,,
 double_or_nothing,Double-or-Nothing,Passive,Meme,Mythic,Self,None,0,0,0,1,1,0,,,PAS|TRIG|APMAN,EndOfTurn,0,false,,Passive - end turn 60% +1 AP; 40% -1 AP.,,,,,,,,,,,,,,,,,,,,,,,,
 meme_momentum,Meme Momentum,Passive,Meme,Mythic,Self,None,0,0,0,1,1,0,,,PAS|TRIG|APMAN,EndOfTurn,0,false,,Passive - a landed hit raises both Atk by 2 and grants +2 AP. A miss drops them by 1.,,,,,,,,,,,,,,,,,,,,,,,,

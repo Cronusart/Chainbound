@@ -76,6 +76,8 @@ The default narration template is `A combat modifier changed the outcome.` Setup
 
 ## Faults for the follow-up agent
 
+> **Runner check 2026-10-25:** all 25 tests in `TriggerConditionalModifierAuditTests.cs` pass in the Editor, including every `TriggerConditionalModifierKnownFaultTests` case. Faults 1–5 are fixed in `CombatResolver`. Faults 7 and 9 were resolved by the rule changes now locked in the contract tests `GritGuard_ProtectsAfterTheCarrierActs_AndCoversTheFollowingTurn` and `PostCastBarrier_GrantsOnHit_SkipsAMiss_AndPreservesAnEqualBarrier`. Fault 6 (full-block proc rule) is still open: its contract test still locks today's split. Fault 8 (stamp roller ignores host category, server side) was not re-checked.
+
 Ordered by how directly they cheat a stamped asset.
 
 ### 1. The stamped percent does not drive on-hit, on-crit, on-KO, or on-escape odds

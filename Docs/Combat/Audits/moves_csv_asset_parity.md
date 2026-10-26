@@ -1,8 +1,8 @@
 # Moves CSV ↔ Asset Parity
 
 - CSV: `Docs/Specs/Combat/Data/Moves.csv`
-- Assets: `Assets/Data/Combat/Moves` / `Assets/Data/Combat/Moves/MoveDatabase.asset`
-- Generated: 2026-10-21 06:24:40
+- Assets: `Assets/Data/Combat/Moves` / `Assets/Data/Combat/Moves/Database/MoveDatabase.asset`
+- Generated: 2026-10-25 14:51:43
 - CSV rows: 211
 - Assets: 211
 - Field diffs: 0

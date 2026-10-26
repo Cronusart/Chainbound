@@ -1084,6 +1084,26 @@ namespace Chainbound.Combat
                 return;
             }
 
+            // Own-team drain (All-In). ResolveUtilityTarget has no ally case and would fall back to the enemy.
+            if (effect != null && effect.targetOverride == MoveTargeting.AllAllies)
+            {
+                TeamState allies = context?.sourceTeam;
+                if (allies == null)
+                    return;
+                System.Collections.Generic.List<ChainlingInstance> activeAllies = allies.GetActiveChainlings();
+                if (activeAllies == null)
+                    return;
+                for (int i = 0; i < activeAllies.Count; i++)
+                {
+                    ChainlingInstance ally = activeAllies[i];
+                    if (ally == null || !ally.isAlive)
+                        continue;
+                    int drained = _apService.Drain(ally, amount, turn, move.definitionId);
+                    LogDrain(source, ally, move, drained, turn);
+                }
+                return;
+            }
+
             ChainlingInstance resolvedTarget = ResolveUtilityTarget(source, target, effect);
             int resolvedDrain = _apService.Drain(resolvedTarget, amount, turn, move.definitionId);
             LogDrain(source, resolvedTarget, move, resolvedDrain, turn);

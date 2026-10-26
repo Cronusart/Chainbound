@@ -151,6 +151,55 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void AllIn_SlowerAllysQueuedMoveFailsForNoAp_AndFoesKeepTheirAp()
+        {
+            MoveInstance jab = Move("jab", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 1, 10);
+            jab.resolveProfile.accuracy.forceHit = true;
+            CombatResolver resolver = RunAllIn2v2(allySpeed: 5, jab, forceMiss: false, out ChainlingInstance ally, out ChainlingInstance foe, out int foeApControl);
+
+            Assert.AreEqual(0, ally.currentAP);
+            Assert.IsTrue(resolver.Log.Events.Any(e => e.eventType == CombatEventType.ActionFailed && e.sourceId == "ally"));
+            Assert.IsFalse(resolver.Log.Events.Any(e => e.eventType == CombatEventType.MoveUsed && e.sourceId == "ally"));
+            Assert.AreEqual(foeApControl, foe.currentAP, "All-In must not touch enemy AP.");
+        }
+
+        [Test]
+        public void AllIn_FasterAndPriorAlliesResolve_AndOnlyLoseTheirLeftoverAp()
+        {
+            MoveInstance fastJab = Move("jab", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 1, 10);
+            fastJab.resolveProfile.accuracy.forceHit = true;
+            CombatResolver fast = RunAllIn2v2(allySpeed: 40, fastJab, forceMiss: false, out ChainlingInstance fastAlly, out _, out _);
+            Assert.IsTrue(fast.Log.Events.Any(e => e.eventType == CombatEventType.MoveUsed && e.sourceId == "ally"));
+            Assert.AreEqual(0, fastAlly.currentAP);
+
+            MoveInstance priorJab = Move("jab", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 1, 10);
+            priorJab.resolveProfile.accuracy.forceHit = true;
+            priorJab.tags.Add("PRIOR");
+            CombatResolver prior = RunAllIn2v2(allySpeed: 5, priorJab, forceMiss: false, out ChainlingInstance priorAlly, out _, out _);
+            Assert.IsTrue(prior.Log.Events.Any(e => e.eventType == CombatEventType.MoveUsed && e.sourceId == "ally"));
+            Assert.AreEqual(0, priorAlly.currentAP);
+        }
+
+        [Test]
+        public void AllIn_SlowerAllysZeroApMoveStillResolves()
+        {
+            MoveInstance boost = Move("ap_boost", MoveCategory.Support, MoveTargeting.Self, 0, 0);
+            CombatResolver resolver = RunAllIn2v2(allySpeed: 5, boost, forceMiss: false, out _, out _, out _);
+
+            Assert.IsTrue(resolver.Log.Events.Any(e => e.eventType == CombatEventType.MoveUsed && e.sourceId == "ally"));
+            Assert.IsFalse(resolver.Log.Events.Any(e => e.eventType == CombatEventType.ActionFailed && e.sourceId == "ally"));
+        }
+
+        [Test]
+        public void AllIn_WipesAllyApEvenOnAMiss()
+        {
+            MoveInstance boost = Move("ap_boost", MoveCategory.Support, MoveTargeting.Self, 0, 0);
+            RunAllIn2v2(allySpeed: 5, boost, forceMiss: true, out ChainlingInstance ally, out _, out _);
+
+            Assert.AreEqual(0, ally.currentAP);
+        }
+
+        [Test]
         public void FeeCollector_DrainsOnlyTheFirstOpposingActorWhenAhead()
         {
             RunFeeCollector(holderStartAp: 1, firstStartAp: 3, secondStartAp: 3, firstSpeed: 40, secondSpeed: 10, out int firstAp, out int secondAp);
@@ -697,6 +746,70 @@ namespace Chainbound.Combat.Tests
             resolver.ExecuteTurn(state, CombatAction.UseMove(0, 0), CombatAction.Pass(1));
             apAfter = actor.currentAP;
             return hpBefore - foe.currentHP;
+        }
+
+        // 2v2 All-In: actor (speed 20) casts All-In, ally queues allyMove. foeApControl is the foe's AP
+        // after the same turn with the actor passing, so enemy AP can be compared without knowing regen.
+        private CombatResolver RunAllIn2v2(
+            int allySpeed,
+            MoveInstance allyMove,
+            bool forceMiss,
+            out ChainlingInstance ally,
+            out ChainlingInstance foe,
+            out int foeApControl)
+        {
+            foeApControl = RunAllIn2v2Once(allySpeed, allyMove, forceMiss, castAllIn: false, out _, out _, out _);
+            RunAllIn2v2Once(allySpeed, allyMove, forceMiss, castAllIn: true, out CombatResolver resolver, out ally, out foe);
+            return resolver;
+        }
+
+        private int RunAllIn2v2Once(
+            int allySpeed,
+            MoveInstance allyMove,
+            bool forceMiss,
+            bool castAllIn,
+            out CombatResolver resolver,
+            out ChainlingInstance ally,
+            out ChainlingInstance foe)
+        {
+            resolver = CreateResolver();
+            ChainlingInstance actor = Chainling("actor", 20);
+            actor.currentAP = 6;
+            ally = Chainling("ally", allySpeed);
+            ally.currentAP = 4;
+            foe = Chainling("foe", 10, 400);
+            foe.currentAP = 3;
+
+            MoveInstance allIn = Move("all_in", MoveCategory.DamagingMelee, MoveTargeting.SingleEnemy, 4, 98);
+            allIn.rechargeTurns = 2;
+            allIn.tags.Add("SpendRemainingAp");
+            allIn.resolveProfile.accuracy.forceHit = !forceMiss;
+            allIn.resolveProfile.accuracy.forceMiss = forceMiss;
+            allIn.resolveProfile.utilityExecutionTiming = MoveUtilityExecutionTiming.ResolveBeforeFirstHit;
+            allIn.utilityEffects.Add(new UtilityEffectPayload
+            {
+                effectType = UtilityEffectType.DrainAP,
+                apGain = 10,
+                chance = 1f,
+                targetOverride = MoveTargeting.AllAllies,
+            });
+            actor.moves.Add(allIn);
+
+            MoveInstance copy = Move(allyMove.definitionId, allyMove.category, allyMove.targeting, allyMove.apCost, allyMove.basePower);
+            copy.tags.AddRange(allyMove.tags);
+            copy.resolveProfile.accuracy.forceHit = allyMove.resolveProfile.accuracy.forceHit;
+            ally.moves.Add(copy);
+
+            CombatState state = resolver.InitializeBattle(Team(0, actor, ally), Team(1, foe));
+            resolver.ExecuteTurn2v2(
+                state,
+                new List<CombatAction>
+                {
+                    castAllIn ? CombatAction.UseMove(0, 0) : CombatAction.Pass(0),
+                    CombatAction.UseMove(0, 0),
+                },
+                new List<CombatAction> { CombatAction.Pass(1) });
+            return foe.currentAP;
         }
 
         private void RunFeeCollector(
