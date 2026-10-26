@@ -96,6 +96,33 @@ namespace Chainbound.Combat
             return Convert.FromBase64String(await tcs.Task.ConfigureAwait(false));
         }
 
+        /// <summary>
+        /// The browser wallet signs and submits through its own RPC, matching the MWA
+        /// SignAndSend path. The authenticated RPC proxy never relays sendTransaction.
+        /// </summary>
+        public async Task<string> SignAndSendTransactionAsync(byte[] txBytes)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("No wallet connected via bridge.");
+
+            string id = Guid.NewGuid().ToString("N");
+            var tcs = new TaskCompletionSource<string>();
+            _pending[id] = tcs;
+
+            string payload = Convert.ToBase64String(txBytes);
+            _pendingRequests.Enqueue(
+                $"{{\"type\":\"sign_and_send_transaction\",\"id\":\"{id}\",\"payload\":\"{payload}\"}}");
+
+            var completed = await Task.WhenAny(
+                tcs.Task, Task.Delay(120_000)).ConfigureAwait(false);
+            _pending.TryRemove(id, out _);
+
+            if (completed != tcs.Task)
+                throw new TimeoutException("Transaction signing timed out.");
+
+            return await tcs.Task.ConfigureAwait(false);
+        }
+
         public async Task<byte[]> SignMessageAsync(byte[] messageBytes)
         {
             if (!IsConnected)

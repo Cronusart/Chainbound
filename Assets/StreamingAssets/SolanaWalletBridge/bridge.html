@@ -344,6 +344,8 @@
                 var msg = await apiGet('/api/pending');
                 if (msg.type === 'sign_transaction') {
                     await handleSignTransaction(msg);
+                } else if (msg.type === 'sign_and_send_transaction') {
+                    await handleSignAndSendTransaction(msg);
                 } else if (msg.type === 'sign_message') {
                     await handleSignMessage(msg);
                 }
@@ -386,6 +388,49 @@
                 });
                 setStatus('Connected via ' + connectedWallet.name, 'connected');
                 log('Sign rejected: ' + err.message, 'error');
+            }
+        }
+
+        /* ── Sign and Send Transaction ─────────────────────────────── */
+        /* The wallet submits through its own RPC, like MWA on Android. */
+        async function handleSignAndSendTransaction(msg) {
+            try {
+                if (typeof connectedProvider.signAndSendTransaction !== 'function') {
+                    throw new Error(connectedWallet.name + ' does not support signAndSendTransaction');
+                }
+                setStatus('Approve transaction in ' + connectedWallet.name + '...', 'signing');
+                log('Sign and send request (id: ' + msg.id + ')');
+
+                var raw = Uint8Array.from(atob(msg.payload), function(c) { return c.charCodeAt(0); });
+                var tx;
+                if (raw[0] & 0x80) {
+                    tx = solanaWeb3.VersionedTransaction.deserialize(raw);
+                } else {
+                    tx = solanaWeb3.Transaction.from(raw);
+                }
+
+                var result = await connectedProvider.signAndSendTransaction(tx);
+                var signature = (result && result.signature) || result;
+                if (typeof signature !== 'string' || signature.length < 64) {
+                    throw new Error('Wallet returned no base58 transaction signature');
+                }
+
+                await apiPost('/api/sign-result', {
+                    id: msg.id,
+                    type: 'transaction_sent',
+                    signature: signature
+                });
+
+                setStatus('Connected via ' + connectedWallet.name, 'connected');
+                log('Transaction sent: ' + signature, 'success');
+            } catch (err) {
+                await apiPost('/api/sign-result', {
+                    id: msg.id,
+                    type: 'error',
+                    message: err.message
+                });
+                setStatus('Connected via ' + connectedWallet.name, 'connected');
+                log('Send rejected: ' + err.message, 'error');
             }
         }
 
