@@ -145,7 +145,7 @@ Public audit tool: given an operation ID, it fetches the PDA, recomputes the res
 
 ## Cost (to be filled from the efficacy run)
 
-Per roll: the `request_roll` and `consume_roll` fees (result authority), plus `RollRequest` rent (191 bytes with the discriminator, about 0.0022 SOL, refunded by `close_roll`), plus any MagicBlock fee, which isn't documented yet. The fulfill fee is the oracle's.
+Per roll: the `request_roll` and `consume_roll` fees (result authority), plus `RollRequest` rent (191 bytes with the discriminator, about 1.6M lamports at the measured Devnet rate, refunded by `close_roll`), plus any MagicBlock fee, which isn't documented yet. The fulfill fee is the oracle's.
 
 ## Work breakdown (after approval)
 

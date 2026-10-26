@@ -30,7 +30,7 @@ The deploy record's "Current Phase 1 + MagicBlock artifact" table (714,312 bytes
 
 - Use a dedicated Devnet test wallet. Never the upgrade authority `DkFm…gJmG`.
 - Fund it with about 0.05 SOL from the Devnet faucet.
-- Expected cost per round trip: two signed transactions from the test wallet (request, consume) plus rent for the `EncounterRequest` PDA, which is 122 bytes, about 0.00174 SOL. Whether MagicBlock charges the payer anything else is not documented; measure it.
+- Expected cost per round trip: two signed transactions from the test wallet (request, consume) plus rent for the `EncounterRequest` PDA, which is 122 bytes, 1,270,000 lamports (measured). Whether MagicBlock charges the payer anything else is not documented; measure it.
 - `EncounterRequest` has no close instruction, so that rent is locked for good. Record this; roll_request adds a close path.
 
 ## Steps
@@ -40,6 +40,13 @@ The deploy record's "Current Phase 1 + MagicBlock artifact" table (714,312 bytes
 Build the `request_encounter` transaction for the funded test wallet and send it to `simulateTransaction` with `sigVerify: false` and `replaceRecentBlockhash: true`. Pass when `err` is null and the logs show `Instruction: RequestEncounter` followed by the CPI into `Vrf1RNUj…`. Record compute units.
 
 This catches account or queue mistakes before any SOL moves.
+
+**Result, 2026-10-26: PASS.** Test wallet `7oBf57qGZRZvNNcRjKiLMdxQ2TeMeA9ue8LtiwG5M5Pj` (10 SOL on Devnet, not the upgrade authority).
+
+- `err: null`, 38,350 of 200,000 compute units.
+- Logs: `Instruction: RequestEncounter` → system program (PDA init) → `Vrf1RNUj…` invoke (`Idx: 16`, one nested system call, 11,675 CUs) → success.
+- Measured `EncounterRequest` rent: 1,270,000 lamports (0.00127 SOL).
+- What the nested system call inside the VRF CPI pays for (a fee or a request account) only shows in a real run; compare the payer balance in step 3.
 
 ### 1. Editor setup
 
