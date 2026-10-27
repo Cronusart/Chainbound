@@ -459,11 +459,11 @@ namespace Chainbound.Combat.Tests
             Assert.AreEqual(62, rarityCounts["Common"]);
             Assert.AreEqual(43, rarityCounts["Uncommon"]);
             Assert.AreEqual(43, rarityCounts["Rare"]);
-            Assert.AreEqual(31, rarityCounts["Epic"]);
+            Assert.AreEqual(30, rarityCounts["Epic"]);
             Assert.AreEqual(21, rarityCounts["Legendary"]);
-            Assert.AreEqual(10, rarityCounts["Mythic"]);
+            Assert.AreEqual(11, rarityCounts["Mythic"]);
 
-            Assert.AreEqual("Epic", csvRarity["all_in"]);
+            Assert.AreEqual("Mythic", csvRarity["all_in"]);
             Assert.AreEqual("Legendary", csvRarity["cryo_ray"]);
             Assert.AreEqual("Legendary", csvRarity["hammer_sync"]);
             Assert.AreEqual("Legendary", csvRarity["fork_split"]);

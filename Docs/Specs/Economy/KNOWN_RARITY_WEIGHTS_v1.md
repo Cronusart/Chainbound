@@ -1,6 +1,8 @@
 # Rarity-weighted Known rolls with on-chain VRF tiers — draft v1
 
-> **Status:** DRAFT for approval, 2026-10-26. The Known curve is decided (**Ultra**, see "Decisions needed" 1); decisions 2–5 are still open. Nothing here is implemented. It extends [ROLL_REQUEST_VRF_DESIGN_v1.md](ROLL_REQUEST_VRF_DESIGN_v1.md) and answers its decision 1 (Known tier weights and membership). The VRF latency and cost numbers come from [MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md](../Solana/MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md).
+> **Status:** APPROVED 2026-10-26 (Cronus); see "Decisions" at the end.
+> - **Implemented, not yet deployed:** the on-chain tier (program and devnet tool) and All-In → Mythic in the data. Devnet needs a program upgrade and `set-odds`, both signed by the user.
+> - **Not started:** server settlement, the exporter's per-tier pools, and the Unity reveal. It extends [ROLL_REQUEST_VRF_DESIGN_v1.md](ROLL_REQUEST_VRF_DESIGN_v1.md) and answers its decision 1 (Known tier weights and membership). The VRF latency and cost numbers come from [MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md](../Solana/MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md).
 
 ## What changes for the player
 
@@ -69,15 +71,15 @@ Applied to `Moves.csv` and the 19 species assets today:
 | Common | 62 | — |
 | Uncommon | 42 | (`civet_beam` is `NO_CANDY`) |
 | Rare | 42 | `ore_strike` |
-| Epic | 27 | `transaction_tax`, `shard_partition`, `fox_feint`, `bean_sip` |
+| Epic | 26 (was 27; All-In moved to Mythic) | `transaction_tax`, `shard_partition`, `fox_feint`, `bean_sip` |
 | Legendary | 10 | `immutable_ledger`, `memory_leak`, `ember_wall`, `fork_split`, `deep_reap`, `ap_reserve`, `yield_spike`, `streamlined_flow`, `field_split`, `hammer_sync`, `cryo_ray` |
-| Mythic | 8 | `fuel_surge`, `chaos_strike` |
+| Mythic | 9 (with All-In) | `fuel_surge`, `chaos_strike` |
 
 Eligible Legendary moves: `defensive_reflex`, `overflow_reboot`, `combustive_shift`, `finish_burn`, `conductive_counter`, `thread_lock`, `crash_routine`, `shard_scatter`, `hype_train`, `gecko_guard`.
 
-Eligible Mythic moves: `voltage_rush`, `risk_spike`, `data_scramble`, `glitch_barrage`, `viral_surge`, `jackpot_shot`, `double_or_nothing`, `meme_momentum`.
+Eligible Mythic moves: `voltage_rush`, `risk_spike`, `data_scramble`, `glitch_barrage`, `viral_surge`, `jackpot_shot`, `double_or_nothing`, `meme_momentum`, `all_in`.
 
-`all_in` (Epic, Meme) would become eligible under this rule. That's the "rarity-weighted Known rolls" condition from the `COMBAT_ISSUES_MASTER` availability note, so approving this rule also approves All-In in the Candy Machine.
+`all_in` (Meme) is eligible under this rule. That meets the "rarity-weighted Known rolls" condition in the `COMBAT_ISSUES_MASTER` availability note. It was moved from Epic to Mythic on approval.
 
 How it's authored: `VendingConfigSO.knownPoolMoveIds` is replaced by the rule above, plus a `knownPoolExcludeIds` list for hand-picked exceptions. `CombatServerTablesExporter` generates one list per tier, and it fails the export if any tier ends up empty. That way every tier always has a move and nothing needs a roll-down rule.
 
@@ -145,14 +147,18 @@ Stamp uses the same mechanism with kind 2 and its own `RollOdds` row. The callba
 4. Server and Unity: settlement, audit endpoint, the Candy Machine odds display, and tier-coloured reveals sized to the 2.5 s latency budget.
 5. Devnet: a 1,000-draw distribution check against the simulator (`OddsSimulatorWindow`, switched to ppm), plus one on-chain round trip per kind.
 
-## Decisions needed
+## Decisions (Cronus, 2026-10-26)
 
-1. **Known curve:** **Decided 2026-10-26 (Cronus): Ultra.** Common 640,000 / Uncommon 250,000 / Rare 90,000 / Epic 17,000 / Legendary 2,800 / Mythic 200 ppm. At 10 rolls a day, that means:
+1. **Known curve: Ultra.** Common 640,000 / Uncommon 250,000 / Rare 90,000 / Epic 17,000 / Legendary 2,800 / Mythic 200 ppm. At 10 rolls a day, that means:
    - **Mythic:** 1 in 5,000, about 500 days on average, about a 5.8% chance in a month, and about 52% in a year.
    - **Legendary:** 1 in 357, about 36 days.
    - **Epic:** 1 in 59, about 6 days.
-   - **A specific Mythic move:** 1 in 40,000.
-2. **Pool rule:** the rule above (all eligible minus signatures, `NO_CANDY` and `BOSS_ONLY`), or a hand-picked shorter list. This also decides All-In.
-3. **Typed moves:** the rule puts typed moves of every element in the Candy Machine. ECONOMY_01 positions the market as "mostly typeless Common and Uncommon". Fine for Candy, or keep Common/Uncommon candy typeless?
-4. **Stamp curve:** fix the drift to ECONOMY_01 (0.5% Mythic), or move Stamps to the same Steep curve.
-5. **Tier on-chain** (recommended, this draft) or **server-only** (the original roll_request design).
+   - **A specific Mythic move:** 1 in 45,000, with 9 eligible Mythics after All-In moved.
+2. **Pool rule: approved as written.**
+   - **All-In moves from Epic to Mythic.** It's the highest-damage move in the pool. `Moves.csv` and `Move_all_in.asset` are updated.
+   - **Candy pool counts are now** Epic 26 and Mythic 9.
+   - **Mythic caps now apply to All-In:** at most 2 per Chainling and 4 per team.
+   - **The gameplay manifest hash changes** with this, since rarity is in the manifest. The battle service needs a rebuild and redeploy after the Unity regeneration.
+3. **Typed moves: yes, in the Candy Machine.** ECONOMY_01's "market" is a separate vendor that sells discounted typeless moves with an occasional typed one; it isn't the Candy Machine.
+4. **Stamp curve: Ultra**, the same curve as Known (Mythic 0.02%). Confirmed by Cronus. This replaces the server's current Stamp cut-offs (45 / 30 / 17 / 5 / 2 / 1%) once Stamp moves to `roll_request`.
+5. **Tier on-chain: approved**, so rarity weights can be tested on VRF now.

@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Spends all your AP (min 4). On cast, your ally's AP also drops to 0. Can't use All-In again next turn.
   category: 0
   baseType: 14
-  rarity: 3
+  rarity: 5
   targeting: 0
   contactType: 0
   power: 98

@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_arguments)] // Anchor instruction ABIs intentionally expose explicit arguments.
 
 use crate::instruction::FulfillEncounter as FulfillEncounterInstruction;
+use crate::instruction::FulfillRoll as FulfillRollInstruction;
 use anchor_lang::prelude::*;
 use ephemeral_rollups_sdk::anchor::{vrf, vrf_callback};
 use ephemeral_rollups_sdk::vrf::{
@@ -8,6 +9,7 @@ use ephemeral_rollups_sdk::vrf::{
     instructions::{create_request_scoped_randomness_ix, RequestRandomnessParams},
     types::SerializableAccountMeta,
 };
+use solana_sha256_hasher::hashv;
 use mpl_core::{
     accounts::{BaseAssetV1, BaseCollectionV1},
     instructions::{BurnV1CpiBuilder, CreateV2CpiBuilder},
@@ -44,6 +46,17 @@ const SECONDS_PER_DAY: i64 = 86_400;
 const ENCOUNTER_PENDING: u8 = 0;
 const ENCOUNTER_FULFILLED: u8 = 1;
 const ENCOUNTER_CONSUMED: u8 = 2;
+const ROLL_KIND_KNOWN: u8 = 1;
+const ROLL_KIND_STAMP: u8 = 2;
+const ROLL_PENDING: u8 = 0;
+const ROLL_FULFILLED: u8 = 1;
+const ROLL_CONSUMED: u8 = 2;
+const ROLL_TIER_COUNT: usize = 6;
+const ROLL_TIER_UNSET: u8 = u8::MAX;
+const ROLL_PPM_TOTAL: u32 = 1_000_000;
+// About an hour of Devnet slots; the retention window is still an open design decision.
+const ROLL_CLOSE_DELAY_SLOTS: u64 = 9_000;
+const ROLL_SEED_DOMAIN: &[u8] = b"chainbound:roll:v1";
 
 #[program]
 pub mod chainbound_game {
@@ -1217,6 +1230,148 @@ pub mod chainbound_game {
         ctx.accounts.encounter_request.consume()
     }
 
+    /// Creates the published tier odds for one roll kind. Thresholds are cumulative parts per
+    /// million, Common..Mythic.
+    pub fn initialize_roll_odds(
+        ctx: Context<InitializeRollOdds>,
+        kind: u8,
+        cumulative_ppm: [u32; ROLL_TIER_COUNT],
+        pool_hash: [u8; 32],
+    ) -> Result<()> {
+        validate_roll_kind(kind)?;
+        validate_cumulative_ppm(&cumulative_ppm)?;
+        let odds = &mut ctx.accounts.roll_odds;
+        odds.kind = kind;
+        odds.odds_version = 1;
+        odds.cumulative_ppm = cumulative_ppm;
+        odds.pool_hash = pool_hash;
+        odds.bump = ctx.bumps.roll_odds;
+        emit!(RollOddsChanged {
+            kind,
+            odds_version: odds.odds_version,
+            cumulative_ppm,
+            pool_hash,
+        });
+        Ok(())
+    }
+
+    /// Replaces the odds for new requests. Pending requests keep the snapshot they were made with.
+    pub fn update_roll_odds(
+        ctx: Context<UpdateRollOdds>,
+        cumulative_ppm: [u32; ROLL_TIER_COUNT],
+        pool_hash: [u8; 32],
+    ) -> Result<()> {
+        validate_cumulative_ppm(&cumulative_ppm)?;
+        let odds = &mut ctx.accounts.roll_odds;
+        odds.odds_version = odds
+            .odds_version
+            .checked_add(1)
+            .ok_or(ChainboundError::ArithmeticOverflow)?;
+        odds.cumulative_ppm = cumulative_ppm;
+        odds.pool_hash = pool_hash;
+        emit!(RollOddsChanged {
+            kind: odds.kind,
+            odds_version: odds.odds_version,
+            cumulative_ppm,
+            pool_hash,
+        });
+        Ok(())
+    }
+
+    /// Requests VRF bytes for one paid operation (Known roll or Stamp). One PDA per operation, so
+    /// a second request for the same operation fails at init.
+    pub fn request_roll(
+        ctx: Context<RequestRoll>,
+        kind: u8,
+        operation_hash: [u8; 32],
+        subject_hash: [u8; 32],
+    ) -> Result<()> {
+        validate_roll_kind(kind)?;
+        let odds = &ctx.accounts.roll_odds;
+        let request = &mut ctx.accounts.roll_request;
+        request.status = ROLL_PENDING;
+        request.tier = ROLL_TIER_UNSET;
+        request.randomness = [0; 32];
+        request.kind = kind;
+        request.operation_hash = operation_hash;
+        request.subject_hash = subject_hash;
+        request.odds_version = odds.odds_version;
+        request.cumulative_ppm = odds.cumulative_ppm;
+        request.pool_hash = odds.pool_hash;
+        request.requested_at_slot = Clock::get()?.slot;
+        request.fulfilled_at_slot = 0;
+        request.consumed_at_slot = 0;
+        request.result_hash = [0; 32];
+        request.bump = ctx.bumps.roll_request;
+
+        let caller_seed = roll_caller_seed(
+            kind,
+            &operation_hash,
+            &subject_hash,
+            request.odds_version,
+            &request.pool_hash,
+        );
+        emit!(RollRequested {
+            kind,
+            operation_hash,
+            subject_hash,
+            odds_version: request.odds_version,
+            caller_seed,
+        });
+
+        let ix = create_request_scoped_randomness_ix(RequestRandomnessParams {
+            payer: ctx.accounts.result_authority.key(),
+            oracle_queue: ctx.accounts.oracle_queue.key(),
+            callback_program_id: crate::ID,
+            callback_discriminator: FulfillRollInstruction::DISCRIMINATOR.to_vec(),
+            caller_seed,
+            accounts_metas: Some(vec![SerializableAccountMeta {
+                pubkey: ctx.accounts.roll_request.key(),
+                is_signer: false,
+                is_writable: true,
+            }]),
+            ..Default::default()
+        });
+        ctx.accounts
+            .invoke_signed_vrf(&ctx.accounts.result_authority.to_account_info(), &ix)?;
+        Ok(())
+    }
+
+    /// MagicBlock callback. Stores the bytes and draws the rarity tier on-chain from the odds
+    /// snapshot taken at request time.
+    pub fn fulfill_roll(ctx: Context<FulfillRoll>, randomness: [u8; 32]) -> Result<()> {
+        let request = &mut ctx.accounts.roll_request;
+        request.fulfill(randomness, Clock::get()?.slot)?;
+        emit!(RollFulfilled {
+            kind: request.kind,
+            operation_hash: request.operation_hash,
+            tier: request.tier,
+            odds_version: request.odds_version,
+        });
+        Ok(())
+    }
+
+    /// Records the hash of the settled result exactly once.
+    pub fn consume_roll(ctx: Context<ConsumeRoll>, result_hash: [u8; 32]) -> Result<()> {
+        let request = &mut ctx.accounts.roll_request;
+        request.consume(result_hash, Clock::get()?.slot)?;
+        emit!(RollConsumed {
+            kind: request.kind,
+            operation_hash: request.operation_hash,
+            tier: request.tier,
+            result_hash,
+        });
+        Ok(())
+    }
+
+    /// Returns a consumed request's rent once the retention window has passed. Events keep the
+    /// audit trail.
+    pub fn close_roll(ctx: Context<CloseRoll>) -> Result<()> {
+        ctx.accounts
+            .roll_request
+            .ensure_closable(Clock::get()?.slot)
+    }
+
     pub fn apply_xp_and_maybe_level_up(
         _ctx: Context<ResultAuthorityOnly>,
         _chainling_instance_id: u32,
@@ -1589,6 +1744,126 @@ pub struct ConsumeEncounterRandomness<'info> {
     )]
     pub encounter_request: Account<'info, EncounterRequest>,
     pub owner: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(kind: u8)]
+pub struct InitializeRollOdds<'info> {
+    #[account(
+        init,
+        payer = program_authority,
+        space = 8 + RollOdds::LEN,
+        seeds = [b"roll_odds", kind.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub roll_odds: Account<'info, RollOdds>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = program_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub program_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateRollOdds<'info> {
+    #[account(
+        mut,
+        seeds = [b"roll_odds", roll_odds.kind.to_le_bytes().as_ref()],
+        bump = roll_odds.bump
+    )]
+    pub roll_odds: Account<'info, RollOdds>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = program_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    pub program_authority: Signer<'info>,
+}
+
+#[vrf]
+#[derive(Accounts)]
+#[instruction(kind: u8, operation_hash: [u8; 32])]
+pub struct RequestRoll<'info> {
+    #[account(
+        init,
+        payer = result_authority,
+        space = 8 + RollRequest::LEN,
+        seeds = [b"roll_request", kind.to_le_bytes().as_ref(), operation_hash.as_ref()],
+        bump
+    )]
+    pub roll_request: Account<'info, RollRequest>,
+    #[account(
+        seeds = [b"roll_odds", kind.to_le_bytes().as_ref()],
+        bump = roll_odds.bump
+    )]
+    pub roll_odds: Account<'info, RollOdds>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+    /// CHECK: Pinned to MagicBlock's base-layer queue for Solana Devnet/mainnet.
+    #[account(mut, address = DEFAULT_QUEUE)]
+    pub oracle_queue: AccountInfo<'info>,
+}
+
+#[vrf_callback]
+#[derive(Accounts)]
+pub struct FulfillRoll<'info> {
+    #[account(mut)]
+    pub roll_request: Account<'info, RollRequest>,
+}
+
+#[derive(Accounts)]
+pub struct ConsumeRoll<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"roll_request",
+            roll_request.kind.to_le_bytes().as_ref(),
+            roll_request.operation_hash.as_ref()
+        ],
+        bump = roll_request.bump
+    )]
+    pub roll_request: Account<'info, RollRequest>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    pub result_authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CloseRoll<'info> {
+    #[account(
+        mut,
+        close = result_authority,
+        seeds = [
+            b"roll_request",
+            roll_request.kind.to_le_bytes().as_ref(),
+            roll_request.operation_hash.as_ref()
+        ],
+        bump = roll_request.bump
+    )]
+    pub roll_request: Account<'info, RollRequest>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -2149,6 +2424,132 @@ impl EncounterRequest {
 }
 
 #[account]
+pub struct RollOdds {
+    pub kind: u8,
+    pub odds_version: u32,
+    pub cumulative_ppm: [u32; ROLL_TIER_COUNT],
+    pub pool_hash: [u8; 32],
+    pub bump: u8,
+}
+
+impl RollOdds {
+    pub const LEN: usize = 1 + 4 + (4 * ROLL_TIER_COUNT) + 32 + 1;
+}
+
+#[account]
+pub struct RollRequest {
+    // Status, tier and randomness first so clients can poll a compact prefix.
+    pub status: u8,
+    pub tier: u8,
+    pub randomness: [u8; 32],
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub subject_hash: [u8; 32],
+    pub odds_version: u32,
+    pub cumulative_ppm: [u32; ROLL_TIER_COUNT],
+    pub pool_hash: [u8; 32],
+    pub requested_at_slot: u64,
+    pub fulfilled_at_slot: u64,
+    pub consumed_at_slot: u64,
+    pub result_hash: [u8; 32],
+    pub bump: u8,
+}
+
+impl RollRequest {
+    pub const LEN: usize =
+        1 + 1 + 32 + 1 + 32 + 32 + 4 + (4 * ROLL_TIER_COUNT) + 32 + 8 + 8 + 8 + 32 + 1;
+
+    fn fulfill(&mut self, randomness: [u8; 32], fulfilled_at_slot: u64) -> Result<()> {
+        require!(
+            self.status == ROLL_PENDING,
+            ChainboundError::InvalidRollStatus
+        );
+        self.randomness = randomness;
+        self.tier = roll_tier(&randomness, &self.cumulative_ppm)?;
+        self.fulfilled_at_slot = fulfilled_at_slot;
+        self.status = ROLL_FULFILLED;
+        Ok(())
+    }
+
+    fn consume(&mut self, result_hash: [u8; 32], consumed_at_slot: u64) -> Result<()> {
+        require!(
+            self.status == ROLL_FULFILLED,
+            ChainboundError::InvalidRollStatus
+        );
+        require!(result_hash != [0; 32], ChainboundError::InvalidRollResult);
+        self.result_hash = result_hash;
+        self.consumed_at_slot = consumed_at_slot;
+        self.status = ROLL_CONSUMED;
+        Ok(())
+    }
+
+    fn ensure_closable(&self, current_slot: u64) -> Result<()> {
+        require!(
+            self.status == ROLL_CONSUMED,
+            ChainboundError::InvalidRollStatus
+        );
+        let open_at = self
+            .consumed_at_slot
+            .checked_add(ROLL_CLOSE_DELAY_SLOTS)
+            .ok_or(ChainboundError::ArithmeticOverflow)?;
+        require!(current_slot >= open_at, ChainboundError::RollCloseTooEarly);
+        Ok(())
+    }
+}
+
+fn validate_roll_kind(kind: u8) -> Result<()> {
+    require!(
+        kind == ROLL_KIND_KNOWN || kind == ROLL_KIND_STAMP,
+        ChainboundError::InvalidRollKind
+    );
+    Ok(())
+}
+
+/// Every tier must be reachable (strictly increasing) and the last threshold must close the range.
+fn validate_cumulative_ppm(cumulative_ppm: &[u32; ROLL_TIER_COUNT]) -> Result<()> {
+    let mut previous = 0u32;
+    for threshold in cumulative_ppm.iter() {
+        require!(*threshold > previous, ChainboundError::InvalidRollOdds);
+        previous = *threshold;
+    }
+    require!(previous == ROLL_PPM_TOTAL, ChainboundError::InvalidRollOdds);
+    Ok(())
+}
+
+/// Tier = first index whose cumulative threshold exceeds `u64_le(bytes 0..8) % 1_000_000`.
+/// The modulo bias is at most 1e6 / 2^64 per outcome.
+fn roll_tier(randomness: &[u8; 32], cumulative_ppm: &[u32; ROLL_TIER_COUNT]) -> Result<u8> {
+    let mut head = [0u8; 8];
+    head.copy_from_slice(&randomness[0..8]);
+    let draw = (u64::from_le_bytes(head) % ROLL_PPM_TOTAL as u64) as u32;
+    for (tier, threshold) in cumulative_ppm.iter().enumerate() {
+        if draw < *threshold {
+            return Ok(tier as u8);
+        }
+    }
+    err!(ChainboundError::InvalidRollOdds)
+}
+
+/// Binds the oracle input to the operation, the subject and the odds version.
+fn roll_caller_seed(
+    kind: u8,
+    operation_hash: &[u8; 32],
+    subject_hash: &[u8; 32],
+    odds_version: u32,
+    pool_hash: &[u8; 32],
+) -> [u8; 32] {
+    hashv(&[
+        ROLL_SEED_DOMAIN,
+        &[kind],
+        operation_hash,
+        subject_hash,
+        &odds_version.to_le_bytes(),
+        pool_hash,
+    ])
+    .to_bytes()
+}
+
+#[account]
 pub struct MoveVault {
     pub owner: Pubkey,
     pub known_capacity: u8,
@@ -2379,6 +2780,39 @@ pub struct KnownMoveRolled {
     pub owner: Pubkey,
     pub known_instance_id: u64,
     pub move_id: u16,
+}
+
+#[event]
+pub struct RollOddsChanged {
+    pub kind: u8,
+    pub odds_version: u32,
+    pub cumulative_ppm: [u32; ROLL_TIER_COUNT],
+    pub pool_hash: [u8; 32],
+}
+
+#[event]
+pub struct RollRequested {
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub subject_hash: [u8; 32],
+    pub odds_version: u32,
+    pub caller_seed: [u8; 32],
+}
+
+#[event]
+pub struct RollFulfilled {
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub tier: u8,
+    pub odds_version: u32,
+}
+
+#[event]
+pub struct RollConsumed {
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub tier: u8,
+    pub result_hash: [u8; 32],
 }
 
 #[event]
@@ -2826,6 +3260,16 @@ pub enum ChainboundError {
     TooManyKnownMoves,
     #[msg("Encounter randomness is not in the required lifecycle state.")]
     InvalidEncounterStatus,
+    #[msg("Roll kind must be Known (1) or Stamp (2).")]
+    InvalidRollKind,
+    #[msg("Roll odds must be six strictly increasing thresholds ending at 1,000,000.")]
+    InvalidRollOdds,
+    #[msg("Roll request is not in the required lifecycle state.")]
+    InvalidRollStatus,
+    #[msg("Roll result hash must be non-zero.")]
+    InvalidRollResult,
+    #[msg("Roll request retention window has not passed.")]
+    RollCloseTooEarly,
 }
 
 #[cfg(test)]
@@ -2942,6 +3386,121 @@ mod tests {
         request.consume().unwrap();
         assert_eq!(request.status, ENCOUNTER_CONSUMED);
         assert!(request.consume().is_err());
+    }
+
+    // Ultra curve: 64 / 25 / 9 / 1.7 / 0.28 / 0.02 percent.
+    const ULTRA_CUMULATIVE_PPM: [u32; ROLL_TIER_COUNT] =
+        [640_000, 890_000, 980_000, 997_000, 999_800, 1_000_000];
+
+    fn bytes_with_draw(draw: u64) -> [u8; 32] {
+        let mut bytes = [0xAB; 32];
+        bytes[0..8].copy_from_slice(&draw.to_le_bytes());
+        bytes
+    }
+
+    fn test_roll_request() -> RollRequest {
+        RollRequest {
+            status: ROLL_PENDING,
+            tier: ROLL_TIER_UNSET,
+            randomness: [0; 32],
+            kind: ROLL_KIND_KNOWN,
+            operation_hash: [3; 32],
+            subject_hash: [4; 32],
+            odds_version: 1,
+            cumulative_ppm: ULTRA_CUMULATIVE_PPM,
+            pool_hash: [5; 32],
+            requested_at_slot: 100,
+            fulfilled_at_slot: 0,
+            consumed_at_slot: 0,
+            result_hash: [0; 32],
+            bump: 1,
+        }
+    }
+
+    #[test]
+    fn roll_odds_validation_requires_strictly_increasing_thresholds_ending_at_one_million() {
+        assert!(validate_cumulative_ppm(&ULTRA_CUMULATIVE_PPM).is_ok());
+        assert!(validate_cumulative_ppm(&[0, 1, 2, 3, 4, 1_000_000]).is_err());
+        assert!(validate_cumulative_ppm(&[10, 10, 20, 30, 40, 1_000_000]).is_err());
+        assert!(validate_cumulative_ppm(&[10, 20, 30, 40, 50, 999_999]).is_err());
+        assert!(validate_cumulative_ppm(&[10, 20, 30, 40, 50, 1_000_001]).is_err());
+        assert!(validate_roll_kind(ROLL_KIND_KNOWN).is_ok());
+        assert!(validate_roll_kind(ROLL_KIND_STAMP).is_ok());
+        assert!(validate_roll_kind(0).is_err());
+        assert!(validate_roll_kind(3).is_err());
+    }
+
+    #[test]
+    fn roll_tier_boundaries_follow_cumulative_thresholds() {
+        let cases: [(u64, u8); 13] = [
+            (0, 0),
+            (639_999, 0),
+            (640_000, 1),
+            (889_999, 1),
+            (890_000, 2),
+            (979_999, 2),
+            (980_000, 3),
+            (996_999, 3),
+            (997_000, 4),
+            (999_799, 4),
+            (999_800, 5),
+            (999_999, 5),
+            // Only the value mod 1,000,000 matters.
+            (3 * 1_000_000 + 999_800, 5),
+        ];
+        for (draw, expected) in cases {
+            assert_eq!(
+                roll_tier(&bytes_with_draw(draw), &ULTRA_CUMULATIVE_PPM).unwrap(),
+                expected,
+                "draw {draw}"
+            );
+        }
+        // u64::MAX % 1_000_000 = 551_615, which is Common.
+        assert_eq!(
+            roll_tier(&bytes_with_draw(u64::MAX), &ULTRA_CUMULATIVE_PPM).unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn roll_request_draws_tier_on_fulfill_and_transitions_once() {
+        let mut request = test_roll_request();
+        request.fulfill(bytes_with_draw(999_850), 103).unwrap();
+        assert_eq!(request.status, ROLL_FULFILLED);
+        assert_eq!(request.tier, 5);
+        assert_eq!(request.fulfilled_at_slot, 103);
+        assert!(request.fulfill(bytes_with_draw(0), 104).is_err());
+        assert_eq!(request.tier, 5);
+
+        assert!(request.consume([0; 32], 110).is_err());
+        request.consume([9; 32], 110).unwrap();
+        assert_eq!(request.status, ROLL_CONSUMED);
+        assert_eq!(request.result_hash, [9; 32]);
+        assert!(request.consume([8; 32], 111).is_err());
+    }
+
+    #[test]
+    fn roll_close_requires_consumed_and_retention_window() {
+        let mut request = test_roll_request();
+        assert!(request.ensure_closable(u64::MAX).is_err());
+        request.fulfill(bytes_with_draw(1), 101).unwrap();
+        assert!(request.ensure_closable(u64::MAX).is_err());
+        request.consume([7; 32], 200).unwrap();
+        assert!(request
+            .ensure_closable(200 + ROLL_CLOSE_DELAY_SLOTS - 1)
+            .is_err());
+        assert!(request.ensure_closable(200 + ROLL_CLOSE_DELAY_SLOTS).is_ok());
+    }
+
+    #[test]
+    fn roll_caller_seed_binds_every_input() {
+        let base = roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32]);
+        assert_ne!(base, roll_caller_seed(2, &[1; 32], &[2; 32], 1, &[3; 32]));
+        assert_ne!(base, roll_caller_seed(1, &[9; 32], &[2; 32], 1, &[3; 32]));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[9; 32], 1, &[3; 32]));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 2, &[3; 32]));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[9; 32]));
+        assert_eq!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32]));
     }
 
     #[test]

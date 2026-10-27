@@ -344,6 +344,8 @@ Also seen, not in scope here:
 
 > **Implemented 2026-10-25.** `DrainApEffect` has the `AllAllies` branch, the `all_in` row carries `DrainAP:10:100%:AllAllies:all_in` with `ResolveBeforeFirstHit`, and the asset, gameplay manifest, and server move tables are regenerated (CSV/asset parity: 0 diffs). Tests: four `AllIn_*` 2v2 tests in `ApCostLadderTests.cs` (slower ally fails for no AP and foes keep AP; faster and PRIOR allies resolve; a 0-AP ally move resolves; a miss still wipes). The optional AI penalty is not done.
 >
+> **Rarity and Candy (decided 2026-10-26, Cronus, later the same day).** All-In is now **Mythic** (it's the highest-damage move in the pool). It joins the rarity-weighted Candy Machine Known pool under the rule in [KNOWN_RARITY_WEIGHTS_v1.md](../Specs/Economy/KNOWN_RARITY_WEIGHTS_v1.md). It still stays out of species pools. This supersedes the Candy part of the note below.
+>
 > **Availability (decided 2026-10-26, Cronus).** All-In stays out of every species pool until a Meme species exists, and out of the Candy Machine Known pool (`VendingConfigSO.knownPoolMoveIds`, today ten typeless baselines rolled 1-in-10) until rarity-weighted Known rolls are designed. Until then no player can obtain it.
 
 **Decision.** On cast, All-In drains **all** AP from the caster **and** its active ally. Enemy AP is untouched. This is the full wipe, not the 2 AP partial.
