@@ -139,13 +139,13 @@ Public audit tool: given an operation ID, it fetches the PDA, recomputes the res
 | Case | Behavior |
 |---|---|
 | Request transaction fails | Operation stays `vrf_pending` with no PDA; reconcile retries the request with the same seed (the PDA doesn't exist yet) |
-| Oracle doesn't fulfill within T | Stays pending; the client shows "still rolling" and resumes later. T is set from the efficacy latency sample |
+| Oracle doesn't fulfill within T | Stays pending; the client shows "still rolling" and resumes later. T = 10 s, from the efficacy latency sample (confirmed p90 1,994 ms) |
 | Oracle never fulfills | **Open question:** does MagicBlock support re-requesting for an existing PDA? If not, after a long deadline cancel the operation and release the RAM reservation. Never fall back to HMAC entropy for the same operation |
 | Settle fails after fulfill | Reconcile retries; settlement is idempotent on the operation ID |
 
 ## Cost (measured in efficacy run 1)
 
-Per roll: the `request_roll` and `consume_roll` fees (result authority), plus `RollRequest` rent (191 bytes with the discriminator, about 1.6M lamports at the measured Devnet rate, refunded by `close_roll`), plus the MagicBlock request charge (500,000 lamports, measured on Devnet). The fulfill fee is the oracle's. Run 1 measured the oracle at about 1 s, so most of the wait the player sees is polling and the confirmation level.
+Per roll: the `request_roll` and `consume_roll` fees (result authority), plus `RollRequest` rent (191 bytes with the discriminator, about 1.6M lamports at the measured Devnet rate, refunded by `close_roll`), plus the MagicBlock request charge (500,000 lamports, measured on Devnet). The fulfill fee is the oracle's. The 10-run sample measured request → fulfilled at a median of 1.85 s (p90 1.99 s, 2–3 slots), with finalized about 130 ms behind on Devnet. The oracle is fast; most of the wait the player sees is client polling.
 
 ## Work breakdown (after approval)
 

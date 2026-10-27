@@ -1,6 +1,6 @@
 # MagicBlock VRF Devnet efficacy run — plan
 
-> **Status:** first round trip **PASSED** on 2026-10-26 (steps 0–3; see "Run 1 results"). Steps 4–5, the negative cases and the latency sample, are still to run. Results go in the "MagicBlock VRF efficacy track" section of [OWNERSHIP_SPINE_PHASE1_DEVNET.md](../Economy/OWNERSHIP_SPINE_PHASE1_DEVNET.md). The follow-on design is [ROLL_REQUEST_VRF_DESIGN_v1.md](../Economy/ROLL_REQUEST_VRF_DESIGN_v1.md).
+> **Status:** **PASSED** on 2026-10-26: the first round trip (steps 0–3, "Run 1 results"), the negative cases (step 4, 5/5 including N6 and N7), and the 10-run latency sample (step 5, 10/10). Step 6 clean-up is the only item left. Results go in the "MagicBlock VRF efficacy track" section of [OWNERSHIP_SPINE_PHASE1_DEVNET.md](../Economy/OWNERSHIP_SPINE_PHASE1_DEVNET.md). The follow-on design is [ROLL_REQUEST_VRF_DESIGN_v1.md](../Economy/ROLL_REQUEST_VRF_DESIGN_v1.md).
 
 ## Goal
 
@@ -106,7 +106,9 @@ How to run: one small script, `tools/vrf-efficacy/negative.cjs`, alongside the e
 | N3 forged callback, wrong identity | `2012 ConstraintAddress` on `vrf_program_identity`; the handler never ran |
 | PDA after N1–N3 | Unchanged: Consumed, same bytes |
 
-N6 runs after step 5 (`--seeds <latency results file>`). N7 is recorded per run by the latency script.
+**N6 and a rerun of N1–N3 against latency run 1's PDA, 2026-10-26** (`--pda DaArYScC… --owner Ei1H… --other 7oBf… --seeds tools/vrf-efficacy/vrf-latency-results.jsonl`): **5/5 PASS**. N1–N3 gave the same codes as above. N6 failed in the system program's `Allocate` with "account … already in use" (`Custom(0)`), so a used seed can't open a second request. The PDA was unchanged afterwards.
+
+**N7** was recorded in all 10 latency runs: consume simulated right after the request confirmed, before the oracle answered, returned `6036` every time.
 
 ### 5. Latency sample
 
@@ -143,6 +145,32 @@ What the numbers decide:
 - **roll_request timeout:** `max(10 s, 3 × p90 confirmed latency)` before showing "still rolling".
 - **Unity polling:** if confirmed is reliably much faster than finalized, poll at confirmed (or subscribe) and settle at finalized. The current 2 s poll at finalized is most of run 1's 10.7 s.
 - **Candy Machine reveal length:** sized to cover the confirmed p90.
+
+**Results, 2026-10-26: 10/10 PASS** (`tools/vrf-efficacy/vrf-latency-results.jsonl`). Payer was a throwaway Devnet keypair, `Ei1HGT9cb85vGHcVcQSD7Pxh8QSgv28YbBnjefep4dMq`; slots 515,529,702–515,530,031. Times are wall clock from send, in milliseconds.
+
+| Metric | min | median | p90 | max | Bar |
+|---|---:|---:|---:|---:|---|
+| Request confirmed | 887 | 984 | 1,346 | 1,529 | — |
+| Fulfilled, confirmed | 1,406 | 1,850 | 1,994 | 2,068 | p90 ≤ 5 s: **pass** |
+| Fulfilled, finalized | 1,537 | 1,975 | 2,126 | 2,201 | recorded |
+| Consumed (confirmed) | 2,366 | 2,794 | 3,028 | 3,712 | — |
+| Request slot → fulfill slot | 2 | 3 | 3 | 3 | p90 ≤ 8: **pass** |
+
+Checked independently over RPC:
+
+- All 10 PDAs are Consumed at finalized. Owner, seed and randomness match the file, and all 10 randomness values are distinct.
+- I sampled the fulfill transactions for runs 1, 5 and 10. Each succeeded, was signed by oracle `vrfkfM4u…`, and included the scoped identity `DYXg…`. The request and consume transactions for those runs are finalized with no error.
+- Every run was fulfilled by the same oracle, `vrfkfM4u…`.
+- **Duplicate oracle submissions:** 29 in total, 0–5 per run. As in run 1, they fail inside `Vrf1RNUj…` and never reach the Chainbound program. They are harmless, but a fulfill lookup has to pick the successful transaction, not the first one.
+- **Cost:** exactly 1,780,000 lamports per run, from the payer's balance deltas (17,800,000 for 10).
+
+**Finality finding.** Devnet finalized only about 130 ms after confirmed. The public RPC reported finalized slots at or ahead of confirmed during the check (gap 0 across 5 samples). The classic ~13 s finalization lag isn't present on Devnet today. Don't carry this over to mainnet without measuring there.
+
+Decisions this sets:
+
+- **roll_request timeout:** `max(10 s, 3 × 1,994 ms)` = **10 s** before "still rolling".
+- **Unity polling:** run 1's 10.7 s was the client, not the chain; the chain answers in about 2 s. Poll the PDA every 250–500 ms (or subscribe) at confirmed, and settle at finalized. On Devnet that adds about 130 ms. The current 2 s finalized poll should go.
+- **Candy Machine reveal:** at least **2.5 s** covers the confirmed p90 plus client slack. Keep the "still rolling" state for the tail.
 
 ### 6. Clean up and record
 
