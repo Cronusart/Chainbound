@@ -1,6 +1,6 @@
 # Rarity-weighted Known rolls with on-chain VRF tiers — draft v1
 
-> **Status:** DRAFT for approval, 2026-10-26. Nothing here is implemented. It extends [ROLL_REQUEST_VRF_DESIGN_v1.md](ROLL_REQUEST_VRF_DESIGN_v1.md) and answers its decision 1 (Known tier weights and membership). The VRF latency and cost numbers come from [MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md](../Solana/MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md).
+> **Status:** DRAFT for approval, 2026-10-26. The Known curve is decided (**Ultra**, see "Decisions needed" 1); decisions 2–5 are still open. Nothing here is implemented. It extends [ROLL_REQUEST_VRF_DESIGN_v1.md](ROLL_REQUEST_VRF_DESIGN_v1.md) and answers its decision 1 (Known tier weights and membership). The VRF latency and cost numbers come from [MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md](../Solana/MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md).
 
 ## What changes for the player
 
@@ -147,7 +147,11 @@ Stamp uses the same mechanism with kind 2 and its own `RollOdds` row. The callba
 
 ## Decisions needed
 
-1. **Known curve:** Steep (recommended), Ultra, ECONOMY_01, or custom numbers.
+1. **Known curve:** **Decided 2026-10-26 (Cronus): Ultra.** Common 640,000 / Uncommon 250,000 / Rare 90,000 / Epic 17,000 / Legendary 2,800 / Mythic 200 ppm. At 10 rolls a day, that means:
+   - **Mythic:** 1 in 5,000, about 500 days on average, about a 5.8% chance in a month, and about 52% in a year.
+   - **Legendary:** 1 in 357, about 36 days.
+   - **Epic:** 1 in 59, about 6 days.
+   - **A specific Mythic move:** 1 in 40,000.
 2. **Pool rule:** the rule above (all eligible minus signatures, `NO_CANDY` and `BOSS_ONLY`), or a hand-picked shorter list. This also decides All-In.
 3. **Typed moves:** the rule puts typed moves of every element in the Candy Machine. ECONOMY_01 positions the market as "mostly typeless Common and Uncommon". Fine for Candy, or keep Common/Uncommon candy typeless?
 4. **Stamp curve:** fix the drift to ECONOMY_01 (0.5% Mythic), or move Stamps to the same Steep curve.
