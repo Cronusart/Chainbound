@@ -42,11 +42,23 @@ namespace Chainbound.Combat
         public static readonly bool[] CancelRamReservationWritable = { true, false, true };
         public static readonly bool[] CancelRamReservationSigner = { false, false, true };
 
+        public const string CloseRoll = "close_roll";
+        public static readonly byte[] CloseRollDiscriminator = { 34, 110, 251, 171, 221, 168, 78, 59 };
+        public static readonly string[] CloseRollAccounts = { "roll_request", "game_config", "result_authority" };
+        public static readonly bool[] CloseRollWritable = { true, false, true };
+        public static readonly bool[] CloseRollSigner = { false, false, true };
+
         public const string ConsumeEncounterRandomness = "consume_encounter_randomness";
         public static readonly byte[] ConsumeEncounterRandomnessDiscriminator = { 7, 114, 169, 20, 163, 95, 27, 181 };
         public static readonly string[] ConsumeEncounterRandomnessAccounts = { "encounter_request", "owner" };
         public static readonly bool[] ConsumeEncounterRandomnessWritable = { true, false };
         public static readonly bool[] ConsumeEncounterRandomnessSigner = { false, true };
+
+        public const string ConsumeRoll = "consume_roll";
+        public static readonly byte[] ConsumeRollDiscriminator = { 72, 170, 70, 253, 92, 234, 18, 1 };
+        public static readonly string[] ConsumeRollAccounts = { "roll_request", "game_config", "result_authority" };
+        public static readonly bool[] ConsumeRollWritable = { true, false, false };
+        public static readonly bool[] ConsumeRollSigner = { false, false, true };
 
         public const string CreateChainling = "create_chainling";
         public static readonly byte[] CreateChainlingDiscriminator = { 183, 200, 202, 25, 7, 99, 222, 84 };
@@ -90,6 +102,12 @@ namespace Chainbound.Combat
         public static readonly bool[] FulfillEncounterWritable = { false, true };
         public static readonly bool[] FulfillEncounterSigner = { true, false };
 
+        public const string FulfillRoll = "fulfill_roll";
+        public static readonly byte[] FulfillRollDiscriminator = { 138, 152, 214, 200, 136, 138, 64, 105 };
+        public static readonly string[] FulfillRollAccounts = { "vrf_program_identity", "roll_request" };
+        public static readonly bool[] FulfillRollWritable = { false, true };
+        public static readonly bool[] FulfillRollSigner = { true, false };
+
         public const string GrantRam = "grant_ram";
         public static readonly byte[] GrantRamDiscriminator = { 178, 154, 17, 238, 34, 122, 206, 163 };
         public static readonly string[] GrantRamAccounts = { "receipt", "profile", "owner", "config", "result_authority", "system_program" };
@@ -120,6 +138,12 @@ namespace Chainbound.Combat
         public static readonly bool[] InitializeOwnershipConfigWritable = { true, false, true, false };
         public static readonly bool[] InitializeOwnershipConfigSigner = { false, false, true, false };
 
+        public const string InitializeRollOdds = "initialize_roll_odds";
+        public static readonly byte[] InitializeRollOddsDiscriminator = { 34, 206, 209, 47, 17, 242, 20, 29 };
+        public static readonly string[] InitializeRollOddsAccounts = { "roll_odds", "game_config", "program_authority", "system_program" };
+        public static readonly bool[] InitializeRollOddsWritable = { true, false, true, false };
+        public static readonly bool[] InitializeRollOddsSigner = { false, false, true, false };
+
         public const string PrepareProfileStampTicket = "prepare_profile_stamp_ticket";
         public static readonly byte[] PrepareProfileStampTicketDiscriminator = { 14, 195, 234, 21, 25, 158, 57, 144 };
         public static readonly string[] PrepareProfileStampTicketAccounts = { "ticket", "ownership_config", "owner", "game_config", "result_authority", "system_program" };
@@ -149,6 +173,12 @@ namespace Chainbound.Combat
         public static readonly string[] RequestEncounterAccounts = { "encounter_request", "payer", "oracle_queue", "program_identity", "vrf_program", "slot_hashes", "system_program" };
         public static readonly bool[] RequestEncounterWritable = { true, true, true, false, false, false, false };
         public static readonly bool[] RequestEncounterSigner = { false, true, false, false, false, false, false };
+
+        public const string RequestRoll = "request_roll";
+        public static readonly byte[] RequestRollDiscriminator = { 98, 118, 98, 29, 96, 208, 255, 97 };
+        public static readonly string[] RequestRollAccounts = { "roll_request", "roll_odds", "game_config", "result_authority", "oracle_queue", "program_identity", "vrf_program", "slot_hashes", "system_program" };
+        public static readonly bool[] RequestRollWritable = { true, false, false, true, true, false, false, false, false };
+        public static readonly bool[] RequestRollSigner = { false, false, false, true, false, false, false, false, false };
 
         public const string RollKnownMove = "roll_known_move";
         public static readonly byte[] RollKnownMoveDiscriminator = { 42, 140, 118, 198, 71, 101, 152, 152 };
@@ -198,6 +228,12 @@ namespace Chainbound.Combat
         public static readonly bool[] UpdatePositionWritable = { true, true };
         public static readonly bool[] UpdatePositionSigner = { false, true };
 
+        public const string UpdateRollOdds = "update_roll_odds";
+        public static readonly byte[] UpdateRollOddsDiscriminator = { 250, 25, 203, 180, 12, 115, 173, 230 };
+        public static readonly string[] UpdateRollOddsAccounts = { "roll_odds", "game_config", "program_authority" };
+        public static readonly bool[] UpdateRollOddsWritable = { true, false, false };
+        public static readonly bool[] UpdateRollOddsSigner = { false, false, true };
+
         public const string UpdateWinsLosses = "update_wins_losses";
         public static readonly byte[] UpdateWinsLossesDiscriminator = { 248, 192, 181, 104, 80, 81, 248, 70 };
         public static readonly string[] UpdateWinsLossesAccounts = { "profile", "config", "result_authority" };
@@ -219,6 +255,8 @@ namespace Chainbound.Combat
         public static readonly byte[] RamPurchaseReceiptAccountDiscriminator = { 37, 105, 212, 100, 110, 164, 29, 144 };
         public static readonly byte[] RamReconciliationReceiptAccountDiscriminator = { 242, 112, 40, 70, 115, 180, 87, 215 };
         public static readonly byte[] RamReservationAccountDiscriminator = { 171, 186, 0, 107, 1, 255, 131, 148 };
+        public static readonly byte[] RollOddsAccountDiscriminator = { 54, 95, 136, 210, 223, 136, 92, 250 };
+        public static readonly byte[] RollRequestAccountDiscriminator = { 204, 253, 122, 192, 160, 91, 16, 202 };
         public static readonly byte[] StampTicketAccountDiscriminator = { 27, 188, 81, 247, 225, 23, 30, 219 };
 
         public static List<AccountMeta> BuildAccounts(string[] names, bool[] writable, bool[] signer, IReadOnlyDictionary<string, PublicKey> addresses)
