@@ -17,7 +17,7 @@ MonoBehaviour:
   description: All foes lose Atk -1 for the turn.
   category: 2
   baseType: 5
-  rarity: 0
+  rarity: 3
   targeting: 1
   contactType: 2
   power: 0
@@ -31,7 +31,7 @@ MonoBehaviour:
     duration: 1
     chance: 1
     overrideTargeting: 0
-    targetOverride: 1
+    targetOverride: 0
     parameterType: 0
   stageChanges: []
   tags:
@@ -50,6 +50,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

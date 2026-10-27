@@ -95,7 +95,7 @@ namespace Chainbound.Combat
         private static void Collect(Scene scene, List<StageHandle> results)
         {
             results.Clear();
-            var seen = new HashSet<int>();
+            var seen = new HashSet<EntityId>();
             CombatStageMarker[] markers = FindObjectsByType<CombatStageMarker>(
                 FindObjectsInactive.Include,
                 FindObjectsSortMode.None);
@@ -106,7 +106,7 @@ namespace Chainbound.Combat
                     continue;
 
                 GameObject root = marker.gameObject;
-                if (!seen.Add(root.GetInstanceID()))
+                if (!seen.Add(root.GetEntityId()))
                     continue;
 
                 results.Add(new StageHandle(root, marker.StageId));
@@ -119,7 +119,7 @@ namespace Chainbound.Combat
             for (int i = 0; i < roots.Length; i++)
             {
                 GameObject root = roots[i];
-                if (root == null || !seen.Add(root.GetInstanceID()))
+                if (root == null || !seen.Add(root.GetEntityId()))
                     continue;
 
                 if (!CombatStageIds.TryMatchKnownName(root.name, out string stageId))

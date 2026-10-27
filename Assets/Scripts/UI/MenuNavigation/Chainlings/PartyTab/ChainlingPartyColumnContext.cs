@@ -18,6 +18,7 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
         public ChainlingProgressionEventCatalogSO progressionEventCatalog;
         public ChainlingBadgeCatalogSO badgeCatalog;
         public IReadOnlyList<MenuMoveItem> moveInventory;
+        public EncounterCatalogSourceSO encounterCatalog;
 
         public bool HasFilledChainling =>
             entry != null && entry.snapshot != null && !string.IsNullOrWhiteSpace(entry.snapshot.speciesId);

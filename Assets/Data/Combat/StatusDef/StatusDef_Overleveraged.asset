@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 208
   displayName: Overleveraged
-  effectSummary: Next heavy hit causes recoil
+  effectSummary: Shelved; not applied by any move.
   statusClass: 3
   origin: 1
   defaultDuration: 2

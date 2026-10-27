@@ -24,6 +24,7 @@ custom-panic = []
 anchor-lang = "0.32.1"
 ephemeral-rollups-sdk = { git = "https://github.com/magicblock-labs/ephemeral-rollups-sdk", rev = "60761a7f76b3b417496d4a5fcca8412e35d44f5b", features = ["anchor-compat"] }
 mpl-core = { version = "=0.11.1", default-features = false }
+solana-sha256-hasher = "=2.3.0"
 
 
 [lints.rust]

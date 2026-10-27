@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.8-a
   displayName: Patch Kit
-  effectDescription: "On use: heal {n}% Max HP"
+  effectDescription: 'On use: heal {n}% Max HP'
   category: 5
   scope: 0
   minimumRarity: 1

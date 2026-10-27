@@ -17,10 +17,10 @@ MonoBehaviour:
   description: 2-4 hits; each has 20% chance to lower Atk.
   category: 1
   baseType: 5
-  rarity: 2
+  rarity: 0
   targeting: 0
   contactType: 1
-  power: 18
+  power: 15
   apCost: 3
   accuracy: 95
   hitCountMin: 2
@@ -48,6 +48,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

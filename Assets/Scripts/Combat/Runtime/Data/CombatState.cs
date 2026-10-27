@@ -20,6 +20,9 @@ namespace Chainbound.Combat
         /// <summary>Current turn number (1-based).</summary>
         public int currentTurn;
 
+        /// <summary>Turn on which Fee Collector already chose its one drain. -1 means not yet.</summary>
+        public int feeCollectorAppliedTurn = -1;
+
         /// <summary>Current phase of the turn.</summary>
         public TurnPhase currentPhase;
 
@@ -28,6 +31,9 @@ namespace Chainbound.Combat
 
         /// <summary>Is the battle still active?</summary>
         public bool isActive;
+
+        /// <summary>Boss battles resolve a mutual wipe by KO order instead of declaring a draw.</summary>
+        public bool isBossBattle;
 
         /// <summary>Winner team index (-1 = no winner yet, -2 = draw).</summary>
         public int winnerTeamIndex;
@@ -76,6 +82,7 @@ namespace Chainbound.Combat
             currentTurn = 0;
             currentPhase = TurnPhase.NotStarted;
             isActive = false;
+            isBossBattle = false;
             winnerTeamIndex = -1;
             turnActionLedger = new TurnActionLedger();
             fieldEntryEffects = new List<CombatFieldEntryEffect>();

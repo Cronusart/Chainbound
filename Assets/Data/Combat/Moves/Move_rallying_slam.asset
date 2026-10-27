@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: rallying_slam
   displayName: Rallying Slam
-  description: Contact hit that grants +1 AP if Def stage exceeds Atk.
+  description: Contact hit; +1 AP if your Def stage exceeds your Atk.
   category: 0
   baseType: 3
-  rarity: 2
+  rarity: 3
   targeting: 0
   contactType: 0
-  power: 64
+  power: 52
   apCost: 2
   accuracy: 95
   hitCountMin: 1
@@ -35,16 +35,44 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 3
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: rallying_slam
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 4
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
-    utilityExecutionTiming: 0
+    utilityExecutionTiming: 2
     conditionalEffectPolicy: 0
-    resolveConditions: []
+    resolveConditions:
+    - subject: 0
+      conditionType: 23
+      threshold: 0
+      statusId: 0
+      stat: 2
+      comparisonStat: 1
     requireAllResolveConditions: 1
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

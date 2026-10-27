@@ -51,7 +51,7 @@ namespace SignalJam.UI.MenuNavigation
             text.fontSize = size;
             text.alignment = alignment;
             text.color = Text;
-            text.enableWordWrapping = wrap;
+            text.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
             text.raycastTarget = false;
             return text;
         }

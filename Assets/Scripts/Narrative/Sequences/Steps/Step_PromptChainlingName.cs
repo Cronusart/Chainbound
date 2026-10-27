@@ -63,7 +63,13 @@ public class Step_PromptChainlingName : SequenceStep
         // the species display name path. This keeps onboarding recoverable.
         resolvedName = ChainlingDisplayNameRules.ResolveOrFallback(resolvedName, fallbackName);
 
-        selectionUi?.HideStarterNameInput();
+        if (selectionUi != null)
+        {
+            TMP_InputField confirmedField = selectionUi.StarterNameInputField;
+            if (confirmedField != null && confirmedField.gameObject.activeSelf)
+                confirmedField.SetTextWithoutNotify(resolvedName);
+            selectionUi.RetainStarterNameInput();
+        }
         context.Variables.Set(displayNameVariable, resolvedName, VariableScope.Global);
         context.Variables.MarkPersistent(displayNameVariable);
         onComplete?.Invoke(StepOutcome.Success());

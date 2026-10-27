@@ -2,6 +2,7 @@ import { assertEquals, assertNotEquals } from "https://deno.land/std@0.224.0/ass
 import {
   BIND_RAM_COST_PIN,
   deriveKnownResult,
+  deriveProfileKnownReference,
   deriveRamOperationId,
   deriveStampResult,
   DEVNET_GENESIS_HASH,
@@ -22,6 +23,41 @@ import {
   reconcileRamDeltaOnChain,
   SECOND_STAMP_RAM_COST_PIN,
 } from "./ownership_spine.ts";
+import { allowedHostCategoriesForModifier, eligibleModifierPoolForMove } from "./modifier_host_compatibility.ts";
+
+const repoPrefix = import.meta.url.includes("/Supabase/supabase/functions/_shared/") ? "../../../../" : "../../../";
+const functionPrefix = import.meta.url.includes("/Supabase/supabase/functions/_shared/")
+  ? "../../../functions/"
+  : "../";
+
+Deno.test("stamp modifier pool is filtered by the canonical host move category", async () => {
+  const eligible = eligibleModifierPoolForMove("baseline_striker");
+  assertEquals(eligible.includes("6.1-a"), true);
+  assertEquals(eligible.includes("6.4-d"), false);
+  assertEquals(eligible.includes("6.8-b"), false);
+  assertEquals(eligible.includes("8.1-a"), false);
+  for (const sectionId of eligible) {
+    const allowed = allowedHostCategoriesForModifier(sectionId);
+    assertEquals(allowed == null || allowed.includes("DamagingMelee"), true, sectionId);
+  }
+
+  const secret = new TextEncoder().encode("host-compatible-stamp-test");
+  const result = await deriveStampResult(
+    secret,
+    "profile-a",
+    "known-a",
+    1,
+    1,
+    EXPECTED_MODIFIER_POOL_HASH,
+    "baseline_striker",
+  );
+  assertEquals(eligible.includes(result.modifierIds[0]), true);
+});
+
+function functionSourceUrl(relativePath: string): URL {
+  const leaf = relativePath.startsWith("../") ? relativePath.slice(3) : relativePath;
+  return new URL(`${functionPrefix}${leaf}`, import.meta.url);
+}
 
 Deno.test("transaction signatures use 64-byte base58 validation, not the public-key regex", () => {
   const confirmedDevnetSignature =
@@ -38,7 +74,7 @@ Deno.test("both ownership confirmations apply transaction-signature validation",
       "../ownership_confirm_stamp/index.ts",
     ]
   ) {
-    const source = await Deno.readTextFile(new URL(relativePath, import.meta.url));
+    const source = await Deno.readTextFile(functionSourceUrl(relativePath));
     assertEquals(source.includes("isSolanaSignature(signature)"), true);
     assertEquals(source.includes("SOLANA_BASE58_RE.test(signature)"), false);
   }
@@ -63,14 +99,23 @@ Deno.test("RAM operation IDs are stable UUIDs scoped by profile, kind, and idemp
   assertEquals(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(first), true);
 });
 
-Deno.test("Phase 1 Known roll cost remains pinned in the authority endpoint", async () => {
+Deno.test("profile-owned Known references are stable non-zero u64 values", async () => {
+  const first = await deriveProfileKnownReference("39000000-0000-4000-8000-000000000001");
+  assertEquals(await deriveProfileKnownReference("39000000-0000-4000-8000-000000000001"), first);
+  assertNotEquals(await deriveProfileKnownReference("39000000-0000-4000-8000-000000000002"), first);
+  assertEquals(first > 0n && first <= 0xffffffffffffffffn, true);
+});
+
+Deno.test("Known rolls are profile-native atomic spends with no wallet or Solana dependency", async () => {
   assertEquals(KNOWN_ROLL_RAM_COST, 5);
-  const source = await Deno.readTextFile(new URL("../ownership_roll_known/index.ts", import.meta.url));
+  const source = await Deno.readTextFile(functionSourceUrl("ownership_roll_known/index.ts"));
   assertEquals(source.includes("KNOWN_ROLL_RAM_COST"), true);
-  assertEquals(source.includes('supabase.rpc("ram_ledger_reserve_operation"'), true);
-  assertEquals(source.includes("settleKnownRollOnChain"), true);
-  assertEquals(source.includes('supabase.rpc("ownership_settle_known_reserved"'), true);
-  assertEquals(source.includes('supabase.rpc("ownership_roll_known_atomic"'), false);
+  assertEquals(source.includes('supabase.rpc("ownership_roll_known_profile_atomic"'), true);
+  assertEquals(source.includes("settleKnownRollOnChain"), false);
+  assertEquals(source.includes("requireBoundWallet"), false);
+  assertEquals(source.includes("wallet_address"), false);
+  assertEquals(source.includes("isOwnershipWalletAllowed"), false);
+  assertEquals(source.includes("ensureOwnershipRpcCluster"), false);
 });
 
 Deno.test("Phase 1 RAM policy pins remain distinct", () => {
@@ -82,7 +127,7 @@ Deno.test("Phase 1 RAM policy pins remain distinct", () => {
 });
 
 Deno.test("first Stamp confirmation uses one atomic 75-RAM settlement RPC", async () => {
-  const source = await Deno.readTextFile(new URL("../ownership_confirm_stamp/index.ts", import.meta.url));
+  const source = await Deno.readTextFile(functionSourceUrl("ownership_confirm_stamp/index.ts"));
   assertEquals(source.includes('supabase.rpc("ownership_confirm_stamp_reserved"'), true);
   assertEquals(source.includes("FIRST_STAMP_RAM_COST"), true);
   assertEquals(source.includes('.from("ownership_known_moves").update('), false);
@@ -90,7 +135,7 @@ Deno.test("first Stamp confirmation uses one atomic 75-RAM settlement RPC", asyn
 
 Deno.test("Stamped Core creation uses collection authority without a conflicting update authority", async () => {
   const source = await Deno.readTextFile(
-    new URL("../../../backend/chainbound_game/programs/chainbound_game/src/lib.rs", import.meta.url),
+    new URL(`${repoPrefix}backend/chainbound_game/programs/chainbound_game/src/lib.rs`, import.meta.url),
   );
   const start = source.indexOf("pub fn stamp_known_move");
   const end = source.indexOf("pub fn bind_chainling", start);
@@ -105,11 +150,11 @@ Deno.test("Stamped Core creation uses collection authority without a conflicting
 Deno.test("Devnet smoke grant is explicit-wallet, beta, and fresh-zero gated", async () => {
   const shared = await Deno.readTextFile(new URL("./ownership_spine.ts", import.meta.url));
   const prepare = await Deno.readTextFile(
-    new URL("../ownership_prepare_devnet_smoke_grant/index.ts", import.meta.url),
+    functionSourceUrl("ownership_prepare_devnet_smoke_grant/index.ts"),
   );
   const confirm = await Deno.readTextFile(
-    new URL("../ownership_confirm_devnet_smoke_grant/index.ts", import.meta.url),
-  );
+    functionSourceUrl("ownership_confirm_devnet_smoke_grant/index.ts"),
+  ).then((source) => source.replaceAll("\r\n", "\n"));
   assertEquals(shared.includes('DEVNET_SMOKE_WALLETS_ENV = "CHAINBOUND_DEVNET_SMOKE_WALLETS"'), true);
   assertEquals(shared.includes('LEGACY_DEVNET_SMOKE_WALLET_ENV = "CHAINBOUND_DEVNET_SMOKE_WALLET"'), true);
   assertEquals(shared.includes("smokeWallets.has(owner.toBase58())"), true);
@@ -197,7 +242,6 @@ Deno.test("ownership RPC genesis guard accepts the selected cluster and fails cl
 Deno.test("Mainnet ownership mutation endpoints enforce the smoke-wallet boundary", async () => {
   for (
     const relativePath of [
-      "../ownership_roll_known/index.ts",
       "../ownership_grant_event_known/index.ts",
       "../profile_grant_progression_ordinal/index.ts",
       "../ownership_prepare_stamp/index.ts",
@@ -205,16 +249,22 @@ Deno.test("Mainnet ownership mutation endpoints enforce the smoke-wallet boundar
       "../ownership_reconcile_stamp/index.ts",
     ]
   ) {
-    const source = await Deno.readTextFile(new URL(relativePath, import.meta.url));
+    const source = await Deno.readTextFile(functionSourceUrl(relativePath));
     assertEquals(source.includes("isOwnershipWalletAllowed"), true, relativePath);
     assertEquals(source.includes("mainnet_smoke_wallet_not_allowed"), true, relativePath);
   }
 });
 
+Deno.test("walletless Known rolls are not constrained by the Stamp wallet allowlist", async () => {
+  const source = await Deno.readTextFile(functionSourceUrl("ownership_roll_known/index.ts"));
+  assertEquals(source.includes("isOwnershipWalletAllowed"), false);
+  assertEquals(source.includes("mainnet_smoke_wallet_not_allowed"), false);
+});
+
 Deno.test("Devnet smoke confirmation atomically mirrors verified RAM", async () => {
   const confirm = await Deno.readTextFile(
-    new URL("../ownership_confirm_devnet_smoke_grant/index.ts", import.meta.url),
-  );
+    functionSourceUrl("ownership_confirm_devnet_smoke_grant/index.ts"),
+  ).then((source) => source.replaceAll("\r\n", "\n"));
   assertEquals(
     confirm.includes('supabase.rpc(\n      "ownership_confirm_devnet_smoke_grant_atomic"'),
     true,
@@ -225,10 +275,10 @@ Deno.test("Devnet smoke confirmation atomically mirrors verified RAM", async () 
 
 Deno.test("operator RAM reconciliation is receipt-backed and retires the legacy top-up", async () => {
   const source = await Deno.readTextFile(
-    new URL("../ram_operator_reconcile/index.ts", import.meta.url),
+    functionSourceUrl("ram_operator_reconcile/index.ts"),
   );
   const legacy = await Deno.readTextFile(
-    new URL("../ownership_operator_devnet_ram_topup/index.ts", import.meta.url),
+    functionSourceUrl("ownership_operator_devnet_ram_topup/index.ts"),
   );
   assertEquals(source.includes("reconcileRamDeltaOnChain"), true);
   assertEquals(source.includes("ram_reconciliation_approve"), true);
@@ -242,11 +292,12 @@ Deno.test("operator RAM reconciliation is receipt-backed and retires the legacy 
 
 Deno.test("inventory hydration includes the canonical RAM mirror", async () => {
   const inventory = await Deno.readTextFile(
-    new URL("../ownership_get_inventory/index.ts", import.meta.url),
+    functionSourceUrl("ownership_get_inventory/index.ts"),
   );
-  assertEquals(inventory.includes('.select("ram_balance")'), true);
+  assertEquals(inventory.includes("readRamBalanceSnapshot"), true);
+  assertEquals(inventory.includes("ramBalanceVersion: ramSnapshot.version"), true);
   assertEquals(inventory.includes("stampRamCost: config.stampRamCost"), true);
-  assertEquals(inventory.includes("ramBalance, stampRamCost: config.stampRamCost, known, stamped"), true);
+  assertEquals(inventory.includes("ramBalance,"), true);
   assertEquals(inventory.includes("stampEffectFieldsFromOperation(operation)"), true);
 });
 
@@ -259,6 +310,7 @@ Deno.test("two-modifier Stamp never repeats a modifier", async () => {
     2,
     1,
     EXPECTED_MODIFIER_POOL_HASH,
+    "baseline_striker",
   );
   assertEquals(result.modifierIds.length, 2);
   assertNotEquals(result.modifierIds[0], result.modifierIds[1]);
@@ -273,14 +325,14 @@ Deno.test("Stamp entropy is bound to the Known and excludes client idempotency",
   assertEquals(deriveSource.includes("stamp:v2:"), true);
 
   const secret = Uint8Array.from({ length: 64 }, (_, index) => index);
-  const first = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH);
-  const retry = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH);
+  const first = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH, "baseline_striker");
+  const retry = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH, "baseline_striker");
   assertEquals(retry, first);
 });
 
 Deno.test("Stamp lock uses leftover digest bytes and stays inside catalog min/max", async () => {
   const secret = Uint8Array.from({ length: 64 }, (_, index) => index);
-  const result = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH);
+  const result = await deriveStampResult(secret, "profile-a", "known-a", 1, 1, EXPECTED_MODIFIER_POOL_HASH, "baseline_striker");
   assertEquals(result.modifierEffectValues.length, 1);
   const bounds = MODIFIER_EFFECT_BOUNDS[result.modifierIds[0] as keyof typeof MODIFIER_EFFECT_BOUNDS];
   const min = Math.min(bounds.min, bounds.max);
@@ -292,7 +344,7 @@ Deno.test("Stamp lock uses leftover digest bytes and stays inside catalog min/ma
 });
 
 Deno.test("Phase 1 Stamp preparation enforces one modifier and resumes a canonical intent", async () => {
-  const source = await Deno.readTextFile(new URL("../ownership_prepare_stamp/index.ts", import.meta.url));
+  const source = await Deno.readTextFile(functionSourceUrl("ownership_prepare_stamp/index.ts"));
   assertEquals(source.includes("modifierCount !== 1"), true);
   assertEquals(source.includes("canonicalIdempotencyKey"), true);
   assertEquals(source.includes("stamp_intent_in_progress"), true);
@@ -301,7 +353,7 @@ Deno.test("Phase 1 Stamp preparation enforces one modifier and resumes a canonic
 });
 
 Deno.test("Stamp confirmation persists signature before RPC and settles from the consumed program receipt", async () => {
-  const source = await Deno.readTextFile(new URL("../ownership_confirm_stamp/index.ts", import.meta.url));
+  const source = await Deno.readTextFile(functionSourceUrl("ownership_confirm_stamp/index.ts"));
   const submitted = source.indexOf('status: "submitted"');
   const rpcCheck = source.indexOf("finalizedSignatureOutcome(config.rpcUrl, signature)");
   assertNotEquals(submitted, -1);
@@ -314,28 +366,50 @@ Deno.test("Stamp confirmation persists signature before RPC and settles from the
 });
 
 Deno.test("Stamp preparation reserves coordinated RAM before chain build, metadata, or intent creation", async () => {
-  const source = await Deno.readTextFile(new URL("../ownership_prepare_stamp/index.ts", import.meta.url));
+  const source = await Deno.readTextFile(functionSourceUrl("ownership_prepare_stamp/index.ts"));
   const reserve = source.indexOf('supabase.rpc("ram_ledger_reserve_operation"');
+  const ensure = source.indexOf("ensureRamLedgerAccount(");
   const chainReservation = source.indexOf("ensureRamReservationOnChain({");
   const chainBuild = source.indexOf("buildStampTransaction({");
   const preflight = source.indexOf("simulateStampTransaction(config.rpcUrl");
   const metadata = source.indexOf("publishStampedMetadata(");
   const operationWrite = source.indexOf(".insert(operation)");
   assertNotEquals(reserve, -1);
+  assertNotEquals(ensure, -1);
   assertNotEquals(chainReservation, -1);
   assertNotEquals(chainBuild, -1);
   assertNotEquals(preflight, -1);
   assertNotEquals(metadata, -1);
   assertNotEquals(operationWrite, -1);
+  assertEquals(ensure < reserve, true);
   assertEquals(reserve < chainReservation, true);
   assertEquals(chainReservation < chainBuild, true);
   assertEquals(chainBuild < preflight, true);
   assertEquals(preflight < metadata, true);
   assertEquals(metadata < operationWrite, true);
+  assertEquals(source.includes("known.onchain_instance_id != null"), true);
+  assertEquals(source.includes("known_source: built.knownSource"), true);
+});
+
+Deno.test("profile-native Stamp uses an authority ticket and no wallet MoveVault or chain RAM debit", async () => {
+  const source = await Deno.readTextFile(new URL("./ownership_spine.ts", import.meta.url));
+  assertEquals(source.includes("PREPARE_PROFILE_STAMP_DISCRIMINATOR"), true);
+  assertEquals(source.includes("STAMP_PROFILE_KNOWN_DISCRIMINATOR"), true);
+  const program = await Deno.readTextFile(
+    new URL(`${repoPrefix}backend/chainbound_game/programs/chainbound_game/src/lib.rs`, import.meta.url),
+  );
+  const start = program.indexOf("pub fn stamp_profile_known_move");
+  const end = program.indexOf("pub fn bind_chainling", start);
+  assertNotEquals(start, -1);
+  assertNotEquals(end, -1);
+  const instruction = program.slice(start, end);
+  assertEquals(instruction.includes("consume_ram_reservation"), false);
+  assertEquals(instruction.includes("remove_known_by_instance"), false);
+  assertEquals(instruction.includes("CreateV2CpiBuilder"), true);
 });
 
 Deno.test("Stamp reconciliation terminalizes failed signatures and expired unsigned reviews", async () => {
-  const source = await Deno.readTextFile(new URL("../ownership_reconcile_stamp/index.ts", import.meta.url));
+  const source = await Deno.readTextFile(functionSourceUrl("ownership_reconcile_stamp/index.ts"));
   assertEquals(
     source.includes('failureCode = outcome === "failed" ? "transaction_failed" : "unsigned_intent_expired"'),
     true,
@@ -345,7 +419,7 @@ Deno.test("Stamp reconciliation terminalizes failed signatures and expired unsig
 });
 
 Deno.test("Stamp reconciliation can recover a signature from the deterministic asset", async () => {
-  const source = await Deno.readTextFile(new URL("../ownership_reconcile_stamp/index.ts", import.meta.url));
+  const source = await Deno.readTextFile(functionSourceUrl("ownership_reconcile_stamp/index.ts"));
   assertEquals(source.includes("findFinalizedSignatureForAddress"), true);
   assertEquals(source.includes("fetchAndVerifyStampReceipt"), true);
   assertEquals(source.includes('supabase.rpc("ownership_confirm_stamp_reserved"'), true);

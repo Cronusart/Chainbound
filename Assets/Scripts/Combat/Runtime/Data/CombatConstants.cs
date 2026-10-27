@@ -10,7 +10,7 @@ namespace Chainbound.Combat
         public const int AP_PER_TURN = 2;
         public const int AP_CAP = 10;
         public const int AP_COST_DAMAGING_MIN = 1;
-        public const int AP_COST_DAMAGING_MAX = 3;
+        public const int AP_COST_DAMAGING_MAX = 5;
         public const int AP_COST_UTILITY_MIN = 0;
         public const int AP_COST_UTILITY_MAX = 2;
         public const int AP_COST_SUPPORT_MIN = 2;

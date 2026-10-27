@@ -549,6 +549,7 @@ namespace Chainbound.Combat
                 visualIdentity = BuildRandomVisualIdentity(speciesId, rng),
                 ivs = BuildIvs(rng),
                 moveIds = new List<string>(),
+                moveAcquisitions = new List<string>(),
                 modifier1SectionIds = new List<string>(),
                 modifier2SectionIds = new List<string>(),
             };
@@ -966,12 +967,15 @@ namespace Chainbound.Combat
 
             if (snapshot.moveIds == null)
                 snapshot.moveIds = new List<string>();
+            if (snapshot.moveAcquisitions == null)
+                snapshot.moveAcquisitions = new List<string>();
             if (snapshot.modifier1SectionIds == null)
                 snapshot.modifier1SectionIds = new List<string>();
             if (snapshot.modifier2SectionIds == null)
                 snapshot.modifier2SectionIds = new List<string>();
 
             snapshot.moveIds.Clear();
+            snapshot.moveAcquisitions.Clear();
             snapshot.modifier1SectionIds.Clear();
             snapshot.modifier2SectionIds.Clear();
 
@@ -1002,6 +1006,7 @@ namespace Chainbound.Combat
                     continue;
 
                 snapshot.moveIds.Add(move.moveId);
+                snapshot.moveAcquisitions.Add(move.acquisition ?? string.Empty);
                 snapshot.modifier1SectionIds.Add(move.modifier1SectionId ?? "");
                 snapshot.modifier2SectionIds.Add(move.modifier2SectionId ?? "");
             }
@@ -1430,6 +1435,7 @@ namespace Chainbound.Combat
                 evolutionStage = source.evolutionStage,
                 visualIdentity = ChainlingVisualIdentity.CloneForPlayerSave(source.visualIdentity),
                 moveIds = source.moveIds != null ? new List<string>(source.moveIds) : new List<string>(),
+                moveAcquisitions = source.moveAcquisitions != null ? new List<string>(source.moveAcquisitions) : new List<string>(),
                 modifier1SectionIds = source.modifier1SectionIds != null ? new List<string>(source.modifier1SectionIds) : new List<string>(),
                 modifier2SectionIds = source.modifier2SectionIds != null ? new List<string>(source.modifier2SectionIds) : new List<string>(),
                 ivs = source.ivs != null ? (int[])source.ivs.Clone() : new int[CombatConstants.STAT_COUNT],

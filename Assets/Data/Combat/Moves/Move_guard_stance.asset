@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: guard_stance
   displayName: Guard Stance
-  description: Gain Def +2; melee contact takes +10% recoil for 3 turns.
+  description: Gain Def +2.
   category: 2
   baseType: 3
   rarity: 0
@@ -47,6 +47,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

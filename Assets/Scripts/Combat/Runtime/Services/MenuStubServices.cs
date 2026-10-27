@@ -125,11 +125,13 @@ namespace Chainbound.Combat
 
         public Task<ChainlingDexSnapshot> FetchDexAsync(string playerProfileId, string walletAddress)
         {
-            return Task.FromResult(new ChainlingDexSnapshot
+            var snapshot = new ChainlingDexSnapshot
             {
                 seenSpeciesIds = new List<string>(devSeenSpeciesIds),
                 caughtSpeciesIds = new List<string>(devCaughtSpeciesIds),
-            });
+            };
+            ChainlingDexRecords.UnionInto(snapshot);
+            return Task.FromResult(snapshot);
         }
     }
 }

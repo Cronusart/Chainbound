@@ -224,7 +224,7 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
                     moveNameText.font = moveNameFont;
                 if (moveNameFontSize > 0f)
                     moveNameText.fontSize = moveNameFontSize;
-                moveNameText.enableWordWrapping = false;
+                moveNameText.textWrappingMode = TextWrappingModes.NoWrap;
                 moveNameText.overflowMode = TextOverflowModes.Ellipsis;
                 moveNameText.alignment = moveNameAlignment;
             }
@@ -235,7 +235,7 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
                     statText.font = statFont;
                 if (statFontSize > 0f)
                     statText.fontSize = statFontSize;
-                statText.enableWordWrapping = false;
+                statText.textWrappingMode = TextWrappingModes.NoWrap;
                 statText.overflowMode = TextOverflowModes.Ellipsis;
                 statText.alignment = statAlignment;
             }

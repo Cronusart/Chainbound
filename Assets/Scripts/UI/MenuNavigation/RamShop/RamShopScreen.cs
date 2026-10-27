@@ -109,6 +109,8 @@ namespace SignalJam.UI.MenuNavigation
             WireButtons();
             ResolveServices();
             base.Show();
+            PlayBundleReveal();
+            RefreshBundlePriceLabels();
             Refresh();
         }
 
@@ -145,6 +147,8 @@ namespace SignalJam.UI.MenuNavigation
         {
             if (busy) return;
             selectedTender = string.IsNullOrWhiteSpace(tender) ? "SOL" : tender.ToUpperInvariant();
+            RefreshBundlePriceLabels();
+            RefreshTenderSelectionVisuals();
             SetStatus($"{selectedTender} selected. Choose a bundle for a fresh server quote.");
         }
 
@@ -192,6 +196,8 @@ namespace SignalJam.UI.MenuNavigation
                 RamCatalog loaded = await shop.GetCatalogAsync();
                 if (version != refreshVersion) return;
                 catalog = loaded;
+                RefreshBundlePriceLabels();
+                RefreshTenderSelectionVisuals();
                 if (balanceLabel != null)
                     balanceLabel.text = $"RAM {loaded.authoritativeBalance ?? "0"}";
                 if (!loaded.checkoutAvailable)
@@ -598,6 +604,50 @@ namespace SignalJam.UI.MenuNavigation
                 navigation.selectOnDown = retryButton;
                 bundleButtons[i].navigation = navigation;
             }
+        }
+
+        private void PlayBundleReveal()
+        {
+            RamBundleCardPresenter[] cards = GetComponentsInChildren<RamBundleCardPresenter>(true);
+            foreach (RamBundleCardPresenter card in cards)
+                card?.PlayReveal();
+        }
+
+        private void RefreshBundlePriceLabels()
+        {
+            foreach (Button button in bundleButtons)
+            {
+                RamBundleCardPresenter card = button != null ? button.GetComponent<RamBundleCardPresenter>() : null;
+                if (card == null)
+                    continue;
+
+                RamTender price = null;
+                RamBundle offer = FindOffer(card.RamAmount);
+                if (offer?.prices != null)
+                {
+                    price = offer.prices.Find(item => item != null &&
+                        string.Equals(item.tender, selectedTender, StringComparison.OrdinalIgnoreCase));
+                }
+
+                card.SetTenderPrice(price, selectedTender);
+            }
+        }
+
+        private void RefreshTenderSelectionVisuals()
+        {
+            SetTenderSelected(solButton, string.Equals(selectedTender, "SOL", StringComparison.OrdinalIgnoreCase));
+            SetTenderSelected(usdcButton, string.Equals(selectedTender, "USDC", StringComparison.OrdinalIgnoreCase));
+            SetTenderSelected(skrButton, string.Equals(selectedTender, "SKR", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static void SetTenderSelected(Button button, bool selected)
+        {
+            if (button == null)
+                return;
+
+            Transform marker = button.transform.Find("SelectedMark");
+            if (marker != null)
+                marker.gameObject.SetActive(selected);
         }
 
         private void SetConfirmationVisible(bool visible)

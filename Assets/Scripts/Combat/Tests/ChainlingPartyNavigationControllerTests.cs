@@ -115,6 +115,27 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void DetailedViewStaysFrozen()
+        {
+            bool detailRequested = false;
+            controller.DetailRequested += () => detailRequested = true;
+
+            Assert.IsFalse(controller.TryHandleDetailedView());
+            Assert.AreEqual(ChainlingPartyNavigationPhase.ViewSection, controller.Phase);
+            Assert.IsFalse(detailRequested);
+
+            controller.EnterPartySection();
+            Assert.IsFalse(controller.TryHandleDetailedView());
+            Assert.AreEqual(ChainlingPartyNavigationPhase.PartySection, controller.Phase);
+            Assert.IsFalse(detailRequested);
+
+            controller.EnterColumnEditing();
+            Assert.IsFalse(controller.TryHandleDetailedView());
+            Assert.AreEqual(ChainlingPartyNavigationPhase.ColumnEditing, controller.Phase);
+            Assert.IsFalse(detailRequested);
+        }
+
+        [Test]
         public void SubmitFromColumnEditingRequestsDetail()
         {
             bool detailRequested = false;

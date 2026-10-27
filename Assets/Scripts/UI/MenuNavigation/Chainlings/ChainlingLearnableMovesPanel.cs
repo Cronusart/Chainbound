@@ -13,6 +13,8 @@ namespace SignalJam.UI.MenuNavigation
     {
         [SerializeField] private TMP_Text headingLabel;
         [SerializeField] private TMP_Text statusLabel;
+        [SerializeField] private ChainlingProgressionRewardTablesSO progressionRewardTables;
+        [SerializeField] private ChainlingProgressionEventCatalogSO progressionEventCatalog;
         [SerializeField] private Button scrollUpButton;
         [SerializeField] private Button scrollDownButton;
         [SerializeField] private ScrollRect scrollRect;
@@ -56,13 +58,97 @@ namespace SignalJam.UI.MenuNavigation
                     : "LEARNABLE MOVES";
 
             List<SpeciesProgressionMoveEntry> pool = BuildUniquePool(species);
-            if (statusLabel != null)
-                statusLabel.text = pool.Count > 0
-                    ? "Species progression pool • learned entries are marked"
-                    : "No learnable move pool has been authored for this species.";
+            int stars = snapshot != null ? snapshot.stars : 0;
+            bool entangled = ChainlingProgressionIdentityUtility.IsEntangled(snapshot);
+            ChainlingProgressionRewardTablesSO tables = ResolveRewardTables();
+            MoveLearnSummaryPreview summary = MoveLearnPreviewUtility.BuildSummaryPreview(
+                species,
+                stars,
+                entangled,
+                tables,
+                progressionEventCatalog);
+            ChainlingProgressionResolvedPool resolved = MoveLearnPreviewUtility.ResolvePreviewPool(
+                species,
+                stars,
+                entangled,
+                progressionEventCatalog);
+            Dictionary<string, float> folioShares = BuildFolioShares(resolved);
 
+            if (statusLabel != null)
+            {
+                if (pool.Count == 0 || summary == null || !summary.poolConfigured)
+                    statusLabel.text = pool.Count > 0
+                        ? "Species progression pool • learned entries are marked"
+                        : "No learnable move pool has been authored for this species.";
+                else
+                    statusLabel.text = summary.isMastery
+                        ? $"Five-star mastery folio {summary.gatePercent}%"
+                        : $"Next-star folio {summary.gatePercent}%";
+            }
+
+            SortForDossier(species, pool);
             for (int i = 0; i < pool.Count; i++)
-                CreateRow(pool[i], snapshot);
+                CreateRow(species, pool[i], snapshot, folioShares);
+        }
+
+        private ChainlingProgressionRewardTablesSO ResolveRewardTables()
+        {
+            if (progressionRewardTables != null)
+                return progressionRewardTables;
+
+            PostBattleRewardsConfigSO rewards = BalanceConfigRuntime.PostBattleRewards;
+            return rewards != null ? rewards.progressionRewardTables : null;
+        }
+
+        private static Dictionary<string, float> BuildFolioShares(ChainlingProgressionResolvedPool pool)
+        {
+            var shares = new Dictionary<string, float>(StringComparer.Ordinal);
+            if (pool?.entries == null)
+                return shares;
+
+            int total = pool.TotalWeight;
+            for (int i = 0; i < pool.entries.Count; i++)
+            {
+                ResolvedProgressionMoveEntry entry = pool.entries[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.moveId))
+                    continue;
+
+                shares[entry.moveId] = total > 0
+                    ? 100f * entry.effectiveWeight / total
+                    : 0f;
+            }
+
+            return shares;
+        }
+
+        private static void SortForDossier(SpeciesDefinitionSO species, List<SpeciesProgressionMoveEntry> pool)
+        {
+            pool.Sort((a, b) =>
+            {
+                int signature = (IsSignature(species, b) ? 1 : 0) - (IsSignature(species, a) ? 1 : 0);
+                if (signature != 0)
+                    return signature;
+
+                int rarityA = a?.move != null ? (int)a.move.rarity : -1;
+                int rarityB = b?.move != null ? (int)b.move.rarity : -1;
+                int rarity = rarityB.CompareTo(rarityA);
+                if (rarity != 0)
+                    return rarity;
+
+                string nameA = a?.move != null ? a.move.displayName : "";
+                string nameB = b?.move != null ? b.move.displayName : "";
+                return string.Compare(nameA, nameB, StringComparison.Ordinal);
+            });
+        }
+
+        private static bool IsSignature(SpeciesDefinitionSO species, SpeciesProgressionMoveEntry entry)
+        {
+            if (entry == null)
+                return false;
+            if (entry.isSignature)
+                return true;
+
+            return species != null && species.flagshipMove != null && entry.move == species.flagshipMove;
         }
 
         private static List<SpeciesProgressionMoveEntry> BuildUniquePool(SpeciesDefinitionSO species)
@@ -97,13 +183,19 @@ namespace SignalJam.UI.MenuNavigation
             return result;
         }
 
-        private void CreateRow(SpeciesProgressionMoveEntry poolEntry, ChainlingSnapshot snapshot)
+        private void CreateRow(
+            SpeciesDefinitionSO species,
+            SpeciesProgressionMoveEntry poolEntry,
+            ChainlingSnapshot snapshot,
+            Dictionary<string, float> folioShares)
         {
             MoveDefinitionSO move = poolEntry.move;
             bool learned = snapshot != null && snapshot.moveIds != null && snapshot.moveIds.Contains(move.moveId);
+            float share = folioShares != null && folioShares.TryGetValue(move.moveId, out float found) ? found : 0f;
+            bool signature = IsSignature(species, poolEntry);
             if (rowTemplate != null)
             {
-                CreateRowFromTemplate(move, poolEntry, learned);
+                CreateRowFromTemplate(move, poolEntry, learned, share, signature);
                 return;
             }
 
@@ -127,12 +219,18 @@ namespace SignalJam.UI.MenuNavigation
             int min = Mathf.Clamp(poolEntry.minStar, 0, CombatConstants.STAR_MAX);
             int max = poolEntry.maxStar <= 0 ? CombatConstants.STAR_MAX : Mathf.Clamp(poolEntry.maxStar, min, CombatConstants.STAR_MAX);
             string gate = min == 0 && max == CombatConstants.STAR_MAX ? "Any star" : $"Stars {min}-{max}";
-            string tag = poolEntry.isSignature ? "SIGNATURE" : poolEntry.poolTag.ToString().ToUpperInvariant();
-            text.text = $"<b>{move.displayName}</b>   {move.baseType} • {move.category}   {gate}   [{tag}]" +
+            string tag = signature ? "SIGNATURE" : poolEntry.poolTag.ToString().ToUpperInvariant();
+            string shareLabel = MoveLearnPreviewUtility.FormatPercent(share);
+            text.text = $"<b>{move.displayName}</b>   {move.baseType} • {move.category}   {move.rarity}   {shareLabel} of the folio   {gate}   [{tag}]" +
                         (learned ? "   <color=#79E0B1>LEARNED</color>" : string.Empty);
         }
 
-        private void CreateRowFromTemplate(MoveDefinitionSO move, SpeciesProgressionMoveEntry poolEntry, bool learned)
+        private void CreateRowFromTemplate(
+            MoveDefinitionSO move,
+            SpeciesProgressionMoveEntry poolEntry,
+            bool learned,
+            float share,
+            bool signature)
         {
             GameObject row = Instantiate(rowTemplate.gameObject, rowsRoot);
             row.name = $"Move_{move.moveId}";
@@ -146,8 +244,9 @@ namespace SignalJam.UI.MenuNavigation
             int min = Mathf.Clamp(poolEntry.minStar, 0, CombatConstants.STAR_MAX);
             int max = poolEntry.maxStar <= 0 ? CombatConstants.STAR_MAX : Mathf.Clamp(poolEntry.maxStar, min, CombatConstants.STAR_MAX);
             string gate = min == 0 && max == CombatConstants.STAR_MAX ? "Any star" : $"Stars {min}-{max}";
-            string tag = poolEntry.isSignature ? "SIGNATURE" : poolEntry.poolTag.ToString().ToUpperInvariant();
-            text.text = $"{move.displayName}    {move.baseType} · {move.category}    {gate}    {tag}" +
+            string tag = signature ? "SIGNATURE" : poolEntry.poolTag.ToString().ToUpperInvariant();
+            string shareLabel = MoveLearnPreviewUtility.FormatPercent(share);
+            text.text = $"{move.displayName}    {move.baseType} · {move.category}    {move.rarity}    {shareLabel} of the folio    {gate}    {tag}" +
                         (learned ? "    LEARNED" : string.Empty);
         }
 

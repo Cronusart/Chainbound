@@ -21,6 +21,7 @@ import {
   stampEffectFieldsFromOperation,
   verifiedStampedAssetMatchesOperation,
 } from "../_shared/ownership_spine.ts";
+import { loadArchiveBindingProjection } from "../_shared/bindery_foundation.ts";
 
 serve(async (req: Request) => {
   const early = requirePost(req);
@@ -33,7 +34,11 @@ serve(async (req: Request) => {
   try {
     loadRollConfig();
     const config = loadOwnershipConfig();
-    const ramSnapshot = await readRamBalanceSnapshot(supabase, profile.player_profile_id);
+    const [ramSnapshot, archiveBindingMap] = await Promise.all([
+      readRamBalanceSnapshot(supabase, profile.player_profile_id),
+      loadArchiveBindingProjection(supabase, profile.player_profile_id),
+    ]);
+    const archiveBindings = Array.from(archiveBindingMap.values());
     const ramBalance = ramSnapshot.balance;
     const { data: knownRows, error: knownError } = await supabase.from("ownership_known_moves").select("*")
       .eq("player_profile_id", profile.player_profile_id).is("consumed_at", null).order("created_at", {
@@ -62,6 +67,7 @@ serve(async (req: Request) => {
         stampRamCost: config.stampRamCost,
         known,
         stamped: [],
+        archiveBindings,
         pendingStamp: null,
       });
     }
@@ -136,6 +142,7 @@ serve(async (req: Request) => {
       stampRamCost: config.stampRamCost,
       known,
       stamped,
+      archiveBindings,
       pendingStamp,
     });
   } catch (error) {

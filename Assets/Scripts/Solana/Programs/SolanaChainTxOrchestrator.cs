@@ -215,7 +215,7 @@ namespace Chainbound.Combat
 
         public Task<TxResult> SubmitAsync(string idempotencyKey, byte[] transactionBytes)
         {
-            var scope = new ChainTxScope("legacy-configured", wallet.PublicKey, idempotencyKey);
+            var scope = new ChainTxScope(LegacyScopeCluster, wallet.PublicKey, idempotencyKey);
             return SubmitAsync(new ChainTxRequest(scope, transactionBytes, wallet.SupportsSignAndSend));
         }
 
@@ -226,7 +226,7 @@ namespace Chainbound.Combat
                 record = journal.Values.FirstOrDefault(item => item.signature == txSignature);
             if (record == null)
             {
-                record = NewRecord(new ChainTxScope("legacy-configured", wallet.PublicKey, txSignature), string.Empty, TxStatus.Submitted);
+                record = NewRecord(new ChainTxScope(LegacyScopeCluster, wallet.PublicKey, txSignature), string.Empty, TxStatus.Submitted);
                 record.signature = txSignature;
                 SaveRecord(record);
             }
@@ -318,6 +318,11 @@ namespace Chainbound.Combat
                 !string.Equals(NormalizeCluster(scope.cluster), configuredCluster, StringComparison.Ordinal))
                 throw new InvalidOperationException("Pending transactions cannot resume under a different Solana cluster.");
         }
+
+        // Overloads without an explicit scope run against the configured cluster. Labelling them with a
+        // placeholder made ValidateScopeMatchesWallet reject every one once ownershipCluster was set.
+        private string LegacyScopeCluster =>
+            string.IsNullOrWhiteSpace(configuredCluster) ? "legacy-configured" : configuredCluster;
 
         private static string NormalizeCluster(string cluster)
         {
@@ -480,7 +485,7 @@ namespace Chainbound.Combat
                 foreach (LegacyEntry entry in legacy?.entries ?? new List<LegacyEntry>())
                 {
                     if (string.IsNullOrWhiteSpace(entry.key) || string.IsNullOrWhiteSpace(entry.sig)) continue;
-                    var record = NewRecord(new ChainTxScope("legacy-configured", wallet.PublicKey, entry.key), string.Empty, TxStatus.Submitted);
+                    var record = NewRecord(new ChainTxScope(LegacyScopeCluster, wallet.PublicKey, entry.key), string.Empty, TxStatus.Submitted);
                     record.signature = entry.sig;
                     journal[record.ScopeKey] = record;
                 }

@@ -22,6 +22,18 @@ namespace Chainbound.Combat
         public List<TurnTeamActorEntry> damagingMoveActorsThisTurn = new List<TurnTeamActorEntry>();
         public List<TurnTeamStringEntry> allyKosThisTurn = new List<TurnTeamStringEntry>();
         public List<TurnActorTargetEntry> actorTargetsHitThisTurn = new List<TurnActorTargetEntry>();
+        public List<string> recordedKoIds = new List<string>();
+        public int koSequence;
+        public int lastKoSequenceTeam0 = -1;
+        public int lastKoSequenceTeam1 = -1;
+        public List<TurnActorIntEntry> bossTellStates = new List<TurnActorIntEntry>();
+        public int actionSerial;
+        public int raiseLowestStageActionSerial = -1;
+        public List<string> pendingUplinkAllies = new List<string>();
+        public List<string> uplinkPaidKeys = new List<string>();
+        public List<SetupFeedArm> pendingSetupFeeds = new List<SetupFeedArm>();
+        public float activeSetupFeedFraction;
+        public string activeSetupFeedActorId;
 
         public void BeginTurn(int turn)
         {
@@ -44,6 +56,50 @@ namespace Chainbound.Combat
             allyKosThisTurn.Clear();
             actorTargetsHitThisTurn.Clear();
             currentTurn = turn;
+            if (uplinkPaidKeys != null)
+                uplinkPaidKeys.Clear();
+            else
+                uplinkPaidKeys = new List<string>();
+            // Setup Feed waits for the next ally action, so a new turn must not drop it.
+        }
+
+        public void ClearPendingUplink()
+        {
+            if (pendingUplinkAllies == null)
+                pendingUplinkAllies = new List<string>();
+            else
+                pendingUplinkAllies.Clear();
+        }
+
+        public void NoteUplinkAlly(string sourceId, string allyId)
+        {
+            if (string.IsNullOrEmpty(sourceId) || string.IsNullOrEmpty(allyId) ||
+                string.Equals(sourceId, allyId, StringComparison.Ordinal))
+                return;
+
+            if (pendingUplinkAllies == null)
+                pendingUplinkAllies = new List<string>();
+            string key = sourceId + "|" + allyId;
+            for (int i = 0; i < pendingUplinkAllies.Count; i++)
+            {
+                if (string.Equals(pendingUplinkAllies[i], key, StringComparison.Ordinal))
+                    return;
+            }
+            pendingUplinkAllies.Add(key);
+        }
+
+        public bool TryClaimUplinkPay(string sourceId, string allyId)
+        {
+            if (uplinkPaidKeys == null)
+                uplinkPaidKeys = new List<string>();
+            string key = sourceId + "|" + allyId;
+            for (int i = 0; i < uplinkPaidKeys.Count; i++)
+            {
+                if (string.Equals(uplinkPaidKeys[i], key, StringComparison.Ordinal))
+                    return false;
+            }
+            uplinkPaidKeys.Add(key);
+            return true;
         }
 
         public void EndTurn(int turn)
@@ -53,7 +109,112 @@ namespace Chainbound.Combat
 
         public void RecordActorAction(string actorId)
         {
+            actionSerial++;
             AddUnique(actorsThatActedThisTurn, actorId);
+        }
+
+        public void ArmSetupFeed(int teamIndex, string sourceActorId, float powerFraction)
+        {
+            if (teamIndex < 0 || string.IsNullOrWhiteSpace(sourceActorId) || powerFraction <= 0f)
+                return;
+
+            EnsurePendingSetupFeeds();
+            for (int i = pendingSetupFeeds.Count - 1; i >= 0; i--)
+            {
+                SetupFeedArm existing = pendingSetupFeeds[i];
+                if (existing != null &&
+                    existing.teamIndex == teamIndex &&
+                    string.Equals(existing.sourceActorId, sourceActorId, StringComparison.Ordinal))
+                    pendingSetupFeeds.RemoveAt(i);
+            }
+
+            pendingSetupFeeds.Add(new SetupFeedArm
+            {
+                teamIndex = teamIndex,
+                sourceActorId = sourceActorId,
+                powerFraction = powerFraction,
+                armedActionSerial = actionSerial,
+            });
+        }
+
+        public bool TryConsumeSetupFeeds(int teamIndex, string actorId, bool powerMove, List<float> consumedFractions)
+        {
+            if (consumedFractions != null)
+                consumedFractions.Clear();
+            if (teamIndex < 0 || string.IsNullOrWhiteSpace(actorId))
+                return false;
+
+            EnsurePendingSetupFeeds();
+            float total = 0f;
+            bool consumed = false;
+            for (int i = pendingSetupFeeds.Count - 1; i >= 0; i--)
+            {
+                SetupFeedArm arm = pendingSetupFeeds[i];
+                if (arm == null)
+                {
+                    pendingSetupFeeds.RemoveAt(i);
+                    continue;
+                }
+
+                if (arm.teamIndex != teamIndex ||
+                    string.Equals(arm.sourceActorId, actorId, StringComparison.Ordinal) ||
+                    arm.armedActionSerial >= actionSerial ||
+                    arm.powerFraction <= 0f)
+                    continue;
+
+                pendingSetupFeeds.RemoveAt(i);
+                consumed = true;
+                total += arm.powerFraction;
+                if (consumedFractions != null)
+                    consumedFractions.Add(arm.powerFraction);
+            }
+
+            if (consumed && powerMove)
+            {
+                activeSetupFeedFraction = total;
+                activeSetupFeedActorId = actorId;
+            }
+
+            return consumed;
+        }
+
+        public bool TryPeekActiveSetupFeed(string actorId, out float powerFraction)
+        {
+            powerFraction = 0f;
+            if (activeSetupFeedFraction <= 0f ||
+                string.IsNullOrWhiteSpace(actorId) ||
+                !string.Equals(activeSetupFeedActorId, actorId, StringComparison.Ordinal))
+                return false;
+
+            powerFraction = activeSetupFeedFraction;
+            return true;
+        }
+
+        public void ClearActiveSetupFeed()
+        {
+            activeSetupFeedFraction = 0f;
+            activeSetupFeedActorId = null;
+        }
+
+        public bool HasPendingSetupFeed(int teamIndex, string sourceActorId)
+        {
+            EnsurePendingSetupFeeds();
+            for (int i = 0; i < pendingSetupFeeds.Count; i++)
+            {
+                SetupFeedArm arm = pendingSetupFeeds[i];
+                if (arm != null &&
+                    arm.teamIndex == teamIndex &&
+                    string.Equals(arm.sourceActorId, sourceActorId, StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void EnsurePendingSetupFeeds()
+        {
+            if (pendingSetupFeeds == null)
+                pendingSetupFeeds = new List<SetupFeedArm>();
         }
 
         public void RecordMiss(string attackerId)
@@ -67,6 +228,11 @@ namespace Chainbound.Combat
         }
 
         public void RecordHit(string actorId, string targetId)
+        {
+            RecordHit(-1, actorId, targetId);
+        }
+
+        public void RecordHit(int teamIndex, string actorId, string targetId)
         {
             RecordHit(targetId);
             if (string.IsNullOrWhiteSpace(actorId) || string.IsNullOrWhiteSpace(targetId))
@@ -82,6 +248,7 @@ namespace Chainbound.Combat
 
             actorTargetsHitThisTurn.Add(new TurnActorTargetEntry
             {
+                teamIndex = teamIndex,
                 actorId = actorId,
                 targetId = targetId,
             });
@@ -114,8 +281,18 @@ namespace Chainbound.Combat
 
         public void RecordKo(string defeatedId, int defeatedTeamIndex)
         {
+            if (string.IsNullOrWhiteSpace(defeatedId) || Contains(recordedKoIds, defeatedId))
+                return;
+
+            recordedKoIds.Add(defeatedId);
+            koSequence++;
+            if (defeatedTeamIndex == 0)
+                lastKoSequenceTeam0 = koSequence;
+            else if (defeatedTeamIndex == 1)
+                lastKoSequenceTeam1 = koSequence;
+
             AddUnique(targetsKoThisTurn, defeatedId);
-            if (defeatedTeamIndex >= 0 && !string.IsNullOrWhiteSpace(defeatedId))
+            if (defeatedTeamIndex >= 0)
             {
                 allyKosThisTurn.Add(new TurnTeamStringEntry
                 {
@@ -190,6 +367,20 @@ namespace Chainbound.Combat
             return count;
         }
 
+        public int CountDistinctTargetsHitThisTurnByTeam(int teamIndex)
+        {
+            if (teamIndex < 0)
+                return 0;
+            var targets = new List<string>();
+            for (int i = 0; i < actorTargetsHitThisTurn.Count; i++)
+            {
+                TurnActorTargetEntry entry = actorTargetsHitThisTurn[i];
+                if (entry.teamIndex == teamIndex)
+                    AddUnique(targets, entry.targetId);
+            }
+            return targets.Count;
+        }
+
         public bool DidTeamSufferKoThisTurn(int teamIndex)
         {
             for (int i = 0; i < allyKosThisTurn.Count; i++)
@@ -233,6 +424,32 @@ namespace Chainbound.Combat
             }
 
             return false;
+        }
+
+        public int GetBossTellState(string actorId)
+        {
+            if (bossTellStates == null || string.IsNullOrWhiteSpace(actorId))
+                return 0;
+            for (int i = 0; i < bossTellStates.Count; i++)
+                if (string.Equals(bossTellStates[i].actorId, actorId, StringComparison.Ordinal))
+                    return bossTellStates[i].value;
+            return 0;
+        }
+
+        public void SetBossTellState(string actorId, int value)
+        {
+            if (string.IsNullOrWhiteSpace(actorId))
+                return;
+            if (bossTellStates == null)
+                bossTellStates = new List<TurnActorIntEntry>();
+            for (int i = 0; i < bossTellStates.Count; i++)
+            {
+                if (!string.Equals(bossTellStates[i].actorId, actorId, StringComparison.Ordinal))
+                    continue;
+                bossTellStates[i] = new TurnActorIntEntry { actorId = actorId, value = value };
+                return;
+            }
+            bossTellStates.Add(new TurnActorIntEntry { actorId = actorId, value = value });
         }
 
         private static void AddRangeUnique(List<string> target, List<string> source)
@@ -282,7 +499,24 @@ namespace Chainbound.Combat
     [Serializable]
     public struct TurnActorTargetEntry
     {
+        public int teamIndex;
         public string actorId;
         public string targetId;
+    }
+
+    [Serializable]
+    public struct TurnActorIntEntry
+    {
+        public string actorId;
+        public int value;
+    }
+
+    [Serializable]
+    public sealed class SetupFeedArm
+    {
+        public int teamIndex = -1;
+        public string sourceActorId;
+        public float powerFraction;
+        public int armedActionSerial;
     }
 }

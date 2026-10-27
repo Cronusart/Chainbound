@@ -96,7 +96,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
     private float lastAppliedTime = -1f;
     private bool stateChanged = false;
 
-    private readonly Dictionary<int, RegionFogOverlay> regionFogOverlays = new Dictionary<int, RegionFogOverlay>();
+    private readonly Dictionary<EntityId, RegionFogOverlay> regionFogOverlays = new Dictionary<EntityId, RegionFogOverlay>();
 
     private readonly struct RegionFogOverlay
     {
@@ -148,7 +148,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
     // Cache scene-authored rotation on FIRST indoor entry, not in Awake
     private Quaternion cachedIndoorSceneAuthoredRotation;
     private bool hasIndoorRotationCached = false;
-    private int cachedIndoorLightInstanceID = -1; // Track which light we cached from
+    private EntityId cachedIndoorLightInstanceID = EntityId.None; // Track which light we cached from
     
     // ============================================
     // PROPERTIES
@@ -616,7 +616,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
         if (!indoors && wasIndoors)
         {
             hasIndoorRotationCached = false;
-            cachedIndoorLightInstanceID = -1;
+            cachedIndoorLightInstanceID = EntityId.None;
             
             if (debugLighting)
             {
@@ -652,7 +652,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
             indoorProfile = indoorLight.Profile;
 
         hasIndoorRotationCached = false;
-        cachedIndoorLightInstanceID = -1;
+        cachedIndoorLightInstanceID = EntityId.None;
         stateChanged = true;
         
         // Pre-cache the scene-authored rotation from the IndoorDirectionalLight component
@@ -660,7 +660,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
         if (indoorLight.IsDataCached && indoorLight.Profile != null && indoorLight.Profile.UseSceneAuthoredRotation)
         {
             cachedIndoorSceneAuthoredRotation = indoorLight.SceneAuthoredRotation;
-            cachedIndoorLightInstanceID = indoorLight.Light.GetInstanceID();
+            cachedIndoorLightInstanceID = indoorLight.Light.GetEntityId();
             hasIndoorRotationCached = true;
             
             if (debugLighting)
@@ -707,7 +707,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
         
         // Reset indoor rotation cache since we're configuring for outdoor
         hasIndoorRotationCached = false;
-        cachedIndoorLightInstanceID = -1;
+        cachedIndoorLightInstanceID = EntityId.None;
         
         if (debugLighting)
         {
@@ -725,7 +725,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
         if (owner == null)
             return;
 
-        regionFogOverlays[owner.GetInstanceID()] = new RegionFogOverlay(fogDensityMultiplier, fogTint, priority);
+        regionFogOverlays[owner.GetEntityId()] = new RegionFogOverlay(fogDensityMultiplier, fogTint, priority);
         stateChanged = true;
         if (!isIndoors && timeService != null)
             ApplyVisuals(timeService.NormalizedTime);
@@ -734,7 +734,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
     /// <summary>Removes one region overlay. Indoor presentation always remains authoritative.</summary>
     public void ClearRegionFogOverlay(Component owner)
     {
-        if (owner == null || !regionFogOverlays.Remove(owner.GetInstanceID()))
+        if (owner == null || !regionFogOverlays.Remove(owner.GetEntityId()))
             return;
 
         stateChanged = true;
@@ -861,15 +861,18 @@ public class TimeOfDayVisualApplier : MonoBehaviour
     private RegionFogOverlay ResolveRegionFogOverlay()
     {
         RegionFogOverlay resolved = new RegionFogOverlay(1f, new Color(1f, 1f, 1f, 0f), int.MinValue);
-        int resolvedOwnerId = int.MaxValue;
-        foreach (KeyValuePair<int, RegionFogOverlay> pair in regionFogOverlays)
+        EntityId resolvedOwnerId = EntityId.None;
+        bool hasResolved = false;
+        foreach (KeyValuePair<EntityId, RegionFogOverlay> pair in regionFogOverlays)
         {
             RegionFogOverlay candidate = pair.Value;
-            if (candidate.Priority > resolved.Priority ||
+            if (!hasResolved ||
+                candidate.Priority > resolved.Priority ||
                 (candidate.Priority == resolved.Priority && pair.Key < resolvedOwnerId))
             {
                 resolved = candidate;
                 resolvedOwnerId = pair.Key;
+                hasResolved = true;
             }
         }
 
@@ -939,7 +942,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
             if (debugLighting)
             {
                 Debug.Log($"[TimeOfDayVisualApplier] CACHED OUTDOOR SUN:" +
-                         $"\n  Light: {cachedOutdoorSun.name} (ID: {cachedOutdoorSun.GetInstanceID()})" +
+                         $"\n  Light: {cachedOutdoorSun.name} (ID: {cachedOutdoorSun.GetEntityId()})" +
                          $"\n  Enabled: {cachedOutdoorSunEnabled}" +
                          $"\n  Rotation: {cachedOutdoorSunRotation.eulerAngles}");
             }
@@ -1034,7 +1037,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
                 {
                     // Use the rotation cached by IndoorDirectionalLight in its Awake (before anything else)
                     cachedIndoorSceneAuthoredRotation = indoorLightComponent.SceneAuthoredRotation;
-                    cachedIndoorLightInstanceID = indoorDirectionalLight.GetInstanceID();
+                    cachedIndoorLightInstanceID = indoorDirectionalLight.GetEntityId();
                     hasIndoorRotationCached = true;
                     
                     if (debugLighting)
@@ -1048,7 +1051,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
                 {
                     // Fallback: cache current rotation (may already be modified - less reliable)
                     cachedIndoorSceneAuthoredRotation = indoorDirectionalLight.transform.rotation;
-                    cachedIndoorLightInstanceID = indoorDirectionalLight.GetInstanceID();
+                    cachedIndoorLightInstanceID = indoorDirectionalLight.GetEntityId();
                     hasIndoorRotationCached = true;
                     
                     if (debugLighting)
@@ -1076,13 +1079,13 @@ public class TimeOfDayVisualApplier : MonoBehaviour
                 if (hasIndoorRotationCached)
                 {
                     // Verify we're applying to the same light we cached from
-                    if (indoorDirectionalLight.GetInstanceID() != cachedIndoorLightInstanceID)
+                    if (indoorDirectionalLight.GetEntityId() != cachedIndoorLightInstanceID)
                     {
                         Debug.LogWarning($"[TimeOfDayVisualApplier] Indoor light instance changed! " +
-                                        $"Cached from ID {cachedIndoorLightInstanceID}, now applying to {indoorDirectionalLight.GetInstanceID()}. " +
+                                        $"Cached from ID {cachedIndoorLightInstanceID}, now applying to {indoorDirectionalLight.GetEntityId()}. " +
                                         "Re-caching rotation.");
                         cachedIndoorSceneAuthoredRotation = indoorDirectionalLight.transform.rotation;
-                        cachedIndoorLightInstanceID = indoorDirectionalLight.GetInstanceID();
+                        cachedIndoorLightInstanceID = indoorDirectionalLight.GetEntityId();
                     }
                     
                     // ENFORCE the cached rotation (idempotent - prevents drift from other scripts)
@@ -1113,7 +1116,7 @@ public class TimeOfDayVisualApplier : MonoBehaviour
                     ? $"scene-authored/cached ({cachedIndoorSceneAuthoredRotation.eulerAngles})" 
                     : $"profile ({indoorProfile.IndoorDirectionalRotation})";
                 Debug.Log($"[TimeOfDayVisualApplier] APPLIED INDOOR DIRECTIONAL:" +
-                         $"\n  Light: {indoorDirectionalLight.name} (ID: {indoorDirectionalLight.GetInstanceID()})" +
+                         $"\n  Light: {indoorDirectionalLight.name} (ID: {indoorDirectionalLight.GetEntityId()})" +
                          $"\n  Rotation mode: {rotationInfo}" +
                          $"\n  Actual rotation: {indoorDirectionalLight.transform.rotation.eulerAngles}" +
                          $"\n  RenderSettings.sun: {(RenderSettings.sun != null ? RenderSettings.sun.name : "null")}");

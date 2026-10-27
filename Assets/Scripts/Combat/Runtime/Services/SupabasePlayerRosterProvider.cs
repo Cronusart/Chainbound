@@ -109,6 +109,7 @@ namespace Chainbound.Combat
                             evolutionStage = entry.evolution_stage > 0 ? entry.evolution_stage : 1,
                             visualIdentity = ResolveVisualIdentity(entry),
                             moveIds = CopyStringSlots(entry.move_ids),
+                            moveAcquisitions = CopyStringSlots(entry.acquisitions),
                             modifier1SectionIds = CopyStringSlots(entry.modifier1_section_ids),
                             modifier2SectionIds = CopyStringSlots(entry.modifier2_section_ids),
                             ivs = ivs,
@@ -269,6 +270,7 @@ namespace Chainbound.Combat
             public int times_captured;
             public PveServiceRecordPayload pve_service_record;
             public List<string> move_ids = new List<string>();
+            public List<string> acquisitions = new List<string>();
             public List<string> modifier1_section_ids = new List<string>();
             public List<string> modifier2_section_ids = new List<string>();
             public int current_hp = ChainlingVitalsConstants.UnsyncedCurrentHp;

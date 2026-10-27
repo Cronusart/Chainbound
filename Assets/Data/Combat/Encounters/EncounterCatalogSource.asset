@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eed2a75ea54c6124a93ce4ae7bf4ae98, type: 3}
+  m_Name: EncounterCatalogSource
+  m_EditorClassIdentifier: 
+  speciesDatabase: {fileID: 11400000, guid: 30d36b2ab437f37498a64868dc46ed1c, type: 2}
+  zones:
+  - {fileID: 11400000, guid: 5575a47c00f351943be1c32ac4e41974, type: 2}
+  - {fileID: 11400000, guid: ff5d5de2480c73343bb6f122742f96b3, type: 2}
+  - {fileID: 11400000, guid: 0b323793a1d9b034ab4220ba073446ed, type: 2}
+  - {fileID: 11400000, guid: d4e5f60718293a4b5c6d7e8f901a2b3c, type: 2}

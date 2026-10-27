@@ -324,6 +324,9 @@ namespace Chainbound.Combat
         private bool _isWaitingForPlayerActions;
         private bool _waitingForBattleIntro;
         private bool _resumeAutoRunAfterIntro;
+        private int _battleStartNarrationFrom;
+        private int _battleStartNarrationTo;
+        private bool _battleStartNarrationQueued;
 
         // Replay recording (passive â€” does not affect gameplay)
         private CombatReplayData _replayData;
@@ -505,10 +508,17 @@ namespace Chainbound.Combat
             _cpuAI = CreateAI(cpuPersonality);
 
             // Initialize battle
-            _state = _resolver.InitializeBattle(team0, team1);
+            _battleStartNarrationFrom = _resolver.Log != null ? _resolver.Log.EventCount : 0;
+            _state = _resolver.InitializeBattle(
+                team0,
+                team1,
+                encounter != null && encounter.difficulty == EncounterDifficulty.Boss);
+            _battleStartNarrationTo = _resolver.Log != null ? _resolver.Log.EventCount : _battleStartNarrationFrom;
+            _battleStartNarrationQueued = false;
             if (_casualPvp == null && authoritativeState != null && authoritativeState.vitals != null && authoritativeState.vitals.Count > 0)
                 ApplyAuthoritativeCheckpoint(authoritativeState, authoritativeState.hasActionCheckpoint);
             _battleStarted = true;
+            ChainlingDexRecords.RecordWildEncounter(encounter, IsPvP || IsCasualPvpSession);
             _turnCount = authoritativeState != null && authoritativeState.hasActionCheckpoint
                 ? Mathf.Max(1, authoritativeState.turnNumber)
                 : 0;
@@ -549,6 +559,8 @@ namespace Chainbound.Combat
 
             OnBattleStarted?.Invoke(_state);
             EmitVitalsChangedIfNeeded(forceEmitAll: true);
+            if (!shouldWaitForIntro)
+                QueueBattleStartNarrationOnce();
 
             if (usePlayerInput && !autoRunTurns)
             {
@@ -827,6 +839,11 @@ namespace Chainbound.Combat
                 ClearBattleIntroState();
                 presenter?.AbortQueuedPresentation();
 
+                bool authorityClosed = false;
+                yield return CommitAuthoritativeFlee(success => authorityClosed = success);
+                if (!authorityClosed)
+                    yield break;
+
                 _state.isActive = false;
                 _state.currentPhase = TurnPhase.BattleOver;
                 _state.winnerTeamIndex = 1;
@@ -919,6 +936,64 @@ namespace Chainbound.Combat
             }
         }
 
+        private IEnumerator CommitAuthoritativeFlee(Action<bool> completed)
+        {
+            CombatSessionEnvelope current = AuthoritativeBattleLaunchContext.Current;
+            if (current == null || !current.IsResumable || string.IsNullOrWhiteSpace(current.BattleId))
+            {
+                completed?.Invoke(true);
+                yield break;
+            }
+
+            ICombatSessionService service = SolanaServiceBridge.Instance != null
+                ? SolanaServiceBridge.Instance.CombatSessionService
+                : null;
+            if (service == null)
+            {
+                BlockOnAuthorityFailure("Battle authority is unavailable; flee was not committed.");
+                completed?.Invoke(false);
+                yield break;
+            }
+
+            CombatTeamCommand command = BuildAuthoritativeFleeCommand(current, _state, _turnCount);
+            Task<CombatSessionEnvelope> commit = service.SubmitTeamCommandAsync(current.BattleId, command);
+            while (!commit.IsCompleted)
+                yield return null;
+
+            if (commit.IsFaulted || commit.IsCanceled || commit.Result == null)
+            {
+                string detail = commit.Exception != null
+                    ? commit.Exception.GetBaseException().Message
+                    : "The flee checkpoint was not acknowledged.";
+                BlockOnAuthorityFailure(detail);
+                completed?.Invoke(false);
+                yield break;
+            }
+
+            AuthoritativeBattleLaunchContext.Publish(commit.Result);
+            completed?.Invoke(true);
+        }
+
+        private static CombatTeamCommand BuildAuthoritativeFleeCommand(
+            CombatSessionEnvelope current,
+            CombatState state,
+            int turnCount)
+        {
+            return new CombatTeamCommand
+            {
+                CommandId = string.Concat(current.BattleId, ":", current.Version.ToString(), ":flee"),
+                ExpectedVersion = current.Version,
+                Kind = "action_step",
+                ActionId = "flee",
+                TurnNumber = Mathf.Max(1, turnCount),
+                StepIndex = 0,
+                BattleActive = false,
+                WinnerTeamIndex = -1,
+                EndReason = "Flee",
+                Vitals = BuildAuthorityVitals(state),
+            };
+        }
+
         private void TryPlayFleeSound(Vector3 worldPosition)
         {
             if (fleeSound == null)
@@ -1000,6 +1075,9 @@ namespace Chainbound.Combat
             _pendingPlayerActions = null;
             _playerActionsReady = false;
             _isWaitingForPlayerActions = false;
+            _battleStartNarrationFrom = 0;
+            _battleStartNarrationTo = 0;
+            _battleStartNarrationQueued = false;
             ClearBattleIntroState();
             _replayData = null;
         }
@@ -1022,6 +1100,7 @@ namespace Chainbound.Combat
             _waitingForBattleIntro = false;
             bool resumeAutoRun = _resumeAutoRunAfterIntro;
             _resumeAutoRunAfterIntro = false;
+            QueueBattleStartNarrationOnce();
 
             if (resumeAutoRun && autoRunTurns && _battleStarted && _state != null && _state.isActive)
                 StartAutoRunCoroutine();
@@ -1168,6 +1247,9 @@ namespace Chainbound.Combat
 
         private void RecordSuccessfulCapture(ChainlingInstance target, CaptureOutcome outcome)
         {
+            if (target != null)
+                ChainlingDexRecords.RecordCaught(target.speciesId);
+
             float duration = outcome != null ? outcome.DurationSeconds : 0f;
             if (duration <= 0f && outcome != null && outcome.ElapsedTicks > 0)
                 duration = outcome.ElapsedTicks / 30f;
@@ -1632,9 +1714,14 @@ namespace Chainbound.Combat
 
         private List<CombatVitalSnapshot> BuildAuthorityVitals()
         {
+            return BuildAuthorityVitals(_state);
+        }
+
+        private static List<CombatVitalSnapshot> BuildAuthorityVitals(CombatState state)
+        {
             var result = new List<CombatVitalSnapshot>();
-            AppendTeamVitals(result, _state?.team0, 0);
-            AppendTeamVitals(result, _state?.team1, 1);
+            AppendTeamVitals(result, state?.team0, 0);
+            AppendTeamVitals(result, state?.team1, 1);
             return result;
         }
 

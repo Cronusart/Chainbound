@@ -317,6 +317,52 @@ namespace SignalJam.UI.MenuNavigation
             OpenAtTab(index >= 0 ? index : ResolveDefaultTabIndex());
         }
 
+        public void OpenRamShop()
+        {
+            if (IsGameplayMenuBlockedInCurrentScene())
+                return;
+
+            ResolveReferences();
+            EnsureRuntimeHubLayout();
+
+            if (closingSequencePlaying)
+                return;
+
+            RamShopScreen shop = GetComponentInChildren<RamShopScreen>(true);
+            if (shop == null)
+            {
+                if (enableDebugLogs)
+                    Debug.Log("[PlayerMenuController] Open RAM shop ignored: embedded screen is missing.", this);
+                return;
+            }
+
+            if (IsOpen && screenStack != null && screenStack.Current == shop)
+                return;
+
+            if (!IsOpen && !PassesGameplayMenuOpenGate())
+                return;
+
+            if (!IsOpen)
+            {
+                IsOpen = true;
+                PlaySfxCue(PlayerMenuSfxCue.MenuOpen);
+                PlayerMenuSfxResolver.SuppressNavigationCues(0.35f);
+                ApplyRootVisible(true);
+                SetRootInteraction(false);
+                AcquirePauseAndInput();
+                ConfigureTabs();
+                featureUnlockService = ResolveFeatureUnlockService();
+                ApplyFeatureLocks(featureUnlockService != null && featureUnlockService.IsHandbookUnlocked);
+                _ = RefreshFeatureLocksAsync();
+                RunWithoutNavigationSfx(() => ShowRamShop(shop));
+                PlayOpenBootSequence();
+                return;
+            }
+
+            PlaySfxCue(PlayerMenuSfxCue.PanelSwitch);
+            RunWithoutNavigationSfx(() => ShowRamShop(shop));
+        }
+
         public void OpenToTab(int tabIndex)
         {
             if (!IsMenuTabIndexAllowed(tabIndex))
@@ -363,29 +409,8 @@ namespace SignalJam.UI.MenuNavigation
                 return;
             }
 
-            OnScreenKeyboardService keyboard = OnScreenKeyboardService.Instance;
-            if (keyboard != null && keyboard.IsOpen)
-            {
-                if (enableDebugLogs)
-                    Debug.Log("[PlayerMenuController] Open ignored: on-screen keyboard is open.", this);
-                PlaySfxCue(PlayerMenuSfxCue.Invalid);
+            if (!PassesGameplayMenuOpenGate())
                 return;
-            }
-
-            if (!bypassAvailabilityGate)
-            {
-                GameplayMenuAvailabilityService gate = availabilityService != null
-                    ? availabilityService
-                    : GameplayMenuAvailabilityService.Instance;
-
-                if (gate != null && !gate.CanOpen)
-                {
-                    if (enableDebugLogs)
-                        Debug.Log("[PlayerMenuController] Open ignored: gameplay menu is unavailable.", this);
-                    PlaySfxCue(PlayerMenuSfxCue.Invalid);
-                    return;
-                }
-            }
 
             IsOpen = true;
             PlaySfxCue(PlayerMenuSfxCue.MenuOpen);
@@ -1468,7 +1493,7 @@ namespace SignalJam.UI.MenuNavigation
             tmp.fontSize = size;
             tmp.alignment = align;
             tmp.color = new Color(0.92f, 0.96f, 1f, 1f);
-            tmp.enableWordWrapping = true;
+            tmp.textWrappingMode = TextWrappingModes.Normal;
             return tmp;
         }
 
@@ -1561,6 +1586,48 @@ namespace SignalJam.UI.MenuNavigation
             rt.pivot = new Vector2(0.5f, 0f);
             rt.sizeDelta = new Vector2(width, height);
             rt.anchoredPosition = new Vector2(0f, y);
+        }
+
+        private void ShowRamShop(RamShopScreen shop)
+        {
+            SetHubVisible(false);
+            isContentMode = true;
+
+            if (screenStack != null && screenStack.Current != null && screenStack.Current != shop)
+                screenStack.Push(shop);
+            else
+                screenStack?.ShowRoot(shop, animate: false);
+
+            ApplyContentNavigation(shop);
+        }
+
+        private bool PassesGameplayMenuOpenGate()
+        {
+            OnScreenKeyboardService keyboard = OnScreenKeyboardService.Instance;
+            if (keyboard != null && keyboard.IsOpen)
+            {
+                if (enableDebugLogs)
+                    Debug.Log("[PlayerMenuController] Open ignored: on-screen keyboard is open.", this);
+                PlaySfxCue(PlayerMenuSfxCue.Invalid);
+                return false;
+            }
+
+            if (!bypassAvailabilityGate)
+            {
+                GameplayMenuAvailabilityService gate = availabilityService != null
+                    ? availabilityService
+                    : GameplayMenuAvailabilityService.Instance;
+
+                if (gate != null && !gate.CanOpen)
+                {
+                    if (enableDebugLogs)
+                        Debug.Log("[PlayerMenuController] Open ignored: gameplay menu is unavailable.", this);
+                    PlaySfxCue(PlayerMenuSfxCue.Invalid);
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static bool IsGameplayMenuBlockedInCurrentScene()

@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_arguments)] // Anchor instruction ABIs intentionally expose explicit arguments.
 
 use crate::instruction::FulfillEncounter as FulfillEncounterInstruction;
+use crate::instruction::FulfillRoll as FulfillRollInstruction;
 use anchor_lang::prelude::*;
 use ephemeral_rollups_sdk::anchor::{vrf, vrf_callback};
 use ephemeral_rollups_sdk::vrf::{
@@ -8,6 +9,7 @@ use ephemeral_rollups_sdk::vrf::{
     instructions::{create_request_scoped_randomness_ix, RequestRandomnessParams},
     types::SerializableAccountMeta,
 };
+use solana_sha256_hasher::hashv;
 use mpl_core::{
     accounts::{BaseAssetV1, BaseCollectionV1},
     instructions::{BurnV1CpiBuilder, CreateV2CpiBuilder},
@@ -32,7 +34,7 @@ const MAX_MUTATION_IDS: usize = 4;
 const MAX_MUTATION_ID_LEN: usize = 32;
 const MAX_CHAINLING_KNOWN_MOVE_IDS: usize = 16;
 const COMPONENT_STAMPED_MOVE: u8 = 0;
-const COMPONENT_COSMETIC_SKIN: u8 = 1;
+const COMPONENT_COSMETIC: u8 = 1;
 const KNOWN_ROLL_RAM_COST: u32 = 5;
 const RAM_RESERVATION_KIND_KNOWN: u8 = 0;
 const RAM_RESERVATION_KIND_STAMP: u8 = 1;
@@ -44,6 +46,17 @@ const SECONDS_PER_DAY: i64 = 86_400;
 const ENCOUNTER_PENDING: u8 = 0;
 const ENCOUNTER_FULFILLED: u8 = 1;
 const ENCOUNTER_CONSUMED: u8 = 2;
+const ROLL_KIND_KNOWN: u8 = 1;
+const ROLL_KIND_STAMP: u8 = 2;
+const ROLL_PENDING: u8 = 0;
+const ROLL_FULFILLED: u8 = 1;
+const ROLL_CONSUMED: u8 = 2;
+const ROLL_TIER_COUNT: usize = 6;
+const ROLL_TIER_UNSET: u8 = u8::MAX;
+const ROLL_PPM_TOTAL: u32 = 1_000_000;
+// About an hour of Devnet slots; the retention window is still an open design decision.
+const ROLL_CLOSE_DELAY_SLOTS: u64 = 9_000;
+const ROLL_SEED_DOMAIN: &[u8] = b"chainbound:roll:v1";
 
 #[program]
 pub mod chainbound_game {
@@ -708,6 +721,62 @@ pub mod chainbound_game {
         Ok(())
     }
 
+    /// Records a Stamp ticket for a profile-owned Known move. The Known exists
+    /// only in the authenticated Postgres profile until this wallet-signed
+    /// transaction creates the Core asset; no wallet MoveVault row is required.
+    pub fn prepare_profile_stamp_ticket(
+        ctx: Context<PrepareProfileStampTicket>,
+        idempotency_key: [u8; 32],
+        known_reference: u64,
+        move_id: u16,
+        modifier_ids: Vec<String>,
+        rarity: u8,
+        asset_name: String,
+        asset_uri: String,
+        expires_at: i64,
+    ) -> Result<()> {
+        require!(known_reference != 0, ChainboundError::InvalidKnownReference);
+        require!(
+            modifier_ids.len() == 1 || modifier_ids.len() == 2,
+            ChainboundError::InvalidModifierCount
+        );
+        require!(
+            modifier_ids.iter().all(|value| !value.trim().is_empty()),
+            ChainboundError::InvalidModifier
+        );
+        if modifier_ids.len() == 2 {
+            require!(
+                modifier_ids[0] != modifier_ids[1],
+                ChainboundError::DuplicateModifier
+            );
+        }
+        let now = Clock::get()?.unix_timestamp;
+        require!(expires_at > now, ChainboundError::TicketExpired);
+
+        let mut stored_modifiers = [String::new(), String::new()];
+        for (index, modifier_id) in modifier_ids.into_iter().enumerate() {
+            stored_modifiers[index] = bounded_string(modifier_id, MAX_MODIFIER_ID_LEN)?;
+        }
+
+        let ticket = &mut ctx.accounts.ticket;
+        ticket.owner = ctx.accounts.owner.key();
+        ticket.idempotency_key = idempotency_key;
+        ticket.known_instance_id = known_reference;
+        ticket.move_id = move_id;
+        ticket.modifier_count = if stored_modifiers[1].is_empty() { 1 } else { 2 };
+        ticket.modifier_ids = stored_modifiers;
+        ticket.rarity = rarity;
+        ticket.asset_name = bounded_string(asset_name, MAX_ASSET_NAME_LEN)?;
+        ticket.asset_uri = bounded_string(asset_uri, MAX_ASSET_URI_LEN)?;
+        ticket.expires_at = expires_at;
+        ticket.consumed = false;
+        ticket.stamped_asset = Pubkey::default();
+        ticket.generator_version = ctx.accounts.ownership_config.generator_version;
+        ticket.pool_hash = ctx.accounts.ownership_config.pool_hash;
+        ticket.bump = ctx.bumps.ticket;
+        Ok(())
+    }
+
     /// Atomically consumes one Known instance and RAM and creates its Stamped Core asset.
     pub fn stamp_known_move(ctx: Context<StampKnownMove>, idempotency_key: [u8; 32]) -> Result<()> {
         let owner_key = ctx.accounts.owner.key();
@@ -836,6 +905,109 @@ pub mod chainbound_game {
         Ok(())
     }
 
+    /// Atomically turns a profile-owned Known into a wallet-owned Core asset.
+    /// Postgres is the canonical RAM ledger for this path, so the program only
+    /// requires the wallet signature and the result-authority-issued ticket.
+    pub fn stamp_profile_known_move(
+        ctx: Context<StampProfileKnownMove>,
+        idempotency_key: [u8; 32],
+    ) -> Result<()> {
+        let owner_key = ctx.accounts.owner.key();
+        let now = Clock::get()?.unix_timestamp;
+        let ticket = &ctx.accounts.ticket;
+
+        require!(ticket.owner == owner_key, ChainboundError::InvalidAuthority);
+        require!(
+            ticket.idempotency_key == idempotency_key,
+            ChainboundError::IdempotencyMismatch
+        );
+        require!(
+            ticket.known_instance_id != 0,
+            ChainboundError::InvalidKnownReference
+        );
+        require!(!ticket.consumed, ChainboundError::TicketAlreadyConsumed);
+        require!(ticket.expires_at >= now, ChainboundError::TicketExpired);
+        require!(
+            ticket.modifier_count == 1 || ticket.modifier_count == 2,
+            ChainboundError::InvalidModifierCount
+        );
+        require!(
+            ticket.generator_version == ctx.accounts.ownership_config.generator_version
+                && ticket.pool_hash == ctx.accounts.ownership_config.pool_hash,
+            ChainboundError::StaleConfiguration
+        );
+        require!(
+            !ticket.modifier_ids[0].is_empty()
+                && (ticket.modifier_count == 1 || !ticket.modifier_ids[1].is_empty()),
+            ChainboundError::InvalidModifier
+        );
+        if ticket.modifier_count == 2 {
+            require!(
+                ticket.modifier_ids[0] != ticket.modifier_ids[1],
+                ChainboundError::DuplicateModifier
+            );
+        }
+
+        validate_collection(
+            &ctx.accounts.moves_collection,
+            ctx.accounts.ownership_config.moves_collection,
+            ctx.accounts.core_authority.key(),
+        )?;
+
+        let attributes = profile_stamped_attributes(&ctx.accounts.ownership_config, ticket);
+        let known_instance_id = ticket.known_instance_id;
+        let move_id = ticket.move_id;
+        let modifier_count = ticket.modifier_count;
+        ctx.accounts.ticket.consumed = true;
+        ctx.accounts.ticket.stamped_asset = ctx.accounts.stamped_asset.key();
+
+        let core_program_info = ctx.accounts.core_program.to_account_info();
+        let stamped_asset_info = ctx.accounts.stamped_asset.to_account_info();
+        let moves_collection_info = ctx.accounts.moves_collection.to_account_info();
+        let core_authority_info = ctx.accounts.core_authority.to_account_info();
+        let owner_info = ctx.accounts.owner.to_account_info();
+        let system_program_info = ctx.accounts.system_program.to_account_info();
+        let asset_bump = [ctx.bumps.stamped_asset];
+        let authority_bump = [ctx.bumps.core_authority];
+        let asset_seeds: &[&[u8]] = &[
+            b"stamped_asset",
+            owner_key.as_ref(),
+            idempotency_key.as_ref(),
+            &asset_bump,
+        ];
+        let authority_seeds: &[&[u8]] = &[b"core_authority", &authority_bump];
+        let signer_seeds: &[&[&[u8]]] = &[asset_seeds, authority_seeds];
+
+        CreateV2CpiBuilder::new(&core_program_info)
+            .asset(&stamped_asset_info)
+            .collection(Some(&moves_collection_info))
+            .authority(Some(&core_authority_info))
+            .payer(&owner_info)
+            .owner(Some(&owner_info))
+            .update_authority(None)
+            .system_program(&system_program_info)
+            .data_state(DataState::AccountState)
+            .name(ctx.accounts.ticket.asset_name.clone())
+            .uri(ctx.accounts.ticket.asset_uri.clone())
+            .plugins(vec![PluginAuthorityPair {
+                plugin: Plugin::Attributes(Attributes {
+                    attribute_list: attributes,
+                }),
+                authority: Some(PluginAuthority::UpdateAuthority),
+            }])
+            .invoke_signed(signer_seeds)?;
+
+        emit!(StampedMoveCreated {
+            owner: owner_key,
+            known_instance_id,
+            move_id,
+            modifier_count,
+            asset: ctx.accounts.stamped_asset.key(),
+            idempotency_key,
+        });
+        Ok(())
+    }
+
     /// Publishes one Chainling Archive and atomically consumes its cover plus the selected
     /// Stamped move or cosmetic skin Core asset.
     pub fn bind_chainling(
@@ -855,7 +1027,7 @@ pub mod chainbound_game {
             Clock::get()?.unix_timestamp,
         )?;
         require!(
-            component_kind == COMPONENT_STAMPED_MOVE || component_kind == COMPONENT_COSMETIC_SKIN,
+            component_kind == COMPONENT_STAMPED_MOVE || component_kind == COMPONENT_COSMETIC,
             ChainboundError::InvalidComponentKind
         );
         require!(
@@ -1056,6 +1228,148 @@ pub mod chainbound_game {
     /// Marks fulfilled bytes consumed exactly once after the game has read them.
     pub fn consume_encounter_randomness(ctx: Context<ConsumeEncounterRandomness>) -> Result<()> {
         ctx.accounts.encounter_request.consume()
+    }
+
+    /// Creates the published tier odds for one roll kind. Thresholds are cumulative parts per
+    /// million, Common..Mythic.
+    pub fn initialize_roll_odds(
+        ctx: Context<InitializeRollOdds>,
+        kind: u8,
+        cumulative_ppm: [u32; ROLL_TIER_COUNT],
+        pool_hash: [u8; 32],
+    ) -> Result<()> {
+        validate_roll_kind(kind)?;
+        validate_cumulative_ppm(&cumulative_ppm)?;
+        let odds = &mut ctx.accounts.roll_odds;
+        odds.kind = kind;
+        odds.odds_version = 1;
+        odds.cumulative_ppm = cumulative_ppm;
+        odds.pool_hash = pool_hash;
+        odds.bump = ctx.bumps.roll_odds;
+        emit!(RollOddsChanged {
+            kind,
+            odds_version: odds.odds_version,
+            cumulative_ppm,
+            pool_hash,
+        });
+        Ok(())
+    }
+
+    /// Replaces the odds for new requests. Pending requests keep the snapshot they were made with.
+    pub fn update_roll_odds(
+        ctx: Context<UpdateRollOdds>,
+        cumulative_ppm: [u32; ROLL_TIER_COUNT],
+        pool_hash: [u8; 32],
+    ) -> Result<()> {
+        validate_cumulative_ppm(&cumulative_ppm)?;
+        let odds = &mut ctx.accounts.roll_odds;
+        odds.odds_version = odds
+            .odds_version
+            .checked_add(1)
+            .ok_or(ChainboundError::ArithmeticOverflow)?;
+        odds.cumulative_ppm = cumulative_ppm;
+        odds.pool_hash = pool_hash;
+        emit!(RollOddsChanged {
+            kind: odds.kind,
+            odds_version: odds.odds_version,
+            cumulative_ppm,
+            pool_hash,
+        });
+        Ok(())
+    }
+
+    /// Requests VRF bytes for one paid operation (Known roll or Stamp). One PDA per operation, so
+    /// a second request for the same operation fails at init.
+    pub fn request_roll(
+        ctx: Context<RequestRoll>,
+        kind: u8,
+        operation_hash: [u8; 32],
+        subject_hash: [u8; 32],
+    ) -> Result<()> {
+        validate_roll_kind(kind)?;
+        let odds = &ctx.accounts.roll_odds;
+        let request = &mut ctx.accounts.roll_request;
+        request.status = ROLL_PENDING;
+        request.tier = ROLL_TIER_UNSET;
+        request.randomness = [0; 32];
+        request.kind = kind;
+        request.operation_hash = operation_hash;
+        request.subject_hash = subject_hash;
+        request.odds_version = odds.odds_version;
+        request.cumulative_ppm = odds.cumulative_ppm;
+        request.pool_hash = odds.pool_hash;
+        request.requested_at_slot = Clock::get()?.slot;
+        request.fulfilled_at_slot = 0;
+        request.consumed_at_slot = 0;
+        request.result_hash = [0; 32];
+        request.bump = ctx.bumps.roll_request;
+
+        let caller_seed = roll_caller_seed(
+            kind,
+            &operation_hash,
+            &subject_hash,
+            request.odds_version,
+            &request.pool_hash,
+        );
+        emit!(RollRequested {
+            kind,
+            operation_hash,
+            subject_hash,
+            odds_version: request.odds_version,
+            caller_seed,
+        });
+
+        let ix = create_request_scoped_randomness_ix(RequestRandomnessParams {
+            payer: ctx.accounts.result_authority.key(),
+            oracle_queue: ctx.accounts.oracle_queue.key(),
+            callback_program_id: crate::ID,
+            callback_discriminator: FulfillRollInstruction::DISCRIMINATOR.to_vec(),
+            caller_seed,
+            accounts_metas: Some(vec![SerializableAccountMeta {
+                pubkey: ctx.accounts.roll_request.key(),
+                is_signer: false,
+                is_writable: true,
+            }]),
+            ..Default::default()
+        });
+        ctx.accounts
+            .invoke_signed_vrf(&ctx.accounts.result_authority.to_account_info(), &ix)?;
+        Ok(())
+    }
+
+    /// MagicBlock callback. Stores the bytes and draws the rarity tier on-chain from the odds
+    /// snapshot taken at request time.
+    pub fn fulfill_roll(ctx: Context<FulfillRoll>, randomness: [u8; 32]) -> Result<()> {
+        let request = &mut ctx.accounts.roll_request;
+        request.fulfill(randomness, Clock::get()?.slot)?;
+        emit!(RollFulfilled {
+            kind: request.kind,
+            operation_hash: request.operation_hash,
+            tier: request.tier,
+            odds_version: request.odds_version,
+        });
+        Ok(())
+    }
+
+    /// Records the hash of the settled result exactly once.
+    pub fn consume_roll(ctx: Context<ConsumeRoll>, result_hash: [u8; 32]) -> Result<()> {
+        let request = &mut ctx.accounts.roll_request;
+        request.consume(result_hash, Clock::get()?.slot)?;
+        emit!(RollConsumed {
+            kind: request.kind,
+            operation_hash: request.operation_hash,
+            tier: request.tier,
+            result_hash,
+        });
+        Ok(())
+    }
+
+    /// Returns a consumed request's rent once the retention window has passed. Events keep the
+    /// audit trail.
+    pub fn close_roll(ctx: Context<CloseRoll>) -> Result<()> {
+        ctx.accounts
+            .roll_request
+            .ensure_closable(Clock::get()?.slot)
     }
 
     pub fn apply_xp_and_maybe_level_up(
@@ -1433,6 +1747,126 @@ pub struct ConsumeEncounterRandomness<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(kind: u8)]
+pub struct InitializeRollOdds<'info> {
+    #[account(
+        init,
+        payer = program_authority,
+        space = 8 + RollOdds::LEN,
+        seeds = [b"roll_odds", kind.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub roll_odds: Account<'info, RollOdds>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = program_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub program_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateRollOdds<'info> {
+    #[account(
+        mut,
+        seeds = [b"roll_odds", roll_odds.kind.to_le_bytes().as_ref()],
+        bump = roll_odds.bump
+    )]
+    pub roll_odds: Account<'info, RollOdds>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = program_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    pub program_authority: Signer<'info>,
+}
+
+#[vrf]
+#[derive(Accounts)]
+#[instruction(kind: u8, operation_hash: [u8; 32])]
+pub struct RequestRoll<'info> {
+    #[account(
+        init,
+        payer = result_authority,
+        space = 8 + RollRequest::LEN,
+        seeds = [b"roll_request", kind.to_le_bytes().as_ref(), operation_hash.as_ref()],
+        bump
+    )]
+    pub roll_request: Account<'info, RollRequest>,
+    #[account(
+        seeds = [b"roll_odds", kind.to_le_bytes().as_ref()],
+        bump = roll_odds.bump
+    )]
+    pub roll_odds: Account<'info, RollOdds>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+    /// CHECK: Pinned to MagicBlock's base-layer queue for Solana Devnet/mainnet.
+    #[account(mut, address = DEFAULT_QUEUE)]
+    pub oracle_queue: AccountInfo<'info>,
+}
+
+#[vrf_callback]
+#[derive(Accounts)]
+pub struct FulfillRoll<'info> {
+    #[account(mut)]
+    pub roll_request: Account<'info, RollRequest>,
+}
+
+#[derive(Accounts)]
+pub struct ConsumeRoll<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"roll_request",
+            roll_request.kind.to_le_bytes().as_ref(),
+            roll_request.operation_hash.as_ref()
+        ],
+        bump = roll_request.bump
+    )]
+    pub roll_request: Account<'info, RollRequest>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    pub result_authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CloseRoll<'info> {
+    #[account(
+        mut,
+        close = result_authority,
+        seeds = [
+            b"roll_request",
+            roll_request.kind.to_le_bytes().as_ref(),
+            roll_request.operation_hash.as_ref()
+        ],
+        bump = roll_request.bump
+    )]
+    pub roll_request: Account<'info, RollRequest>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
 pub struct BurnKnownMoveForRam<'info> {
     #[account(
         mut,
@@ -1645,6 +2079,32 @@ pub struct PrepareStampTicket<'info> {
 
 #[derive(Accounts)]
 #[instruction(idempotency_key: [u8; 32])]
+pub struct PrepareProfileStampTicket<'info> {
+    #[account(
+        init,
+        payer = result_authority,
+        space = 8 + StampTicket::LEN,
+        seeds = [b"stamp_ticket", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump
+    )]
+    pub ticket: Account<'info, StampTicket>,
+    #[account(seeds = [b"ownership_config"], bump = ownership_config.bump)]
+    pub ownership_config: Account<'info, OwnershipConfig>,
+    /// CHECK: The authenticated backend binds this address to the profile's active wallet.
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub result_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(idempotency_key: [u8; 32])]
 pub struct StampKnownMove<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -1669,6 +2129,39 @@ pub struct StampKnownMove<'info> {
         constraint = vault.owner == owner.key() @ ChainboundError::InvalidAuthority
     )]
     pub vault: Box<Account<'info, MoveVault>>,
+    #[account(
+        mut,
+        seeds = [b"stamp_ticket", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump = ticket.bump,
+        constraint = ticket.owner == owner.key() @ ChainboundError::InvalidAuthority
+    )]
+    pub ticket: Account<'info, StampTicket>,
+    #[account(seeds = [b"ownership_config"], bump = ownership_config.bump)]
+    pub ownership_config: Account<'info, OwnershipConfig>,
+    /// CHECK: The key and signer authority are enforced by this program's PDA seeds.
+    #[account(seeds = [b"core_authority"], bump)]
+    pub core_authority: UncheckedAccount<'info>,
+    /// CHECK: Metaplex Core creates this PDA; it must be empty before the CPI.
+    #[account(
+        mut,
+        seeds = [b"stamped_asset", owner.key().as_ref(), idempotency_key.as_ref()],
+        bump
+    )]
+    pub stamped_asset: UncheckedAccount<'info>,
+    /// CHECK: Owner is constrained to Metaplex Core; collection data is parsed and validated.
+    #[account(mut, owner = mpl_core::ID)]
+    pub moves_collection: UncheckedAccount<'info>,
+    /// CHECK: Fixed address prevents arbitrary CPI substitution.
+    #[account(address = mpl_core::ID)]
+    pub core_program: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(idempotency_key: [u8; 32])]
+pub struct StampProfileKnownMove<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
     #[account(
         mut,
         seeds = [b"stamp_ticket", owner.key().as_ref(), idempotency_key.as_ref()],
@@ -1931,6 +2424,132 @@ impl EncounterRequest {
 }
 
 #[account]
+pub struct RollOdds {
+    pub kind: u8,
+    pub odds_version: u32,
+    pub cumulative_ppm: [u32; ROLL_TIER_COUNT],
+    pub pool_hash: [u8; 32],
+    pub bump: u8,
+}
+
+impl RollOdds {
+    pub const LEN: usize = 1 + 4 + (4 * ROLL_TIER_COUNT) + 32 + 1;
+}
+
+#[account]
+pub struct RollRequest {
+    // Status, tier and randomness first so clients can poll a compact prefix.
+    pub status: u8,
+    pub tier: u8,
+    pub randomness: [u8; 32],
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub subject_hash: [u8; 32],
+    pub odds_version: u32,
+    pub cumulative_ppm: [u32; ROLL_TIER_COUNT],
+    pub pool_hash: [u8; 32],
+    pub requested_at_slot: u64,
+    pub fulfilled_at_slot: u64,
+    pub consumed_at_slot: u64,
+    pub result_hash: [u8; 32],
+    pub bump: u8,
+}
+
+impl RollRequest {
+    pub const LEN: usize =
+        1 + 1 + 32 + 1 + 32 + 32 + 4 + (4 * ROLL_TIER_COUNT) + 32 + 8 + 8 + 8 + 32 + 1;
+
+    fn fulfill(&mut self, randomness: [u8; 32], fulfilled_at_slot: u64) -> Result<()> {
+        require!(
+            self.status == ROLL_PENDING,
+            ChainboundError::InvalidRollStatus
+        );
+        self.randomness = randomness;
+        self.tier = roll_tier(&randomness, &self.cumulative_ppm)?;
+        self.fulfilled_at_slot = fulfilled_at_slot;
+        self.status = ROLL_FULFILLED;
+        Ok(())
+    }
+
+    fn consume(&mut self, result_hash: [u8; 32], consumed_at_slot: u64) -> Result<()> {
+        require!(
+            self.status == ROLL_FULFILLED,
+            ChainboundError::InvalidRollStatus
+        );
+        require!(result_hash != [0; 32], ChainboundError::InvalidRollResult);
+        self.result_hash = result_hash;
+        self.consumed_at_slot = consumed_at_slot;
+        self.status = ROLL_CONSUMED;
+        Ok(())
+    }
+
+    fn ensure_closable(&self, current_slot: u64) -> Result<()> {
+        require!(
+            self.status == ROLL_CONSUMED,
+            ChainboundError::InvalidRollStatus
+        );
+        let open_at = self
+            .consumed_at_slot
+            .checked_add(ROLL_CLOSE_DELAY_SLOTS)
+            .ok_or(ChainboundError::ArithmeticOverflow)?;
+        require!(current_slot >= open_at, ChainboundError::RollCloseTooEarly);
+        Ok(())
+    }
+}
+
+fn validate_roll_kind(kind: u8) -> Result<()> {
+    require!(
+        kind == ROLL_KIND_KNOWN || kind == ROLL_KIND_STAMP,
+        ChainboundError::InvalidRollKind
+    );
+    Ok(())
+}
+
+/// Every tier must be reachable (strictly increasing) and the last threshold must close the range.
+fn validate_cumulative_ppm(cumulative_ppm: &[u32; ROLL_TIER_COUNT]) -> Result<()> {
+    let mut previous = 0u32;
+    for threshold in cumulative_ppm.iter() {
+        require!(*threshold > previous, ChainboundError::InvalidRollOdds);
+        previous = *threshold;
+    }
+    require!(previous == ROLL_PPM_TOTAL, ChainboundError::InvalidRollOdds);
+    Ok(())
+}
+
+/// Tier = first index whose cumulative threshold exceeds `u64_le(bytes 0..8) % 1_000_000`.
+/// The modulo bias is at most 1e6 / 2^64 per outcome.
+fn roll_tier(randomness: &[u8; 32], cumulative_ppm: &[u32; ROLL_TIER_COUNT]) -> Result<u8> {
+    let mut head = [0u8; 8];
+    head.copy_from_slice(&randomness[0..8]);
+    let draw = (u64::from_le_bytes(head) % ROLL_PPM_TOTAL as u64) as u32;
+    for (tier, threshold) in cumulative_ppm.iter().enumerate() {
+        if draw < *threshold {
+            return Ok(tier as u8);
+        }
+    }
+    err!(ChainboundError::InvalidRollOdds)
+}
+
+/// Binds the oracle input to the operation, the subject and the odds version.
+fn roll_caller_seed(
+    kind: u8,
+    operation_hash: &[u8; 32],
+    subject_hash: &[u8; 32],
+    odds_version: u32,
+    pool_hash: &[u8; 32],
+) -> [u8; 32] {
+    hashv(&[
+        ROLL_SEED_DOMAIN,
+        &[kind],
+        operation_hash,
+        subject_hash,
+        &odds_version.to_le_bytes(),
+        pool_hash,
+    ])
+    .to_bytes()
+}
+
+#[account]
 pub struct MoveVault {
     pub owner: Pubkey,
     pub known_capacity: u8,
@@ -2161,6 +2780,39 @@ pub struct KnownMoveRolled {
     pub owner: Pubkey,
     pub known_instance_id: u64,
     pub move_id: u16,
+}
+
+#[event]
+pub struct RollOddsChanged {
+    pub kind: u8,
+    pub odds_version: u32,
+    pub cumulative_ppm: [u32; ROLL_TIER_COUNT],
+    pub pool_hash: [u8; 32],
+}
+
+#[event]
+pub struct RollRequested {
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub subject_hash: [u8; 32],
+    pub odds_version: u32,
+    pub caller_seed: [u8; 32],
+}
+
+#[event]
+pub struct RollFulfilled {
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub tier: u8,
+    pub odds_version: u32,
+}
+
+#[event]
+pub struct RollConsumed {
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub tier: u8,
+    pub result_hash: [u8; 32],
 }
 
 #[event]
@@ -2473,6 +3125,12 @@ fn stamped_attributes(config: &OwnershipConfig, ticket: &StampTicket) -> Vec<Att
     values
 }
 
+fn profile_stamped_attributes(config: &OwnershipConfig, ticket: &StampTicket) -> Vec<Attribute> {
+    let mut values = stamped_attributes(config, ticket);
+    values.push(attribute("cb.known_source", "profile".to_string()));
+    values
+}
+
 fn archive_attributes(
     config: &OwnershipConfig,
     chainling: &ChainlingAccount,
@@ -2489,7 +3147,7 @@ fn archive_attributes(
         .join(",");
     vec![
         attribute("cb.schema_version", config.schema_version.to_string()),
-        attribute("cb.kind", "bound_chainling".to_string()),
+        attribute("cb.kind", "chainling_archive".to_string()),
         attribute("cb.chainling_id", chainling.chainling_id.to_string()),
         attribute("cb.species_id", chainling.species_id.clone()),
         attribute("cb.level", chainling.level.to_string()),
@@ -2511,7 +3169,7 @@ fn archive_attributes(
             if component_kind == COMPONENT_STAMPED_MOVE {
                 "stamped_move".to_string()
             } else {
-                "cosmetic_skin".to_string()
+                "cosmetic".to_string()
             },
         ),
     ]
@@ -2562,6 +3220,8 @@ pub enum ChainboundError {
     InvalidConfig,
     #[msg("The Known move instance does not exist or was already consumed.")]
     KnownMoveNotFound,
+    #[msg("The profile-owned Known reference is invalid.")]
+    InvalidKnownReference,
     #[msg("The ticket move no longer matches the selected Known instance.")]
     KnownMoveMismatch,
     #[msg("Stamped moves require exactly one or two modifiers.")]
@@ -2600,6 +3260,16 @@ pub enum ChainboundError {
     TooManyKnownMoves,
     #[msg("Encounter randomness is not in the required lifecycle state.")]
     InvalidEncounterStatus,
+    #[msg("Roll kind must be Known (1) or Stamp (2).")]
+    InvalidRollKind,
+    #[msg("Roll odds must be six strictly increasing thresholds ending at 1,000,000.")]
+    InvalidRollOdds,
+    #[msg("Roll request is not in the required lifecycle state.")]
+    InvalidRollStatus,
+    #[msg("Roll result hash must be non-zero.")]
+    InvalidRollResult,
+    #[msg("Roll request retention window has not passed.")]
+    RollCloseTooEarly,
 }
 
 #[cfg(test)]
@@ -2718,6 +3388,121 @@ mod tests {
         assert!(request.consume().is_err());
     }
 
+    // Ultra curve: 64 / 25 / 9 / 1.7 / 0.28 / 0.02 percent.
+    const ULTRA_CUMULATIVE_PPM: [u32; ROLL_TIER_COUNT] =
+        [640_000, 890_000, 980_000, 997_000, 999_800, 1_000_000];
+
+    fn bytes_with_draw(draw: u64) -> [u8; 32] {
+        let mut bytes = [0xAB; 32];
+        bytes[0..8].copy_from_slice(&draw.to_le_bytes());
+        bytes
+    }
+
+    fn test_roll_request() -> RollRequest {
+        RollRequest {
+            status: ROLL_PENDING,
+            tier: ROLL_TIER_UNSET,
+            randomness: [0; 32],
+            kind: ROLL_KIND_KNOWN,
+            operation_hash: [3; 32],
+            subject_hash: [4; 32],
+            odds_version: 1,
+            cumulative_ppm: ULTRA_CUMULATIVE_PPM,
+            pool_hash: [5; 32],
+            requested_at_slot: 100,
+            fulfilled_at_slot: 0,
+            consumed_at_slot: 0,
+            result_hash: [0; 32],
+            bump: 1,
+        }
+    }
+
+    #[test]
+    fn roll_odds_validation_requires_strictly_increasing_thresholds_ending_at_one_million() {
+        assert!(validate_cumulative_ppm(&ULTRA_CUMULATIVE_PPM).is_ok());
+        assert!(validate_cumulative_ppm(&[0, 1, 2, 3, 4, 1_000_000]).is_err());
+        assert!(validate_cumulative_ppm(&[10, 10, 20, 30, 40, 1_000_000]).is_err());
+        assert!(validate_cumulative_ppm(&[10, 20, 30, 40, 50, 999_999]).is_err());
+        assert!(validate_cumulative_ppm(&[10, 20, 30, 40, 50, 1_000_001]).is_err());
+        assert!(validate_roll_kind(ROLL_KIND_KNOWN).is_ok());
+        assert!(validate_roll_kind(ROLL_KIND_STAMP).is_ok());
+        assert!(validate_roll_kind(0).is_err());
+        assert!(validate_roll_kind(3).is_err());
+    }
+
+    #[test]
+    fn roll_tier_boundaries_follow_cumulative_thresholds() {
+        let cases: [(u64, u8); 13] = [
+            (0, 0),
+            (639_999, 0),
+            (640_000, 1),
+            (889_999, 1),
+            (890_000, 2),
+            (979_999, 2),
+            (980_000, 3),
+            (996_999, 3),
+            (997_000, 4),
+            (999_799, 4),
+            (999_800, 5),
+            (999_999, 5),
+            // Only the value mod 1,000,000 matters.
+            (3 * 1_000_000 + 999_800, 5),
+        ];
+        for (draw, expected) in cases {
+            assert_eq!(
+                roll_tier(&bytes_with_draw(draw), &ULTRA_CUMULATIVE_PPM).unwrap(),
+                expected,
+                "draw {draw}"
+            );
+        }
+        // u64::MAX % 1_000_000 = 551_615, which is Common.
+        assert_eq!(
+            roll_tier(&bytes_with_draw(u64::MAX), &ULTRA_CUMULATIVE_PPM).unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn roll_request_draws_tier_on_fulfill_and_transitions_once() {
+        let mut request = test_roll_request();
+        request.fulfill(bytes_with_draw(999_850), 103).unwrap();
+        assert_eq!(request.status, ROLL_FULFILLED);
+        assert_eq!(request.tier, 5);
+        assert_eq!(request.fulfilled_at_slot, 103);
+        assert!(request.fulfill(bytes_with_draw(0), 104).is_err());
+        assert_eq!(request.tier, 5);
+
+        assert!(request.consume([0; 32], 110).is_err());
+        request.consume([9; 32], 110).unwrap();
+        assert_eq!(request.status, ROLL_CONSUMED);
+        assert_eq!(request.result_hash, [9; 32]);
+        assert!(request.consume([8; 32], 111).is_err());
+    }
+
+    #[test]
+    fn roll_close_requires_consumed_and_retention_window() {
+        let mut request = test_roll_request();
+        assert!(request.ensure_closable(u64::MAX).is_err());
+        request.fulfill(bytes_with_draw(1), 101).unwrap();
+        assert!(request.ensure_closable(u64::MAX).is_err());
+        request.consume([7; 32], 200).unwrap();
+        assert!(request
+            .ensure_closable(200 + ROLL_CLOSE_DELAY_SLOTS - 1)
+            .is_err());
+        assert!(request.ensure_closable(200 + ROLL_CLOSE_DELAY_SLOTS).is_ok());
+    }
+
+    #[test]
+    fn roll_caller_seed_binds_every_input() {
+        let base = roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32]);
+        assert_ne!(base, roll_caller_seed(2, &[1; 32], &[2; 32], 1, &[3; 32]));
+        assert_ne!(base, roll_caller_seed(1, &[9; 32], &[2; 32], 1, &[3; 32]));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[9; 32], 1, &[3; 32]));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 2, &[3; 32]));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[9; 32]));
+        assert_eq!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32]));
+    }
+
     #[test]
     fn archive_metadata_contains_capture_base_variant_and_known_moves() {
         let owner = Pubkey::new_unique();
@@ -2764,6 +3549,29 @@ mod tests {
         assert!(attrs
             .iter()
             .any(|item| item.key == "cb.known_move_ids" && item.value == "7,8"));
+        assert!(attrs
+            .iter()
+            .any(|item| item.key == "cb.kind" && item.value == "chainling_archive"));
+        assert!(attrs.iter().any(|item| {
+            item.key == "cb.bind_component_kind" && item.value == "stamped_move"
+        }));
+        assert!(!attrs.iter().any(|item| {
+            item.value == "bound_chainling" || item.value == "cosmetic_skin"
+        }));
+
+        let cosmetic_attrs = archive_attributes(
+            &config,
+            &chainling,
+            Pubkey::new_unique(),
+            Pubkey::new_unique(),
+            COMPONENT_COSMETIC,
+        );
+        assert!(cosmetic_attrs
+            .iter()
+            .any(|item| item.key == "cb.bind_component_kind" && item.value == "cosmetic"));
+        assert!(!cosmetic_attrs.iter().any(|item| {
+            item.value == "bound_chainling" || item.value == "cosmetic_skin"
+        }));
     }
 
     #[test]

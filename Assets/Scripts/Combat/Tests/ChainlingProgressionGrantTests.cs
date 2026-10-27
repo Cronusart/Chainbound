@@ -8,6 +8,75 @@ namespace Chainbound.Combat.Tests
     public sealed class ChainlingProgressionGrantTests
     {
         [Test]
+        public void MythicSignature_FloorsAtOneBeforeFiveStars_AndUsesStarFiveWeight()
+        {
+            ProgressionConfigSO config = ScriptableObject.CreateInstance<ProgressionConfigSO>();
+            config.moveLearnRarityWeights = new[] { 1f, 0.72f, 0.48f, 0.28f, 0.14f, 0.06f };
+
+            MoveDefinitionSO signature = CreateMove("mythic_sig", "Mythic Sig");
+            signature.rarity = RarityTier.Mythic;
+            MoveDefinitionSO common = CreateMove("baseline_jab", "Baseline Jab");
+            SpeciesDefinitionSO species = ScriptableObject.CreateInstance<SpeciesDefinitionSO>();
+            species.speciesId = "balloom";
+            species.progressionMovePool.Add(new SpeciesProgressionMoveEntry
+            {
+                move = signature,
+                weight = SpeciesProgressionPoolWeights.Signature,
+                weightAtStarFive = SpeciesProgressionPoolWeights.SignatureAtStarFive,
+                useWeightAtStarFive = true,
+                isSignature = true,
+                poolTag = ProgressionPoolTag.Learnable,
+                maxStar = CombatConstants.STAR_MAX,
+            });
+            species.progressionMovePool.Add(new SpeciesProgressionMoveEntry
+            {
+                move = common,
+                weight = SpeciesProgressionPoolWeights.Standard,
+                poolTag = ProgressionPoolTag.Learnable,
+                maxStar = CombatConstants.STAR_MAX,
+            });
+
+            ChainlingProgressionResolvedPool beforeFive = ChainlingProgressionPoolResolver.Resolve(
+                species,
+                4,
+                false,
+                null,
+                null,
+                config);
+            ChainlingProgressionResolvedPool atFive = ChainlingProgressionPoolResolver.Resolve(
+                species,
+                CombatConstants.STAR_MAX,
+                false,
+                null,
+                null,
+                config);
+
+            Assert.NotNull(Find(beforeFive, "mythic_sig"));
+            Assert.AreEqual(1, Find(beforeFive, "mythic_sig").effectiveWeight);
+            Assert.AreEqual(SpeciesProgressionPoolWeights.Standard, Find(beforeFive, "baseline_jab").effectiveWeight);
+            Assert.AreEqual(1, Find(atFive, "mythic_sig").effectiveWeight);
+
+            config.moveLearnRarityWeights[5] = 0.2f;
+            ChainlingProgressionResolvedPool earlyPath = ChainlingProgressionPoolResolver.Resolve(
+                species,
+                4,
+                false,
+                null,
+                null,
+                config);
+            ChainlingProgressionResolvedPool starFivePath = ChainlingProgressionPoolResolver.Resolve(
+                species,
+                CombatConstants.STAR_MAX,
+                false,
+                null,
+                null,
+                config);
+
+            Assert.AreEqual(2, Find(earlyPath, "mythic_sig").effectiveWeight);
+            Assert.AreEqual(5, Find(starFivePath, "mythic_sig").effectiveWeight);
+        }
+
+        [Test]
         public void PoolResolver_AppliesEventMultiplierAndGateBonus()
         {
             MoveDefinitionSO jab = CreateMove("baseline_jab", "Baseline Jab");

@@ -208,13 +208,7 @@ namespace SignalJam.UI.MenuNavigation
 
         private static string SlotLabel(int slot)
         {
-            switch (slot)
-            {
-                case 0: return "LEAD";
-                case 1: return "PARTNER";
-                case 2: return "BENCH";
-                default: return "PARTY";
-            }
+            return ChainlingsPartyScreen.SlotLabel(slot);
         }
     }
 }

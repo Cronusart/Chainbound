@@ -358,6 +358,40 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void BuildSummary_EntryView_UsesTheSharedEncounterCatalog()
+        {
+            ChainlingPartyColumnContext ctx = CreateFilledContext();
+            EncounterZoneSO zone = ScriptableObject.CreateInstance<EncounterZoneSO>();
+            zone.zoneId = "loomville_grass";
+            zone.entryMergeMode = EncounterEntryMergeMode.Replace;
+            zone.entries = new List<ZoneEncounterEntry>
+            {
+                new ZoneEncounterEntry { speciesId = "validape", weight = 10, baseCaptureRate = 55 },
+            };
+            EncounterCatalogSourceSO source = ScriptableObject.CreateInstance<EncounterCatalogSourceSO>();
+            source.zones = new List<EncounterZoneSO> { zone };
+            ctx.encounterCatalog = source;
+            try
+            {
+                ChainlingPartyColumnSummary summary =
+                    ChainlingPartyColumnViewModelBuilder.BuildSummary(ChainlingPartyViewMode.Detail, ctx);
+                ChainlingPartyColumnDrillDown drillDown =
+                    ChainlingPartyColumnViewModelBuilder.BuildDrillDown(ChainlingPartyViewMode.Detail, ctx);
+
+                Assert.AreEqual("Loomville", summary.encountersSummaryLine);
+                Assert.AreEqual(1, drillDown.encounterRows.Count);
+                Assert.AreEqual("Loomville", drillDown.encounterRows[0].zoneName);
+                Assert.AreEqual("Often · Any", drillDown.encounterRows[0].detail);
+                Assert.IsFalse(drillDown.encounterRows[0].detail.Contains("10"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(zone);
+            }
+        }
+
+        [Test]
         public void ViewModeLabels_DetailDisplaysAsEntry()
         {
             Assert.AreEqual("Entry", ChainlingPartyViewModeLabels.GetDisplayName(ChainlingPartyViewMode.Detail));

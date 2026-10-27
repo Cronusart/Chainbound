@@ -15,8 +15,8 @@ MonoBehaviour:
   authoritativeEncounterId: 
   rewardEligibilityQuestId: 
   roster:
-  - speciesId: balloom
-    displayName: Balloom
+  - speciesId: minefolk
+    displayName: minefolk
     stars: 0
     rebirthCount: 0
     masteryXp: 0
@@ -67,7 +67,7 @@ MonoBehaviour:
     currentHp: -1
   teamName: Wild
   aiPersonality: 4
-  difficulty: 1
+  difficulty: 0
   bossIntroDialogueAsset: {fileID: 0}
   fleePolicy: 0
   capturePolicy: 2

@@ -89,6 +89,8 @@ namespace Chainbound.Combat
                     totalRamSpent = stats.total_ram_spent,
                     totalKnownMovesAcquired = stats.total_ordinals_acquired,
                     totalStampedMovesCreated = stats.total_inscriptions_created,
+                    candyMachineRolls = stats.candy_machine_rolls,
+                    candyMachineStamps = stats.candy_machine_stamps,
                     uniqueSpeciesCaptured = stats.unique_species_captured,
                 };
 
@@ -171,6 +173,8 @@ namespace Chainbound.Combat
             public long total_ram_spent;
             public int total_ordinals_acquired;
             public int total_inscriptions_created;
+            public int candy_machine_rolls;
+            public int candy_machine_stamps;
             public int unique_species_captured;
         }
     }

@@ -30,7 +30,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1002, type: 2}
   - {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
   - {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
-  learnLevels: 010000000100000001000000
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  learnLevels: 01000000010000000100000001000000
   exclusiveMoves:
   - {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
   flagshipMove: {fileID: 11400000, guid: b0a51ea000010001aaaabbbbcccc1001, type: 2}
@@ -57,6 +58,15 @@ MonoBehaviour:
     maxStar: 5
     excludeIfOwned: 0
   - move: {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23

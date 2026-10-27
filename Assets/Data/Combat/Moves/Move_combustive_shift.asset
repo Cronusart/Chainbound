@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: combustive_shift
   displayName: Combustive Shift
-  description: 2 hits; bonus damage vs debuffed targets missing AP.
+  description: Two ranged hits.
   category: 1
   baseType: 2
-  rarity: 2
+  rarity: 4
   targeting: 0
   contactType: 1
   power: 22
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

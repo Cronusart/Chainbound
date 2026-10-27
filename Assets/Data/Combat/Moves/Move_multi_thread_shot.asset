@@ -17,7 +17,7 @@ MonoBehaviour:
   description: 2-3 ranged hits; each has 10% chance to gain +1 AP.
   category: 1
   baseType: 11
-  rarity: 0
+  rarity: 1
   targeting: 0
   contactType: 1
   power: 12
@@ -66,6 +66,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

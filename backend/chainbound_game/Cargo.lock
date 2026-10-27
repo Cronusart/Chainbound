@@ -531,6 +531,7 @@ dependencies = [
  "anchor-lang",
  "ephemeral-rollups-sdk",
  "mpl-core",
+ "solana-sha256-hasher 2.3.0",
 ]
 
 [[package]]

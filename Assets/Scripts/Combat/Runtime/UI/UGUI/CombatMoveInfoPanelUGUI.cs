@@ -159,7 +159,7 @@ namespace Chainbound.Combat
 
             descriptionText = EnsureText("DescriptionText", modal, 0.03f, 0.56f, 0.97f, 0.80f, 20, TextAlignmentOptions.TopLeft, new Color(0.90f, 0.92f, 0.94f, 1f), "No description available for this move.");
             if (descriptionText != null)
-                descriptionText.enableWordWrapping = true;
+                descriptionText.textWrappingMode = TextWrappingModes.Normal;
 
             chemistryHeaderText = EnsureText("ChemistryHeader", modal, 0.03f, 0.50f, 0.97f, 0.56f, 20, TextAlignmentOptions.Left, new Color(0.85f, 0.93f, 0.98f, 1f), "Type Reactions");
             chemistryListRoot = EnsureRect("ChemistryList", modal, 0.03f, 0.19f, 0.97f, 0.49f);
@@ -168,7 +168,7 @@ namespace Chainbound.Combat
 
             modifierDetailsText = EnsureText("ModifierDetailsText", modal, 0.03f, 0.11f, 0.97f, 0.18f, 16, TextAlignmentOptions.TopLeft, new Color(0.78f, 0.86f, 0.93f, 1f), "No modifier details.");
             if (modifierDetailsText != null)
-                modifierDetailsText.enableWordWrapping = true;
+                modifierDetailsText.textWrappingMode = TextWrappingModes.Normal;
             footerPromptText = EnsureText("FooterPrompt", modal, 0.03f, 0.03f, 0.97f, 0.10f, 18, TextAlignmentOptions.Center, new Color(0.84f, 0.92f, 0.96f, 1f), "Cancel=Close");
         }
 

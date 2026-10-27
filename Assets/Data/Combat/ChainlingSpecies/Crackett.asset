@@ -28,18 +28,18 @@ MonoBehaviour:
   offTypeMoveExceptions:
   - {fileID: 11400000, guid: 5cc708803c6bda14792d714b1168b357, type: 2}
   learnableMoves:
-  - {fileID: 11400000, guid: a58dcda91d298534bafdb861985cd67c, type: 2}
-  - {fileID: 11400000, guid: b3aef408d024b3044a13114c16c961d8, type: 2}
-  - {fileID: 11400000, guid: f7a2ecaa331fdc844a10d214e9ec0337, type: 2}
   - {fileID: 11400000, guid: 904650a38215c234d97ab899b2428838, type: 2}
+  - {fileID: 11400000, guid: a58dcda91d298534bafdb861985cd67c, type: 2}
+  - {fileID: 11400000, guid: f7a2ecaa331fdc844a10d214e9ec0337, type: 2}
+  - {fileID: 11400000, guid: b3aef408d024b3044a13114c16c961d8, type: 2}
   - {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
   learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
-  flagshipMove: {fileID: 11400000, guid: a58dcda91d298534bafdb861985cd67c, type: 2}
+  flagshipMove: {fileID: 11400000, guid: 904650a38215c234d97ab899b2428838, type: 2}
   initialMoves:
   - {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
   progressionMovePool:
-  - move: {fileID: 11400000, guid: a58dcda91d298534bafdb861985cd67c, type: 2}
+  - move: {fileID: 11400000, guid: 904650a38215c234d97ab899b2428838, type: 2}
     weight: 8
     useWeightAtStarFive: 1
     weightAtStarFive: 24
@@ -48,7 +48,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: b3aef408d024b3044a13114c16c961d8, type: 2}
+  - move: {fileID: 11400000, guid: a58dcda91d298534bafdb861985cd67c, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -66,7 +66,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 904650a38215c234d97ab899b2428838, type: 2}
+  - move: {fileID: 11400000, guid: b3aef408d024b3044a13114c16c961d8, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23

@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: transaction_tax
   displayName: Transaction Tax
-  description: Make target lose 1 AP; gain it if they had more AP.
+  description: Steal 1 AP from the target.
   category: 2
   baseType: 2
-  rarity: 0
+  rarity: 3
   targeting: 0
   contactType: 2
   power: 0
@@ -34,7 +34,28 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 5
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: transaction_tax
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 0
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -44,6 +65,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -17,10 +17,10 @@ MonoBehaviour:
   description: Ranged hit gains +15% damage per target status.
   category: 1
   baseType: 12
-  rarity: 0
+  rarity: 2
   targeting: 0
   contactType: 1
-  power: 52
+  power: 54
   apCost: 3
   accuracy: 95
   hitCountMin: 1
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

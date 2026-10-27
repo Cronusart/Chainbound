@@ -669,6 +669,92 @@
       ]
     },
     {
+      "name": "close_roll",
+      "docs": [
+        "Returns a consumed request's rent once the retention window has passed. Events keep the",
+        "audit trail."
+      ],
+      "discriminator": [
+        34,
+        110,
+        251,
+        171,
+        221,
+        168,
+        78,
+        59
+      ],
+      "accounts": [
+        {
+          "name": "roll_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  108,
+                  108,
+                  95,
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "roll_request.kind",
+                "account": "RollRequest"
+              },
+              {
+                "kind": "account",
+                "path": "roll_request.operation_hash",
+                "account": "RollRequest"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "consume_encounter_randomness",
       "docs": [
         "Marks fulfilled bytes consumed exactly once after the game has read them."
@@ -732,6 +818,100 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "consume_roll",
+      "docs": [
+        "Records the hash of the settled result exactly once."
+      ],
+      "discriminator": [
+        72,
+        170,
+        70,
+        253,
+        92,
+        234,
+        18,
+        1
+      ],
+      "accounts": [
+        {
+          "name": "roll_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  108,
+                  108,
+                  95,
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "roll_request.kind",
+                "account": "RollRequest"
+              },
+              {
+                "kind": "account",
+                "path": "roll_request.operation_hash",
+                "account": "RollRequest"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "result_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "create_chainling",
@@ -1498,6 +1678,48 @@
       ]
     },
     {
+      "name": "fulfill_roll",
+      "docs": [
+        "MagicBlock callback. Stores the bytes and draws the rarity tier on-chain from the odds",
+        "snapshot taken at request time."
+      ],
+      "discriminator": [
+        138,
+        152,
+        214,
+        200,
+        136,
+        138,
+        64,
+        105
+      ],
+      "accounts": [
+        {
+          "name": "vrf_program_identity",
+          "docs": [
+            "Scoped VRF identity PDA, bound to this program. Its presence as a signer proves",
+            "the callback was issued by the VRF program for this program."
+          ],
+          "signer": true
+        },
+        {
+          "name": "roll_request",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "randomness",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "grant_ram",
       "docs": [
         "Credits RAM under the configured daily cap. Profile creation intentionally grants zero;",
@@ -1949,6 +2171,270 @@
               32
             ]
           }
+        }
+      ]
+    },
+    {
+      "name": "initialize_roll_odds",
+      "docs": [
+        "Creates the published tier odds for one roll kind. Thresholds are cumulative parts per",
+        "million, Common..Mythic."
+      ],
+      "discriminator": [
+        34,
+        206,
+        209,
+        47,
+        17,
+        242,
+        20,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "roll_odds",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  108,
+                  108,
+                  95,
+                  111,
+                  100,
+                  100,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "kind"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "kind",
+          "type": "u8"
+        },
+        {
+          "name": "cumulative_ppm",
+          "type": {
+            "array": [
+              "u32",
+              6
+            ]
+          }
+        },
+        {
+          "name": "pool_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "prepare_profile_stamp_ticket",
+      "docs": [
+        "Records a Stamp ticket for a profile-owned Known move. The Known exists",
+        "only in the authenticated Postgres profile until this wallet-signed",
+        "transaction creates the Core asset; no wallet MoveVault row is required."
+      ],
+      "discriminator": [
+        14,
+        195,
+        234,
+        21,
+        25,
+        158,
+        57,
+        144
+      ],
+      "accounts": [
+        {
+          "name": "ticket",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  95,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "known_reference",
+          "type": "u64"
+        },
+        {
+          "name": "move_id",
+          "type": "u16"
+        },
+        {
+          "name": "modifier_ids",
+          "type": {
+            "vec": "string"
+          }
+        },
+        {
+          "name": "rarity",
+          "type": "u8"
+        },
+        {
+          "name": "asset_name",
+          "type": "string"
+        },
+        {
+          "name": "asset_uri",
+          "type": "string"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
         }
       ]
     },
@@ -2465,6 +2951,175 @@
       "args": [
         {
           "name": "request_seed",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "request_roll",
+      "docs": [
+        "Requests VRF bytes for one paid operation (Known roll or Stamp). One PDA per operation, so",
+        "a second request for the same operation fails at init."
+      ],
+      "discriminator": [
+        98,
+        118,
+        98,
+        29,
+        96,
+        208,
+        255,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "roll_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  108,
+                  108,
+                  95,
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "kind"
+              },
+              {
+                "kind": "arg",
+                "path": "operation_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "roll_odds",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  108,
+                  108,
+                  95,
+                  111,
+                  100,
+                  100,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "kind"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        },
+        {
+          "name": "oracle_queue",
+          "writable": true,
+          "address": "Cuj97ggrhhidhbu39TijNVqE74xvKJ69gDervRUXAxGh"
+        },
+        {
+          "name": "program_identity",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  105,
+                  100,
+                  101,
+                  110,
+                  116,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vrf_program",
+          "address": "Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz"
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "kind",
+          "type": "u8"
+        },
+        {
+          "name": "operation_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "subject_hash",
           "type": {
             "array": [
               "u8",
@@ -3177,6 +3832,175 @@
       ]
     },
     {
+      "name": "stamp_profile_known_move",
+      "docs": [
+        "Atomically turns a profile-owned Known into a wallet-owned Core asset.",
+        "Postgres is the canonical RAM ledger for this path, so the program only",
+        "requires the wallet signature and the result-authority-issued ticket."
+      ],
+      "discriminator": [
+        158,
+        107,
+        90,
+        125,
+        109,
+        128,
+        171,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "ticket",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  95,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownership_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  115,
+                  104,
+                  105,
+                  112,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "core_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  114,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "stamped_asset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  97,
+                  109,
+                  112,
+                  101,
+                  100,
+                  95,
+                  97,
+                  115,
+                  115,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "idempotency_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "moves_collection",
+          "writable": true
+        },
+        {
+          "name": "core_program",
+          "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "idempotency_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "update_game_config",
       "discriminator": [
         180,
@@ -3427,6 +4251,101 @@
         {
           "name": "z",
           "type": "i16"
+        }
+      ]
+    },
+    {
+      "name": "update_roll_odds",
+      "docs": [
+        "Replaces the odds for new requests. Pending requests keep the snapshot they were made with."
+      ],
+      "discriminator": [
+        250,
+        25,
+        203,
+        180,
+        12,
+        115,
+        173,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "roll_odds",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  108,
+                  108,
+                  95,
+                  111,
+                  100,
+                  100,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "roll_odds.kind",
+                "account": "RollOdds"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_authority",
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "cumulative_ppm",
+          "type": {
+            "array": [
+              "u32",
+              6
+            ]
+          }
+        },
+        {
+          "name": "pool_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ]
     },
@@ -3711,6 +4630,32 @@
       ]
     },
     {
+      "name": "RollOdds",
+      "discriminator": [
+        54,
+        95,
+        136,
+        210,
+        223,
+        136,
+        92,
+        250
+      ]
+    },
+    {
+      "name": "RollRequest",
+      "discriminator": [
+        204,
+        253,
+        122,
+        192,
+        160,
+        91,
+        16,
+        202
+      ]
+    },
+    {
       "name": "StampTicket",
       "discriminator": [
         27,
@@ -3830,6 +4775,58 @@
       ]
     },
     {
+      "name": "RollConsumed",
+      "discriminator": [
+        32,
+        130,
+        164,
+        71,
+        211,
+        147,
+        192,
+        167
+      ]
+    },
+    {
+      "name": "RollFulfilled",
+      "discriminator": [
+        191,
+        9,
+        176,
+        98,
+        45,
+        64,
+        133,
+        156
+      ]
+    },
+    {
+      "name": "RollOddsChanged",
+      "discriminator": [
+        208,
+        81,
+        56,
+        83,
+        4,
+        53,
+        45,
+        58
+      ]
+    },
+    {
+      "name": "RollRequested",
+      "discriminator": [
+        225,
+        43,
+        126,
+        11,
+        108,
+        114,
+        143,
+        63
+      ]
+    },
+    {
       "name": "StampedMoveCreated",
       "discriminator": [
         133,
@@ -3931,98 +4928,128 @@
     },
     {
       "code": 6017,
+      "name": "InvalidKnownReference",
+      "msg": "The profile-owned Known reference is invalid."
+    },
+    {
+      "code": 6018,
       "name": "KnownMoveMismatch",
       "msg": "The ticket move no longer matches the selected Known instance."
     },
     {
-      "code": 6018,
+      "code": 6019,
       "name": "InvalidModifierCount",
       "msg": "Stamped moves require exactly one or two modifiers."
     },
     {
-      "code": 6019,
+      "code": 6020,
       "name": "InvalidModifier",
       "msg": "Modifier identifiers must be non-empty."
     },
     {
-      "code": 6020,
+      "code": 6021,
       "name": "DuplicateModifier",
       "msg": "Stamped modifier identifiers must be distinct."
     },
     {
-      "code": 6021,
+      "code": 6022,
       "name": "StaleConfiguration",
       "msg": "The ticket was produced for a different ownership configuration."
     },
     {
-      "code": 6022,
+      "code": 6023,
       "name": "TicketExpired",
       "msg": "This ticket has expired."
     },
     {
-      "code": 6023,
+      "code": 6024,
       "name": "TicketAlreadyConsumed",
       "msg": "This ticket was already consumed."
     },
     {
-      "code": 6024,
+      "code": 6025,
       "name": "IdempotencyMismatch",
       "msg": "The idempotency key does not match this receipt or ticket."
     },
     {
-      "code": 6025,
+      "code": 6026,
       "name": "WrongCollection",
       "msg": "The supplied Core collection is not the configured trusted collection."
     },
     {
-      "code": 6026,
+      "code": 6027,
       "name": "InvalidCollectionAuthority",
       "msg": "The supplied Core collection is not controlled by the program authority PDA."
     },
     {
-      "code": 6027,
+      "code": 6028,
       "name": "AssetOwnerMismatch",
       "msg": "The supplied Core asset is not owned by the signing wallet."
     },
     {
-      "code": 6028,
+      "code": 6029,
       "name": "InvalidCoreAccount",
       "msg": "The supplied Metaplex Core account could not be decoded."
     },
     {
-      "code": 6029,
+      "code": 6030,
       "name": "InvalidComponentKind",
       "msg": "Bind component kind must be a Stamped move or cosmetic skin."
     },
     {
-      "code": 6030,
+      "code": 6031,
       "name": "DuplicateComponent",
       "msg": "The cover and selected third component must be different assets."
     },
     {
-      "code": 6031,
+      "code": 6032,
       "name": "ChainlingMismatch",
       "msg": "The Chainling does not match the requested Bind."
     },
     {
-      "code": 6032,
+      "code": 6033,
       "name": "AlreadyBound",
       "msg": "This Chainling is already Bound."
     },
     {
-      "code": 6033,
+      "code": 6034,
       "name": "TooManyMutations",
       "msg": "Capture supplied too many mutation IDs."
     },
     {
-      "code": 6034,
+      "code": 6035,
       "name": "TooManyKnownMoves",
       "msg": "Capture supplied too many Known move IDs."
     },
     {
-      "code": 6035,
+      "code": 6036,
       "name": "InvalidEncounterStatus",
       "msg": "Encounter randomness is not in the required lifecycle state."
+    },
+    {
+      "code": 6037,
+      "name": "InvalidRollKind",
+      "msg": "Roll kind must be Known (1) or Stamp (2)."
+    },
+    {
+      "code": 6038,
+      "name": "InvalidRollOdds",
+      "msg": "Roll odds must be six strictly increasing thresholds ending at 1,000,000."
+    },
+    {
+      "code": 6039,
+      "name": "InvalidRollStatus",
+      "msg": "Roll request is not in the required lifecycle state."
+    },
+    {
+      "code": 6040,
+      "name": "InvalidRollResult",
+      "msg": "Roll result hash must be non-zero."
+    },
+    {
+      "code": 6041,
+      "name": "RollCloseTooEarly",
+      "msg": "Roll request retention window has not passed."
     }
   ],
   "types": [
@@ -5095,6 +6122,278 @@
           {
             "name": "balance_after",
             "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RollConsumed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "tier",
+            "type": "u8"
+          },
+          {
+            "name": "result_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RollFulfilled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "tier",
+            "type": "u8"
+          },
+          {
+            "name": "odds_version",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RollOdds",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "odds_version",
+            "type": "u32"
+          },
+          {
+            "name": "cumulative_ppm",
+            "type": {
+              "array": [
+                "u32",
+                6
+              ]
+            }
+          },
+          {
+            "name": "pool_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RollOddsChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "odds_version",
+            "type": "u32"
+          },
+          {
+            "name": "cumulative_ppm",
+            "type": {
+              "array": [
+                "u32",
+                6
+              ]
+            }
+          },
+          {
+            "name": "pool_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RollRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
+            "name": "tier",
+            "type": "u8"
+          },
+          {
+            "name": "randomness",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "subject_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "odds_version",
+            "type": "u32"
+          },
+          {
+            "name": "cumulative_ppm",
+            "type": {
+              "array": [
+                "u32",
+                6
+              ]
+            }
+          },
+          {
+            "name": "pool_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "requested_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "fulfilled_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "consumed_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "result_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RollRequested",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "subject_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "odds_version",
+            "type": "u32"
+          },
+          {
+            "name": "caller_seed",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ]
       }

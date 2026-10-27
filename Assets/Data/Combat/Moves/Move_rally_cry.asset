@@ -17,7 +17,7 @@ MonoBehaviour:
   description: All allies gain Speed +1; user gains +1 AP at turn end.
   category: 3
   baseType: 0
-  rarity: 0
+  rarity: 1
   targeting: 3
   contactType: 2
   power: 0
@@ -26,7 +26,13 @@ MonoBehaviour:
   hitCountMin: 1
   hitCountMax: 1
   rechargeTurns: 0
-  statusEffects: []
+  statusEffects:
+  - statusId: 303
+    duration: 1
+    chance: 1
+    overrideTargeting: 1
+    targetOverride: 4
+    parameterType: 0
   stageChanges:
   - stat: 5
     stages: 1
@@ -48,6 +54,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: Move_recoil_strike
   m_EditorClassIdentifier: 
   moveId: recoil_strike
-  displayName: Recoil Strike
-  description: 76-power contact hit; take 15% MaxHP recoil.
+  displayName: Hard Fork
+  description: Heavy contact hit; then remove one debuff from yourself.
   category: 0
   baseType: 7
-  rarity: 0
+  rarity: 1
   targeting: 0
   contactType: 0
-  power: 76
-  apCost: 2
+  power: 72
+  apCost: 4
   accuracy: 95
   hitCountMin: 1
   hitCountMax: 1
@@ -33,16 +33,38 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 12
+    magnitude: 1
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: hard_fork
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 4
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
-    utilityExecutionTiming: 0
+    utilityExecutionTiming: 3
     conditionalEffectPolicy: 0
     resolveConditions: []
     requireAllResolveConditions: 1
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

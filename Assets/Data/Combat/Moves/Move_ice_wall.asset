@@ -14,33 +14,37 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: ice_wall
   displayName: Ice Wall
-  description: Give an ally 25% mitigation for the rest of this turn. If you are
-    faster, gain +1 AP when hit.
+  description: "**Mid Wall \xB7 2 AP \xB7 [PRIOR] \xB7 Recharge 1.** The next melee
+    hit on an ally or yourself deals 40% less. Lasts until it blocks 1 hit or until
+    the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Ranged
+    attacks are not blocked. If the protected Chainling is faster than the attacker,
+    it gains 1 AP (max 1). Only one Wall or Barrier can be on a Chainling at a time."
   category: 3
   baseType: 6
-  rarity: 0
+  rarity: 1
   targeting: 2
   contactType: 2
   power: 0
-  apCost: 3
+  apCost: 2
   accuracy: 0
   hitCountMin: 1
   hitCountMax: 1
-  rechargeTurns: 0
+  rechargeTurns: 2
   statusEffects: []
   stageChanges: []
   tags:
   - SUP
   - TRIG
   - APMAN
+  - PRIOR
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
   utilityEffects:
-  - effectType: 0
-    magnitude: 0.25
-    turnBudget: 1
-    hitBudget: 0
+  - effectType: 31
+    magnitude: 0.4
+    turnBudget: 2
+    hitBudget: 1
     apGain: 0
     stackKey: wall_ice
     statusId: 0
@@ -57,11 +61,11 @@ MonoBehaviour:
     healPercentMaxHP: 0
     counterDamagePercentMaxHP: 0
     affectAllAllies: 0
-    contactFilter: 0
+    contactFilter: 1
   - effectType: 1
     magnitude: 0
     turnBudget: 1
-    hitBudget: 0
+    hitBudget: 1
     apGain: 1
     stackKey: wall_ice_ap
     statusId: 0
@@ -88,6 +92,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

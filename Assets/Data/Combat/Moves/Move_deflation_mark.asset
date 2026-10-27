@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Apply Burned Tokens so enemy DoT heals you; lower Atk -1.
   category: 2
   baseType: 5
-  rarity: 0
+  rarity: 2
   targeting: 0
   contactType: 2
   power: 0
@@ -53,6 +53,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

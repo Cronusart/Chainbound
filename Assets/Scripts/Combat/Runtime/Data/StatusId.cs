@@ -18,7 +18,7 @@ namespace Chainbound.Combat
         Defueled            = 105,  // Remove one harmful chemistry status from self (Instant)
         Bridged             = 106,  // Legacy migration ID; use Splinter
         Firewalled          = 107,  // Legacy migration ID; use Firewall
-        Jammed              = 108,  // Accuracy down (Acc -2)
+        Jammed              = 108,  // Accuracy -1 for 2 turns
         Halted              = 109,  // Legacy migration ID; use Slowed
         Crashed             = 110,  // Legacy migration ID; use Shattered
         FOMO                = 111,  // Atk +1 for 3 turns, 1/16 MaxHP self DoT
@@ -46,7 +46,7 @@ namespace Chainbound.Combat
         Rekt                = 200,  // 25% lose action
         Offline             = 201,  // Sleep; wakes on damage
         GlitchedMind        = 202,  // 50% mis-act
-        FUD                 = 203,  // Atk/Def/Acc/Spd -1
+        FUD                 = 203,  // Atk/Def/Spd -1
         HODLed              = 204,  // Immune stat drops; Def ramps +1/turn
         FiftyOnePercentAttacked = 205,  // Team slow & acc down
         MEVExtracted        = 206,  // Steal 1 AP per turn
@@ -76,6 +76,8 @@ namespace Chainbound.Combat
         Relay               = 308,  // Full barrier bypass for next hit (Consumed)
         DamageIntercept     = 309,  // Redirect next single-target attack to interceptor (Consumed)
         SearField           = 310,  // Atk -1 for the rest of the granting turn; stage reverts on expiry
+        Kindled             = 311,  // 6% MaxHP burn at end of turn, then expires
+        CipherLocked        = 312,  // Cannot receive new buffs or positive stage changes
 
         // â”€â”€ Engine-Internal Statuses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Recharging          = 900,  // Stamped recharge timer (ConsumedStatus, see 02C Â§1.2)

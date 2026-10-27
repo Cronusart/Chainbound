@@ -25,14 +25,13 @@ MonoBehaviour:
   baseRangedDef: 62
   baseSpeed: 44
   maxEvolutionStages: 1
-  offTypeMoveExceptions:
-  - {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
+  offTypeMoveExceptions: []
   learnableMoves:
   - {fileID: 11400000, guid: e72675c79b76bc1489b761df7cdd438a, type: 2}
   - {fileID: 11400000, guid: 95aa98c6f895d6f4c982f72ebb32fd3d, type: 2}
   - {fileID: 11400000, guid: a38fdcf34d3968941a08b99d1c607be1, type: 2}
   - {fileID: 11400000, guid: b595b599739107d439d3614cece97cc6, type: 2}
-  - {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
+  - {fileID: 11400000, guid: ee2f18cfdea3f214d9d44650c4e5cc59, type: 2}
   learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
   flagshipMove: {fileID: 11400000, guid: e72675c79b76bc1489b761df7cdd438a, type: 2}
@@ -75,7 +74,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
+  - move: {fileID: 11400000, guid: ee2f18cfdea3f214d9d44650c4e5cc59, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23

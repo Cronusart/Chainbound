@@ -31,6 +31,12 @@ namespace Chainbound.Combat
             45f, 30f, 17.5f, 5f, 2f, 0.5f
         };
 
+        private static readonly string[] DefaultKnownPoolMoveIds =
+        {
+            "baseline_striker", "baseline_slam", "baseline_jab", "baseline_shot", "baseline_snipe",
+            "baseline_volley", "baseline_blast", "baseline_barrage", "baseline_thrust", "baseline_multi_strike",
+        };
+
         [Header("Identity")]
         [Min(1)] public int configVersion = 1;
         [Tooltip("Bump when VRF derivation contract changes (e.g. basis points).")]
@@ -50,6 +56,10 @@ namespace Chainbound.Combat
         {
             new VendingItemClassEntry { classId = "modifiers", weight = 100, enabled = true },
         };
+
+        [Header("Known Move Pool")]
+        [Tooltip("Authored candy-roll membership. Server generation fills element and power from the move catalog and rejects unavailable moves.")]
+        public List<string> knownPoolMoveIds = new List<string>(DefaultKnownPoolMoveIds);
 
         [Header("Event Favor Boost (server-gated)")]
         [Tooltip("Additive rarity bias toward rarer tiers. Default 0; only non-zero via server override.")]
@@ -111,6 +121,7 @@ namespace Chainbound.Combat
             {
                 new VendingItemClassEntry { classId = "modifiers", weight = 100, enabled = true },
             };
+            knownPoolMoveIds = new List<string>(DefaultKnownPoolMoveIds);
             eventFavorBoost = 0f;
         }
 
@@ -151,6 +162,8 @@ namespace Chainbound.Combat
 
             if (itemClasses == null)
                 itemClasses = new List<VendingItemClassEntry>();
+            if (knownPoolMoveIds == null || knownPoolMoveIds.Count == 0)
+                knownPoolMoveIds = new List<string>(DefaultKnownPoolMoveIds);
         }
     }
 }

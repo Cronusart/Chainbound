@@ -17,6 +17,8 @@ namespace Chainbound.Combat
 
         public static string GetIconKey(StatusId statusId)
         {
+            if (statusId == StatusId.Kindled)
+                return "status_kindled";
             ChemistryStatusFamily family = GetFamily(statusId);
             return family == ChemistryStatusFamily.None
                 ? string.Empty
@@ -50,7 +52,9 @@ namespace Chainbound.Combat
                 case StatusId.Firewall:
                     return "PROJECTILE -30%";
                 case StatusId.Slowed:
-                    return "SPD -2 / 25% LOSS";
+                    return "SPD -2";
+                case StatusId.Kindled:
+                    return "6% BURN";
                 case StatusId.CascadeFailure:
                     return "3 = 25% MAXHP";
                 case StatusId.Splinter:

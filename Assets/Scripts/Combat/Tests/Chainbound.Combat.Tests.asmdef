@@ -10,7 +10,8 @@
         "SignalJam.UI.MenuNavigation",
         "SignalJam.VisualFx",
         "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime"
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"

@@ -13,34 +13,60 @@ MonoBehaviour:
   m_Name: Move_lattice_guard
   m_EditorClassIdentifier: 
   moveId: lattice_guard
-  displayName: Lattice Guard
-  description: 40-damage barrier for ally; reflects 20% absorbed damage.
+  displayName: Lattice Barrier
+  description: "**Mid Barrier \xB7 2 AP \xB7 [PRIOR] \xB7 Recharge 1.** The next
+    ranged hit on an ally or yourself deals 40% less. Lasts until it blocks 1 hit
+    or until the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first
+    hit. Melee attacks are not blocked. The attacker takes 20% of the damage this
+    barrier prevented. Only one Wall or Barrier can be on a Chainling at a time."
   category: 3
   baseType: 13
   rarity: 1
   targeting: 2
   contactType: 2
   power: 0
-  apCost: 1
+  apCost: 2
   accuracy: 0
   hitCountMin: 1
   hitCountMax: 1
-  rechargeTurns: 0
+  rechargeTurns: 2
   statusEffects: []
   stageChanges: []
   tags:
   - SUP
   - TRIG
+  - PRIOR
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
   utilityEffects:
-  - effectType: 10
-    magnitude: 40
+  - effectType: 31
+    magnitude: 0.4
     turnBudget: 2
+    hitBudget: 1
+    apGain: 0
+    stackKey: barrier_lattice
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 0
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 2
+  - effectType: 32
+    magnitude: 0
+    turnBudget: 0
     hitBudget: 0
     apGain: 0
-    stackKey: wall_lattice
+    stackKey: barrier_lattice
     statusId: 0
     statusDuration: 0
     targetOverride: 0
@@ -65,6 +91,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

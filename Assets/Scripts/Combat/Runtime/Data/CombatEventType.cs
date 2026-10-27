@@ -90,5 +90,9 @@ namespace Chainbound.Combat
         ValidationError,
         InitiativeResolved,
         SpeedTieResolved,
+        BuffBlocked,
+        BossTell,
+        // Appended for serialized enum stability: informational outcome, not damage.
+        BlockIgnoredDot,
     }
 }

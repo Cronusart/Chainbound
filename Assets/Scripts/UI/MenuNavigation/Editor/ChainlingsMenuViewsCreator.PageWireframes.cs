@@ -43,6 +43,26 @@ namespace SignalJam.UI.MenuNavigation.Editor
             Debug.Log("[ChainlingsMenuViewsCreator] Applied dossier page wireframes to ChainlingDetailView.");
         }
 
+        [MenuItem("Tools/Chainbound/UI/Player Menu Dev/Apply Unified Move Inventory Page", priority = 46)]
+        public static void ApplyUnifiedMoveInventoryPage()
+        {
+            GameObject instance = PrefabUtility.LoadPrefabContents(DetailPrefabPath);
+            try
+            {
+                TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(IndexFontPath);
+                Transform movesPage = instance.transform.Find(PageStackName + "/MovesPage");
+                ApplyMovesWireframe(movesPage, font);
+                PrefabUtility.SaveAsPrefabAsset(instance, DetailPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(instance);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[ChainlingsMenuViewsCreator] Applied unified move inventory page to ChainlingDetailView.");
+        }
+
         [MenuItem("Tools/Chainbound/UI/Player Menu Dev/Apply Chainling Growth Page", priority = 45)]
         public static void ApplyChainlingGrowthPage()
         {
@@ -255,21 +275,13 @@ namespace SignalJam.UI.MenuNavigation.Editor
             if (page == null)
                 return;
 
-            RectTransform rows = CreateWireframeRows(page);
-            CreateSectionLabel(rows, "LoadoutHeader", "LOADOUT", font);
-            TMP_Text summary = CreateSectionLabel(rows, "SlotSummary", "0 / 4 equipped", font);
-            Button[] slots = new Button[4];
-            TMP_Text[] labels = new TMP_Text[4];
-            for (int i = 0; i < slots.Length; i++)
-            {
-                slots[i] = CreateFocusRow(rows, $"Slot_{i + 1}", $"Slot {i + 1}\nEmpty", font, WireframeRowHeight);
-                labels[i] = slots[i].GetComponentInChildren<TMP_Text>(true);
-            }
-
-            CreateSectionLabel(rows, "CompatibleHeader", "COMPATIBLE", font);
-            CreateFocusRow(rows, "CompatibleRow", "Compatible move    Owned", font, WireframeRowHeight);
-            Button template = CreateFocusRow(rows, "RowTemplate", "Compatible move", font, WireframeRowHeight);
+            RectTransform rows = CreateOrResetMoveRows(page);
+            CreateSectionLabel(rows, "InventoryHeader", "MOVE INVENTORY", font);
+            TMP_Text summary = CreateSectionLabel(rows, "SlotSummary", "0 owned | 0 equipped", font);
+            Button template = CreateFocusRow(rows, "RowTemplate", "Move name    Type    State", font, WireframeRowHeight);
             template.gameObject.SetActive(false);
+            Button emptyState = CreateFocusRow(rows, "EmptyState", "Loading move inventory...", font, WireframeRowHeight);
+            emptyState.interactable = false;
 
             ChainlingMoveEquipPanel panel = page.GetComponent<ChainlingMoveEquipPanel>();
             if (panel == null)
@@ -277,15 +289,16 @@ namespace SignalJam.UI.MenuNavigation.Editor
 
             SerializedObject panelSo = new SerializedObject(panel);
             SetIfPresent(panelSo, "slotSummaryLabel", summary);
+            SetIfPresent(panelSo, "moveRowsRoot", rows);
+            SetIfPresent(panelSo, "moveRowTemplate", template);
+            SetIfPresent(panelSo, "emptyStateButton", emptyState);
             SetIfPresent(panelSo, "equippedRoot", null);
             SetIfPresent(panelSo, "availableRoot", null);
             SetIfPresent(panelSo, "refreshButton", null);
             SerializedProperty rowLabels = panelSo.FindProperty("loadoutRowLabels");
             if (rowLabels != null)
             {
-                rowLabels.arraySize = labels.Length;
-                for (int i = 0; i < labels.Length; i++)
-                    rowLabels.GetArrayElementAtIndex(i).objectReferenceValue = labels[i];
+                rowLabels.arraySize = 0;
             }
 
             panelSo.ApplyModifiedPropertiesWithoutUndo();
@@ -530,6 +543,18 @@ namespace SignalJam.UI.MenuNavigation.Editor
             return BuildWireframeShell(page);
         }
 
+        private static RectTransform CreateOrResetMoveRows(Transform page)
+        {
+            Transform rowsTransform = page.Find("Content/Viewport/Rows");
+            if (rowsTransform == null)
+                return CreateWireframeRows(page);
+
+            for (int i = rowsTransform.childCount - 1; i >= 0; i--)
+                UnityEngine.Object.DestroyImmediate(rowsTransform.GetChild(i).gameObject);
+
+            return rowsTransform as RectTransform;
+        }
+
         private static RectTransform BuildWireframeShell(Transform page)
         {
             RectTransform content = PlayerMenuUiFactory.CreateRect("Content", page);
@@ -595,10 +620,13 @@ namespace SignalJam.UI.MenuNavigation.Editor
                 label.alignment = TextAlignmentOptions.MidlineLeft;
                 label.color = WireframeInk;
                 label.fontSize = 18f;
-                label.enableWordWrapping = true;
+                label.textWrappingMode = TextWrappingModes.Normal;
                 label.raycastTarget = false;
                 if (font != null)
+                {
                     label.font = font;
+                    ApplyStampInk(label);
+                }
             }
 
             EnsureFocusButton(button.gameObject, height);
@@ -612,9 +640,22 @@ namespace SignalJam.UI.MenuNavigation.Editor
             text.fontStyle = FontStyles.UpperCase;
             text.raycastTarget = false;
             if (font != null)
+            {
                 text.font = font;
+                ApplyStampInk(text);
+            }
             PlayerMenuUiFactory.LayoutElement(text.gameObject, preferredHeight: 28f, flexibleWidth: 1f);
             return text;
+        }
+
+        private static void ApplyStampInk(TMP_Text text)
+        {
+            if (text == null)
+                return;
+
+            Material stamp = AssetDatabase.LoadAssetAtPath<Material>(StampInkMaterialPath);
+            if (stamp != null)
+                text.fontSharedMaterial = stamp;
         }
 
         private static void EnsureFocusButton(GameObject target, float preferredHeight)

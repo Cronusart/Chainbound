@@ -15,6 +15,7 @@ export interface PlayerProfileRow {
   last_platform_seen?: string | null;
   data_residency?: string | null;
   progression_state?: JsonMap | null;
+  bound_wallet_address?: string | null;
 }
 
 export interface AuthenticatedUserContext {
@@ -148,11 +149,9 @@ export async function resolveProfileByWallet(
   if (!walletPublicKey) return null;
 
   const { data: walletLink, error: walletError } = await supabase
-    .from("profile_wallets")
+    .from("player_profiles")
     .select("player_profile_id")
-    .eq("wallet_public_key", walletPublicKey)
-    .eq("is_active", true)
-    .is("unlinked_at", null)
+    .eq("bound_wallet_address", walletPublicKey)
     .maybeSingle();
 
   if (walletError) throw new Error(`Failed to resolve wallet link: ${walletError.message}`);
@@ -214,6 +213,77 @@ export async function getActiveWallet(
 
   if (error) throw new Error(`Failed to resolve wallet: ${error.message}`);
   return data as JsonMap | null;
+}
+
+export class WalletBindingError extends Error {
+  constructor(public readonly code: string, public readonly httpStatus = 409) {
+    super(code);
+    this.name = "WalletBindingError";
+  }
+}
+
+export async function requireBoundWallet(
+  supabase: SupabaseClient,
+  playerProfileId: string,
+  requestedWallet: string,
+): Promise<void> {
+  const { data, error } = await supabase.from("player_profiles")
+    .select("bound_wallet_address")
+    .eq("player_profile_id", playerProfileId)
+    .single();
+  if (error) throw error;
+  if (!requestedWallet || str(data.bound_wallet_address) !== requestedWallet) {
+    throw new WalletBindingError("wallet_profile_mismatch");
+  }
+}
+
+export async function ensureRamLedgerAccount(
+  supabase: SupabaseClient,
+  playerProfileId: string,
+  walletAddress: string,
+  cluster: string,
+): Promise<JsonMap> {
+  if (
+    !playerProfileId || !SOLANA_BASE58_RE.test(walletAddress) || (cluster !== "devnet" && cluster !== "mainnet-beta")
+  ) {
+    throw new Error("invalid_ram_ledger_scope");
+  }
+  const { data, error } = await supabase.rpc("ram_ledger_ensure_account", {
+    p_player_profile_id: playerProfileId,
+    p_wallet_address: walletAddress,
+    p_cluster: cluster,
+  });
+  if (error) {
+    const known = [
+      "invalid_ram_ledger_scope",
+      "wallet_not_linked_to_profile",
+      "ram_ledger_scope_mismatch",
+    ].find((code) => error.message?.includes(code));
+    const code = known ?? "ram_ledger_account_ensure_failed";
+    if (code === "ram_ledger_scope_mismatch") throw new WalletBindingError("wallet_profile_mismatch");
+    throw new Error(code);
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("invalid_ram_ledger_account_response");
+  }
+  return data as JsonMap;
+}
+
+export async function readRamBalanceSnapshot(
+  supabase: SupabaseClient,
+  playerProfileId: string,
+): Promise<{ balance: number; version: number }> {
+  const { data, error } = await supabase.from("player_profiles")
+    .select("ram_balance, ram_balance_version")
+    .eq("player_profile_id", playerProfileId)
+    .single();
+  if (error) throw error;
+  const balance = Number(data.ram_balance ?? 0);
+  const version = Number(data.ram_balance_version ?? 0);
+  if (!Number.isSafeInteger(balance) || balance < 0 || !Number.isSafeInteger(version) || version <= 0) {
+    throw new Error("invalid_ram_balance_snapshot");
+  }
+  return { balance, version };
 }
 
 export async function sessionResponse(
@@ -293,15 +363,19 @@ export async function resolveAuthenticatedProfile(
 
   const suppliedProfileId = str(body.player_profile_id);
   const suppliedAuthUserId = str(body.auth_user_id);
-  if ((suppliedProfileId && suppliedProfileId !== profile.player_profile_id) ||
-      (suppliedAuthUserId && suppliedAuthUserId !== authenticated.userId)) {
+  if (
+    (suppliedProfileId && suppliedProfileId !== profile.player_profile_id) ||
+    (suppliedAuthUserId && suppliedAuthUserId !== authenticated.userId)
+  ) {
     return null;
   }
 
   const suppliedWallet = str(body.wallet_public_key) || str(body.wallet_address);
   if (suppliedWallet) {
     const walletProfile = await resolveProfileByWallet(supabase, suppliedWallet);
-    if (!allowWalletProfileConflict && walletProfile && walletProfile.player_profile_id !== profile.player_profile_id) return null;
+    if (!allowWalletProfileConflict && walletProfile && walletProfile.player_profile_id !== profile.player_profile_id) {
+      return null;
+    }
   }
 
   return profile;

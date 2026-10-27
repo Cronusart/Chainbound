@@ -71,7 +71,7 @@ public sealed class StarterSelectionUiPrefabTests
     }
 
     [Test]
-    public void ShowStarterNameInput_KeepsAuthoredPoseAndUsesUpperCase()
+    public void ShowStarterNameInput_MovesIntoNamingPoseAndUsesUpperCase()
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
         Assert.That(prefab, Is.Not.Null);
@@ -88,6 +88,13 @@ public sealed class StarterSelectionUiPrefabTests
             Vector2 authoredSize = nameRect.sizeDelta;
             Vector2 authoredAnchorMin = nameRect.anchorMin;
             Vector2 authoredAnchorMax = nameRect.anchorMax;
+            RectTransform preview = FindChild(instance.transform, "PreviewContainer") as RectTransform;
+            RectTransform frame = FindChild(instance.transform, "VisualFrame") as RectTransform;
+            Assert.That(preview, Is.Not.Null);
+            Assert.That(frame, Is.Not.Null);
+            Vector2 previewMin = preview.offsetMin;
+            Vector2 previewMax = preview.offsetMax;
+            float frameY = frame.anchoredPosition.y;
 
             SetPrivateField(ui, "isShowing", true);
             FieldInfo modeField = typeof(StarterSelectionUI).GetField(
@@ -98,10 +105,22 @@ public sealed class StarterSelectionUiPrefabTests
 
             Assert.That(ui.ShowStarterNameInput(), Is.True);
 
-            Assert.That(nameRect.anchoredPosition, Is.EqualTo(authoredPosition));
+            Assert.That(nameRect.anchoredPosition.x, Is.EqualTo(authoredPosition.x).Within(0.01f));
+            Assert.That(nameRect.anchoredPosition.y, Is.EqualTo(-15f).Within(0.01f));
             Assert.That(nameRect.sizeDelta, Is.EqualTo(authoredSize));
             Assert.That(nameRect.anchorMin, Is.EqualTo(authoredAnchorMin));
             Assert.That(nameRect.anchorMax, Is.EqualTo(authoredAnchorMax));
+            Assert.That(preview.offsetMin.x, Is.EqualTo(1000f).Within(0.01f));
+            Assert.That(preview.offsetMax.x, Is.EqualTo(-1000f).Within(0.01f));
+            Assert.That(preview.offsetMin.y, Is.EqualTo(previewMin.y).Within(0.01f));
+            Assert.That(preview.offsetMax.y, Is.EqualTo(previewMax.y).Within(0.01f));
+            Assert.That(frame.anchoredPosition.y, Is.EqualTo(frameY - 30f).Within(0.01f));
+
+            ui.StarterNameInputField.SetTextWithoutNotify("KIT");
+            ui.RetainStarterNameInput();
+            Assert.That(ui.StarterNameInputField.gameObject.activeSelf, Is.True);
+            Assert.That(ui.StarterNameInputField.text, Is.EqualTo("KIT"));
+            Assert.That(ui.StarterNameInputField.readOnly, Is.True);
 
             TextMeshProUGUI label = ui.StarterNameInputField.textComponent as TextMeshProUGUI;
             TextMeshProUGUI placeholder = ui.StarterNameInputField.placeholder as TextMeshProUGUI;
@@ -122,6 +141,59 @@ public sealed class StarterSelectionUiPrefabTests
         FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.That(field, Is.Not.Null, fieldName);
         field.SetValue(target, value);
+    }
+
+    [Test]
+    public void PortraitChrome_ShowsTheStarterPanelPlateAndScanlines()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        Assert.That(prefab, Is.Not.Null);
+        GameObject instance = UnityEngine.Object.Instantiate(prefab);
+        Assert.That(instance, Is.Not.Null);
+
+        try
+        {
+            StarterSelectionUI ui = instance.GetComponent<StarterSelectionUI>();
+            Assert.That(ui, Is.Not.Null);
+            Transform container = FindChild(instance.transform, "PreviewContainer");
+            Assert.That(container, Is.Not.Null);
+            Image plate = container.GetComponent<Image>();
+            Assert.That(plate, Is.Not.Null);
+            Color authored = plate.color;
+
+            InvokePrivate(ui, "PreparePortraitChrome", "Kitsauto");
+
+            Assert.That(plate.color.a, Is.GreaterThan(0.5f));
+            Transform scanline = container.Find("ScanlineOverlay");
+            Assert.That(scanline, Is.Not.Null);
+            Assert.That(scanline.gameObject.activeSelf, Is.True);
+            RawImage scanlineImage = scanline.GetComponent<RawImage>();
+            Assert.That(scanlineImage, Is.Not.Null);
+            Assert.That(scanlineImage.texture, Is.Not.Null);
+            Assert.That(scanlineImage.color.a, Is.GreaterThan(0.4f));
+            Assert.That(scanline.GetSiblingIndex(), Is.EqualTo(0));
+            RectTransform previewRect = container as RectTransform;
+            Assert.That(previewRect, Is.Not.Null);
+            Assert.That(previewRect.offsetMin.x, Is.EqualTo(1000f).Within(0.01f));
+            Assert.That(previewRect.offsetMax.x, Is.EqualTo(-1000f).Within(0.01f));
+            Assert.That(ui.StarterNameInputField.gameObject.activeSelf, Is.False);
+
+            InvokePrivate(ui, "ResetNamingPresentation");
+            Assert.That(plate.color, Is.EqualTo(authored));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(instance);
+        }
+    }
+
+    private static void InvokePrivate(object target, string methodName, params object[] args)
+    {
+        MethodInfo method = target.GetType().GetMethod(
+            methodName,
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null, methodName);
+        method.Invoke(target, args);
     }
 
     [Test]

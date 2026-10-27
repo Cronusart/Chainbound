@@ -121,7 +121,7 @@ public static class CaptureChallengePrefabAuthoring
             if (label != null)
             {
                 label.text = "Signal Orb";
-                label.enableWordWrapping = false;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
                 label.overflowMode = TextOverflowModes.Ellipsis;
                 RectTransform labelRect = label.rectTransform;
                 labelRect.anchorMin = new Vector2(0f, 0f);
@@ -156,7 +156,7 @@ public static class CaptureChallengePrefabAuthoring
             quantity.color = Color.white;
             quantity.alignment = TextAlignmentOptions.Right;
             quantity.verticalAlignment = VerticalAlignmentOptions.Middle;
-            quantity.enableWordWrapping = false;
+            quantity.textWrappingMode = TextWrappingModes.NoWrap;
             quantity.raycastTarget = false;
             quantity.overflowMode = TextOverflowModes.Overflow;
 

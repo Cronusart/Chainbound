@@ -27,15 +27,15 @@ MonoBehaviour:
   offTypeMoveExceptions: []
   learnableMoves:
   - {fileID: 11400000, guid: 0be8d1f145e1b9040b1df038b2891fb3, type: 2}
-  - {fileID: 11400000, guid: c3cee192ebf6d1448b87fd911bbc1943, type: 2}
-  - {fileID: 11400000, guid: cfb1ff4502dd4c941a729f33c20a35f1, type: 2}
-  - {fileID: 11400000, guid: 9895a2381377a634296fdce28030a062, type: 2}
+  - {fileID: 11400000, guid: 907faf178bd46fb4f8f0e953d1b1341a, type: 2}
+  - {fileID: 11400000, guid: 8a18f5ce6fbabc14781c7e0ef8cfb36e, type: 2}
+  - {fileID: 11400000, guid: 3d4f977429f58244c82535c46c6e712e, type: 2}
   - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
   learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
   flagshipMove: {fileID: 11400000, guid: 0be8d1f145e1b9040b1df038b2891fb3, type: 2}
   initialMoves:
-  - {fileID: 11400000, guid: c3cee192ebf6d1448b87fd911bbc1943, type: 2}
+  - {fileID: 11400000, guid: 8a18f5ce6fbabc14781c7e0ef8cfb36e, type: 2}
   progressionMovePool:
   - move: {fileID: 11400000, guid: 0be8d1f145e1b9040b1df038b2891fb3, type: 2}
     weight: 8
@@ -46,7 +46,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: c3cee192ebf6d1448b87fd911bbc1943, type: 2}
+  - move: {fileID: 11400000, guid: 907faf178bd46fb4f8f0e953d1b1341a, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -55,7 +55,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: cfb1ff4502dd4c941a729f33c20a35f1, type: 2}
+  - move: {fileID: 11400000, guid: 8a18f5ce6fbabc14781c7e0ef8cfb36e, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -64,7 +64,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 9895a2381377a634296fdce28030a062, type: 2}
+  - move: {fileID: 11400000, guid: 3d4f977429f58244c82535c46c6e712e, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23

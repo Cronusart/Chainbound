@@ -46,6 +46,7 @@ namespace Chainbound.Combat
         /// Used by rest-of-turn debuffs such as Bot Swarm.
         /// </summary>
         public List<OwnedStageDelta> ownedStageDeltas;
+        public List<OwnedCombatStageDelta> ownedCombatStageDeltas;
 
         /// <summary>
         /// Turn this status was applied. Paired with holdThroughGrantTurn so a
@@ -123,6 +124,15 @@ namespace Chainbound.Combat
             ownedStageDeltas.Add(new OwnedStageDelta { stat = stat, delta = delta });
         }
 
+        public void AddOwnedCombatStage(CombatStageStat stat, int delta)
+        {
+            if (delta == 0)
+                return;
+            if (ownedCombatStageDeltas == null)
+                ownedCombatStageDeltas = new List<OwnedCombatStageDelta>();
+            ownedCombatStageDeltas.Add(new OwnedCombatStageDelta { stat = stat, delta = delta });
+        }
+
         /// <summary>
         /// Apply a stage change and remember the clamped delta so expiry can undo it.
         /// A refresh of the same status does not call this again for apply-once stages.
@@ -173,6 +183,13 @@ namespace Chainbound.Combat
     public struct OwnedStageDelta
     {
         public CoreStat stat;
+        public int delta;
+    }
+
+    [Serializable]
+    public struct OwnedCombatStageDelta
+    {
+        public CombatStageStat stat;
         public int delta;
     }
 }

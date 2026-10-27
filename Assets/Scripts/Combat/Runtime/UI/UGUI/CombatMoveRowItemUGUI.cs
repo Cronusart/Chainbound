@@ -43,8 +43,8 @@ namespace Chainbound.Combat
     }
 
     /// <summary>
-    /// Move-select row view. Prefers authored prefab hierarchy/colors; selection tints the frame
-    /// via editor-exposed colors instead of rebuilding layout at runtime.
+    /// Move-select row view. Prefers authored prefab hierarchy/colors; active selection tints the
+    /// frame, while passive presentation deliberately tints both frame and backdrop.
     /// </summary>
     [DisallowMultipleComponent]
     public class CombatMoveRowItemUGUI : MonoBehaviour
@@ -73,14 +73,24 @@ namespace Chainbound.Combat
         [SerializeField] private Color selectedBackground = new Color(0.92f, 0.88f, 0.42f, 1f);
         [SerializeField] private Color disabledBackground = new Color(0.35f, 0.35f, 0.35f, 0.55f);
 
+        [Header("Passive Row")]
+        [SerializeField] private Color passiveSelectedColor = new Color32(0xC7, 0xDC, 0xD0, 0xFF);
+        [SerializeField] private Color passiveNormalColor = new Color32(0x9B, 0xAB, 0xB2, 0xFF);
+        [SerializeField] private Color passiveLabelColor = new Color32(0x2E, 0x22, 0x2F, 0xFF);
+
         [Header("Label Colors")]
         [SerializeField] private Color usableLabelColor = Color.white;
         [SerializeField] private Color unusableLabelColor = new Color(0.74f, 0.74f, 0.74f, 0.85f);
+        [SerializeField] private Color selectedLabelColor = new Color32(0x2E, 0x22, 0x2F, 0xFF);
+        [SerializeField] private bool useSelectedLabelColor = true;
         [SerializeField] private Color selectionArrowColor = new Color(0.98f, 0.88f, 0.28f, 1f);
 
         [Header("Priority Pill")]
         [SerializeField] private Color priorityPillBackgroundColor = new Color(0.86f, 0.62f, 0.18f, 0.92f);
         [SerializeField] private Color priorityPillTextColor = new Color(1f, 0.95f, 0.78f, 1f);
+        [SerializeField] private Color priorityPillSelectedTextColor = new Color32(0x2E, 0x22, 0x2F, 0xFF);
+        [SerializeField] private Color passivePillBackgroundColor = new Color32(0x2E, 0x22, 0x2F, 0xFF);
+        [SerializeField] private Color passivePillTextColor = new Color32(0xC7, 0xDC, 0xD0, 0xFF);
         [SerializeField] private float priorityPillPaddingX = 8f;
         [SerializeField] private float priorityPillMinWidth = 56f;
         [SerializeField] private float priorityPillHeight = 22f;
@@ -115,6 +125,7 @@ namespace Chainbound.Combat
         private bool _authoredArrowScaleCached;
         private bool _isSelected;
         private bool _isUsable = true;
+        private bool _isPassive;
         private MoveRowSelectionTuning _activeTuning = MoveRowSelectionTuning.CreateDefaults();
 
         public RectTransform RowRect
@@ -146,7 +157,7 @@ namespace Chainbound.Combat
                     labelText.font = fontOverride;
                 if (labelText.fontSize <= 0f)
                     labelText.fontSize = 20f;
-                labelText.enableWordWrapping = false;
+                labelText.textWrappingMode = TextWrappingModes.NoWrap;
                 labelText.alignment = TextAlignmentOptions.Left;
             }
 
@@ -173,24 +184,30 @@ namespace Chainbound.Combat
             bool isUsable,
             bool selected,
             bool hideTypeIcon = false,
-            bool hasPriority = false)
+            bool hasPriority = false,
+            bool isPassive = false)
         {
             EnsureReferences();
             EnsureLayoutElement(preferredRowHeight);
 
             _isUsable = isUsable;
             _isSelected = selected;
+            _isPassive = isPassive;
 
             if (labelText != null)
             {
                 labelText.text = string.IsNullOrEmpty(label) ? "--" : label;
-                labelText.color = isUsable ? usableLabelColor : unusableLabelColor;
+                ApplyLabelColor();
             }
 
-            SetPriorityPillVisible(hasPriority && !hideTypeIcon, isUsable, selected);
+            SetPriorityPillVisible(
+                isPassive || (hasPriority && !hideTypeIcon),
+                isPassive,
+                isUsable,
+                selected);
 
             EnsureBackdropVisible();
-            RestoreAuthoredBackdropColor();
+            ApplyBackdropColor();
             ApplyFrameColor();
 
             if (typeIconImage != null)
@@ -218,8 +235,9 @@ namespace Chainbound.Combat
             _activeTuning = tuning;
             _isSelected = selected;
             EnsureBackdropVisible();
-            RestoreAuthoredBackdropColor();
+            ApplyBackdropColor();
             ApplyFrameColor();
+            ApplyLabelColor();
             CacheAuthoredContentAnchoredX();
 
             // Selected row shifts from authored X by nudgeOffsetX. Reserve mode parks every row
@@ -267,11 +285,12 @@ namespace Chainbound.Combat
 
         public void SetMoveBackdropVisible(bool visible, bool animate, MoveRowSelectionTuning tuning)
         {
-            // Backdrop stays visible; selection tint goes to the frame/outline only.
+            // Backdrop stays visible. Active rows retain the authored fill; passive rows use their
+            // dedicated selected/unselected fill so they remain distinct from AP-blocked moves.
             EnsureReferences();
             _activeTuning = tuning;
             EnsureBackdropVisible();
-            RestoreAuthoredBackdropColor();
+            ApplyBackdropColor();
             ApplyFrameColor();
         }
 
@@ -312,8 +331,9 @@ namespace Chainbound.Combat
             KillSelectionTweens(true);
             HideSelectionArrowImmediate();
             EnsureBackdropVisible();
-            RestoreAuthoredBackdropColor();
+            ApplyBackdropColor();
             ApplyFrameColor();
+            ApplyLabelColor();
             RefreshPriorityPillLayout(selected: false);
         }
 
@@ -340,11 +360,12 @@ namespace Chainbound.Combat
 
         private void ApplyFrameColor()
         {
-            // Selection tint applies only to the frame/outline (MoveRowBG), never the backdrop fill.
             if (backgroundImage == null)
                 return;
 
-            if (!_isUsable)
+            if (_isPassive)
+                backgroundImage.color = _isSelected ? passiveSelectedColor : passiveNormalColor;
+            else if (!_isUsable)
                 backgroundImage.color = disabledBackground;
             else if (_isSelected)
                 backgroundImage.color = selectedBackground;
@@ -378,6 +399,36 @@ namespace Chainbound.Combat
 
             CacheAuthoredBackdropColor();
             selectionBackdropImage.color = _authoredBackdropColor;
+        }
+
+        private void ApplyBackdropColor()
+        {
+            RestoreAuthoredBackdropColor();
+            if (_isPassive && selectionBackdropImage != null)
+                selectionBackdropImage.color = _isSelected ? passiveSelectedColor : passiveNormalColor;
+        }
+
+        private void ApplyLabelColor()
+        {
+            if (labelText == null)
+                return;
+
+            if (_isPassive)
+            {
+                labelText.color = passiveLabelColor;
+                return;
+            }
+
+            if (_isSelected && useSelectedLabelColor)
+            {
+                Color selectedColor = selectedLabelColor;
+                if (!_isUsable)
+                    selectedColor.a = unusableLabelColor.a;
+                labelText.color = selectedColor;
+                return;
+            }
+
+            labelText.color = _isUsable ? usableLabelColor : unusableLabelColor;
         }
 
         private void CacheAuthoredContentAnchoredX()
@@ -507,7 +558,7 @@ namespace Chainbound.Combat
             CacheAuthoredContentAnchoredX();
             CacheAuthoredArrowScale();
             EnsureBackdropVisible();
-            RestoreAuthoredBackdropColor();
+            ApplyBackdropColor();
             ApplyFrameColor();
         }
 
@@ -579,19 +630,50 @@ namespace Chainbound.Combat
 
         private void EnsureLayoutElement(float preferredHeight)
         {
-            if (layoutElement == null)
-                layoutElement = GetComponent<LayoutElement>();
-            if (layoutElement == null)
-                layoutElement = gameObject.AddComponent<LayoutElement>();
+            LayoutElement own = GetComponent<LayoutElement>();
+            if (own == null)
+                own = gameObject.AddComponent<LayoutElement>();
+
+            // The preview row in the battle canvas was wired at the list's layout element.
+            // Writes must stay on this row so the list's content height is left alone.
+            if (layoutElement == null || layoutElement.gameObject != gameObject)
+                layoutElement = own;
 
             float height = preferredHeight > 0f ? preferredHeight : DefaultPreferredHeight;
             if (layoutElement.preferredHeight <= 0f)
                 layoutElement.preferredHeight = height;
             if (layoutElement.minHeight <= 0f)
                 layoutElement.minHeight = layoutElement.preferredHeight;
+
+            ApplyAuthoredHeightToRect(height);
         }
 
-        private void SetPriorityPillVisible(bool visible, bool isUsable, bool selected)
+        private void ApplyAuthoredHeightToRect(float fallbackHeight)
+        {
+            RectTransform rect = transform as RectTransform;
+            if (rect == null || layoutElement == null)
+                return;
+
+            // A stretched vertical anchor is already driven by the parent width/height.
+            if (Mathf.Abs(rect.anchorMax.y - rect.anchorMin.y) > 0.001f)
+                return;
+            if (rect.sizeDelta.y > 0.5f)
+                return;
+
+            float authored = layoutElement.preferredHeight > 0f
+                ? layoutElement.preferredHeight
+                : layoutElement.minHeight > 0f
+                    ? layoutElement.minHeight
+                    : fallbackHeight;
+            if (authored <= 0f)
+                return;
+
+            Vector2 size = rect.sizeDelta;
+            size.y = authored;
+            rect.sizeDelta = size;
+        }
+
+        private void SetPriorityPillVisible(bool visible, bool isPassive, bool isUsable, bool selected)
         {
             EnsurePriorityPill();
             if (priorityPillRoot == null)
@@ -603,17 +685,21 @@ namespace Chainbound.Combat
 
             if (priorityPillText != null)
             {
-                priorityPillText.text = MoveSelectDisplayUtility.PriorityPillLabel;
-                Color textColor = priorityPillTextColor;
-                if (!isUsable)
+                priorityPillText.text = isPassive
+                    ? MoveSelectDisplayUtility.PassivePillLabel
+                    : MoveSelectDisplayUtility.PriorityPillLabel;
+                Color textColor = isPassive
+                    ? passivePillTextColor
+                    : selected ? priorityPillSelectedTextColor : priorityPillTextColor;
+                if (!isPassive && !isUsable)
                     textColor.a *= 0.7f;
                 priorityPillText.color = textColor;
             }
 
             if (priorityPillBackground != null)
             {
-                Color bg = priorityPillBackgroundColor;
-                if (!isUsable)
+                Color bg = isPassive ? passivePillBackgroundColor : priorityPillBackgroundColor;
+                if (!isPassive && !isUsable)
                     bg.a *= 0.55f;
                 priorityPillBackground.color = bg;
             }
@@ -659,7 +745,7 @@ namespace Chainbound.Combat
                 priorityPillText.text = MoveSelectDisplayUtility.PriorityPillLabel;
                 priorityPillText.alignment = TextAlignmentOptions.Center;
                 priorityPillText.color = priorityPillTextColor;
-                priorityPillText.enableWordWrapping = false;
+                priorityPillText.textWrappingMode = TextWrappingModes.NoWrap;
                 priorityPillText.overflowMode = TextOverflowModes.Overflow;
                 priorityPillText.raycastTarget = false;
                 if (labelText != null && labelText.font != null)
@@ -694,7 +780,7 @@ namespace Chainbound.Combat
 
             if (priorityPillText != null)
             {
-                priorityPillText.enableWordWrapping = false;
+                priorityPillText.textWrappingMode = TextWrappingModes.NoWrap;
                 priorityPillText.overflowMode = TextOverflowModes.Overflow;
                 priorityPillText.fontSize = fontSize;
                 priorityPillText.ForceMeshUpdate(true);

@@ -21,7 +21,7 @@ namespace Chainbound.Combat.Editor
         public const string DefaultModifiersCatalogPath = "Assets/Data/Combat/Modifiers/Catalog/ModifierCatalog.asset";
 
         public static readonly string MovesHeader =
-            "MoveId,DisplayName,Category,BaseType,Rarity,Targeting,ContactType,Power,APCost,Accuracy,HitMin,HitMax,RechargeTurns,StatusEffects,StageChanges,Tags,TriggerCondition,HPThreshold,TriggerOnce,HealPercentMaxHP,Description,SelectionPolicy,ActiveConditionType,ActiveConditionThreshold,UtilityEffects,HpCostPercent,ResolvePrimaryTiming,ResolveUtilityTiming,ResolveConditionalPolicy,ResolveConditions,ResolveRequireAll,DamagePowerMultiplier,DamagePreMitigationMultiplier,DamageFinalMultiplier,DamageOverrideAttackStat,DamageAttackStat,ConditionalDamageMultiplier,ConditionalDamageConditions,ConditionalDamageRequireAll,ConditionalDamageScalingCondition,ConditionalDamageBonusPerCount,ConditionalDamageMaxMultiplier,RandomDamageMultipliers";
+            "MoveId,DisplayName,Category,BaseType,Rarity,Targeting,ContactType,Power,APCost,Accuracy,HitMin,HitMax,RechargeTurns,StatusEffects,StageChanges,Tags,TriggerCondition,HPThreshold,TriggerOnce,HealPercentMaxHP,Description,SelectionPolicy,ActiveConditionType,ActiveConditionThreshold,UtilityEffects,HpCostPercent,ResolvePrimaryTiming,ResolveUtilityTiming,ResolveConditionalPolicy,ResolveConditions,ResolveRequireAll,DamagePowerMultiplier,DamagePreMitigationMultiplier,DamageFinalMultiplier,DamageOverrideAttackStat,DamageAttackStat,ConditionalDamageMultiplier,ConditionalDamageConditions,ConditionalDamageRequireAll,ConditionalDamageScalingCondition,ConditionalDamageBonusPerCount,ConditionalDamageMaxMultiplier,RandomDamageMultipliers,AccuracyTuning,MoveEffectsOncePerTarget";
 
         public static readonly string ModifiersHeader =
             "SectionId,DisplayName,Category,Scope,MinRarity,EffectMin,EffectMax,AllowedCategories,ForbiddenCombos,SlotCost,IsTypeInfusion,IsStatSub,SubStat,TriggerCondition,TriggerChance,EffectDescription,PowerCap,APCostCap,ForbiddenTags,SlotType,LowHpThreshold,Weight";
@@ -129,6 +129,8 @@ namespace Chainbound.Combat.Editor
                     profile.conditionalDamage.bonusMultiplierPerCount.ToString(CultureInfo.InvariantCulture),
                     profile.conditionalDamage.maxMultiplier.ToString(CultureInfo.InvariantCulture),
                     FormatFloatList(profile.conditionalDamage.randomMultipliers),
+                    FormatAccuracyTuning(profile.accuracy),
+                    profile.moveEffectsOncePerTarget ? "true" : string.Empty,
                 };
 
                 sb.AppendLine(JoinCsv(fields.ToArray()));
@@ -138,6 +140,31 @@ namespace Chainbound.Combat.Editor
             File.WriteAllText(csvPath, sb.ToString(), new UTF8Encoding(false));
             AssetDatabase.Refresh();
             return $"Exported {moves.Count} moves → {csvPath}";
+        }
+
+        public static string FormatAccuracyTuning(MoveAccuracyTuning tuning)
+        {
+            if (tuning == null)
+                return string.Empty;
+
+            var tokens = new List<string>();
+            bool sureHit = tuning.ignoreEvasionStages == 6 && Mathf.Abs(tuning.minHitChance - 0.95f) < 0.0001f;
+            if (sureHit)
+                tokens.Add("SureHit");
+            else
+            {
+                if (tuning.ignoreEvasionStages != 0)
+                    tokens.Add($"IgnoreEva:{tuning.ignoreEvasionStages}");
+                if (tuning.minHitChance > 0f)
+                    tokens.Add($"MinHit:{tuning.minHitChance.ToString(CultureInfo.InvariantCulture)}");
+            }
+            if (tuning.forceHit)
+                tokens.Add("ForceHit");
+            if (Mathf.Abs(tuning.accuracyBonusPercent) > 0.0001f)
+                tokens.Add($"Bonus:{tuning.accuracyBonusPercent.ToString(CultureInfo.InvariantCulture)}");
+            if (tuning.maxHitChance < 0.9999f)
+                tokens.Add($"MaxHit:{tuning.maxHitChance.ToString(CultureInfo.InvariantCulture)}");
+            return string.Join("|", tokens);
         }
 
         public static string ExportModifiersToCSV(
@@ -510,6 +537,73 @@ namespace Chainbound.Combat.Editor
                     return cleanse;
                 }
 
+                case UtilityEffectType.ApplyChemistryStatus:
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "ApplyChemistryStatus:{0}:{1}:{2}:{3}:{4}",
+                        e.statusId,
+                        e.statusDuration,
+                        FormatPercentToken(e.chance),
+                        e.targetOverride,
+                        e.stackKey ?? string.Empty);
+
+                case UtilityEffectType.BlockWindow:
+                {
+                    string category = e.contactFilter == UtilityContactFilter.Contact
+                        ? "Melee"
+                        : e.contactFilter == UtilityContactFilter.Projectile ? "Ranged" : "Any";
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "BlockWindow:{0}:{1}:{2}:{3}",
+                        FormatPercentToken(e.magnitude),
+                        category,
+                        e.turnBudget,
+                        e.stackKey ?? string.Empty);
+                }
+
+                case UtilityEffectType.BlockReflect:
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "BlockReflect:{0}:{1}",
+                        FormatPercentToken(e.reflectPercent),
+                        e.stackKey ?? string.Empty);
+
+                case UtilityEffectType.StripBuffs:
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "StripBuffs:{0}:{1}:{2}:{3}",
+                        (int)Math.Round(e.magnitude),
+                        FormatPercentToken(e.chance),
+                        e.targetOverride,
+                        e.stackKey ?? string.Empty);
+
+                case UtilityEffectType.StripAllStatuses:
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "StripAllStatuses:{0}:{1}:{2}",
+                        FormatPercentToken(e.chance),
+                        e.targetOverride,
+                        e.stackKey ?? string.Empty);
+
+                case UtilityEffectType.StripBuffsThenStage:
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "StripBuffsThenStage:{0}:{1}:{2}:{3}:{4}:{5}",
+                        (int)Math.Round(e.magnitude),
+                        FormatPercentToken(e.chance),
+                        e.targetOverride,
+                        e.stageStat,
+                        e.stageAmount,
+                        e.stackKey ?? string.Empty);
+
+                case UtilityEffectType.HealSelfPerTargetDebuff:
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "HealSelfPerTargetDebuff:{0}:{1}:{2}",
+                        FormatRawPercent(e.magnitude),
+                        FormatPercentToken(e.chance),
+                        e.stackKey ?? string.Empty);
+
                 case UtilityEffectType.BonusHealPercentIfSpeedHigher:
                     return string.Format(
                         CultureInfo.InvariantCulture,
@@ -606,6 +700,12 @@ namespace Chainbound.Combat.Editor
                         "LifestealPercent:{0}:{1}",
                         FormatPercentToken(e.magnitude),
                         e.stackKey ?? string.Empty);
+
+                case UtilityEffectType.ExtendBuff:
+                    return string.IsNullOrEmpty(e.stackKey) ? "ExtendBuff" : "ExtendBuff:" + e.stackKey;
+
+                case UtilityEffectType.RaiseLowestStage:
+                    return string.IsNullOrEmpty(e.stackKey) ? "RaiseLowestStage" : "RaiseLowestStage:" + e.stackKey;
 
                 case UtilityEffectType.HealPercentIfStageAtLeast:
                     return string.Format(

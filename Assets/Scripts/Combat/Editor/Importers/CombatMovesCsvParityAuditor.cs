@@ -172,8 +172,8 @@ namespace Chainbound.Combat.Editor
                     HitMin = columns.Get(fields, "HitMin", "1"),
                     HitMax = columns.Get(fields, "HitMax", "1"),
                     RechargeTurns = columns.Get(fields, "RechargeTurns", "0"),
-                    StatusEffects = NormalizePipe(columns.Get(fields, "StatusEffects")),
-                    StageChanges = NormalizePipe(columns.Get(fields, "StageChanges")),
+                    StatusEffects = NormalizeEffectPipe(columns.Get(fields, "StatusEffects")),
+                    StageChanges = NormalizeEffectPipe(columns.Get(fields, "StageChanges")),
                     Tags = NormalizePipe(columns.Get(fields, "Tags")),
                     TriggerCondition = columns.Get(fields, "TriggerCondition", "None"),
                     HPThreshold = columns.Get(fields, "HPThreshold", "0"),
@@ -183,7 +183,7 @@ namespace Chainbound.Combat.Editor
                     SelectionPolicy = columns.Get(fields, "SelectionPolicy", MoveSelectionPolicy.EffectOnly.ToString()),
                     ActiveConditionType = columns.Get(fields, "ActiveConditionType", ActiveConditionType.None.ToString()),
                     ActiveConditionThreshold = columns.Get(fields, "ActiveConditionThreshold", "0"),
-                    UtilityEffects = NormalizePipe(columns.Get(fields, "UtilityEffects")),
+                    UtilityEffects = NormalizeEffectPipe(columns.Get(fields, "UtilityEffects")),
                     HpCostPercent = columns.Get(fields, "HpCostPercent", "0"),
                     ResolvePrimaryTiming = columns.Get(fields, "ResolvePrimaryTiming", MoveEffectTimingBucket.ResolveTimePreHit.ToString()),
                     ResolveUtilityTiming = columns.Get(fields, "ResolveUtilityTiming", MoveUtilityExecutionTiming.UtilityOnly.ToString()),
@@ -202,6 +202,8 @@ namespace Chainbound.Combat.Editor
                     ConditionalDamageBonusPerCount = columns.Get(fields, "ConditionalDamageBonusPerCount", "0"),
                     ConditionalDamageMaxMultiplier = columns.Get(fields, "ConditionalDamageMaxMultiplier", "0"),
                     RandomDamageMultipliers = NormalizePipe(columns.Get(fields, "RandomDamageMultipliers")),
+                    AccuracyTuning = NormalizePipe(columns.Get(fields, "AccuracyTuning")),
+                    MoveEffectsOncePerTarget = NormalizeBool(columns.Get(fields, "MoveEffectsOncePerTarget", "false")),
                 };
             }
 
@@ -263,10 +265,10 @@ namespace Chainbound.Combat.Editor
             Compare(csv.MoveId, "ActiveConditionType", csv.ActiveConditionType, asset.activeConditionType.ToString(), diffs);
             Compare(csv.MoveId, "ActiveConditionThreshold", NormalizeNumber(csv.ActiveConditionThreshold), asset.activeConditionThresholdPercent.ToString(CultureInfo.InvariantCulture), diffs);
             Compare(csv.MoveId, "HpCostPercent", NormalizeNumber(csv.HpCostPercent), asset.hpCostPercent.ToString(CultureInfo.InvariantCulture), diffs);
-            Compare(csv.MoveId, "StatusEffects", csv.StatusEffects, NormalizePipe(CombatCsvRoundTrip.FormatStatusEffectsPublic(asset.statusEffects)), diffs);
-            Compare(csv.MoveId, "StageChanges", csv.StageChanges, NormalizePipe(CombatCsvRoundTrip.FormatStageChangesPublic(asset.stageChanges)), diffs);
+            Compare(csv.MoveId, "StatusEffects", csv.StatusEffects, NormalizeEffectPipe(CombatCsvRoundTrip.FormatStatusEffectsPublic(asset.statusEffects)), diffs);
+            Compare(csv.MoveId, "StageChanges", csv.StageChanges, NormalizeEffectPipe(CombatCsvRoundTrip.FormatStageChangesPublic(asset.stageChanges)), diffs);
             Compare(csv.MoveId, "Tags", csv.Tags, NormalizePipe(string.Join("|", asset.tags ?? new List<string>())), diffs);
-            Compare(csv.MoveId, "UtilityEffects", csv.UtilityEffects, NormalizePipe(CombatCsvRoundTrip.FormatUtilityEffectsPublic(asset.utilityEffects)), diffs);
+            Compare(csv.MoveId, "UtilityEffects", csv.UtilityEffects, NormalizeEffectPipe(CombatCsvRoundTrip.FormatUtilityEffectsPublic(asset.utilityEffects)), diffs);
             Compare(csv.MoveId, "ResolvePrimaryTiming", csv.ResolvePrimaryTiming, profile.primaryTiming.ToString(), diffs);
             Compare(csv.MoveId, "ResolveUtilityTiming", csv.ResolveUtilityTiming, profile.utilityExecutionTiming.ToString(), diffs);
             Compare(csv.MoveId, "ResolveConditionalPolicy", csv.ResolveConditionalPolicy, profile.conditionalEffectPolicy.ToString(), diffs);
@@ -287,6 +289,8 @@ namespace Chainbound.Combat.Editor
             Compare(csv.MoveId, "ConditionalDamageBonusPerCount", NormalizeNumber(csv.ConditionalDamageBonusPerCount), profile.conditionalDamage.bonusMultiplierPerCount.ToString(CultureInfo.InvariantCulture), diffs);
             Compare(csv.MoveId, "ConditionalDamageMaxMultiplier", NormalizeNumber(csv.ConditionalDamageMaxMultiplier), profile.conditionalDamage.maxMultiplier.ToString(CultureInfo.InvariantCulture), diffs);
             Compare(csv.MoveId, "RandomDamageMultipliers", csv.RandomDamageMultipliers, NormalizePipe(CombatCsvRoundTrip.FormatFloatListPublic(profile.conditionalDamage.randomMultipliers)), diffs);
+            Compare(csv.MoveId, "AccuracyTuning", csv.AccuracyTuning, NormalizePipe(CombatCsvRoundTrip.FormatAccuracyTuning(profile.accuracy)), diffs);
+            Compare(csv.MoveId, "MoveEffectsOncePerTarget", csv.MoveEffectsOncePerTarget, profile.moveEffectsOncePerTarget ? "true" : "false", diffs);
         }
 
         private static void Compare(string moveId, string field, string csvValue, string assetValue, List<string> diffs)
@@ -323,6 +327,50 @@ namespace Chainbound.Combat.Editor
 
             cleaned.Sort(StringComparer.OrdinalIgnoreCase);
             return string.Join("|", cleaned);
+        }
+
+        private static string NormalizeEffectPipe(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var normalized = new List<string>();
+            string[] tokens = value.Split('|');
+            for (int i = 0; i < tokens.Length; i++)
+            {
+                string token = tokens[i].Trim();
+                if (token.Length == 0)
+                    continue;
+                string[] parts = token.Split(':');
+                for (int j = 0; j < parts.Length; j++)
+                {
+                    string part = parts[j].Trim();
+                    if (part.EndsWith("%", StringComparison.Ordinal) &&
+                        float.TryParse(part.Substring(0, part.Length - 1), NumberStyles.Float, CultureInfo.InvariantCulture, out float percent))
+                    {
+                        parts[j] = (percent / 100f).ToString(CultureInfo.InvariantCulture);
+                    }
+                    else if (float.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out float number))
+                    {
+                        parts[j] = number.ToString(CultureInfo.InvariantCulture);
+                    }
+                    else if (bool.TryParse(part, out bool flag))
+                    {
+                        parts[j] = flag ? "true" : "false";
+                    }
+                    else
+                    {
+                        parts[j] = part;
+                    }
+                }
+
+                if (parts.Length == 2 && string.Equals(parts[0], "BonusHealPercentIfSpeedHigher", StringComparison.Ordinal))
+                    parts = new[] { parts[0], parts[1], MoveTargeting.Self.ToString(), string.Empty };
+                normalized.Add(string.Join(":", parts));
+            }
+
+            normalized.Sort(StringComparer.OrdinalIgnoreCase);
+            return string.Join("|", normalized);
         }
 
         private static string NormalizeBool(string value)
@@ -386,6 +434,8 @@ namespace Chainbound.Combat.Editor
             public string ConditionalDamageBonusPerCount;
             public string ConditionalDamageMaxMultiplier;
             public string RandomDamageMultipliers;
+            public string AccuracyTuning;
+            public string MoveEffectsOncePerTarget;
         }
     }
 }

@@ -30,11 +30,30 @@ public sealed class ProfileCardFormatterTests
     }
 
     [Test]
-    public void FormatRecord_HidesZeroZero()
+    public void FormatCount_ShowsZeroAndClampsNegative()
     {
-        Assert.AreEqual("", ProfileCardFormatter.FormatRecord(0, 0));
-        Assert.AreEqual("1W-0L", ProfileCardFormatter.FormatRecord(1, 0));
-        Assert.AreEqual("0W-2L", ProfileCardFormatter.FormatRecord(0, 2));
+        Assert.AreEqual("0", ProfileCardFormatter.FormatCount(0));
+        Assert.AreEqual("0", ProfileCardFormatter.FormatCount(-4));
+        Assert.AreEqual(1250.ToString("N0"), ProfileCardFormatter.FormatCount(1250));
+    }
+
+    [Test]
+    public void FormatRam_ShowsZeroAndClampsNegative()
+    {
+        Assert.AreEqual("0", ProfileCardFormatter.FormatRam(0L));
+        Assert.AreEqual("0", ProfileCardFormatter.FormatRam(-8L));
+        Assert.AreEqual(12500L.ToString("N0"), ProfileCardFormatter.FormatRam(12500L));
+    }
+
+    [Test]
+    public void CareerLabels_DoNotMentionInscriptionsOrStamps()
+    {
+        string joined = string.Join(" ", ProfileCardFormatter.CareerLabels).ToLowerInvariant();
+        Assert.IsFalse(joined.Contains("inscribed"));
+        Assert.IsFalse(joined.Contains("stamped"));
+        Assert.Contains("UNIQUE SPECIES", ProfileCardFormatter.CareerLabels);
+        Assert.Contains("RAM EARNED", ProfileCardFormatter.CareerLabels);
+        Assert.Contains("KO'D", ProfileCardFormatter.CareerLabels);
     }
 
     [Test]
@@ -49,14 +68,5 @@ public sealed class ProfileCardFormatterTests
     {
         string copy = ProfileCardFormatter.FormatShareCopy("  ", "Ada");
         Assert.AreEqual("just checked $Ada's chainbound id", copy);
-    }
-
-    [Test]
-    public void FormatStatLines_ClampNegativeAndAlwaysShow()
-    {
-        Assert.AreEqual("3 species", ProfileCardFormatter.FormatUniqueSpecies(3));
-        Assert.AreEqual("0 species", ProfileCardFormatter.FormatUniqueSpecies(-2));
-        Assert.AreEqual("4 captured   1 entangled", ProfileCardFormatter.FormatCaptures(4, 1));
-        Assert.AreEqual("2 stamped", ProfileCardFormatter.FormatStampedMoves(2));
     }
 }

@@ -42,5 +42,5 @@ EditorBuildSettings:
     path: Assets/Scenes/SocialLobby.unity
     guid: f8a3bf2dbdd26e243a6be6a53f190325
   m_configObjects:
+    com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: e315850a770634346b2154cbce6e65f7, type: 3}
-  m_UseUCBPForAssetBundles: 0

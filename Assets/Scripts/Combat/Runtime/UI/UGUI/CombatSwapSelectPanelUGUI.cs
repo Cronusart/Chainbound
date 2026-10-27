@@ -369,7 +369,7 @@ namespace Chainbound.Combat
             }
             text.raycastTarget = false;
             if (createdText)
-                text.enableWordWrapping = false;
+                text.textWrappingMode = TextWrappingModes.NoWrap;
             if (string.IsNullOrEmpty(text.text))
                 text.text = value;
             return text;

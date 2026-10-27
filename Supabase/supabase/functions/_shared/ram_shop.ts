@@ -1,4 +1,11 @@
-import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "npm:@solana/web3.js@1.98.4";
+import {
+  ComputeBudgetProgram,
+  Connection,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from "npm:@solana/web3.js@1.98.4";
 import {
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
@@ -8,17 +15,28 @@ import {
 import bs58 from "npm:bs58@5.0.0";
 import { Buffer } from "npm:buffer@6.0.3";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getActiveWallet, JsonMap, str } from "./account_helpers.ts";
+import {
+  ensureRamLedgerAccount,
+  getActiveWallet,
+  JsonMap,
+  requireBoundWallet,
+  str,
+  WalletBindingError,
+} from "./account_helpers.ts";
 import {
   CHAINBOUND_PROGRAM_ID,
   DEVNET_GENESIS_HASH,
   ensureOwnershipRpcCluster,
-  fetchChainRamBalance,
   loadOwnershipConfig,
   MAINNET_GENESIS_HASH,
 } from "./ownership_spine.ts";
 
 const RAM_PURCHASE_RECEIPT_DISCRIMINATOR = Uint8Array.from([37, 105, 212, 100, 110, 164, 29, 144]);
+export const RAM_SHOP_COMPUTE_UNIT_LIMIT = 200_000;
+export const RAM_SHOP_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS = 1_000;
+const MIN_COMPUTE_UNIT_LIMIT = 50_000;
+const MAX_COMPUTE_UNIT_LIMIT = 400_000;
+const MAX_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS = 100_000n;
 
 export type RamTender = "SOL" | "USDC" | "SKR";
 export type RamPurchaseState =
@@ -67,6 +85,8 @@ export interface PurchaseOrderRow extends JsonMap {
   credit_signature: string | null;
   credit_receipt_address: string | null;
   balance_after: number | null;
+  balance_version?: number | null;
+  failure_code: string | null;
   quote_expires_at: string;
 }
 
@@ -78,9 +98,7 @@ export class RamShopError extends Error {
 
 export function loadRamShopRuntimeConfig(): RamShopRuntimeConfig {
   const cluster = str(Deno.env.get("RAM_SHOP_CLUSTER"));
-  if (cluster !== "devnet" && cluster !== "mainnet-beta") {
-    throw new RamShopError("ram_shop_cluster_missing", 503);
-  }
+  if (cluster !== "devnet") throw new RamShopError("ram_shop_devnet_only", 503);
   const rpcUrl = str(Deno.env.get("CHAINBOUND_SOLANA_RPC_ENDPOINT"));
   if (!rpcUrl.startsWith("https://")) throw new RamShopError("ram_shop_rpc_missing", 503);
   const configuredGenesis = str(Deno.env.get("RAM_SHOP_RPC_GENESIS_HASH"));
@@ -89,75 +107,24 @@ export function loadRamShopRuntimeConfig(): RamShopRuntimeConfig {
   const programVersion = str(Deno.env.get("RAM_SHOP_PROGRAM_VERSION"));
   if (!programVersion) throw new RamShopError("ram_shop_program_version_missing", 503);
   const programText = str(Deno.env.get("CHAINBOUND_PROGRAM_ID"));
-  if (programText !== CHAINBOUND_PROGRAM_ID) throw new RamShopError("ram_shop_program_not_pinned", 503);
+  const gameProgramText = str(Deno.env.get("CHAINBOUND_GAME_PROGRAM_ID"));
+  if (programText !== CHAINBOUND_PROGRAM_ID || gameProgramText !== programText) {
+    throw new RamShopError("ram_shop_program_not_pinned", 503);
+  }
   return { cluster, rpcUrl, expectedGenesisHash, programId: new PublicKey(programText), programVersion };
 }
 
-async function tryAuditLinkedLedger(
-  supabase: SupabaseClient,
-  profileId: string,
-): Promise<{ status: string; reason: string }> {
-  try {
-    const wallet = await getActiveWallet(supabase, profileId);
-    const walletAddress = str(wallet?.wallet_public_key);
-    if (!walletAddress) return { status: "pending_audit", reason: "linked_wallet_required" };
-    const config = loadOwnershipConfig();
-    await ensureOwnershipRpcCluster(config);
-    const chainBalance = await fetchChainRamBalance({ config, walletAddress });
-    const { data, error } = await supabase.rpc("ram_ledger_register_audit", {
-      p_player_profile_id: profileId,
-      p_wallet_address: walletAddress,
-      p_cluster: config.cluster,
-      p_chain_balance: chainBalance,
-    });
-    if (error) throw error;
-    const payload = (typeof data === "string" ? JSON.parse(data) : data) as JsonMap;
-    const status = str(payload?.status) || "pending_audit";
-    return {
-      status,
-      reason: status === "active" ? "" : "ram_reconciliation_required",
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    return {
-      status: "pending_audit",
-      reason: message === "player_profile_not_initialized" ? message : "ram_ledger_audit_pending",
-    };
-  }
-}
-
-function closedCatalog(authoritativeBalance: string, ledgerStatus: string, reason: string): JsonMap {
-  return {
-    success: true,
-    checkout_available: false,
-    maintenance_reason: reason,
-    authoritative_balance: authoritativeBalance,
-    ledger_status: ledgerStatus,
-    bundles: [],
-    tenders: [],
-  };
-}
-
 export async function catalogResponse(supabase: SupabaseClient, profileId: string): Promise<JsonMap> {
-  const [{ data: profile, error: profileError }, { data: ledger, error: ledgerError }] = await Promise.all([
-    supabase.from("player_profiles").select("ram_balance").eq("player_profile_id", profileId).single(),
-    supabase.from("ram_ledger_accounts").select("status").eq("player_profile_id", profileId).maybeSingle(),
-  ]);
+  const { data: profile, error: profileError } = await supabase
+    .from("player_profiles").select("ram_balance, ram_balance_version").eq("player_profile_id", profileId).single();
   if (profileError) throw profileError;
-  if (ledgerError) throw ledgerError;
   const authoritativeBalance = String(profile.ram_balance ?? 0);
-  let ledgerStatus = str(ledger?.status) || "pending_audit";
-  if (ledgerStatus === "pending_audit") {
-    const audited = await tryAuditLinkedLedger(supabase, profileId);
-    ledgerStatus = audited.status;
-    if (ledgerStatus !== "active") {
-      return closedCatalog(authoritativeBalance, ledgerStatus, audited.reason);
-    }
-  }
+  const authoritativeBalanceVersion = Number(profile.ram_balance_version ?? 0);
+  const ledgerStatus = "postgres_canonical";
 
   const { data: settings, error: settingsError } = await supabase
     .from("ram_shop_settings")
-    .select("checkout_enabled, quote_ttl_seconds, maintenance_reason")
+    .select("checkout_enabled, checkout_cluster, quote_ttl_seconds, maintenance_reason")
     .eq("singleton", true)
     .maybeSingle();
   if (settingsError) throw settingsError;
@@ -171,26 +138,15 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
     reason = error instanceof RamShopError ? error.code : "ram_shop_configuration_invalid";
   }
 
-  const enabledByConfig = settings?.checkout_enabled === true && Number(settings?.quote_ttl_seconds ?? 0) > 0;
-  if (ledgerStatus !== "active") {
-    return {
-      success: true,
-      checkout_available: false,
-      maintenance_reason: ledgerStatus === "frozen_reconciliation"
-        ? "ram_reconciliation_required"
-        : "ram_ledger_audit_pending",
-      authoritative_balance: authoritativeBalance,
-      ledger_status: ledgerStatus,
-      bundles: [],
-      tenders: [],
-    };
-  }
+  const enabledByConfig = settings?.checkout_enabled === true && settings?.checkout_cluster === runtime?.cluster &&
+    Number(settings?.quote_ttl_seconds ?? 0) > 0;
   if (!runtime || !enabledByConfig) {
     return {
       success: true,
       checkout_available: false,
       maintenance_reason: reason,
       authoritative_balance: authoritativeBalance,
+      authoritative_balance_version: authoritativeBalanceVersion,
       ledger_status: ledgerStatus,
       bundles: [],
       tenders: [],
@@ -209,6 +165,7 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
       checkout_available: false,
       maintenance_reason: "catalog_not_configured",
       authoritative_balance: authoritativeBalance,
+      authoritative_balance_version: authoritativeBalanceVersion,
       ledger_status: ledgerStatus,
       bundles: [],
       tenders: [],
@@ -247,6 +204,7 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
     checkout_available: available,
     maintenance_reason: available ? null : "catalog_not_configured",
     authoritative_balance: authoritativeBalance,
+    authoritative_balance_version: authoritativeBalanceVersion,
     ledger_status: ledgerStatus,
     catalog_version: catalog.version,
     cluster: runtime.cluster,
@@ -258,6 +216,7 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
 export async function preparePurchase(
   supabase: SupabaseClient,
   profileId: string,
+  requestedWallet: string,
   sku: string,
   tenderText: string,
 ): Promise<JsonMap> {
@@ -267,28 +226,37 @@ export async function preparePurchase(
 
   const { data: settings, error: settingsError } = await supabase
     .from("ram_shop_settings")
-    .select("checkout_enabled, quote_ttl_seconds, maintenance_reason")
+    .select("checkout_enabled, checkout_cluster, quote_ttl_seconds, maintenance_reason")
     .eq("singleton", true)
     .single();
   if (settingsError) throw settingsError;
   if (settings.checkout_enabled !== true) {
     throw new RamShopError(str(settings.maintenance_reason) || "checkout_disabled", 503);
   }
+  if (settings.checkout_cluster !== runtime.cluster) throw new RamShopError("catalog_cluster_mismatch", 503);
   const ttlSeconds = Number(settings.quote_ttl_seconds ?? 0);
   if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds <= 0) throw new RamShopError("quote_ttl_missing", 503);
 
   const wallet = await getActiveWallet(supabase, profileId);
   const walletAddress = str(wallet?.wallet_public_key);
+  try {
+    await requireBoundWallet(supabase, profileId, requestedWallet);
+  } catch (error) {
+    if (error instanceof WalletBindingError) throw new RamShopError(error.code, error.httpStatus);
+    throw error;
+  }
+  if (walletAddress && walletAddress !== requestedWallet) throw new RamShopError("wallet_profile_mismatch", 409);
   if (!walletAddress) throw new RamShopError("linked_wallet_required", 409);
   const owner = publicKey(walletAddress, "invalid_linked_wallet");
+  await ensureRamLedgerAccount(supabase, profileId, walletAddress, runtime.cluster);
 
   const { data: ledger, error: ledgerError } = await supabase
     .from("ram_ledger_accounts")
-    .select("status, cluster, wallet_address")
+    .select("cluster, wallet_address")
     .eq("player_profile_id", profileId)
     .maybeSingle();
   if (ledgerError) throw ledgerError;
-  if (!ledger || ledger.status !== "active") throw new RamShopError("ram_reconciliation_required", 409);
+  if (!ledger) throw new RamShopError("ram_ledger_scope_missing", 409);
   if (ledger.cluster !== runtime.cluster || ledger.wallet_address !== walletAddress) {
     throw new RamShopError("ram_ledger_scope_mismatch", 409);
   }
@@ -355,11 +323,18 @@ export async function preparePurchase(
   instruction.keys.push({ pubkey: reference, isSigner: false, isWritable: false });
 
   const latest = await connection.getLatestBlockhash("finalized");
-  const transaction = new Transaction({ feePayer: owner, recentBlockhash: latest.blockhash }).add(instruction);
+  const transaction = new Transaction({ feePayer: owner, recentBlockhash: latest.blockhash }).add(
+    ComputeBudgetProgram.setComputeUnitLimit({ units: RAM_SHOP_COMPUTE_UNIT_LIMIT }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: RAM_SHOP_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS }),
+    instruction,
+  );
   const messageBytes = transaction.serializeMessage();
-  const messageBase64 = Buffer.from(messageBytes).toString("base64");
-  const messageHash = await sha256HexBytes(messageBytes);
-  const unsignedBase64 = Buffer.from(transaction.serialize({ requireAllSignatures: false, verifySignatures: false }))
+  const messageBytesArray = Uint8Array.from(messageBytes);
+  const messageBase64 = Buffer.from(messageBytesArray).toString("base64");
+  const messageHash = await sha256HexBytes(messageBytesArray);
+  const unsignedBase64 = Buffer.from(
+    Uint8Array.from(transaction.serialize({ requireAllSignatures: false, verifySignatures: false })),
+  )
     .toString("base64");
   const estimatedFee = (await connection.getFeeForMessage(transaction.compileMessage(), "finalized")).value;
   if (estimatedFee === null) throw new RamShopError("fee_estimate_unavailable", 503);
@@ -391,7 +366,7 @@ export async function preparePurchase(
     reconcile_after: new Date().toISOString(),
   }).select("*").single();
   if (insertError) throw insertError;
-  return orderResponse(inserted as PurchaseOrderRow);
+  return await orderResponseWithBalanceVersion(supabase, inserted as PurchaseOrderRow);
 }
 
 export async function loadOwnedOrder(
@@ -410,6 +385,7 @@ export async function confirmPurchase(
   supabase: SupabaseClient,
   order: PurchaseOrderRow,
   signature: string,
+  manualReviewOnMismatch = true,
 ): Promise<JsonMap> {
   if (!isSignature(signature)) throw new RamShopError("invalid_signature");
   if (["settled", "payment_verified", "credit_submitted"].includes(order.status)) {
@@ -419,19 +395,20 @@ export async function confirmPurchase(
     return await advancePurchaseSettlement(supabase, order);
   }
   if (order.status !== "quoted" && order.status !== "submitted") throw new RamShopError("order_not_confirmable", 409);
-  if (order.payment_signature && order.payment_signature !== signature) {
-    throw new RamShopError("order_signature_mismatch", 409);
-  }
-
-  const { error: submittedError } = await supabase.rpc("ram_shop_record_submission", {
-    p_order_id: order.order_id,
-    p_signature: signature,
-  });
-  if (submittedError) throw new RamShopError(normalizeDatabaseError(submittedError.message), 409);
 
   const runtime = loadRamShopRuntimeConfig();
   if (runtime.cluster !== order.cluster) throw new RamShopError("order_cluster_mismatch", 503);
-  await verifyFinalizedPayment(runtime.rpcUrl, order, signature);
+  try {
+    await verifyFinalizedPayment(runtime.rpcUrl, order, signature);
+  } catch (error) {
+    if (error instanceof RamShopError && error.code === "payment_execution_failed") {
+      return await markOrderTerminal(supabase, order, signature, "failed", error.code);
+    }
+    if (manualReviewOnMismatch && error instanceof RamShopError && isPaymentMismatch(error.code)) {
+      return await markOrderTerminal(supabase, order, signature, "manual_review", error.code);
+    }
+    throw error;
+  }
   const { error: verifiedError } = await supabase.rpc("ram_shop_mark_payment_verified", {
     p_order_id: order.order_id,
     p_signature: signature,
@@ -443,13 +420,70 @@ export async function confirmPurchase(
   );
 }
 
+async function markOrderTerminal(
+  supabase: SupabaseClient,
+  order: PurchaseOrderRow,
+  signature: string | null,
+  state: "expired_unpaid" | "failed" | "manual_review",
+  failureCode: string,
+): Promise<JsonMap> {
+  const { error } = await supabase.rpc("ram_shop_mark_order_terminal", {
+    p_order_id: order.order_id,
+    p_state: state,
+    p_failure_code: failureCode,
+    p_observed_signature: signature,
+  });
+  if (error) throw new RamShopError(normalizeDatabaseError(error.message), 409);
+  return await orderResponseWithBalanceVersion(
+    supabase,
+    await loadOwnedOrder(supabase, order.player_profile_id, order.order_id),
+  );
+}
+
+export async function reconcileQuotedPurchase(
+  supabase: SupabaseClient,
+  order: PurchaseOrderRow,
+  findSignature: (rpcUrl: string, reference: string) => Promise<string | null>,
+): Promise<JsonMap> {
+  const runtime = loadRamShopRuntimeConfig();
+  if (runtime.cluster !== order.cluster) throw new RamShopError("order_cluster_mismatch", 503);
+
+  // Older R0 rows may contain an unverified callback signature. Try it without
+  // escalating, then fall back to the immutable reference address.
+  if (order.payment_signature) {
+    try {
+      return await confirmPurchase(supabase, order, order.payment_signature, false);
+    } catch (error) {
+      if (
+        !(error instanceof RamShopError) ||
+        (!isRecoverablePaymentLookupError(error.code) && !isPaymentMismatch(error.code) &&
+          error.code !== "payment_execution_failed")
+      ) throw error;
+    }
+  }
+  const recovered = await findSignature(runtime.rpcUrl, order.reference_address);
+  if (recovered && recovered !== order.payment_signature) return await confirmPurchase(supabase, order, recovered);
+
+  const expiredByTime = Date.parse(order.quote_expires_at) <= Date.now();
+  if (!expiredByTime) return await orderResponseWithBalanceVersion(supabase, order);
+  const currentBlockHeight = await rpcCall<number>(runtime.rpcUrl, "getBlockHeight", [{ commitment: "finalized" }]);
+  if (currentBlockHeight !== null && currentBlockHeight > Number(order.last_valid_block_height)) {
+    return await markOrderTerminal(supabase, order, null, "expired_unpaid", "quote_expired_unpaid");
+  }
+  return await orderResponseWithBalanceVersion(supabase, order);
+}
+
 export async function advancePurchaseSettlement(
   supabase: SupabaseClient,
   order: PurchaseOrderRow,
 ): Promise<JsonMap> {
-  if (order.status === "settled") return orderResponse(order);
-  if (order.status === "quoted" || order.status === "submitted") return orderResponse(order);
-  if (order.status !== "payment_verified" && order.status !== "credit_submitted") return orderResponse(order);
+  if (order.status === "settled") return await orderResponseWithBalanceVersion(supabase, order);
+  if (order.status === "quoted" || order.status === "submitted") {
+    return await orderResponseWithBalanceVersion(supabase, order);
+  }
+  if (order.status !== "payment_verified" && order.status !== "credit_submitted") {
+    return await orderResponseWithBalanceVersion(supabase, order);
+  }
 
   const config = loadOwnershipConfig();
   if (config.cluster !== order.cluster) throw new RamShopError("settlement_cluster_mismatch", 503);
@@ -562,24 +596,61 @@ export async function verifyFinalizedPayment(
   const encoded = Array.isArray(payload.transaction) ? str(payload.transaction[0]) : "";
   if (!encoded) throw new RamShopError("payment_transaction_missing", 503);
   const transaction = Transaction.from(Buffer.from(encoded, "base64"));
+  await verifyPaymentTransaction(transaction, order, signature);
+}
+
+export async function verifyPaymentTransaction(
+  transaction: Transaction,
+  order: PurchaseOrderRow,
+  signature: string,
+): Promise<void> {
   if (transaction.signatures.length !== 1 || !transaction.signatures[0].signature) {
     throw new RamShopError("payment_signature_shape_mismatch", 409);
   }
-  if (bs58.encode(transaction.signatures[0].signature) !== signature) {
+  if (bs58.encode(Uint8Array.from(transaction.signatures[0].signature)) !== signature) {
     throw new RamShopError("payment_signature_mismatch", 409);
   }
   const messageBytes = transaction.serializeMessage();
-  if (Buffer.from(messageBytes).toString("base64") !== order.expected_message_base64) {
+  const messageBytesArray = Uint8Array.from(messageBytes);
+  if (Buffer.from(messageBytesArray).toString("base64") !== order.expected_message_base64) {
     throw new RamShopError("payment_message_mismatch", 409);
   }
-  if (await sha256HexBytes(messageBytes) !== order.expected_message_hash) {
+  if (await sha256HexBytes(messageBytesArray) !== order.expected_message_hash) {
     throw new RamShopError("payment_message_hash_mismatch", 409);
   }
-  if (transaction.instructions.length !== 1) throw new RamShopError("payment_instruction_count_mismatch", 409);
+  if (transaction.instructions.length !== 3) throw new RamShopError("payment_instruction_count_mismatch", 409);
   if (!transaction.feePayer?.equals(publicKey(order.wallet_address, "invalid_order_wallet"))) {
     throw new RamShopError("payment_fee_payer_mismatch", 409);
   }
-  verifyPaymentInstruction(transaction.instructions[0], order);
+  verifyComputeUnitLimitInstruction(transaction.instructions[0]);
+  verifyComputeUnitPriceInstruction(transaction.instructions[1]);
+  verifyPaymentInstruction(transaction.instructions[2], order);
+}
+
+function verifyComputeUnitLimitInstruction(ix: TransactionInstruction): void {
+  if (
+    !ix.programId.equals(ComputeBudgetProgram.programId) || ix.keys.length !== 0 || ix.data.length !== 5 ||
+    ix.data[0] !== 2
+  ) {
+    throw new RamShopError("payment_compute_limit_mismatch", 409);
+  }
+  const units = ix.data.readUInt32LE(1);
+  if (units < MIN_COMPUTE_UNIT_LIMIT || units > MAX_COMPUTE_UNIT_LIMIT || units !== RAM_SHOP_COMPUTE_UNIT_LIMIT) {
+    throw new RamShopError("payment_compute_limit_mismatch", 409);
+  }
+}
+
+function verifyComputeUnitPriceInstruction(ix: TransactionInstruction): void {
+  if (
+    !ix.programId.equals(ComputeBudgetProgram.programId) || ix.keys.length !== 0 || ix.data.length !== 9 ||
+    ix.data[0] !== 3
+  ) {
+    throw new RamShopError("payment_compute_price_mismatch", 409);
+  }
+  const price = ix.data.readBigUInt64LE(1);
+  if (price > MAX_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS || price !== BigInt(RAM_SHOP_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS)) {
+    throw new RamShopError("payment_compute_price_mismatch", 409);
+  }
 }
 
 function verifyPaymentInstruction(ix: TransactionInstruction, order: PurchaseOrderRow): void {
@@ -620,7 +691,7 @@ function verifyPaymentInstruction(ix: TransactionInstruction, order: PurchaseOrd
     throw new RamShopError("payment_token_accounts_mismatch", 409);
   }
   if (
-    ix.data.length !== 10 || ix.data[0] !== 12 || Buffer.from(ix.data).readBigUInt64LE(1) !== amount ||
+    ix.data.length !== 10 || ix.data[0] !== 12 || Buffer.from(Uint8Array.from(ix.data)).readBigUInt64LE(1) !== amount ||
     ix.data[9] !== order.decimals
   ) {
     throw new RamShopError("payment_token_amount_mismatch", 409);
@@ -704,7 +775,43 @@ export function orderResponse(order: PurchaseOrderRow): JsonMap {
     credit_signature: order.credit_signature,
     credit_receipt_address: order.credit_receipt_address,
     balance_after: order.balance_after === null ? null : String(order.balance_after),
+    balance_version: Number(order.balance_version ?? 0),
+    failure_code: order.failure_code,
   };
+}
+
+export async function orderResponseWithBalanceVersion(
+  supabase: SupabaseClient,
+  order: PurchaseOrderRow,
+): Promise<JsonMap> {
+  if (order.balance_after !== null && Number(order.balance_version ?? 0) > 0) {
+    return orderResponse(order);
+  }
+  return orderResponse({
+    ...order,
+    balance_version: await readRamBalanceVersion(supabase, order.player_profile_id),
+  } as PurchaseOrderRow);
+}
+
+async function readRamBalanceVersion(supabase: SupabaseClient, profileId: string): Promise<number> {
+  const { data, error } = await supabase.from("player_profiles")
+    .select("ram_balance_version")
+    .eq("player_profile_id", profileId)
+    .single();
+  if (error) throw error;
+  const version = Number(data.ram_balance_version ?? 0);
+  if (!Number.isSafeInteger(version) || version <= 0) throw new RamShopError("ram_balance_version_missing", 503);
+  return version;
+}
+
+function isPaymentMismatch(code: string): boolean {
+  return code.startsWith("payment_") && !isRecoverablePaymentLookupError(code) &&
+    code !== "payment_execution_failed" && code !== "payment_transaction_missing";
+}
+
+function isRecoverablePaymentLookupError(code: string): boolean {
+  return code === "payment_not_finalized" || code === "payment_transaction_missing" ||
+    code === "solana_rpc_unavailable" || code === "solana_rpc_error";
 }
 
 function normalizeTender(value: string): RamTender {

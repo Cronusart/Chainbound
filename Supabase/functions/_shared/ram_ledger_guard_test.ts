@@ -8,6 +8,8 @@ Deno.test("post-activation migrations reject unapproved direct RAM balance write
     firstReviewedWriter,
     "20261009010622_ram_v2_postgres_canonical_earn.sql",
     "20261009143000_ram_v2_pre_rollout_hardening.sql",
+    "20261014030000_fisher_ape_lucky_crayon.sql",
+    "20261015042331_profile_owned_known_rolls.sql",
   ]);
   for await (const entry of Deno.readDir(migrationsRoot)) {
     if (!entry.isFile || !entry.name.endsWith(".sql") || entry.name < firstReviewedWriter) continue;
@@ -19,6 +21,26 @@ Deno.test("post-activation migrations reject unapproved direct RAM balance write
       `${entry.name} writes ram_balance outside the reviewed settlement migration`,
     );
   }
+});
+
+Deno.test("quest reward RAM writes are backed by a settled ledger operation", async () => {
+  const source = await Deno.readTextFile(
+    new URL("20261014030000_fisher_ape_lucky_crayon.sql", migrationsRoot),
+  );
+  assertEquals(source.includes("INSERT INTO public.ram_ledger_operations"), true);
+  assertEquals(source.includes("'quest_reward', 'credit'"), true);
+  assertEquals(source.includes("'settled'"), true);
+  assertEquals(source.includes("SET ram_balance = ram_balance + v_reward.ram_amount"), true);
+});
+
+Deno.test("profile-owned candy rolls debit RAM through a settled ledger operation", async () => {
+  const source = await Deno.readTextFile(
+    new URL("20261015042331_profile_owned_known_rolls.sql", migrationsRoot),
+  );
+  assertEquals(source.includes("INSERT INTO public.ram_ledger_operations"), true);
+  assertEquals(source.includes("'known_roll', 'debit'"), true);
+  assertEquals(source.includes("'settled'"), true);
+  assertEquals(source.includes("SET ram_balance = ram_balance - p_ram_cost"), true);
 });
 
 Deno.test("Edge functions never write player profile RAM directly", async () => {

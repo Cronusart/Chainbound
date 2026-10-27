@@ -121,6 +121,7 @@ namespace Chainbound.Combat
             instance.instanceId = string.IsNullOrWhiteSpace(moveItemId) ? instance.instanceId : moveItemId;
             instance.definitionId = moveId;
             instance.tier = tier;
+            instance.acquisition = acquisition ?? string.Empty;
             instance.modifier1SectionId = modifier1SectionId;
             instance.modifier2SectionId = modifier2SectionId;
             AddLockedModifier(instance, modifier1SectionId, modifier1EffectValue, modifier1EffectValueLocked);
@@ -343,6 +344,8 @@ namespace Chainbound.Combat
         public long totalRamSpent;
         public int totalKnownMovesAcquired;
         public int totalStampedMovesCreated;
+        public int candyMachineRolls;
+        public int candyMachineStamps;
         public int uniqueSpeciesCaptured;
     }
 

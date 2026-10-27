@@ -144,6 +144,21 @@ namespace Chainbound.Combat
             return PlayHit();
         }
 
+        public float PlayRefresh()
+        {
+            if (_breakPlaying || visualRoot == null || !visualRoot.gameObject.activeSelf)
+                return 0f;
+
+            _sequence?.Kill();
+            float duration = profile != null ? Mathf.Min(0.14f, Mathf.Max(0.06f, profile.raiseDuration * 0.6f)) : 0.12f;
+            Vector3 from = _restScale;
+            Vector3 pulse = new Vector3(from.x * 1.04f, from.y * 1.08f, from.z);
+            _sequence = DOTween.Sequence();
+            _sequence.Append(visualRoot.DOScale(pulse, duration * 0.45f).SetEase(Ease.OutQuad));
+            _sequence.Append(visualRoot.DOScale(from, duration * 0.55f).SetEase(Ease.OutQuad));
+            return duration;
+        }
+
         public float PlayBreak(Action onComplete = null)
         {
             if (visualRoot == null)

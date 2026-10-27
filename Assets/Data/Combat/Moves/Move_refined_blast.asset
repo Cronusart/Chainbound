@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Kinetic wave for sweeping enemy-line pressure.
   category: 1
   baseType: 0
-  rarity: 2
+  rarity: 0
   targeting: 1
   contactType: 1
   power: 28
@@ -44,6 +44,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

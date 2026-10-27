@@ -651,7 +651,7 @@ namespace Chainbound.Combat
                 return context.evt.targetId;
 
             if (context.targetView != null)
-                return context.targetView.GetInstanceID().ToString();
+                return context.targetView.GetEntityId().ToString();
 
             return context.GetHashCode().ToString();
         }

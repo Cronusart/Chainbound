@@ -20,7 +20,7 @@ namespace Chainbound.Combat
                 MitigationSource source = chainling.mitigationSources[i];
                 if (!IsActiveMitigation(source))
                     continue;
-                if (IsWallTag(source.sourceTag) || IsWallTag(source.stackKey))
+                if (source.blockKind != BlockKind.None || IsWallTag(source.sourceTag) || IsWallTag(source.stackKey))
                     return true;
             }
 
@@ -54,7 +54,7 @@ namespace Chainbound.Combat
                     MitigationSource source = chainling.mitigationSources[i];
                     if (!IsActiveMitigation(source))
                         continue;
-                    if (!IsWallTag(source.sourceTag) && !IsWallTag(source.stackKey))
+                    if (source.blockKind == BlockKind.None && !IsWallTag(source.sourceTag) && !IsWallTag(source.stackKey))
                         continue;
 
                     if (!string.IsNullOrWhiteSpace(source.sourceTag))
@@ -79,6 +79,101 @@ namespace Chainbound.Combat
             return string.Empty;
         }
 
+        public static bool TryResolveLatestBlockProfile(
+            ChainlingInstance chainling,
+            out BlockKind kind,
+            out BlockTier tier,
+            out string sourceTag)
+        {
+            kind = BlockKind.None;
+            tier = BlockTier.None;
+            sourceTag = string.Empty;
+            if (chainling == null)
+                return false;
+
+            for (int i = chainling.mitigationSources != null ? chainling.mitigationSources.Count - 1 : -1; i >= 0; i--)
+            {
+                MitigationSource source = chainling.mitigationSources[i];
+                if (!IsActiveMitigation(source) || source.blockKind == BlockKind.None)
+                    continue;
+
+                kind = source.blockKind;
+                tier = source.blockTier != BlockTier.None
+                    ? source.blockTier
+                    : ResolveBlockTier(source.mitigation);
+                sourceTag = !string.IsNullOrWhiteSpace(source.sourceTag)
+                    ? source.sourceTag.Trim()
+                    : source.stackKey?.Trim() ?? string.Empty;
+                return true;
+            }
+
+
+            if (chainling.barriers != null)
+            {
+                for (int i = chainling.barriers.Count - 1; i >= 0; i--)
+                {
+                    BarrierInstance barrier = chainling.barriers[i];
+                    if (!IsActiveBarrierPublic(barrier))
+                        continue;
+                    kind = BlockKind.Barrier;
+                    tier = BlockTier.Lower;
+                    sourceTag = barrier.sourceTag?.Trim() ?? string.Empty;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool TryResolveMoveBlockProfile(MoveInstance move, out BlockKind kind, out BlockTier tier)
+        {
+            kind = BlockKind.None;
+            tier = BlockTier.None;
+            if (move?.utilityEffects == null)
+                return false;
+
+            for (int i = 0; i < move.utilityEffects.Count; i++)
+            {
+                UtilityEffectPayload effect = move.utilityEffects[i];
+                if (effect == null)
+                    continue;
+
+                if (effect.effectType == UtilityEffectType.FullAbsorbBarrier ||
+                    effect.effectType == UtilityEffectType.DamageThresholdBarrier)
+                {
+                    kind = BlockKind.Barrier;
+                    tier = effect.magnitude > 0f ? ResolveBlockTier(effect.magnitude) : BlockTier.Lower;
+                    return true;
+                }
+
+                if (effect.effectType != UtilityEffectType.BlockWindow)
+                    continue;
+
+                kind = effect.contactFilter == UtilityContactFilter.Contact
+                    ? BlockKind.Wall
+                    : effect.contactFilter == UtilityContactFilter.Projectile
+                        ? BlockKind.Barrier
+                        : BlockKind.None;
+                if (kind == BlockKind.None)
+                    return false;
+
+                tier = ResolveBlockTier(effect.magnitude);
+                return true;
+            }
+
+            return false;
+        }
+
+        public static BlockTier ResolveBlockTier(float mitigation)
+        {
+            float percent = mitigation <= 1f ? mitigation * 100f : mitigation;
+            if (percent <= 30f)
+                return BlockTier.Lower;
+            if (percent <= 50f)
+                return BlockTier.Mid;
+            return BlockTier.Greater;
+        }
+
         public static bool MoveDefinitionPlacesWall(MoveDefinitionSO definition)
         {
             if (definition == null)
@@ -91,7 +186,7 @@ namespace Chainbound.Combat
                     UtilityEffectPayload effect = definition.utilityEffects[i];
                     if (effect == null)
                         continue;
-                    if (effect.effectType == UtilityEffectType.MitigationWindow ||
+                    if (effect.effectType == UtilityEffectType.BlockWindow ||
                         effect.effectType == UtilityEffectType.FullAbsorbBarrier ||
                         effect.effectType == UtilityEffectType.DamageThresholdBarrier)
                         return true;
@@ -116,8 +211,22 @@ namespace Chainbound.Combat
         {
             if (string.IsNullOrWhiteSpace(value))
                 return false;
-            return value.IndexOf("wall", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   value.IndexOf("barrier", StringComparison.OrdinalIgnoreCase) >= 0;
+            string normalized = value.Trim();
+            return normalized.StartsWith("wall_", StringComparison.OrdinalIgnoreCase) ||
+                   normalized.StartsWith("barrier_", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool MovePlacesBlock(MoveInstance move)
+        {
+            if (move?.utilityEffects == null)
+                return false;
+            for (int i = 0; i < move.utilityEffects.Count; i++)
+            {
+                UtilityEffectPayload effect = move.utilityEffects[i];
+                if (effect != null && effect.effectType == UtilityEffectType.BlockWindow)
+                    return true;
+            }
+            return false;
         }
 
         private static bool IsActiveMitigation(MitigationSource source)

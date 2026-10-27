@@ -47,14 +47,10 @@ namespace Chainbound.Combat
         public async Task<OwnershipKnownRollResult> RollKnownAsync(string idempotencyKey)
         {
             RequireEnabled();
-            ResolveChainDependencies();
-            if (wallet == null || !wallet.IsConnected)
-                throw new InvalidOperationException("Connect the profile wallet before rolling Known.");
             string profileId = RequireProfileId();
             OwnershipKnownRollResult result = await PostAsync<OwnershipKnownRollResult>("ownership_roll_known", new KnownRequest
             {
                 player_profile_id = profileId,
-                wallet_address = wallet != null ? wallet.PublicKey : string.Empty,
                 idempotency_key = idempotencyKey,
             });
             if (result != null)
@@ -413,7 +409,7 @@ namespace Chainbound.Combat
             if (solanaConfig == null) solanaConfig = bridge.Config;
         }
 
-        [Serializable] private sealed class KnownRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; }
+        [Serializable] private sealed class KnownRequest { public string player_profile_id; public string idempotency_key; }
         [Serializable] private sealed class InventoryRequest { public string player_profile_id; public string wallet_address; }
         [Serializable] private sealed class ReconcileRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; }
         [Serializable] private sealed class PrepareRequest { public string player_profile_id; public string wallet_address; public string known_instance_id; public int modifier_count; public string idempotency_key; }

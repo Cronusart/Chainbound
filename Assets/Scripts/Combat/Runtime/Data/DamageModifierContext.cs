@@ -14,6 +14,7 @@ namespace Chainbound.Combat
         public float additionalMitigation = 0f;
         public float barrierBypassChance = 0f;
         public float barrierPenetrationPercent = 0f;
+        public bool bypassBlockMitigation;
         public int ignoreEvasionStages = 0;
         public int extraHits = 0;
         public bool expandSingleTargetToAllEnemies;
@@ -58,6 +59,7 @@ namespace Chainbound.Combat
                 additionalMitigation = additionalMitigation,
                 barrierBypassChance = barrierBypassChance,
                 barrierPenetrationPercent = barrierPenetrationPercent,
+                bypassBlockMitigation = bypassBlockMitigation,
                 ignoreEvasionStages = ignoreEvasionStages,
                 extraHits = extraHits,
                 expandSingleTargetToAllEnemies = expandSingleTargetToAllEnemies,

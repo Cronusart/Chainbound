@@ -397,7 +397,7 @@ namespace SignalJam.UI.MenuNavigation.Editor
             text.fontStyle = FontStyles.UpperCase;
             text.color = PlayerMenuUiFactory.Text;
             text.richText = true;
-            text.enableWordWrapping = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.raycastTarget = false;
             text.alignment = TextAlignmentOptions.MidlineLeft;
@@ -423,7 +423,7 @@ namespace SignalJam.UI.MenuNavigation.Editor
             text.color = PlayerMenuUiFactory.Text;
             text.alignment = alignment;
             text.richText = true;
-            text.enableWordWrapping = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.raycastTarget = false;
             return text;

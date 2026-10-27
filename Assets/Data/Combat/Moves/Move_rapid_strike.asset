@@ -17,10 +17,10 @@ MonoBehaviour:
   description: Priority contact hit for finishing before normal moves.
   category: 0
   baseType: 7
-  rarity: 0
+  rarity: 2
   targeting: 0
   contactType: 0
-  power: 52
+  power: 26
   apCost: 1
   accuracy: 95
   hitCountMin: 1
@@ -45,6 +45,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

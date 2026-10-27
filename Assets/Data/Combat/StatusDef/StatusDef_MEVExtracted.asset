@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statusId: 206
   displayName: MEV Extracted
-  effectSummary: Steal 1 AP per turn
+  effectSummary: Drain 1 AP per turn
   statusClass: 0
   origin: 1
   defaultDuration: 2

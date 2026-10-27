@@ -119,15 +119,9 @@ namespace SignalJam.UI.MobileControls
 
         private void HandleSelect()
         {
-            if (MobileHudService.Instance != null && MobileHudService.Instance.CurrentContext == MobileHudContext.Menu)
-            {
-                bool handledByRuntimeSubscriber = SelectRouted != null;
-                SelectRouted?.Invoke();
-                Invoke(onSelect, "Select", handledByRuntimeSubscriber);
-                return;
-            }
-
-            HandleWallet();
+            bool handledByRuntimeSubscriber = SelectRouted != null;
+            SelectRouted?.Invoke();
+            Invoke(onSelect, "Select", handledByRuntimeSubscriber);
         }
 
         private void HandleWallet()

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 9
+  version: 10
 --- !u!21 &2100000
 Material:
   serializedVersion: 8
@@ -125,6 +125,8 @@ Material:
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
+    - _ScreenSpaceReflections: 1
+    - _ScreenSpaceReflectionsContributeTransparent: 1
     - _Smoothness: 0.759
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -132,10 +134,11 @@ Material:
     - _SrcBlendAlpha: 1
     - _Surface: 1
     - _WorkflowMode: 0
+    - _XRMotionVectorsPass: 1
     - _ZWrite: 0
     m_Colors:
-    - _BaseColor: {r: 0.9490196, g: 0.5083326, b: 0.26274505, a: 0.9411765}
-    - _Color: {r: 0.9490196, g: 0.50833255, b: 0.26274502, a: 0.9411765}
+    - _BaseColor: {r: 0.9490196, g: 0.50833255, b: 0.26274502, a: 0.4117647}
+    - _Color: {r: 0.9490196, g: 0.5083325, b: 0.26274496, a: 0.4117647}
     - _EmissionColor: {r: 0.7132075, g: 0.09204861, b: 0, a: 1}
     - _SpecColor: {r: 0.5018867, g: 0.22372012, b: 0.017992094, a: 1}
   m_BuildTextureStacks: []

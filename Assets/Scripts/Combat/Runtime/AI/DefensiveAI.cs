@@ -25,6 +25,7 @@ namespace Chainbound.Combat
             var myTeam = state.GetTeam(teamIndex);
             var enemyTeam = state.GetOpposingTeam(teamIndex);
             var actions = new List<CombatAction>();
+            var queuedBySlot = new Dictionary<int, CombatAction>();
 
             for (int slot = 0; slot < myTeam.activeIndices.Count; slot++)
             {
@@ -36,7 +37,8 @@ namespace Chainbound.Combat
                 }
 
                 float myHpFrac = (float)c.currentHP / Math.Max(1, c.EffectiveMaxHP);
-                var legalActions = AIHelpers.GetLegalActions(c, myTeam, enemyTeam, teamIndex, state);
+                var legalActions = AIHelpers.GetLegalActions(
+                    c, myTeam, enemyTeam, teamIndex, state, queuedBySlot: queuedBySlot, actorSlot: slot);
 
                 // Priority 1: If we can KO an enemy this turn, always take the kill.
                 // Removing an enemy's damage output is the best form of defense.
@@ -44,6 +46,16 @@ namespace Chainbound.Combat
                 if (lethalAction.actionType != CombatActionType.Pass)
                 {
                     actions.Add(lethalAction);
+                    queuedBySlot[slot] = lethalAction;
+                    goto nextSlot;
+                }
+
+                if (AIHelpers.ShouldBankForGreaterBlock(
+                        c, myTeam, enemyTeam, state, queuedBySlot, slot))
+                {
+                    CombatAction bank = CombatAction.Pass(teamIndex);
+                    actions.Add(bank);
+                    queuedBySlot[slot] = bank;
                     goto nextSlot;
                 }
 
@@ -55,6 +67,7 @@ namespace Chainbound.Combat
                         if (legalActions[i].action.actionType == CombatActionType.Swap)
                         {
                             actions.Add(legalActions[i].action);
+                            queuedBySlot[slot] = legalActions[i].action;
                             goto nextSlot;
                         }
                     }
@@ -79,6 +92,7 @@ namespace Chainbound.Combat
                     if (supportAction.actionType != CombatActionType.Pass)
                     {
                         actions.Add(supportAction);
+                        queuedBySlot[slot] = supportAction;
                         goto nextSlot;
                     }
                 }
@@ -101,6 +115,7 @@ namespace Chainbound.Combat
                     if (buffAction.actionType != CombatActionType.Pass)
                     {
                         actions.Add(buffAction);
+                        queuedBySlot[slot] = buffAction;
                         goto nextSlot;
                     }
                 }
@@ -108,6 +123,7 @@ namespace Chainbound.Combat
                 // Priority 5: Attack the highest-threat enemy
                 CombatAction attackAction = FindBestAttack(c, legalActions, enemyTeam, teamIndex);
                 actions.Add(attackAction);
+                queuedBySlot[slot] = attackAction;
 
                 nextSlot:;
             }
@@ -167,14 +183,25 @@ namespace Chainbound.Combat
         private CombatAction FindBestSupport(ChainlingInstance actor,
             List<ScoredAction> legalActions, int teamIndex)
         {
+            float bestScore = float.MinValue;
+            CombatAction best = CombatAction.Pass(teamIndex);
             for (int i = 0; i < legalActions.Count; i++)
             {
                 if (legalActions[i].action.actionType != CombatActionType.UseMove) continue;
                 var move = actor.moves[legalActions[i].action.moveIndex];
                 if (AIHelpers.IsSupport(move) || move.tags.Contains("HEAL"))
-                    return legalActions[i].action;
+                {
+                    float score = CombatWallStateUtility.MovePlacesBlock(move)
+                        ? legalActions[i].score
+                        : 0f;
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        best = legalActions[i].action;
+                    }
+                }
             }
-            return CombatAction.Pass(teamIndex);
+            return bestScore >= 0f ? best : CombatAction.Pass(teamIndex);
         }
 
         private CombatAction FindBestBuff(ChainlingInstance actor,

@@ -22,6 +22,14 @@ namespace Chainbound.Combat
         /// </summary>
         public ChainlingSnapshot localSnapshot;
 
+        /// <summary>
+        /// Provisional capture data used only when an authoritative row exists but
+        /// cannot be read yet (for example, while an expired session is refreshing).
+        /// The backend id is retained so later mutations still target the committed
+        /// Chainling. It never replaces a successfully hydrated server row.
+        /// </summary>
+        public ChainlingSnapshot fallbackSnapshot;
+
         /// <summary>Whether the capture joined the party; drives the dossier placement line.</summary>
         public bool addedToParty;
 

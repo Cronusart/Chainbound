@@ -55,6 +55,8 @@ namespace Chainbound.Combat
         public event Action<WalletConnectResult> OnWalletConnected;
 
         private IWalletProvider boundWalletProvider;
+        private Task resumeAuthRefreshTask;
+        private bool applicationWasInterrupted;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
@@ -105,6 +107,28 @@ namespace Chainbound.Combat
         private void OnDisable()
         {
             UnbindWalletProviderEvents();
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+            {
+                applicationWasInterrupted = true;
+                return;
+            }
+
+            RefreshAuthenticationAfterInterruption();
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused)
+            {
+                applicationWasInterrupted = true;
+                return;
+            }
+
+            RefreshAuthenticationAfterInterruption();
         }
 
         private void OnDestroy()
@@ -190,6 +214,53 @@ namespace Chainbound.Combat
 
             SetSession(session);
             return CurrentSession;
+        }
+
+        /// <summary>
+        /// Returns a current Supabase access token, refreshing the rotating session
+        /// credential when it is near expiry or when a caller explicitly recovered
+        /// from an authentication rejection.
+        /// </summary>
+        public Task<AccountAuthSessionResult> EnsureFreshAuthSessionAsync(bool forceRefresh = false)
+        {
+            IAccountAuthSessionProvider auth = authSessionProvider as IAccountAuthSessionProvider;
+            if (auth == null)
+                return Task.FromResult(AccountAuthSessionResult.Failed("Authenticated profile session provider is not available."));
+
+            SupabaseConfigSO config = PlatformContext.ResolveSupabaseConfig(supabaseConfig);
+            return auth.RefreshSessionAsync(config, forceRefresh);
+        }
+
+        private void RefreshAuthenticationAfterInterruption()
+        {
+            if (!applicationWasInterrupted || CurrentSession == null || !CurrentSession.hasSession)
+                return;
+
+            applicationWasInterrupted = false;
+            if (resumeAuthRefreshTask != null && !resumeAuthRefreshTask.IsCompleted)
+                return;
+
+            resumeAuthRefreshTask = RefreshAuthenticationAfterInterruptionAsync();
+        }
+
+        private async Task RefreshAuthenticationAfterInterruptionAsync()
+        {
+            string previousToken = SupabaseAuthSessionContext.AccessToken;
+            AccountAuthSessionResult result = await EnsureFreshAuthSessionAsync();
+            if (result == null || !result.success)
+            {
+                if (enableDebugLogs)
+                    Debug.LogWarning(
+                        $"[AccountSessionService] Profile session refresh after resume failed: {result?.errorMessage ?? "Unknown authentication error."}",
+                        this);
+                return;
+            }
+
+            if (!string.Equals(previousToken, result.accessToken, StringComparison.Ordinal) &&
+                !string.IsNullOrWhiteSpace(CurrentSession.PlayerProfileId))
+            {
+                PlayerRosterRefreshSignal.Publish(CurrentSession.PlayerProfileId, string.Empty);
+            }
         }
 
         /// <summary>Idempotently marks onboarding started after the player accepts New Game.</summary>

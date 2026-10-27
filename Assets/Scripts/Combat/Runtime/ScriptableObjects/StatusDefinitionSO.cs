@@ -68,5 +68,9 @@ namespace Chainbound.Combat
 
         [Tooltip("Applied once on status application (true) or per turn end (false).")]
         public bool applyOnce;
+
+        [Tooltip("Accuracy or Evasion. CoreStat cannot store those stages.")]
+        public bool usesCombatStage;
+        public CombatStageStat combatStage;
     }
 }

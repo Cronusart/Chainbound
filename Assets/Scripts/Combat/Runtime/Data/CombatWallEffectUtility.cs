@@ -72,6 +72,20 @@ namespace Chainbound.Combat
 
         public static float ResolveWallReflectPercent(ChainlingInstance chainling, string preferredSourceTag)
         {
+            if (chainling?.mitigationSources != null)
+            {
+                for (int i = chainling.mitigationSources.Count - 1; i >= 0; i--)
+                {
+                    MitigationSource source = chainling.mitigationSources[i];
+                    if (!IsActiveMitigation(source) || source.blockKind == BlockKind.None)
+                        continue;
+                    if (!MatchesPreferredSource(preferredSourceTag, source.sourceTag, source.stackKey))
+                        continue;
+                    if (source.reflectPercent > 0f)
+                        return source.reflectPercent;
+                }
+            }
+
             if (chainling?.barriers == null)
                 return 0f;
 
@@ -89,6 +103,32 @@ namespace Chainbound.Combat
             }
 
             return 0f;
+        }
+
+        public static float ResolveBlockReflectPercentFromMove(MoveInstance move)
+        {
+            if (move?.utilityEffects == null)
+                return 0f;
+            for (int i = 0; i < move.utilityEffects.Count; i++)
+            {
+                UtilityEffectPayload effect = move.utilityEffects[i];
+                if (effect?.effectType == UtilityEffectType.BlockReflect)
+                    return Math.Max(0f, Math.Min(1f, effect.reflectPercent));
+            }
+            return 0f;
+        }
+
+        public static int ResolveBlockApGainIfFasterFromMove(MoveInstance move)
+        {
+            if (move?.utilityEffects == null)
+                return 0;
+            for (int i = 0; i < move.utilityEffects.Count; i++)
+            {
+                UtilityEffectPayload effect = move.utilityEffects[i];
+                if (effect?.effectType == UtilityEffectType.GainApOnDamageIfSpeedHigher)
+                    return Math.Max(0, effect.apGain > 0 ? effect.apGain : 1);
+            }
+            return 0;
         }
 
         private static bool IsActiveMitigation(MitigationSource source)

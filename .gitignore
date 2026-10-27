@@ -57,7 +57,13 @@ Supabase/.temp/
 **/*.p12
 **/*.keystore
 **/*secret*
-**/*key*
+**/*keypair*.json
+**/*.keystore
+*.keystores/
+**/*.pem
+.env*
+!**/.env.example
+**/*secret*.json
 !**/*.cs
 !**/*.ts
 !**/*.tsx
@@ -142,3 +148,9 @@ Signal%20Jam/
 **/supabase/.temp/
 %USERPROFILE%*
 
+
+# Claude Code (local agent config, mirrors .cursor/ + AGENTS.md policy above)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json

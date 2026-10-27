@@ -97,6 +97,9 @@ namespace Chainbound.Combat.Editor
         private readonly List<ActiveMoveVfxPreview> _activeMoveVfx = new List<ActiveMoveVfxPreview>();
         private readonly List<PendingPhaseVfxPreview> _pendingPhaseVfx = new List<PendingPhaseVfxPreview>();
         private readonly CombatPreviewPairTiming _timing;
+        private readonly bool _targetWall;
+        private readonly BlockKind _wallKind;
+        private readonly BlockTier _wallTier;
 
         private float _elapsed;
         private bool _fireTriggered;
@@ -112,7 +115,10 @@ namespace Chainbound.Combat.Editor
             CombatVFXLibrary vfxLibrary,
             MoveCategory moveCategory,
             CombatPreviewPhasePrefabOverrides phaseOverrides = null,
-            Camera previewCamera = null)
+            Camera previewCamera = null,
+            bool targetWall = false,
+            BlockKind wallKind = BlockKind.Wall,
+            BlockTier wallTier = BlockTier.Lower)
         {
             _attacker = attacker;
             _defender = defender;
@@ -121,10 +127,13 @@ namespace Chainbound.Combat.Editor
             _moveCategory = moveCategory;
             _phaseOverrides = phaseOverrides != null ? phaseOverrides.Clone() : new CombatPreviewPhasePrefabOverrides();
             _previewCamera = previewCamera;
+            _targetWall = targetWall;
+            _wallKind = wallKind;
+            _wallTier = wallTier;
             _entry = _vfxLibrary != null && _moveDefinition != null
-                ? _vfxLibrary.GetEntryWithFallback(_moveDefinition.moveId, _moveCategory)
+                ? _vfxLibrary.Resolve(VfxMoveKey.From(_moveDefinition)).entry
                 : null;
-            _timing = ResolveTiming(attacker, defender, _entry, moveCategory, _phaseOverrides);
+            _timing = ResolveTiming(attacker, defender, _entry, moveCategory, _phaseOverrides, targetWall);
             CurrentPhase = PairPhase.Idle;
         }
 
@@ -159,7 +168,8 @@ namespace Chainbound.Combat.Editor
             CombatAnimationPreviewSubject defender,
             CombatVFXLibrary.VFXEntry entry,
             MoveCategory moveCategory,
-            CombatPreviewPhasePrefabOverrides phaseOverrides = null)
+            CombatPreviewPhasePrefabOverrides phaseOverrides = null,
+            bool targetWall = false)
         {
             CombatChainlingVisual.CombatAnimState attackState = ResolveAttackState(moveCategory);
             float attackerDuration = attacker != null && attacker.Visual != null
@@ -187,7 +197,8 @@ namespace Chainbound.Combat.Editor
                     defender,
                     attackState == CombatChainlingVisual.CombatAnimState.RangedAttack
                         ? DefaultRangedTravelDuration
-                        : -1f);
+                        : -1f,
+                    targetWall);
                 impactDelay = entry != null ? entry.GetEffectiveImpactDelay(travelFallback) : travelFallback;
             }
 
@@ -284,6 +295,9 @@ namespace Chainbound.Combat.Editor
                 _castTriggered = true;
                 TryQueuePhaseVfx(CombatVFXLibrary.VFXPhase.Cast, 0f);
             }
+
+            if (_targetWall && TryResolveWallStateRow(out CombatVFXFallbacks.WallStateRow wallRow))
+                TryQueueWallPhaseVfx(wallRow.loopVfx, 0f);
         }
 
         private void TriggerFireFrame(float triggerTime)
@@ -317,7 +331,12 @@ namespace Chainbound.Combat.Editor
             _phaseHoldUntil = _elapsed + PhaseHoldSeconds;
 
             TryQueuePhaseVfx(CombatVFXLibrary.VFXPhase.Impact, triggerTime);
-            if (_defender != null && _defender.Visual != null)
+            IReadOnlyList<CombatWallPresentationBeat> beats = ResolvePreviewWallBeats(_targetWall, _wallKind, _wallTier);
+            if (CombatWallPresentationPlanner.Contains(beats, CombatWallPresentationBeat.WallHit) &&
+                TryResolveWallStateRow(out CombatVFXFallbacks.WallStateRow wallRow))
+                TryQueueWallPhaseVfx(wallRow.hitVfx, triggerTime);
+            if (CombatWallPresentationPlanner.Contains(beats, CombatWallPresentationBeat.BodyHitReaction) &&
+                _defender != null && _defender.Visual != null)
                 _defender.Visual.PlayOneShot(CombatChainlingVisual.CombatAnimState.Hit);
 
             ImpactTriggered?.Invoke();
@@ -335,6 +354,28 @@ namespace Chainbound.Combat.Editor
         private void TryQueuePhaseVfx(CombatVFXLibrary.VFXPhase phase, float triggerTime)
         {
             if (!TryResolvePhaseConfig(phase, out CombatVFXLibrary.VFXPhaseConfig config) || config == null || config.vfxPrefab == null)
+                return;
+
+            float spawnDelay = Mathf.Max(0f, config.spawnDelay);
+            if (spawnDelay <= 0f)
+            {
+                SpawnPhaseVfxNow(config);
+                return;
+            }
+
+            _pendingPhaseVfx.Add(new PendingPhaseVfxPreview(config, Mathf.Max(0f, triggerTime) + spawnDelay));
+        }
+
+        private bool TryResolveWallStateRow(out CombatVFXFallbacks.WallStateRow row)
+        {
+            CombatVFXFallbacks fallbacks = _vfxLibrary != null ? _vfxLibrary.Fallbacks : null;
+            row = fallbacks != null ? fallbacks.ResolveWallState(_wallKind, _wallTier) : null;
+            return row != null;
+        }
+
+        private void TryQueueWallPhaseVfx(CombatVFXLibrary.VFXPhaseConfig config, float triggerTime)
+        {
+            if (config == null || !config.enabled || config.vfxPrefab == null)
                 return;
 
             float spawnDelay = Mathf.Max(0f, config.spawnDelay);
@@ -371,12 +412,12 @@ namespace Chainbound.Combat.Editor
 
             bool usesTravel = config.travel != null && config.travel.enabled;
             bool mirrorX = ResolveVfxMirror();
-            Transform staticAnchor = ResolveAnchorTransform(config.anchor, _attacker, _defender, targetWall: false);
+            Transform staticAnchor = ResolveAnchorTransform(config.anchor, _attacker, _defender, _targetWall);
             Vector3 staticRawSpawnPosition = ResolveSpawnPosition(
                 config.anchor,
                 _attacker,
                 _defender,
-                targetWall: false,
+                _targetWall,
                 staticAnchor);
             staticRawSpawnPosition += ApplyVfxFacingToOffset(config.spawnOffset, mirrorX);
             Vector3 staticSpawnPosition = ApplyPreviewCameraDepthOffset(staticRawSpawnPosition, config.cameraDepthOffset);
@@ -496,8 +537,8 @@ namespace Chainbound.Combat.Editor
             out Transform anchor)
         {
             CombatVFXLibrary.VFXAnchor endpointAnchor = endpoint != null ? endpoint.anchor : config.anchor;
-            anchor = ResolveAnchorTransform(endpointAnchor, _attacker, _defender, targetWall: false);
-            Vector3 position = ResolveSpawnPosition(endpointAnchor, _attacker, _defender, targetWall: false, anchor);
+            anchor = ResolveAnchorTransform(endpointAnchor, _attacker, _defender, _targetWall);
+            Vector3 position = ResolveSpawnPosition(endpointAnchor, _attacker, _defender, _targetWall, anchor);
             position += ApplyVfxFacingToOffset(config.spawnOffset, mirrorX);
             if (endpoint != null)
                 position += ApplyVfxFacingToOffset(endpoint.offset, mirrorX);
@@ -623,7 +664,8 @@ namespace Chainbound.Combat.Editor
             CombatVFXLibrary.VFXPhase phase,
             CombatAnimationPreviewSubject attacker,
             CombatAnimationPreviewSubject defender,
-            float fallbackDuration)
+            float fallbackDuration,
+            bool targetWall)
         {
             if (TryResolvePhaseConfig(phase, entry, phaseOverrides, out CombatVFXLibrary.VFXPhaseConfig config) &&
                 config != null &&
@@ -637,13 +679,15 @@ namespace Chainbound.Combat.Editor
                     config.travel.start,
                     attacker,
                     defender,
-                    mirrorX);
+                    mirrorX,
+                    targetWall);
                 Vector3 endPosition = ResolveTravelEndpointForTiming(
                     config,
                     config.travel.end,
                     attacker,
                     defender,
-                    mirrorX);
+                    mirrorX,
+                    targetWall);
                 float resolvedDuration = CombatVfxTravelTimingResolver.ResolveDuration(
                     config,
                     startPosition,
@@ -661,16 +705,27 @@ namespace Chainbound.Combat.Editor
             CombatVFXLibrary.VFXTravelEndpoint endpoint,
             CombatAnimationPreviewSubject attacker,
             CombatAnimationPreviewSubject defender,
-            bool mirrorX)
+            bool mirrorX,
+            bool targetWall)
         {
             CombatVFXLibrary.VFXAnchor endpointAnchor = endpoint != null ? endpoint.anchor : config.anchor;
-            Transform anchor = ResolveAnchorTransform(endpointAnchor, attacker, defender, targetWall: false);
-            Vector3 position = ResolveSpawnPosition(endpointAnchor, attacker, defender, targetWall: false, anchor);
+            Transform anchor = ResolveAnchorTransform(endpointAnchor, attacker, defender, targetWall);
+            Vector3 position = ResolveSpawnPosition(endpointAnchor, attacker, defender, targetWall, anchor);
             position += ApplyVfxFacingToOffset(config.spawnOffset, mirrorX);
             if (endpoint != null)
                 position += ApplyVfxFacingToOffset(endpoint.offset, mirrorX);
 
             return ApplyPreviewCameraDepthOffset(position, config.cameraDepthOffset);
+        }
+
+        internal static IReadOnlyList<CombatWallPresentationBeat> ResolvePreviewWallBeats(
+            bool targetWall,
+            BlockKind wallKind = BlockKind.Wall,
+            BlockTier wallTier = BlockTier.Lower)
+        {
+            _ = wallKind;
+            _ = wallTier;
+            return CombatWallPresentationPlanner.PlanPreview(targetWall);
         }
 
         private static bool TryResolvePhaseConfig(

@@ -533,7 +533,7 @@ namespace SignalJam.UI.MenuNavigation.Editor
             if (descNew)
             {
                 PlaceBelow(description.rectTransform, preferredRole.rectTransform, 4f, 48f);
-                description.enableWordWrapping = true;
+                description.textWrappingMode = TextWrappingModes.Normal;
                 description.overflowMode = TextOverflowModes.Ellipsis;
                 description.maxVisibleLines = 3;
                 description.color = PlayerMenuUiFactory.Muted;
@@ -574,7 +574,7 @@ namespace SignalJam.UI.MenuNavigation.Editor
                 if (encNew)
                 {
                     encounters.color = PlayerMenuUiFactory.Muted;
-                    encounters.enableWordWrapping = false;
+                    encounters.textWrappingMode = TextWrappingModes.NoWrap;
                     encounters.overflowMode = TextOverflowModes.Ellipsis;
                 }
             }
@@ -762,7 +762,7 @@ namespace SignalJam.UI.MenuNavigation.Editor
                 text.fontSize = fontSize;
                 text.alignment = TextAlignmentOptions.TopLeft;
                 text.color = PlayerMenuUiFactory.Text;
-                text.enableWordWrapping = false;
+                text.textWrappingMode = TextWrappingModes.NoWrap;
                 text.overflowMode = TextOverflowModes.Ellipsis;
                 text.raycastTarget = false;
             }
@@ -858,7 +858,7 @@ namespace SignalJam.UI.MenuNavigation.Editor
             text.fontSize = 18f;
             text.alignment = alignment;
             text.color = PlayerMenuUiFactory.Text;
-            text.enableWordWrapping = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.raycastTarget = false;
             return text;

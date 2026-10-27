@@ -224,6 +224,77 @@ public sealed class CombatPostBattleFlowAuthoringTests
         }
     }
 
+    [Test]
+    public void ReportPrefab_AuthoredLayoutIsNotOverwrittenByStarArtOrCanvasInstance()
+    {
+        const string canvasPath = "Assets/Prefabs/Combat/CombatBattleCanvas.prefab";
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        VerticalLayoutGroup rowsLayout = FindDeep(prefab.transform, "XpRows").GetComponent<VerticalLayoutGroup>();
+        Assert.That(rowsLayout.spacing, Is.EqualTo(32f));
+        Assert.That(rowsLayout.padding.left, Is.EqualTo(16));
+        Assert.That(rowsLayout.padding.right, Is.EqualTo(16));
+
+        Transform rewardsBody = FindDeep(prefab.transform, "RewardsBody");
+        Assert.That(rewardsBody.GetComponent<Image>(), Is.Not.Null, "The rewards plate stays the authored image.");
+        TMP_Text rewardsText = null;
+        for (int i = 0; i < rewardsBody.childCount; i++)
+        {
+            Transform child = rewardsBody.GetChild(i);
+            if (child.name == "RewardsBody")
+                rewardsText = child.GetComponent<TMP_Text>();
+        }
+        Assert.That(rewardsText, Is.Not.Null);
+
+        GameObject host = Object.Instantiate(prefab);
+        CompactStarRatingArtSO art = ScriptableObject.CreateInstance<CompactStarRatingArtSO>();
+        try
+        {
+            SerializedObject artData = new SerializedObject(art);
+            artData.FindProperty("cellSize").floatValue = 9f;
+            artData.FindProperty("spacing").floatValue = 1f;
+            artData.FindProperty("fillRightToLeft").boolValue = false;
+            artData.ApplyModifiedPropertiesWithoutUndo();
+
+            CompactStarRatingDisplay stars = FindDeep(host.transform, "StarRowLayout")
+                .GetComponentInParent<CompactStarRatingDisplay>(true);
+            Assert.That(new SerializedObject(stars).FindProperty("applyArtLayoutOverrides").boolValue, Is.False);
+
+            stars.Configure(art);
+            stars.SetRating(3, true, false);
+
+            HorizontalLayoutGroup row = FindDeep(host.transform, "StarRowLayout").GetComponent<HorizontalLayoutGroup>();
+            Assert.That(row.spacing, Is.EqualTo(6f));
+            Assert.That(row.childAlignment, Is.EqualTo(TextAnchor.MiddleRight));
+            LayoutElement cell = row.transform.GetChild(0).GetComponent<LayoutElement>();
+            Assert.That(cell.minWidth, Is.EqualTo(42f));
+            Assert.That(cell.minHeight, Is.EqualTo(42f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(art);
+            Object.DestroyImmediate(host);
+        }
+
+        GameObject canvas = PrefabUtility.LoadPrefabContents(canvasPath);
+        try
+        {
+            Transform report = FindDeep(canvas.transform, "CombatPostBattleReport");
+            PropertyModification[] modifications = PrefabUtility.GetPropertyModifications(report.gameObject);
+            Assert.That(modifications, Is.Not.Null);
+            for (int i = 0; i < modifications.Length; i++)
+            {
+                UnityEngine.Object target = modifications[i].target;
+                if (target == null)
+                    continue;
+                Assert.That(target.name, Is.EqualTo("CombatPostBattleReport"), modifications[i].propertyPath);
+            }
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(canvas);
+        }
+    }
+
     private static void Invoke(object target, string methodName)
     {
         MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);

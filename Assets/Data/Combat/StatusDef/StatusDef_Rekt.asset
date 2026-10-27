@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: StatusDef_Rekt
   m_EditorClassIdentifier: 
   statusId: 200
-  displayName: Rekt
-  effectSummary: 25% chance to lose action
+  displayName: 'Rekt [Deprecated]'
+  effectSummary: Deprecated; no producer.
   statusClass: 0
   origin: 1
   defaultDuration: 2

@@ -14,10 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: ember_wall
   displayName: Ember Wall
-  description: Barrier ally for 2 turns; attackers lose 1 AP when they hit it.
+  description: "**Mid Wall \xB7 2 AP \xB7 [PRIOR] \xB7 Recharge 1.** The next melee
+    hit on an ally or yourself deals 50% less. Lasts until it blocks 1 hit or until
+    the end of next turn. Blocks 1 hit; a multi-hit breaks it on the first hit. Ranged
+    attacks are not blocked. The attacker loses 1 AP. Only one Wall or Barrier can
+    be on a Chainling at a time."
   category: 3
   baseType: 5
-  rarity: 2
+  rarity: 4
   targeting: 2
   contactType: 2
   power: 0
@@ -25,21 +29,22 @@ MonoBehaviour:
   accuracy: 0
   hitCountMin: 1
   hitCountMax: 1
-  rechargeTurns: 0
+  rechargeTurns: 2
   statusEffects: []
   stageChanges: []
   tags:
   - SUP
   - TRIG
   - APMAN
+  - PRIOR
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
   utilityEffects:
-  - effectType: 2
-    magnitude: 0
+  - effectType: 31
+    magnitude: 0.5
     turnBudget: 2
-    hitBudget: 3
+    hitBudget: 1
     apGain: 0
     stackKey: wall_ember
     statusId: 0
@@ -56,7 +61,7 @@ MonoBehaviour:
     healPercentMaxHP: 0
     counterDamagePercentMaxHP: 0
     affectAllAllies: 0
-    contactFilter: 0
+    contactFilter: 1
   - effectType: 11
     magnitude: 0
     turnBudget: 0
@@ -87,6 +92,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

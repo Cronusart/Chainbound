@@ -53,7 +53,7 @@ public class TimeOfDayManager : MonoBehaviour, ITimeOfDayController
                 if (managers.Length > 0)
                 {
                     instance = managers[0];
-                    Debug.Log($"[TimeOfDayManager] Found instance via FindObjectsOfType: {instance.gameObject.name} (ID: {instance.GetInstanceID()})");
+                    Debug.Log($"[TimeOfDayManager] Found instance via FindObjectsOfType: {instance.gameObject.name} (ID: {instance.GetEntityId()})");
                 }
                 else
                 {
@@ -208,7 +208,7 @@ public class TimeOfDayManager : MonoBehaviour, ITimeOfDayController
         // Log the current state for debugging
         if (enableDebugLogs)
         {
-            Debug.Log($"[TimeOfDayManager] Awake on {gameObject.name} (ID: {GetInstanceID()})" +
+            Debug.Log($"[TimeOfDayManager] Awake on {gameObject.name} (ID: {GetEntityId()})" +
                      $"\n  - hasExistingInstance: {hasExistingInstance}" +
                      $"\n  - ReferenceEquals(instance, null): {ReferenceEquals(instance, null)}" +
                      $"\n  - instance == null (Unity): {instance == null}" +
@@ -218,7 +218,7 @@ public class TimeOfDayManager : MonoBehaviour, ITimeOfDayController
         if (hasExistingInstance && instance != this)
         {
             // IMPORTANT: Log this even without debug mode to help diagnose issues
-            Debug.Log($"[TimeOfDayManager] Duplicate detected! Keeping existing (t={instance.normalizedTime:F3}, ID: {instance.GetInstanceID()}). Destroying: {gameObject.name} (ID: {GetInstanceID()})");
+            Debug.Log($"[TimeOfDayManager] Duplicate detected! Keeping existing (t={instance.normalizedTime:F3}, ID: {instance.GetEntityId()}). Destroying: {gameObject.name} (ID: {GetEntityId()})");
             Destroy(gameObject);
             return;
         }
@@ -257,7 +257,7 @@ public class TimeOfDayManager : MonoBehaviour, ITimeOfDayController
         lastBroadcastNormalizedTime = normalizedTime;
         
         // Log initialization (always, for debugging scene setup)
-        Debug.Log($"[TimeOfDayManager] Initialized as primary instance: {gameObject.name} (ID: {GetInstanceID()}), t={normalizedTime:F3}, segment={currentSegment}");
+        Debug.Log($"[TimeOfDayManager] Initialized as primary instance: {gameObject.name} (ID: {GetEntityId()}), t={normalizedTime:F3}, segment={currentSegment}");
     }
     
     private void Start()

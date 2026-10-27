@@ -19,7 +19,7 @@ Deno.test("Bind endpoints use the shared reservation and receipt-backed settleme
 
 Deno.test("Bind production migration is empty, service-only, and replay constrained", async () => {
   const migration = await Deno.readTextFile(
-    new URL("../../migrations/20261003183500_ownership_bind_coordination.sql", import.meta.url),
+    new URL("../../migrations/20261006110715_ownership_bind_coordination.sql", import.meta.url),
   );
   assertEquals(/INSERT\s+INTO\s+public\.ownership_bind_sources/i.test(migration), false);
   for (const table of ["ownership_bind_sources", "ownership_bind_operations", "ownership_chainling_bindings"]) {

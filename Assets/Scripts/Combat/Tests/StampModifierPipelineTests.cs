@@ -23,6 +23,45 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public void ExtraHit_RequiresAMultiHitHost()
+        {
+            ModifierDefinitionSO extraHit = CreateModifier("4.1-a", 1f, 1f, MoveCategory.DamagingMelee, MoveCategory.DamagingRanged);
+            MoveDefinitionSO single = CreateMove("slash", "Slash", MoveCategory.DamagingMelee);
+            MoveDefinitionSO ranged = CreateMove("volley", "Volley", MoveCategory.DamagingRanged);
+            ranged.hitCountMin = 2;
+            ranged.hitCountMax = 3;
+            MoveDefinitionSO tagged = CreateMove("flurry", "Flurry", MoveCategory.DamagingMelee);
+            tagged.tags.Add("MULTI");
+
+            Assert.IsFalse(ModifierValidationService.CanApply(extraHit, single).isValid);
+            Assert.IsTrue(ModifierValidationService.CanApply(extraHit, ranged).isValid);
+            Assert.IsTrue(ModifierValidationService.CanApply(extraHit, tagged).isValid);
+        }
+
+        [Test]
+        public void ImportedAccuracyAndRefundRows_RejectHostsTheyCannotHelp()
+        {
+            ModifierCatalogSO catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<ModifierCatalogSO>(
+                "Assets/Data/Combat/Modifiers/Catalog/ModifierCatalog.asset");
+            Assert.That(catalog, Is.Not.Null);
+            MoveDefinitionSO passive = CreateMove("spite_counter", "Spite Counter", MoveCategory.Passive);
+            MoveDefinitionSO support = CreateMove("mend", "Mend", MoveCategory.Support);
+            MoveDefinitionSO strike = CreateMove("slash", "Slash", MoveCategory.DamagingMelee);
+
+            foreach (string id in new[] { "2.2-a", "2.7-a", "10.2-a" })
+            {
+                Assert.IsFalse(ModifierValidationService.CanApply(catalog.GetBySectionId(id), passive).isValid, id);
+                Assert.IsFalse(ModifierValidationService.CanApply(catalog.GetBySectionId(id), support).isValid, id);
+                Assert.IsTrue(ModifierValidationService.CanApply(catalog.GetBySectionId(id), strike).isValid, id);
+            }
+            foreach (string id in new[] { "3.1-a", "6.3-c" })
+            {
+                Assert.IsFalse(ModifierValidationService.CanApply(catalog.GetBySectionId(id), passive).isValid, id);
+                Assert.IsTrue(ModifierValidationService.CanApply(catalog.GetBySectionId(id), support).isValid, id);
+            }
+        }
+
+        [Test]
         public void PassA_IllegalHosts_AreRejected()
         {
             MoveDefinitionSO damaging = CreateMove("slash", "Slash", MoveCategory.DamagingMelee);
@@ -73,6 +112,28 @@ namespace Chainbound.Combat.Tests
                 utility,
                 CreateCatalog(hairTrigger),
                 new[] { "1.1-a" }).isValid);
+        }
+
+        [Test]
+        public void StatSubstitution_AllowsOneOnDamagingMovesOnly()
+        {
+            ModifierDefinitionSO ironFist = CreateModifier("5.2-a", 0f, 0f, MoveCategory.DamagingMelee);
+            ironFist.slotType = ModifierSlotType.StatSubstitution;
+            ModifierDefinitionSO fleetStrike = CreateModifier("5.2-b", 0f, 0f, MoveCategory.DamagingMelee);
+            fleetStrike.slotType = ModifierSlotType.StatSubstitution;
+            MoveDefinitionSO melee = CreateMove("jab", "Jab", MoveCategory.DamagingMelee);
+            MoveDefinitionSO utility = CreateMove("cleanse", "Cleanse", MoveCategory.StatusUtility);
+
+            Assert.IsTrue(ModifierValidationService.CanApply(ironFist, melee).isValid);
+            Assert.IsFalse(ModifierValidationService.CanApply(ironFist, utility).isValid);
+
+            ModifierValidationResult second = ModifierValidationService.CanApply(
+                fleetStrike,
+                melee,
+                CreateCatalog(ironFist),
+                new[] { "5.2-a" });
+            Assert.IsFalse(second.isValid);
+            StringAssert.Contains("StatSubstitution", second.reason);
         }
 
         [Test]

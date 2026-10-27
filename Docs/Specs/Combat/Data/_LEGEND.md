@@ -170,6 +170,7 @@ Use the enum name exactly as written (e.g., `Pumped`, `FUD`, `GlitchedMind`, `Fi
 | Targeting | Targeting slot-type (max 1 per inscription) |
 | Barrier | Post-cast barrier-grant slot-type (max 1 per inscription) |
 | Durability | Passive MaxHP% durability slot-type (max 1 per inscription) |
+| StatSubstitution | Stat-substitution slot-type (max 1 per stamped move; damaging moves only) |
 
 ### PassiveTriggerCondition
 
@@ -263,7 +264,7 @@ Examples:
 
 ### Tags (Moves.csv)
 
-Pipe-separated tag strings: `DMG|MULTI|AOE|PRIO|PRIOR|TRIG|APMAN|STAT|UTIL|SUP|PAS|HEAL`
+Pipe-separated tag strings: `DMG|MULTI|AOE|PRIO|PRIOR|TRIG|APMAN|STAT|UTIL|SUP|PAS|HEAL|ARMOR`
 
 | Tag | Meaning |
 |------|---------|
@@ -279,6 +280,10 @@ Pipe-separated tag strings: `DMG|MULTI|AOE|PRIO|PRIOR|TRIG|APMAN|STAT|UTIL|SUP|P
 | SUP | Support move (ally heal, barrier, transfer) |
 | PAS | Passive ability |
 | HEAL | Healing effect |
+| ARMOR | Generic hit-limited mitigation that stacks with one Wall or Barrier |
+| SpendRemainingAp | Spend all currently available AP. This is intentionally the only mixed-case tag because existing assets persist the string. |
+| BOSS_ONLY | Authored encounter-kit move that cannot enter player pools, grants, captures, PvP parties, candy rolls, or the card catalog. Implies `NO_CANDY`. |
+| NO_CANDY | Excluded from candy-machine and Known-card rolls. |
 
 ### HealPercentMaxHP (Moves.csv, optional)
 
@@ -312,6 +317,8 @@ Named resolve-profile columns (see header row / export). Leave an optional profi
 | `ConditionalDamageBonusPerCount` | Multiplier added per resolved count |
 | `ConditionalDamageMaxMultiplier` | Cap after count scaling (`0` = uncapped) |
 | `RandomDamageMultipliers` | Pipe-separated seeded choices, e.g. `1.5|0.75` |
+| `AccuracyTuning` | Reusable hit tuning: `SureHit`, `ForceHit:true`, `Bonus:N`, `IgnoreEva:N`, and/or `MinHit:F` / `MaxHit:F`, separated by `|`. `SureHit` expands to ignore 6 Evasion stages and a 95% floor. |
+| `MoveEffectsOncePerTarget` | When `true`, StatusEffects and StageChanges apply on only the first confirmed hit per target in a cast, including barrier-absorbed hits. |
 
 Condition token format:
 
@@ -321,6 +328,7 @@ Condition token format:
 - Multiple conditions are separated by `|`.
 - Count-producing scaling predicates include `BuffedPartnerCountAtLeast`, `DebuffCountAtLeast`, and `StatusCountAtLeast`.
 - Other supported predicates include live HP/AP, status/stage/barrier checks, no-buff checks, prior-turn hit/damage memory, and same-turn action memory.
+- `StageHigherThanOtherStage` is a strict comparison: the selected `Stat` stage must be greater than `ComparisonStat` (equal stages fail).
 
 Examples:
 
@@ -336,6 +344,8 @@ Separate payloads with `|`. Percent tokens accept `25%` or a fraction such as `0
 | Opcode | Parameter format |
 |---|---|
 | `MitigationWindow` | `percent:turns:hits:stackKey` |
+| `BlockWindow` | `percent:category:turns:stackKey` (`category` is `Melee` or `Ranged`; hit budget is fixed at 1) |
+| `BlockReflect` | `percent:stackKey` (reflects this share of damage prevented by the paired block) |
 | `FullAbsorbBarrier` | `turns:hits:stackKey` |
 | `DamageThresholdBarrier` | `capacity:turns:hits:reflectPercent:stackKey` |
 | `WallHitRetaliation` | `attackerApDrain:stackKey` |
@@ -343,6 +353,11 @@ Separate payloads with `|`. Percent tokens accept `25%` or a fraction such as `0
 | AP mutation opcodes | `amount:chance:target:stackKey` |
 | `TurnStartPendingStatus` | `statusId:duration:target:stackKey` |
 | `Cleanse` | `maxCount:chance:target:stackKey` |
+| `ApplyChemistryStatus` | `statusId:duration:chance:target:stackKey` |
+| `StripBuffs` | `maxCount:chance:target:stackKey` |
+| `StripAllStatuses` | `chance:target:stackKey` |
+| `StripBuffsThenStage` | `maxCount:chance:target:stageStat:stagesPerBuff:stackKey` |
+| `HealSelfPerTargetDebuff` | `percentPerDebuff:chance:stackKey` |
 | `BonusHealPercentIfSpeedHigher` | `percent:target:stackKey` |
 | `IncomingDamageMitigation` | `percent:contactFilter:stackKey` |
 | `ChangeStage` | `stageStat:amount:chance:target:cap:allAllies:stackKey` |
@@ -357,7 +372,15 @@ Separate payloads with `|`. Percent tokens accept `25%` or a fraction such as `0
 
 AP mutation opcodes are `GainAP`, `DrainAP`, `StealAP`, `TransferAP`, `RefundAP`, `NextMoveAPSurcharge`.
 
+`StripBuffsThenStage` is the compound Hype Burst form: remove up to `maxCount` General buffs from the target, then grant the source `stagesPerBuff` in `stageStat` for each buff actually removed. Strip operations preserve ChemistryOnly statuses. `HealSelfPerTargetDebuff` counts the foe's General debuffs before later payloads execute and heals the source by that percentage of source MaxHP per debuff.
+
 `CombatStageStat` supports `MeleeAtk`, `MeleeDef`, `RangedAtk`, `RangedDef`, `Speed`, `Accuracy`, `Evasion`, and `CritRate`. Contact filters are `Any`, `Contact`, `Projectile`, and `None`.
+
+### Additional runtime conventions
+
+- `CipherLocked` is a General debuff that blocks all new positive stage changes, buff-status applications, passive ramps, chemistry buffs, and buff extension while active. Existing buffs remain until their normal expiry.
+- `BossTell` is an `OutcomeSummary` combat event used for boss-payoff charging and ready warnings.
+- Recharge value `N` locks a move for `N - 1` of that user's turns. Player-facing card text states that lock duration in plain words.
 
 Armed triggers are `FoeKO`, `EnemyMiss`, `IncomingDebuff`, `IncomingHit`, and `OwnerTurnStart`. Armed windows clear on swap-out.
 
@@ -371,7 +394,7 @@ Armed triggers are `FoeKO`, `EnemyMiss`, `IncomingDebuff`, `IncomingHit`, and `O
 - `PowerCap`: integer cap on move power (`0` = no cap)
 - `APCostCap`: integer cap on move AP cost (`0` = no cap)
 - `ForbiddenTags`: pipe-separated move tags that disallow the modifier (e.g., `MULTI|PRIOR`)
-- `SlotType`: `None`, `INIT`, `ActionEconomy`, or `Targeting` for one-per-inscription caps
+- `SlotType`: `None`, `INIT`, `ActionEconomy`, `Targeting`, `Barrier`, `Durability`, or `StatSubstitution` for one-per-inscription caps
 - `LowHpThreshold` (optional): HP % threshold for `OnLowHP` triggers. Defaults to `30` when omitted.
 - `Weight` (optional, trailing): within-tier relative drop weight for vending candidate pools (`ModifierDefinitionSO.weight`). Defaults to `1` when omitted. Integer ≥ 0. Export writes `LowHpThreshold,Weight` after `SlotType`; older rows without `Weight` remain valid.
 
@@ -406,7 +429,11 @@ Armed triggers are `FoeKO`, `EnemyMiss`, `IncomingDebuff`, `IncomingHit`, and `O
 1. Open `SpeciesMovePools.csv`.
 2. Find or add the species row.
 3. List the 4-5 progression moves in `LearnableMoves` (pipe-separated). Put species-locked moves in `ExclusiveMoves` instead.
-4. Set `FlagshipMove` to the signature. Import gives it weight 8, and weight 24 at 5 stars. Every other pool move gets weight 23.
+
+Every move reachable through a species pool or wild encounter pool must also have a reviewed row in `LivePoolPayloadReview.csv`. `ExpectedTokens` names the status/opcode/rider promised by the text; the EditMode live-pool guard rejects missing reviews, empty utility cards, zero-power attacks, and zero-hit mitigation windows.
+
+Typeless single-target Common attacks at 2 AP use two intentional bands: budget clean is Power 26 / Accuracy 95, while premium clean is Power 30 (or Power 30 with an accuracy/risk tradeoff). Typed Commons target roughly index 34 at 2 AP. Do not raise a typeless Common into the typed band or Uncommon per-AP territory.
+4. Set `FlagshipMove` to the signature. Import gives it weight 8, and weight 24 at 5 stars. Every other pool move gets weight 23. Effective weight multiplies that authored weight by the learn-rarity curve on `ProgressionConfig_Default` (1.00, 0.72, 0.48, 0.28, 0.14, 0.06) and floors a positive result at 1. Wild pools follow the body band: three moves at the species tier or lower, one at that tier or one step higher, and a signature that is strictly the highest rarity in the pool. Starters only keep the signature as the unique top rarity. Ghost and Cofi Lootwak stay outside that band.
 5. List `InitialMoves`. Every initial move must also exist in that species' learnable or exclusive pool.
 6. List 0-2 typed theme exceptions in `OffTypeMoves`. These equip even when the type does not match. They may also sit in the progression pool.
 7. Re-import: `Import Species Pools (CSV)`.

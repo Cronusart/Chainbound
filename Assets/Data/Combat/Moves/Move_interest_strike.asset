@@ -14,15 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: interest_strike
   displayName: Interest Strike
-  description: 2-3 hits; each can grant AP if Def stage exceeds Atk.
+  description: 2-3 hits; each hit gives +1 AP if your Def stage exceeds your Atk.
   category: 0
   baseType: 9
-  rarity: 2
+  rarity: 3
   targeting: 0
   contactType: 0
   power: 18
-  apCost: 3
-  accuracy: 95
+  apCost: 2
+  accuracy: 90
   hitCountMin: 2
   hitCountMax: 3
   rechargeTurns: 0
@@ -36,16 +36,44 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 3
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 1
+    stackKey: interest_strike
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 4
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
-    utilityExecutionTiming: 0
+    utilityExecutionTiming: 2
     conditionalEffectPolicy: 0
-    resolveConditions: []
+    resolveConditions:
+    - subject: 0
+      conditionType: 23
+      threshold: 0
+      statusId: 0
+      stat: 2
+      comparisonStat: 1
     requireAllResolveConditions: 1
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

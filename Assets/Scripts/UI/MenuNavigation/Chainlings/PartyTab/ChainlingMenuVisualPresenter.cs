@@ -243,7 +243,7 @@ namespace SignalJam.UI.MenuNavigation.PartyTab
                 "|",
                 resolved.speciesId ?? "",
                 resolved.visualVariantId ?? "",
-                resolved.baseProfile != null ? resolved.baseProfile.GetInstanceID().ToString() : "",
+                resolved.baseProfile != null ? resolved.baseProfile.GetEntityId().ToString() : "",
                 identity != null ? identity.idleStyleId ?? "" : "",
                 identity != null ? identity.idleFlourishId ?? "" : "",
                 identity != null ? identity.partyColumnVariantId ?? "" : "");

@@ -831,6 +831,8 @@ feature flag, second Stamp, Archive Binding, mainnet, or Closed Beta enablement.
 
 This track is separate from economy/fee design.
 
+> Run plan: [MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md](../Solana/MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md) (2026-10-26). Follow-on Known/Stamp design: [ROLL_REQUEST_VRF_DESIGN_v1.md](ROLL_REQUEST_VRF_DESIGN_v1.md).
+
 | Pin | Value |
 |---|---|
 | MagicBlock base-layer VRF program | `Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz` |
@@ -851,7 +853,11 @@ Expected polling defaults are 2 seconds with a 30-second timeout. Failures inclu
 simulation, wallet cancellation, request transaction failure, missing/wrong-owned request PDA,
 invalid discriminator/status, callback delay, RPC timeout, and consume replay.
 
-There is no successful Devnet VRF request signature yet; VRF remains outside this deployment slice
+**2026-10-26: first successful Devnet round trip.** Request `3wsH59XY…`, fulfill `2xWD6kTe…` (MagicBlock oracle `vrfkfM4u…`, about 1 s after the request), consume `4pUfX8ns…`; PDA `57BTELf5…` verified Consumed with 32 non-zero bytes. Cost 1,930,000 lamports, including a 500,000-lamport MagicBlock request charge and 1,270,000 locked rent. Full record: [MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md](../Solana/MAGICBLOCK_VRF_EFFICACY_RUN_PLAN.md#run-1-results-2026-10-26-verified-from-devnet-rpc).
+
+**2026-10-26: negative cases and latency sample passed.** Negatives 5/5 (consume replay 6036, wrong owner 2006, forged callback 2012, same seed twice rejected by `Allocate`, consume before fulfill 6036 in all 10 runs). Latency over 10 CLI runs, all fulfilled by `vrfkfM4u…`: request → fulfilled (confirmed) median 1,850 ms, p90 1,994 ms, 2–3 slots; finalized about 130 ms later on Devnet. Cost is 1,780,000 lamports per run without priority fees. The 2 s / 30 s polling defaults above are now superseded: poll at 250–500 ms, with a 10 s "still rolling" threshold. Details are in the run plan, step 5.
+
+Before that run there was no successful Devnet VRF request signature; VRF remains outside this deployment slice
 and must not absorb fee design. Stamp continues to use its approved authority-server entropy.
 Future Stamp VRF integration must
 feed the fulfilled bytes into the existing compatibility/`CanApply` selection and lock

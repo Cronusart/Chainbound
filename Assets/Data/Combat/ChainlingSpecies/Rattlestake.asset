@@ -25,21 +25,20 @@ MonoBehaviour:
   baseRangedDef: 52
   baseSpeed: 57
   maxEvolutionStages: 1
-  offTypeMoveExceptions:
-  - {fileID: 11400000, guid: 8b6f4b2aedcc534408a96b246c242fc5, type: 2}
+  offTypeMoveExceptions: []
   learnableMoves:
-  - {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
-  - {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
   - {fileID: 11400000, guid: 8bebb9f65226c5a41820524f15497550, type: 2}
-  - {fileID: 11400000, guid: 9a098dcd2dece13429ce3dd20174b5e3, type: 2}
-  - {fileID: 11400000, guid: 8b6f4b2aedcc534408a96b246c242fc5, type: 2}
+  - {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
+  - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  - {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
+  - {fileID: 11400000, guid: 8401579f4a137094ea89dbc8b8da2874, type: 2}
   learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
-  flagshipMove: {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
+  flagshipMove: {fileID: 11400000, guid: 8bebb9f65226c5a41820524f15497550, type: 2}
   initialMoves:
-  - {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+  - {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
   progressionMovePool:
-  - move: {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
+  - move: {fileID: 11400000, guid: 8bebb9f65226c5a41820524f15497550, type: 2}
     weight: 8
     useWeightAtStarFive: 1
     weightAtStarFive: 24
@@ -48,7 +47,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: c206ddbfa6226004b9e175fc51b9eb73, type: 2}
+  - move: {fileID: 11400000, guid: 9c289e726f7f6eb40830b3673202a0b6, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -57,7 +56,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 8bebb9f65226c5a41820524f15497550, type: 2}
+  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -66,7 +65,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 9a098dcd2dece13429ce3dd20174b5e3, type: 2}
+  - move: {fileID: 11400000, guid: 9f5a83586234df345b459991a6dbe390, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -75,7 +74,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 8b6f4b2aedcc534408a96b246c242fc5, type: 2}
+  - move: {fileID: 11400000, guid: 8401579f4a137094ea89dbc8b8da2874, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23

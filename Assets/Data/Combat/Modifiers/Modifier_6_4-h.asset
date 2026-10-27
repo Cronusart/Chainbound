@@ -14,18 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.4-h
   displayName: Spotter
-  effectDescription: On swap out, an ally gains 5-10% accuracy for the rest of this turn
+  effectDescription: On swap out
   category: 5
   scope: 1
   minimumRarity: 2
   effectMin: 5
   effectMax: 10
+  weight: 1
   allowedCategories: 03000000
   forbiddenCombinations: []
   slotCostIncrease: 0
   powerCap: 0
   apCostCap: 0
-  forbiddenTags: []
+  forbiddenTags:
+  - 0
   slotType: 0
   isTypeInfusion: 0
   isStatSubstitution: 0

@@ -9,7 +9,10 @@ namespace Chainbound.Combat
     /// </summary>
     public static class CaptureDossierLoadout
     {
-        public static void ApplyOwnedMove(ChainlingSnapshot dossier, ChainlingSnapshot encounterSource)
+        public static void ApplyOwnedMove(
+            ChainlingSnapshot dossier,
+            ChainlingSnapshot encounterSource,
+            MoveDatabaseSO moveDatabase = null)
         {
             if (dossier == null)
                 return;
@@ -17,8 +20,11 @@ namespace Chainbound.Combat
             string known = encounterSource != null && !string.IsNullOrWhiteSpace(encounterSource.knownMoveId)
                 ? encounterSource.knownMoveId.Trim()
                 : string.Empty;
+            if (MoveAvailability.IsBossOnly(known, moveDatabase))
+                known = string.Empty;
             dossier.knownMoveId = known;
             dossier.moveIds = new List<string>();
+            dossier.moveAcquisitions = new List<string>();
             dossier.modifier1SectionIds = new List<string>();
             dossier.modifier2SectionIds = new List<string>();
             if (known.Length == 0)
@@ -26,6 +32,7 @@ namespace Chainbound.Combat
 
             dossier.moveIds.Add(known);
             int index = FindMoveIndex(encounterSource.moveIds, known);
+            dossier.moveAcquisitions.Add(index >= 0 ? SectionAt(encounterSource.moveAcquisitions, index) : string.Empty);
             if (index < 0)
                 return;
 

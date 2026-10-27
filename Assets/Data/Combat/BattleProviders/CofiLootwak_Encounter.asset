@@ -39,6 +39,7 @@ MonoBehaviour:
     moveIds:
     - bean_sip
     - civet_beam
+    - grind_tax
     modifier1SectionIds: []
     modifier2SectionIds: []
     ivMaxHP: 0

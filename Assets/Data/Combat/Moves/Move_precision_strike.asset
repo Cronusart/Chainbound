@@ -14,15 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: precision_strike
   displayName: Precision Strike
-  description: Accurate ranged hit with +20% accuracy.
+  description: Ranged hit that ignores Evasion; at least 95% to hit.
   category: 1
   baseType: 10
   rarity: 0
   targeting: 0
   contactType: 1
-  power: 64
+  power: 34
   apCost: 2
-  accuracy: 95
+  accuracy: 100
   hitCountMin: 1
   hitCountMax: 1
   rechargeTurns: 0
@@ -43,6 +43,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0
@@ -53,8 +54,8 @@ MonoBehaviour:
       forceMiss: 0
       accuracyMultiplier: 1
       accuracyBonusPercent: 0
-      ignoreEvasionStages: 0
-      minHitChance: 0
+      ignoreEvasionStages: 6
+      minHitChance: 0.95
       maxHitChance: 1
     crit:
       suppressCrits: 0

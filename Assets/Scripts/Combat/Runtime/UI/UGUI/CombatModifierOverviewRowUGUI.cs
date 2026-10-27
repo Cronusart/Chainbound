@@ -34,7 +34,7 @@ namespace Chainbound.Combat
                     descriptionText.font = fontOverride;
                 if (descriptionText.fontSize <= 0f)
                     descriptionText.fontSize = 18f;
-                descriptionText.enableWordWrapping = true;
+                descriptionText.textWrappingMode = TextWrappingModes.Normal;
                 descriptionText.alignment = TextAlignmentOptions.Left;
                 descriptionText.color = descriptionColor;
             }

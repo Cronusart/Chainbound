@@ -58,13 +58,116 @@ public sealed class ApiError
 public sealed class GameplayManifest
 {
     public int ManifestVersion { get; set; } = 1;
+    public List<ManifestSpecies> Species { get; set; } = new();
+    public List<ManifestMove> Moves { get; set; } = new();
+    public List<ManifestStatus> Statuses { get; set; } = new();
     public List<ManifestEncounter> Encounters { get; set; } = new();
+}
+
+public sealed class ManifestSpecies
+{
+    public string SpeciesId { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public int PrimaryType { get; set; }
+    public int SecondaryType { get; set; }
+    public int BaseMaxHp { get; set; }
+    public int BaseMeleeAttack { get; set; }
+    public int BaseMeleeDefense { get; set; }
+    public int BaseRangedAttack { get; set; }
+    public int BaseRangedDefense { get; set; }
+    public int BaseSpeed { get; set; }
+    public List<string> InitialMoveIds { get; set; } = new();
+}
+
+public sealed class ManifestMove
+{
+    public string MoveId { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public int Category { get; set; }
+    public int BaseType { get; set; }
+    public int Rarity { get; set; }
+    public int Targeting { get; set; }
+    public int ContactType { get; set; }
+    public int Power { get; set; }
+    public int ApCost { get; set; }
+    public int Accuracy { get; set; }
+    public int HitCountMin { get; set; }
+    public int HitCountMax { get; set; }
+    public int RechargeTurns { get; set; }
+    public List<string> Tags { get; set; } = new();
+    public List<ManifestMoveStatus> StatusEffects { get; set; } = new();
+    public string StageChanges { get; set; } = "";
+    public string UtilityEffects { get; set; } = "";
+    public float HpCostPercent { get; set; }
+    public int HealPercent { get; set; }
+    public ManifestResolveProfile ResolveProfile { get; set; } = new();
+    public ManifestAccuracyTuning AccuracyTuning { get; set; } = new();
+    public bool BossOnly { get; set; }
+    public bool SpendsRemainingAp { get; set; }
+    public bool MoveEffectsOncePerTarget { get; set; }
+}
+
+public sealed class ManifestMoveStatus
+{
+    public string StatusId { get; set; } = "";
+    public int Duration { get; set; }
+    public int ChanceBasisPoints { get; set; }
+}
+
+public sealed class ManifestResolveProfile
+{
+    public string PrimaryTiming { get; set; } = "";
+    public string UtilityTiming { get; set; } = "";
+    public string ConditionalPolicy { get; set; } = "";
+    public string Conditions { get; set; } = "";
+    public bool RequireAll { get; set; }
+    public float DamagePowerMultiplier { get; set; }
+    public float DamagePreMitigationMultiplier { get; set; }
+    public float DamageFinalMultiplier { get; set; }
+    public bool DamageOverrideAttackStat { get; set; }
+    public string DamageAttackStat { get; set; } = "";
+    public float ConditionalDamageMultiplier { get; set; }
+    public string ConditionalDamageConditions { get; set; } = "";
+    public bool ConditionalDamageRequireAll { get; set; }
+    public string ConditionalDamageScalingCondition { get; set; } = "";
+    public float ConditionalDamageBonusPerCount { get; set; }
+    public float ConditionalDamageMaxMultiplier { get; set; }
+    public string RandomDamageMultipliers { get; set; } = "";
+}
+
+public sealed class ManifestAccuracyTuning
+{
+    public bool ForceHit { get; set; }
+    public bool ForceMiss { get; set; }
+    public float Multiplier { get; set; }
+    public float BonusPercent { get; set; }
+    public int IgnoreEvasionStages { get; set; }
+    public float MinHitChance { get; set; }
+    public float MaxHitChance { get; set; }
+}
+
+public sealed class ManifestStatus
+{
+    public string StatusId { get; set; } = "";
+    public int NumericId { get; set; }
+    public string DisplayName { get; set; } = "";
+    public string EffectSummary { get; set; } = "";
+    public int StatusClass { get; set; }
+    public int Origin { get; set; }
+    public int DefaultDuration { get; set; }
+    public int CounterThreshold { get; set; }
+    public bool IsBuff { get; set; }
+    public bool IsDebuff { get; set; }
+    public bool PreventsAction { get; set; }
+    public int EndOfTurnDamageBasisPoints { get; set; }
+    public int EndOfTurnApChange { get; set; }
 }
 
 public sealed class ManifestEncounter
 {
     public string EncounterId { get; set; } = "";
     public string ZoneId { get; set; } = "";
+    public string TimeSegment { get; set; } = "";
     public AuthoritativeBattleKind BattleKind { get; set; } = AuthoritativeBattleKind.Wild;
     public string RewardTier { get; set; } = BattleRewardTier.Standard;
     public string RewardEligibilityQuestId { get; set; } = "";
@@ -104,7 +207,11 @@ public sealed class ManifestTarget
     public int LegacyBaseCaptureRate { get; set; } = 45;
     public int CaptureProfile { get; set; } = (int)CaptureVolatilityProfile.Standard;
     public int Stars { get; set; }
+    public int StarVariance { get; set; }
     public int Level { get; set; } = 1;
+    public bool RollIvs { get; set; }
+    public int IvMin { get; set; } = -5;
+    public int IvMax { get; set; } = 5;
     public int[] Ivs { get; set; } = new int[6];
     public string KnownMoveId { get; set; } = "baseline_jab";
     public bool StartsActive { get; set; } = true;

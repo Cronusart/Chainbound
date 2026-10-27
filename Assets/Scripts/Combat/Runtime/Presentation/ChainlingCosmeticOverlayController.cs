@@ -240,7 +240,7 @@ namespace Chainbound.Combat
                 return;
             }
 
-            string nextKey = $"{definition.Id}:{definition.GetInstanceID()}";
+            string nextKey = $"{definition.Id}:{definition.GetEntityId()}";
             if (instance != null && key == nextKey)
                 return;
 

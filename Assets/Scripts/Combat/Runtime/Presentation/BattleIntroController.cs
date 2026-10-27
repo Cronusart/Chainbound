@@ -1641,9 +1641,7 @@ namespace Chainbound.Combat
             target.enableAutoSizing = source.enableAutoSizing;
             target.alignment = source.alignment;
             target.fontStyle = source.fontStyle;
-#pragma warning disable CS0618
-            target.enableWordWrapping = source.enableWordWrapping;
-#pragma warning restore CS0618
+            target.textWrappingMode = source.textWrappingMode;
             target.overflowMode = source.overflowMode;
             target.margin = source.margin;
         }

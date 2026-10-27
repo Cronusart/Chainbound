@@ -1,11 +1,12 @@
 // Generated from Docs/Specs/Combat/Data/Modifiers.csv. Do not edit by hand.
-// sourceSha256=c3abaa587381dbedd0559fe379d77cd7edef29b6f0f24f61c7762aa026b1395e
+// sourceSha256=f2997df29b3d28cbac5af2cf0311a11fbc0a7fb04864346755a84fc5b3bc781d
 // poolHash=6cea5ce56944a88486cafbb568a628b5aa5664c3db652a79cd90016427aaa4b4
-// catalogMechanicalHash=9bf886066de06e1d237530b0392596c6df9eebdb92a14a799d2750924972eda1
+// catalogMechanicalHash=92bfadb53ee7b12911b6851751d0c5e4b5c3978940fdc532bf6d27d0b904e1c3
 // rowCount=104
 
 export const EXPECTED_MODIFIER_POOL_ROW_COUNT = 104 as const;
-export const EXPECTED_MODIFIER_POOL_HASH = "6cea5ce56944a88486cafbb568a628b5aa5664c3db652a79cd90016427aaa4b4" as const;
+export const EXPECTED_MODIFIER_POOL_HASH =
+  "6cea5ce56944a88486cafbb568a628b5aa5664c3db652a79cd90016427aaa4b4" as const;
 
 export const MODIFIER_POOL = [
   "2.1-a",
@@ -133,12 +134,8 @@ export const MODIFIER_EFFECT_BOUNDS = {
   "3.1-b": { min: 10, max: 15, effect: "10-15% chance to refund 1 AP" },
   "3.1-c": { min: 15, max: 20, effect: "15-20% chance to refund 1 AP" },
   "3.2-a": { min: 8, max: 12, effect: "8-12% chance to repeat this move (no AP cost)" },
-  "3.2-b": {
-    min: 15,
-    max: 20,
-    effect: "15-20% chance to auto-use random Common/Uncommon typeless move at end of turn",
-  },
-  "3.2-c": { min: 12, max: 15, effect: "12-15% chance to auto-use random equipped move at end of turn" },
+  "3.2-b": { min: 0, max: 0, effect: "Retired. No combat effect." },
+  "3.2-c": { min: 0, max: 0, effect: "Retired. No combat effect." },
   "4.1-a": { min: 1, max: 1, effect: "+1 guaranteed extra hit (MULTI moves only)" },
   "4.2-a": { min: 50, max: 50, effect: "Hit bounces to 1 adjacent target at -50% power (single-target DMG only)" },
   "4.3-a": { min: 10, max: 10, effect: "Gain priority; -10% power (1-2 AP DMG moves)" },
@@ -150,11 +147,7 @@ export const MODIFIER_EFFECT_BOUNDS = {
   "5.2-d": { min: 0, max: 0, effect: "Damage scales inversely with Atk (higher Atk = lower damage)" },
   "6.1-a": { min: 12, max: 16, effect: "Heal 12-16% of damage dealt" },
   "6.1-b": { min: 15, max: 25, effect: "15-25% chance to drain 1 AP on hit" },
-  "6.1-c": {
-    min: 15,
-    max: 25,
-    effect: "15-25% chance: target's next move deals -10% power. Holds through next turn if they already acted.",
-  },
+  "6.1-c": { min: 15, max: 25, effect: "15-25% chance: target's next move deals -10% power. Holds through next turn if they already acted." },
   "6.1-d": { min: 5, max: 8, effect: "Heal 5-8% of damage dealt as HP" },
   "6.1-e": { min: 8, max: 12, effect: "Heal 8-12% of damage dealt as HP" },
   "6.1-f": { min: 16, max: 20, effect: "Heal 16-20% of damage dealt as HP" },
@@ -181,14 +174,14 @@ export const MODIFIER_EFFECT_BOUNDS = {
   "7.1-d": { min: 0, max: 0, effect: "Effect also applies to partner (self-buff only)" },
   "7.2-a": { min: 15, max: 25, effect: "If ally attacked this turn: +15-25% power" },
   "7.2-b": { min: 40, max: 50, effect: "+40-50% power if target was hit this turn" },
-  "7.2-c": { min: 10, max: 15, effect: "Next ally move: +10-15% power" },
+  "7.2-c": { min: 12, max: 12, effect: "Next ally action gains 12% power. A non-power action wastes it." },
   "10.1-a": { min: 0, max: 50, effect: "Crit chance = 50% minus current crit% (inversely scales)" },
   "10.1-b": { min: 25, max: 35, effect: "+25-35% power; -15% accuracy" },
   "10.1-c": { min: 20, max: 30, effect: "Random +/- 20-30% power per use" },
-  "10.1-d": { min: 3, max: 4, effect: "+3 to +4 stages to all 5 stats; self-damage 5% MaxHP per turn" },
+  "10.1-d": { min: 0, max: 0, effect: "Retired combat effect. Reserved for entangled-only grants." },
   "10.2-a": { min: 3, max: 5, effect: "Cosmetic effect + 3-5% power bonus (Seasonal)" },
-  "10.2-b": { min: 3, max: 5, effect: "Unique visual + 3-5% all stats (Anniversary)" },
-  "10.2-c": { min: 0, max: 0, effect: "Badge display + ranked bonus (Tournament)" },
+  "10.2-b": { min: 0, max: 0, effect: "Retired combat effect. Reserved for server-wide event grants." },
+  "10.2-c": { min: 0, max: 0, effect: "Retired combat effect. Reserved for PvP tournament-win grants." },
   "1.1-a": { min: 8, max: 12, effect: "8-12% chance to gain priority within speed tier" },
   "1.2-a": { min: 30, max: 30, effect: "When HP below 30% this move may act first (once-per-battle intent)" },
   "2.4-a": { min: 10, max: 20, effect: "+10-20% status application chance (multiplicative)" },

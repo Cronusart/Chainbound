@@ -44,6 +44,7 @@ namespace Chainbound.Combat
                 power = moveDef.power,
                 apCost = moveDef.apCost,
                 tags = moveDef.tags,
+                multiHit = IsMultiHitHost(moveDef.hitCountMin, moveDef.hitCountMax, moveDef.tags),
                 label = string.IsNullOrWhiteSpace(moveDef.displayName) ? moveDef.moveId : moveDef.displayName,
             };
 
@@ -67,6 +68,7 @@ namespace Chainbound.Combat
                 power = move.basePower,
                 apCost = move.apCost,
                 tags = move.tags,
+                multiHit = IsMultiHitHost(move.hitCount, move.hitCountMax, move.tags),
                 label = string.IsNullOrWhiteSpace(move.displayName) ? move.definitionId : move.displayName,
             };
 
@@ -168,6 +170,12 @@ namespace Chainbound.Combat
                     $"Move '{move.label}' AP {move.apCost} exceeds cap {modifierDef.apCostCap} for '{modifierDef.sectionId}'.");
             }
 
+            if (RequiresMultiHitHost(modifierDef.sectionId) && !move.multiHit)
+            {
+                return ModifierValidationResult.Invalid(
+                    $"Move '{move.label}' is not a multi-hit move, so '{modifierDef.sectionId}' would do nothing.");
+            }
+
             if (HasForbiddenTag(move.tags, modifierDef.forbiddenTags, out string blockedTag))
             {
                 return ModifierValidationResult.Invalid(
@@ -222,6 +230,27 @@ namespace Chainbound.Combat
             }
 
             return ModifierValidationResult.Valid;
+        }
+
+        /// <summary>Extra Hit (4.1-a) only adds a hit to moves that already hit more than once.</summary>
+        public static bool RequiresMultiHitHost(string sectionId)
+        {
+            return string.Equals(sectionId?.Trim(), "4.1-a", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Same test as CombatResolver.IsMultiMove: more than one hit, or the MULTI tag.</summary>
+        public static bool IsMultiHitHost(int hitCount, int hitCountMax, IReadOnlyList<string> tags)
+        {
+            if (hitCount > 1 || hitCountMax > 1)
+                return true;
+            if (tags == null)
+                return false;
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (string.Equals(tags[i], "MULTI", StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
         }
 
         private static bool HasForbiddenTag(
@@ -396,6 +425,7 @@ namespace Chainbound.Combat
             public int power;
             public int apCost;
             public IReadOnlyList<string> tags;
+            public bool multiHit;
             public string label;
         }
     }

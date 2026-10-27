@@ -17,12 +17,14 @@ namespace Chainbound.Combat
             public readonly string moveId;
             public readonly string displayName;
             public readonly RarityTier rarity;
+            public readonly bool bossOnly;
 
-            public CatalogMove(string moveId, string displayName, RarityTier rarity)
+            public CatalogMove(string moveId, string displayName, RarityTier rarity, bool bossOnly = false)
             {
                 this.moveId = moveId;
                 this.displayName = displayName;
                 this.rarity = rarity;
+                this.bossOnly = bossOnly;
             }
         }
 
@@ -71,7 +73,7 @@ namespace Chainbound.Combat
                 for (int i = 0; i < catalogMoves.Count; i++)
                 {
                     CatalogMove move = catalogMoves[i];
-                    if (!string.IsNullOrWhiteSpace(move.moveId))
+                    if (!string.IsNullOrWhiteSpace(move.moveId) && !move.bossOnly)
                         moves.Add(move);
                 }
             }
@@ -327,7 +329,7 @@ namespace Chainbound.Combat
                     return moves[i];
             }
 
-            return new CatalogMove(moveId, moveId, RarityTier.Common);
+            throw new InvalidOperationException($"Move '{moveId}' is not available in the candy catalog.");
         }
 
         private CatalogMove PickMove()
@@ -374,14 +376,19 @@ namespace Chainbound.Combat
                     string.IsNullOrWhiteSpace(definition.displayName)
                         ? definition.moveId
                         : definition.displayName,
-                    definition.rarity));
+                    definition.rarity,
+                    MoveAvailability.IsBossOnly(definition)));
             }
             return result;
         }
 
         private static bool IsExcludedFromCandyCatalog(MoveDefinitionSO definition)
         {
-            if (definition?.tags == null)
+            if (definition == null)
+                return false;
+            if (MoveAvailability.IsBossOnly(definition))
+                return true;
+            if (definition.tags == null)
                 return false;
 
             for (int i = 0; i < definition.tags.Count; i++)

@@ -447,8 +447,8 @@ public sealed class MartNpcAuthoringTests
             Assert.That(pcBinding.PresenceId, Is.EqualTo(ChainlingPcTerminalIds.UnlockFlagKey));
             Assert.That(introBinding.ActiveWhenTrue, Is.False);
             Assert.That(pcBinding.ActiveWhenTrue, Is.True);
-            Assert.That(introBinding.Target.GetInstanceID(), Is.EqualTo(monitor.GetInstanceID()));
-            Assert.That(pcBinding.Target.GetInstanceID(), Is.EqualTo(pc.GetInstanceID()));
+            Assert.That(introBinding.Target.GetEntityId(), Is.EqualTo(monitor.GetEntityId()));
+            Assert.That(pcBinding.Target.GetEntityId(), Is.EqualTo(pc.GetEntityId()));
         }
         finally
         {
@@ -474,9 +474,20 @@ public sealed class MartNpcAuthoringTests
         Assert.That(prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopLeft/StorageScroll"), Is.Not.Null);
         Transform partySlots = prefab.transform.Find("SafeArea/TerminalBoot/MenuPanel/TopCenter/PartySlots");
         Assert.That(partySlots, Is.Not.Null);
-        Assert.That(partySlots.childCount, Is.EqualTo(3));
+        Assert.That(partySlots.childCount, Is.EqualTo(4));
+        Transform template = partySlots.Find("PartySlotTemplate");
+        Assert.That(template, Is.Not.Null);
+        Assert.That(template.gameObject.activeSelf, Is.False);
+        Assert.That(template.GetComponent<InventoryItemUseTargetSlot>(), Is.Not.Null);
+        int liveSlots = 0;
         for (int i = 0; i < partySlots.childCount; i++)
-            Assert.That(partySlots.GetChild(i).GetComponent<InventoryItemUseTargetSlot>(), Is.Not.Null);
+        {
+            Transform child = partySlots.GetChild(i);
+            Assert.That(child.GetComponent<InventoryItemUseTargetSlot>(), Is.Not.Null);
+            if (child.gameObject.activeSelf)
+                liveSlots++;
+        }
+        Assert.That(liveSlots, Is.EqualTo(3));
         Assert.That(prefab.transform.Find("SafeArea/ActionSheet"), Is.Not.Null);
         Assert.That(prefab.transform.Find("SafeArea/ActionSheet/Panel/Actions/MoveToParty"), Is.Not.Null);
         Assert.That(prefab.transform.Find("SafeArea/ActionSheet/Panel/Actions/SendToStorage"), Is.Not.Null);

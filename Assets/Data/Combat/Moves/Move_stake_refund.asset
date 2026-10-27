@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Passive - when your buff expires regain 1 AP.
   category: 4
   baseType: 9
-  rarity: 2
+  rarity: 3
   targeting: 4
   contactType: 2
   power: 0
@@ -66,6 +66,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

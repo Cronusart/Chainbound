@@ -17,10 +17,10 @@ MonoBehaviour:
   description: 2 ranged hits; each has 25% chance to raise Speed.
   category: 1
   baseType: 10
-  rarity: 1
+  rarity: 0
   targeting: 0
   contactType: 1
-  power: 26
+  power: 18
   apCost: 2
   accuracy: 95
   hitCountMin: 2
@@ -48,6 +48,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

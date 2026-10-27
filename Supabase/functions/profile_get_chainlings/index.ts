@@ -9,6 +9,7 @@ import {
 } from "../_shared/account_helpers.ts";
 import { loadChainlingLoadouts } from "../_shared/chainling_loadouts.ts";
 import { applyChainlingPassiveRecovery } from "../_shared/chainling_passive_recovery.ts";
+import { archiveBindingFields, loadArchiveBindingProjection } from "../_shared/bindery_foundation.ts";
 
 interface ChainlingRow {
   id: string;
@@ -96,7 +97,10 @@ serve(async (req: Request) => {
     const capacity = (capacityData ?? {}) as Record<string, unknown>;
 
     const rows = (data ?? []) as ChainlingRow[];
-    const loadouts = await loadChainlingLoadouts(supabase, rows.map((row) => row.id));
+    const [loadouts, archiveBindings] = await Promise.all([
+      loadChainlingLoadouts(supabase, rows.map((row) => row.id)),
+      loadArchiveBindingProjection(supabase, profile.player_profile_id),
+    ]);
     const chainlings = rows.map((row) => ({
       backend_chainling_id: row.id,
       species_id: row.species_id,
@@ -121,9 +125,11 @@ serve(async (req: Request) => {
       times_kod: row.times_kod ?? 0,
       times_captured: row.times_captured ?? 0,
       current_hp: row.current_hp ?? -1,
+      ...archiveBindingFields(archiveBindings.get(row.id)),
       move_ids: loadouts.get(row.id)?.move_ids ?? [],
       modifier1_section_ids: loadouts.get(row.id)?.modifier1_section_ids ?? [],
       modifier2_section_ids: loadouts.get(row.id)?.modifier2_section_ids ?? [],
+      acquisitions: loadouts.get(row.id)?.acquisitions ?? [],
       pve_service_record: {
         service_record_version: row.service_record_version ?? 1,
         total_victories: row.pve_total_victories ?? 0,

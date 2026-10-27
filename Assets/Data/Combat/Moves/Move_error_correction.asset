@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Heal ally 15% MaxHP; 50% chance to cleanse 1 General debuff.
   category: 3
   baseType: 12
-  rarity: 2
+  rarity: 1
   targeting: 2
   contactType: 2
   power: 0
@@ -64,6 +64,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

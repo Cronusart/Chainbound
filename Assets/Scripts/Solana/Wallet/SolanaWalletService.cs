@@ -49,7 +49,7 @@ namespace Chainbound.Combat
         public string PublicKey => _publicKey;
         public bool SupportsSignAndSend =>
 #if UNITY_EDITOR
-            false;
+            _usingDesktopBridge && DesktopWalletBridge.Instance.IsConnected;
 #else
             _mobileBridge.IsAvailable;
 #endif
@@ -162,8 +162,9 @@ namespace Chainbound.Combat
             EnsureConnected();
             await SolanaClusterGuard.EnsureExpectedClusterAsync(_config);
 #if UNITY_EDITOR
-            await Task.Yield();
-            throw new NotSupportedException("The Editor browser bridge supports sign-only transactions.");
+            if (_usingDesktopBridge && DesktopWalletBridge.Instance.IsConnected)
+                return await DesktopWalletBridge.Instance.SignAndSendTransactionAsync(transactionBytes);
+            throw new NotSupportedException("Connect a browser wallet through the Editor bridge to sign and send.");
 #else
             ValidateMobileIdentity();
             IsWalletUiActive = true;

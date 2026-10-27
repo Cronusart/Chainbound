@@ -21,6 +21,7 @@ namespace Chainbound.Combat
             public string label;
             public Sprite typeIcon;
             public bool isUsable;
+            public bool isPassive;
             public bool hasPriority;
         }
 
@@ -36,11 +37,15 @@ namespace Chainbound.Combat
             public Color roleTextColor;
             public bool hasRoleTextColor;
             public bool isUsable;
+            public bool isPassive;
             public bool insufficientAp;
             public bool hasPriority;
             public string modifierSummary;
             public IReadOnlyList<ModifierOverviewRowData> modifierRows;
             public string shortDescription;
+            public string readableTypeValue;
+            public string readablePowerValue;
+            public string readableAccuracyValue;
             public Sprite typeIcon;
         }
 
@@ -74,6 +79,7 @@ namespace Chainbound.Combat
         [SerializeField] private TMP_Text footerPromptText;
         [SerializeField] private RectTransform detailsRoot;
         [SerializeField] private CanvasGroup detailsCanvasGroup;
+        [SerializeField] private CombatMoveLibraryCardView libraryCardView;
 
         [Header("Rest Action")]
         [Tooltip("Type-icon sprite shown on the Rest move row and in Rest details.")]
@@ -161,6 +167,7 @@ namespace Chainbound.Combat
         private readonly List<CombatModifierOverviewRowUGUI> _modifierRows = new List<CombatModifierOverviewRowUGUI>(4);
         private Tween _typewriterDelayTween;
         private Tween _detailsPopTween;
+        private RectTransform _detailsPopTarget;
         private bool _isRevealing;
         private int _lastSelectedIndex = -1;
         private bool _pendingDetailsPop;
@@ -183,11 +190,20 @@ namespace Chainbound.Combat
         private TextAlignmentOptions _authoredDescriptionAlignment;
         private TextOverflowModes _authoredDescriptionOverflow;
         private bool _descriptionLayoutCached;
+        private bool _readableDetailsResolved;
+        private TMP_Text _readableTypeValue;
+        private TMP_Text _readablePowerValue;
+        private TMP_Text _readableAccuracyValue;
+        private TMP_Text _readableDescription;
         private bool _restDescriptionLayoutActive;
         private Tween _panelNudgeTween;
         private MonoBehaviour _cachedUiSfxBehaviour;
         private MonoBehaviour _cachedAudioBridgeBehaviour;
         private readonly List<GameObject> _hiddenForTargetingPrompt = new List<GameObject>(8);
+        // Graphics on the panel root itself (e.g. the device_bottom_panelframe Image) that were disabled
+        // while target selection holds the panel open for its prompt. Child objects are covered by
+        // _hiddenForTargetingPrompt; the root's own graphics are not, so the frame needs its own list.
+        private readonly List<Graphic> _rootGraphicsHiddenForTargetingPrompt = new List<Graphic>(2);
 
         private void Awake()
         {
@@ -209,8 +225,10 @@ namespace Chainbound.Combat
 
         /// <summary>
         /// Keeps this panel active so the shared targeting label can show, and hides the move-list chrome.
+        /// When <paramref name="hidePanelFrame"/> is true (target selection), graphics on the panel root
+        /// itself, such as the panel frame image, are hidden too so only the prompt remains.
         /// </summary>
-        public void HoldOpenForTargetingPrompt(GameObject promptObject)
+        public void HoldOpenForTargetingPrompt(GameObject promptObject, bool hidePanelFrame = false)
         {
             EnsureBuilt();
             RestoreTargetingPromptHide();
@@ -247,20 +265,65 @@ namespace Chainbound.Combat
                 child.SetActive(false);
                 _hiddenForTargetingPrompt.Add(child);
             }
+
+            if (hidePanelFrame)
+                HideRootGraphicsForTargetingPrompt(promptObject);
+        }
+
+        private void HideRootGraphicsForTargetingPrompt(GameObject promptObject)
+        {
+            Graphic[] rootGraphics = root.GetComponents<Graphic>();
+            for (int i = 0; i < rootGraphics.Length; i++)
+            {
+                Graphic graphic = rootGraphics[i];
+                if (graphic == null || !graphic.enabled)
+                    continue;
+                // Never hide the prompt text itself if it happens to live on the panel root.
+                if (promptObject == root.gameObject && graphic is TMP_Text)
+                    continue;
+
+                graphic.enabled = false;
+                _rootGraphicsHiddenForTargetingPrompt.Add(graphic);
+            }
         }
 
         public void SetVisible(bool visible)
         {
             EnsureBuilt();
-            RestoreTargetingPromptHide();
+            bool wasHeldForTargetingPrompt = IsHeldForTargetingPrompt;
             if (root == null)
+            {
+                RestoreTargetingPromptHide();
                 return;
+            }
 
             var effect = projectedReveal != null ? projectedReveal : GetComponent<ProjectedPanelReveal>();
+
+            if (!visible && wasHeldForTargetingPrompt)
+            {
+                // Target selection already hid the panel chrome (frame included). Deactivate the root first,
+                // then restore the children/frame underneath it, so leaving target selection does not flash
+                // the full move panel back on just to fade it out.
+                KillTypewriterDelay();
+                KillTypewriters();
+                KillDetailsPopTween();
+                KillPanelNudgeTween(restorePosition: true);
+                ResetAllRowSelectionVisuals();
+                _lastSelectedIndex = -1;
+                _pendingDetailsPop = false;
+                if (effect != null)
+                    effect.CancelHideKeepVisible();
+                root.gameObject.SetActive(false);
+                RestoreTargetingPromptHide();
+                return;
+            }
+
+            RestoreTargetingPromptHide();
 
             if (visible)
             {
                 _isRevealing = true;
+                ApplyDetailsPresentationMode();
                 try
                 {
                     if (effect != null)
@@ -304,7 +367,18 @@ namespace Chainbound.Combat
             }
 
             _hiddenForTargetingPrompt.Clear();
+
+            for (int i = 0; i < _rootGraphicsHiddenForTargetingPrompt.Count; i++)
+            {
+                if (_rootGraphicsHiddenForTargetingPrompt[i] != null)
+                    _rootGraphicsHiddenForTargetingPrompt[i].enabled = true;
+            }
+
+            _rootGraphicsHiddenForTargetingPrompt.Clear();
         }
+
+        private bool IsHeldForTargetingPrompt =>
+            _hiddenForTargetingPrompt.Count > 0 || _rootGraphicsHiddenForTargetingPrompt.Count > 0;
 
         private void ScheduleTypewriters()
         {
@@ -323,7 +397,10 @@ namespace Chainbound.Combat
                 Debug.Log($"[CombatMoveSelectPanelUGUI] ScheduleTypewriters: scheduling {list.Count} typewriter(s) after {typewriterDelay}s delay.");
 
             foreach (var tw in list)
-                if (tw != null) tw.ResetToHidden();
+            {
+                if (tw != null && tw.gameObject.activeInHierarchy)
+                    tw.ResetToHidden();
+            }
 
             _typewriterDelayTween = DOVirtual.DelayedCall(typewriterDelay, PlayTypewriters, true);
         }
@@ -334,16 +411,20 @@ namespace Chainbound.Combat
             if (typewriters != null)
             {
                 foreach (var tw in typewriters)
-                    if (tw != null) list.Add(tw);
+                    if (IsPanelTypewriter(tw) && !list.Contains(tw)) list.Add(tw);
             }
             if (list.Count == 0 && root != null)
             {
                 var found = root.GetComponentsInChildren<TMPTypewriterReveal>(true);
                 if (found != null && found.Length > 0)
                 {
-                    list.AddRange(found);
+                    for (int i = 0; i < found.Length; i++)
+                    {
+                        if (IsPanelTypewriter(found[i]))
+                            list.Add(found[i]);
+                    }
                     if (debugTypewriter)
-                        Debug.Log($"[CombatMoveSelectPanelUGUI] ResolveTypewriters: auto-found {found.Length} TMPTypewriterReveal in children.");
+                        Debug.Log($"[CombatMoveSelectPanelUGUI] ResolveTypewriters: auto-found {list.Count} TMPTypewriterReveal in children.");
                 }
             }
             return list;
@@ -359,7 +440,15 @@ namespace Chainbound.Combat
                 Debug.Log($"[CombatMoveSelectPanelUGUI] PlayTypewriters: playing {list.Count} typewriter(s).");
 
             foreach (var tw in list)
-                if (tw != null) tw.Play();
+            {
+                if (tw != null && tw.gameObject.activeInHierarchy)
+                    tw.Play();
+            }
+        }
+
+        private static bool IsPanelTypewriter(TMPTypewriterReveal typewriter)
+        {
+            return typewriter != null && typewriter.GetComponentInParent<CombatMoveLibraryCardView>(true) == null;
         }
 
         private void KillTypewriterDelay()
@@ -414,7 +503,14 @@ namespace Chainbound.Combat
                 row.SetVisible(true);
                 var entry = rows[i];
                 bool selected = i == selectedIndex;
-                row.SetData(entry.label, entry.typeIcon, entry.isUsable, selected, hideTypeIcon: false, entry.hasPriority);
+                row.SetData(
+                    entry.label,
+                    entry.typeIcon,
+                    entry.isUsable,
+                    selected,
+                    hideTypeIcon: false,
+                    entry.hasPriority,
+                    entry.isPassive);
                 row.ApplySelectionNudge(selected, selectionChanged, selectionTuning);
                 if (selected && selectionChanged)
                     row.PlaySelectBounce(selectionTuning);
@@ -436,26 +532,27 @@ namespace Chainbound.Combat
         {
             EnsureBuilt();
             EnsureAuthoringColorsCached();
+            ApplyDetailsPresentationMode();
 
             if (details.isRestAction)
             {
                 ApplyRestDetails(details);
-                if (_pendingDetailsPop)
-                {
-                    _pendingDetailsPop = false;
-                    PlayDetailsPopAnimation();
-                }
+                PlayDetailsPopIfLegacyPanelIsShowing();
                 return;
             }
 
             SetMoveStatFieldsVisible(true);
             RestoreDescriptionLayout();
             bool muted = !details.isUsable;
-            Color bodyColor = muted ? detailsMutedTextColor : _authoredNameColor;
-            Color roleColor = muted
+            bool keepReadable = details.isPassive;
+            bool muteReadableBody = muted && !keepReadable;
+            Color bodyColor = muteReadableBody ? detailsMutedTextColor : _authoredNameColor;
+            Color roleColor = muted || details.isPassive
                 ? detailsMutedTextColor
                 : details.hasRoleTextColor ? details.roleTextColor : _authoredRoleColor;
-            Color apColor = details.insufficientAp
+            Color apColor = details.isPassive
+                ? detailsMutedTextColor
+                : details.insufficientAp
                 ? insufficientApCostColor
                 : _authoredApColor;
 
@@ -501,14 +598,14 @@ namespace Chainbound.Combat
                         ? "Mods: None"
                         : details.modifierSummary;
                 }
-                selectedModifierText.color = muted ? detailsMutedTextColor : _authoredModifierColor;
+                selectedModifierText.color = muteReadableBody ? detailsMutedTextColor : _authoredModifierColor;
             }
 
-            SetModifierOverviewRows(details.modifierRows, muted);
+            SetModifierOverviewRows(details.modifierRows, muteReadableBody);
             if (selectedDescriptionText != null)
             {
                 selectedDescriptionText.text = string.IsNullOrEmpty(details.shortDescription) ? "No move description available." : details.shortDescription;
-                selectedDescriptionText.color = muted ? detailsMutedTextColor : _authoredDescriptionColor;
+                selectedDescriptionText.color = muteReadableBody ? detailsMutedTextColor : _authoredDescriptionColor;
             }
 
             if (selectedTypeIconImage != null)
@@ -516,15 +613,20 @@ namespace Chainbound.Combat
                 selectedTypeIconImage.sprite = details.typeIcon;
                 selectedTypeIconImage.enabled = details.typeIcon != null;
                 var iconColor = selectedTypeIconImage.color;
-                iconColor.a = muted ? 0.45f : 1f;
+                iconColor.a = muteReadableBody ? 0.45f : 1f;
                 selectedTypeIconImage.color = iconColor;
             }
 
-            if (_pendingDetailsPop)
-            {
-                _pendingDetailsPop = false;
-                PlayDetailsPopAnimation();
-            }
+            ApplyReadableDetails(details);
+            PlayDetailsPopIfLegacyPanelIsShowing();
+        }
+
+        public void SetLibraryCard(CombatMoveLibraryCardView.Presentation presentation)
+        {
+            ApplyDetailsPresentationMode();
+            ResolveLibraryCard();
+            if (libraryCardView != null)
+                libraryCardView.Show(presentation);
         }
 
         public void PlayUnavailableMoveFeedback()
@@ -634,21 +736,51 @@ namespace Chainbound.Combat
                 selectedModifierText.color = detailsMutedTextColor;
         }
 
-        private void PlayDetailsPopAnimation()
+        private void ApplyDetailsPresentationMode()
         {
             EnsureDetailsReferences();
             if (detailsRoot == null)
                 return;
 
+            Transform legacy = detailsRoot.Find("Details1");
+            Transform library = detailsRoot.Find("Details2");
+            if (legacy != null)
+                legacy.gameObject.SetActive(false);
+            if (library != null)
+                library.gameObject.SetActive(true);
+        }
+
+        private void PlayDetailsPopIfLegacyPanelIsShowing()
+        {
+            if (!_pendingDetailsPop)
+                return;
+
+            _pendingDetailsPop = false;
+            EnsureDetailsReferences();
+            Transform legacy = detailsRoot != null ? detailsRoot.Find("Details1") : null;
+            if (legacy == null || !legacy.gameObject.activeSelf)
+                return;
+
+            PlayDetailsPopAnimation(legacy as RectTransform);
+        }
+
+        private void PlayDetailsPopAnimation(RectTransform target)
+        {
+            if (target == null)
+                return;
+
             KillDetailsPopTween();
-            detailsRoot.localScale = Vector3.one;
+            target.localScale = Vector3.one;
             if (detailsCanvasGroup != null)
                 detailsCanvasGroup.alpha = 1f;
 
+            _detailsPopTarget = target;
             _detailsPopTween = DOTween.Sequence()
                 .SetUpdate(true)
-                .Append(detailsRoot.DOScale(detailsPopScale, detailsPopDuration * 0.55f).SetEase(detailsPopEaseOut))
-                .Append(detailsRoot.DOScale(1f, detailsPopDuration * 0.45f).SetEase(detailsPopEaseIn));
+                .Append(target.DOScale(detailsPopScale, detailsPopDuration * 0.55f).SetEase(detailsPopEaseOut))
+                .Append(target.DOScale(1f, detailsPopDuration * 0.45f).SetEase(detailsPopEaseIn))
+                .OnComplete(ResetDetailsPopTarget)
+                .OnKill(ResetDetailsPopTarget);
         }
 
         private void EnsureDetailsReferences()
@@ -664,16 +796,76 @@ namespace Chainbound.Combat
                 detailsCanvasGroup = detailsRoot.GetComponent<CanvasGroup>();
         }
 
+        private void ApplyReadableDetails(MoveDetailData details)
+        {
+            ResolveReadableDetails();
+            SetReadableText(_readableTypeValue, details.readableTypeValue);
+            SetReadableText(_readablePowerValue, details.readablePowerValue);
+            SetReadableText(_readableAccuracyValue, details.readableAccuracyValue);
+            SetReadableText(_readableDescription, details.shortDescription);
+        }
+
+        private void ResolveReadableDetails()
+        {
+            if (_readableDetailsResolved)
+                return;
+
+            _readableDetailsResolved = true;
+            EnsureDetailsReferences();
+            Transform details2 = detailsRoot != null ? detailsRoot.Find("Details2") : null;
+            if (details2 == null)
+                return;
+
+            _readableTypeValue = FindReadableText(details2, "MoveStats/MoveType/Value");
+            _readablePowerValue = FindReadableText(details2, "MoveStats/MovePower/Value");
+            _readableAccuracyValue = FindReadableText(details2, "MoveStats/MoveAccuracy/Value");
+            _readableDescription = FindReadableText(details2, "MoveDetails/MoveDescription/Description");
+        }
+
+        private static TMP_Text FindReadableText(Transform root, string path)
+        {
+            Transform target = root.Find(path);
+            return target != null ? target.GetComponent<TMP_Text>() : null;
+        }
+
+        private static void SetReadableText(TMP_Text label, string value)
+        {
+            if (label == null)
+                return;
+
+            label.text = string.IsNullOrEmpty(value) ? string.Empty : value;
+        }
+
+        private void ResolveLibraryCard()
+        {
+            if (libraryCardView != null)
+                return;
+
+            EnsureDetailsReferences();
+            if (detailsRoot != null)
+                libraryCardView = detailsRoot.GetComponentInChildren<CombatMoveLibraryCardView>(true);
+        }
+
         private void KillDetailsPopTween()
         {
             if (_detailsPopTween != null)
             {
-                _detailsPopTween.Kill();
+                Tween active = _detailsPopTween;
                 _detailsPopTween = null;
+                active.Kill(false);
             }
 
-            if (detailsRoot != null)
-                detailsRoot.DOKill();
+            ResetDetailsPopTarget();
+        }
+
+        private void ResetDetailsPopTarget()
+        {
+            if (_detailsPopTarget == null)
+                return;
+
+            RectTransform target = _detailsPopTarget;
+            _detailsPopTarget = null;
+            target.localScale = Vector3.one;
         }
 
         private void ApplyRestDetails(MoveDetailData details)
@@ -707,6 +899,8 @@ namespace Chainbound.Combat
                     : details.shortDescription;
                 selectedDescriptionText.color = _authoredDescriptionColor;
             }
+
+            ApplyReadableDetails(details);
         }
 
         private void CacheDescriptionLayout()
@@ -849,7 +1043,7 @@ namespace Chainbound.Combat
                 priorityPillText.fontSize = 14f;
                 priorityPillText.alignment = TextAlignmentOptions.Center;
                 priorityPillText.color = priorityPillTextColor;
-                priorityPillText.enableWordWrapping = false;
+                priorityPillText.textWrappingMode = TextWrappingModes.NoWrap;
                 priorityPillText.raycastTarget = false;
                 if (selectedNameText.font != null)
                     priorityPillText.font = selectedNameText.font;
@@ -1036,7 +1230,7 @@ namespace Chainbound.Combat
             selectedModifierText = EnsureText("SelectedModifiers", details, 0f, 0.37f, 1f, 0.52f, 20, TextAlignmentOptions.Left, new Color(0.76f, 0.84f, 0.89f, 1f), "Mods: None");
             modifierListRoot = EnsureModifierListRoot(selectedModifierText != null ? selectedModifierText.transform : details);
             selectedDescriptionText = EnsureText("SelectedDescription", details, 0f, 0f, 1f, 0.38f, 18, TextAlignmentOptions.TopLeft, new Color(0.86f, 0.88f, 0.90f, 1f), "No move description available.");
-            selectedDescriptionText.enableWordWrapping = true;
+            selectedDescriptionText.textWrappingMode = TextWrappingModes.Normal;
 
             footerPromptText = EnsureText("FooterPrompt", root, 0.02f, 0.02f, 0.98f, 0.16f, 18, TextAlignmentOptions.Center, new Color(0.82f, 0.9f, 0.95f, 1f), "Confirm=Select   Cancel=Back   Info=Details");
             EnsureAuthoringColorsCached();
@@ -1129,6 +1323,7 @@ namespace Chainbound.Combat
                     fitter = moveListRoot.gameObject.AddComponent<ContentSizeFitter>();
                 fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
                 fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                HonorAuthoredMoveRowHeight();
             }
 
             bool shouldScroll = rowCount > Mathf.Max(1, visibleMoveRowsBeforeScroll);
@@ -1146,6 +1341,24 @@ namespace Chainbound.Combat
 
             if (!shouldScroll)
                 ResetMoveListScroll();
+        }
+
+        private void HonorAuthoredMoveRowHeight()
+        {
+            if (moveListRoot == null)
+                return;
+
+            // childControlHeight off makes the group use sizeDelta. The prefab rect is 0
+            // while the row LayoutElement preferred height is the authored 58.
+            VerticalLayoutGroup vertical = moveListRoot.GetComponent<VerticalLayoutGroup>();
+            if (vertical != null)
+                vertical.childControlHeight = true;
+
+            // A layout element on the content object outranks the vertical group and
+            // locks the scroller to a single row. Row heights live on the rows.
+            LayoutElement contentLayout = moveListRoot.GetComponent<LayoutElement>();
+            if (contentLayout != null)
+                contentLayout.ignoreLayout = true;
         }
 
         private void EnsureAuthoringColorsCached()
@@ -1385,7 +1598,7 @@ namespace Chainbound.Combat
             iconImage.raycastTarget = false;
 
             var label = EnsureText("Label", contentRect, 0.12f, 0f, 0.78f, 1f, 20, TextAlignmentOptions.Left, Color.white, "--");
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
 
             var row = rowGo.GetComponent<CombatMoveRowItemUGUI>();
             if (row != null)
@@ -1498,7 +1711,7 @@ namespace Chainbound.Combat
             description.fontSize = 22f;
             description.alignment = TextAlignmentOptions.Left;
             description.color = new Color(0.86f, 0.88f, 0.90f, 1f);
-            description.enableWordWrapping = true;
+            description.textWrappingMode = TextWrappingModes.Normal;
             description.raycastTarget = false;
             if (generatedModifierRowFont != null)
                 description.font = generatedModifierRowFont;
@@ -1621,7 +1834,7 @@ namespace Chainbound.Combat
                 text.fontSize = size;
                 text.alignment = align;
                 text.color = color;
-                text.enableWordWrapping = false;
+                text.textWrappingMode = TextWrappingModes.NoWrap;
             }
             text.raycastTarget = false;
             if (string.IsNullOrEmpty(text.text))

@@ -25,7 +25,7 @@ MonoBehaviour:
   accuracy: 0
   hitCountMin: 1
   hitCountMax: 1
-  rechargeTurns: 0
+  rechargeTurns: 2
   statusEffects: []
   stageChanges: []
   tags:
@@ -33,7 +33,28 @@ MonoBehaviour:
   selectionPolicy: 0
   activeConditionType: 0
   activeConditionThresholdPercent: 0
-  utilityEffects: []
+  utilityEffects:
+  - effectType: 28
+    magnitude: 0
+    turnBudget: 0
+    hitBudget: 0
+    apGain: 0
+    stackKey: system_reset
+    statusId: 0
+    statusDuration: 0
+    targetOverride: 0
+    chance: 1
+    reflectPercent: 0
+    stageStat: 0
+    stageAmount: 0
+    stageAmountMax: 0
+    stageCap: 0
+    threshold: 0
+    armedTrigger: 0
+    healPercentMaxHP: 0
+    counterDamagePercentMaxHP: 0
+    affectAllAllies: 0
+    contactFilter: 0
   resolveProfile:
     primaryTiming: 1
     utilityExecutionTiming: 0
@@ -43,6 +64,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

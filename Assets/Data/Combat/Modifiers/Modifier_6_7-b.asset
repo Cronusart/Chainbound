@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sectionId: 6.7-b
   displayName: Double Guard
-  effectDescription: After hit: grant a 2-hit barrier for 3 turns
+  effectDescription: 'After hit: grant a 2-hit barrier for 3 turns'
   category: 5
   scope: 0
   minimumRarity: 2

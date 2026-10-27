@@ -150,6 +150,53 @@ Deno.test("turn validation checks the acting chainling, AP, and swaps", () => {
     null,
   );
 });
+Deno.test("turn validation rejects only certain duplicate block targets", () => {
+  const certain = [
+    { moveIds: ["ember_wall", "guard_posture"], moveApCosts: [2, 1] },
+    { moveIds: ["ember_wall", "guard_posture"], moveApCosts: [2, 1] },
+  ];
+  const target = { targetTeamIndex: 0, targetSlotIndex: 0 };
+  assertEquals(
+    validateTurnActions("a", certain, [
+      { actionType: 0, moveIndex: 0, teamIndex: 0, ...target },
+      { actionType: 0, moveIndex: 0, teamIndex: 0, ...target },
+    ]),
+    "block_target_duplicate",
+  );
+  assertEquals(
+    validateTurnActions("a", certain, [
+      { actionType: 0, moveIndex: 0, teamIndex: 0, targetTeamIndex: 0, targetSlotIndex: 0 },
+      { actionType: 0, moveIndex: 0, teamIndex: 0 },
+    ]),
+    "block_target_duplicate",
+  );
+  assertEquals(
+    validateTurnActions("a", certain, [
+      { actionType: 0, moveIndex: 0, teamIndex: 0, targetTeamIndex: 0, targetSlotIndex: 0 },
+      { actionType: 0, moveIndex: 0, teamIndex: 0 },
+    ]),
+    "block_target_duplicate",
+  );
+  assertEquals(
+    validateTurnActions("a", certain, [
+      { actionType: 0, moveIndex: 0, teamIndex: 0, ...target },
+      { actionType: 0, moveIndex: 1, teamIndex: 0, ...target },
+    ]),
+    null,
+  );
+
+  const uncertain = [
+    { moveIds: ["ember_wall"], moveApCosts: [2] },
+    { moveIds: ["barrier_wall"], moveApCosts: [1] },
+  ];
+  assertEquals(
+    validateTurnActions("a", uncertain, [
+      { actionType: 0, moveIndex: 0, teamIndex: 0, ...target },
+      { actionType: 0, moveIndex: 0, teamIndex: 0, ...target },
+    ]),
+    null,
+  );
+});
 
 Deno.test("party lock rejects an oversized or all-fainted roster", () => {
   assertEquals(partyLockError([{ currentHp: -1 }]), null);

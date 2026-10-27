@@ -157,6 +157,7 @@ serve(async (req: Request) => {
       modifierCount,
       config.generatorVersion,
       config.modifierPoolHash,
+      str(known.move_id),
     );
     const storedIds = existing && Array.isArray(existing.modifier_ids)
       ? existing.modifier_ids.map((value: unknown) => str(value))
@@ -203,14 +204,19 @@ serve(async (req: Request) => {
       }
       throw reservationError;
     }
-    const reservation = await ensureRamReservationOnChain({
-      config,
-      walletAddress,
-      operationId,
-      amount: config.stampRamCost,
-      kind: 1,
-      expiresAt,
-    });
+    // Legacy Known rows still consume their existing wallet-vault instance and
+    // chain RAM reservation. Profile-native Known rows have no wallet state to
+    // reserve: Postgres is canonical and the wallet signs only the Stamp mint.
+    if (known.onchain_instance_id != null) {
+      await ensureRamReservationOnChain({
+        config,
+        walletAddress,
+        operationId,
+        amount: config.stampRamCost,
+        kind: 1,
+        expiresAt,
+      });
+    }
     const built = await buildStampTransaction({
       config,
       walletAddress,
@@ -247,6 +253,9 @@ serve(async (req: Request) => {
     if (existing && String(existing.onchain_instance_id) !== built.onchainInstanceId.toString()) {
       return jsonResponse({ success: false, error: "stamp_reconciliation_required" }, 409);
     }
+    if (existing && str(existing.known_source) !== built.knownSource) {
+      return jsonResponse({ success: false, error: "stamp_reconciliation_required" }, 409);
+    }
 
     const operation = {
       player_profile_id: profile.player_profile_id,
@@ -262,6 +271,7 @@ serve(async (req: Request) => {
       generator_version: config.generatorVersion,
       pool_hash: config.modifierPoolHash,
       acquisition,
+      known_source: built.knownSource,
       onchain_instance_id: built.onchainInstanceId.toString(),
       ticket_address: built.ticketAddress,
       stamped_asset_address: built.stampedAssetAddress,
@@ -297,7 +307,7 @@ serve(async (req: Request) => {
       acquisition,
       transaction_base64: built.transactionBase64,
       ticket_address: built.ticketAddress,
-      reservation_address: reservation.address,
+      reservation_address: built.reservationAddress,
       stamped_asset_address: built.stampedAssetAddress,
       expires_at: built.expiresAt.toISOString(),
       review: {

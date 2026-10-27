@@ -17,6 +17,7 @@ namespace SignalJam.UI.MenuNavigation
         public const string HudTokenReason = "profile_share";
 
         [SerializeField] private RectTransform cardRoot;
+        [SerializeField] private ProfilePortraitTurntable portrait;
         [SerializeField] private Button shareButton;
         [SerializeField] private GameObject[] hideDuringCapture;
         [SerializeField] private ProfileShareCopySO shareCopy;
@@ -65,6 +66,9 @@ namespace SignalJam.UI.MenuNavigation
             {
                 chrome = HideMenuChrome();
                 extraHideWasActive = HideExtra();
+                if (portrait == null)
+                    portrait = GetComponentInChildren<ProfilePortraitTurntable>(true);
+                portrait?.FreezeOnDown();
 
                 MobileHudService hud = MobileHudService.Instance;
                 if (hud != null)
@@ -105,6 +109,7 @@ namespace SignalJam.UI.MenuNavigation
                 if (shareButton != null)
                     shareButton.interactable = shareInteractable;
 
+                portrait?.Resume();
                 sharing = false;
                 shareRoutine = null;
             }

@@ -35,7 +35,16 @@ namespace Chainbound.Combat
                 return null;
 
             rng = rng ?? new Random();
-            int totalWeight = pool.TotalWeight;
+            int totalWeight = 0;
+            for (int i = 0; i < pool.entries.Count; i++)
+            {
+                ResolvedProgressionMoveEntry candidate = pool.entries[i];
+                if (candidate != null && candidate.effectiveWeight > 0 &&
+                    MoveAvailability.IsPlayerObtainable(candidate.move))
+                {
+                    totalWeight += candidate.effectiveWeight;
+                }
+            }
             if (totalWeight <= 0)
                 return null;
 
@@ -44,7 +53,8 @@ namespace Chainbound.Combat
             for (int i = 0; i < pool.entries.Count; i++)
             {
                 ResolvedProgressionMoveEntry entry = pool.entries[i];
-                if (entry == null || entry.effectiveWeight <= 0)
+                if (entry == null || entry.effectiveWeight <= 0 ||
+                    !MoveAvailability.IsPlayerObtainable(entry.move))
                     continue;
 
                 cursor += entry.effectiveWeight;

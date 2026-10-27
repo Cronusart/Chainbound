@@ -20,6 +20,7 @@ MonoBehaviour:
   minimumRarity: 4
   effectMin: 20
   effectMax: 30
+  weight: 1
   allowedCategories: 0000000001000000
   forbiddenCombinations: []
   slotCostIncrease: 0

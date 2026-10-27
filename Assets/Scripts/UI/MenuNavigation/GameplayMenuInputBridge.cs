@@ -4,15 +4,15 @@ using UnityEngine;
 namespace SignalJam.UI.MenuNavigation
 {
     /// <summary>
-    /// Optional prefab-side bridge from MobileControlRouter Select to the player menu.
-    /// Designers can still wire MobileControlRouter.onSelect directly.
+    /// Optional prefab-side bridge from MobileControlRouter Select to the player menu hub.
+    /// Select opens the RAM shop through PersistentPlayerMenuHost, so this stays off.
     /// </summary>
     [DisallowMultipleComponent]
     public class GameplayMenuInputBridge : MonoBehaviour
     {
         [SerializeField] private MobileControlRouter router;
         [SerializeField] private PlayerMenuController playerMenuController;
-        [SerializeField] private bool openOnSelect = true;
+        [SerializeField] private bool openOnSelect = false;
 
         private void OnEnable()
         {

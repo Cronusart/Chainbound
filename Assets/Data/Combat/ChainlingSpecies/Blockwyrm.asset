@@ -24,25 +24,33 @@ MonoBehaviour:
   baseRangedDef: 72
   baseSpeed: 24
   maxEvolutionStages: 1
-  offTypeMoveExceptions:
-  - {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
+  offTypeMoveExceptions: []
   learnableMoves:
+  - {fileID: 11400000, guid: 7de0611d12b66254db9198406464259b, type: 2}
   - {fileID: 11400000, guid: 3f6f001ec7f42d446a4856533e4c3307, type: 2}
   - {fileID: 11400000, guid: eb6d6987be125d546bd658f570358c2a, type: 2}
   - {fileID: 11400000, guid: 293c8d1a1ea21ed44a207e6495e8f9cc, type: 2}
-  - {fileID: 11400000, guid: 7de0611d12b66254db9198406464259b, type: 2}
-  - {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
+  - {fileID: 11400000, guid: a0d4f09a04b73e74cbc93c93ed9fe1b0, type: 2}
   learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
-  flagshipMove: {fileID: 11400000, guid: 3f6f001ec7f42d446a4856533e4c3307, type: 2}
+  flagshipMove: {fileID: 11400000, guid: 7de0611d12b66254db9198406464259b, type: 2}
   initialMoves:
   - {fileID: 11400000, guid: eb6d6987be125d546bd658f570358c2a, type: 2}
   progressionMovePool:
-  - move: {fileID: 11400000, guid: 3f6f001ec7f42d446a4856533e4c3307, type: 2}
+  - move: {fileID: 11400000, guid: 7de0611d12b66254db9198406464259b, type: 2}
     weight: 8
     useWeightAtStarFive: 1
     weightAtStarFive: 24
     isSignature: 1
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: 3f6f001ec7f42d446a4856533e4c3307, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
     poolTag: 0
     minStar: 0
     maxStar: 5
@@ -65,16 +73,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 7de0611d12b66254db9198406464259b, type: 2}
-    weight: 23
-    useWeightAtStarFive: 0
-    weightAtStarFive: 23
-    isSignature: 0
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 3a311f8e9864a56488e72be6f9398d03, type: 2}
+  - move: {fileID: 11400000, guid: a0d4f09a04b73e74cbc93c93ed9fe1b0, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -89,5 +88,5 @@ MonoBehaviour:
   combatRoleOverride: 2
   designNotes: Legendary Block melee guard. Net 440. HP 168, melee defense 86, ranged
     defense 72, sword 58, speed 24. Signature is Bulwark Blow, a Block contact hit
-    that uses Def. Progression pool is that hit, Immovable Stance, Blockade,
-    Immutable Ledger, and off-type Ice Wall.
+    that uses Def. Progression pool is that hit, Immovable Stance, Blockade, Immutable
+    Ledger, and off-type Ice Wall.

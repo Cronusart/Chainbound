@@ -28,8 +28,8 @@ MonoBehaviour:
   offTypeMoveExceptions: []
   learnableMoves:
   - {fileID: 11400000, guid: fba942bbe71d8184a8c75e4bf92c2347, type: 2}
-  - {fileID: 11400000, guid: 104017aa41792f240bc50bdf8a9e310a, type: 2}
-  - {fileID: 11400000, guid: 89c3635410a3fe140a6491d4014241f4, type: 2}
+  - {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
+  - {fileID: 11400000, guid: 00cf21f1039cffd4d8e8cb246f0440d5, type: 2}
   learnLevels: 010000000100000001000000
   exclusiveMoves:
   - {fileID: 11400000, guid: 3d3ef18886f407040bc30e525abd4ab9, type: 2}
@@ -47,7 +47,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 104017aa41792f240bc50bdf8a9e310a, type: 2}
+  - move: {fileID: 11400000, guid: f4591433121edbb4e9c271381b390c19, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -56,7 +56,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 89c3635410a3fe140a6491d4014241f4, type: 2}
+  - move: {fileID: 11400000, guid: 00cf21f1039cffd4d8e8cb246f0440d5, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -89,4 +89,5 @@ MonoBehaviour:
   combatRoleOverride: 7
   designNotes: 'Starter. One per team in 2v2. Net 460, one step above Legendary.
     Node coordinator shape kept: even combat stats, HP still the bulk. Exclusive
-    moves: Validape Slam, Extend Protocol (Spec 06 v1.2).'
+    moves: Validape Slam. Extend Protocol is a shared Node utility, not a Validape
+    exclusive.'

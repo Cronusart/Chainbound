@@ -23,6 +23,8 @@ namespace Chainbound.Combat
         [SerializeField, Min(0f)] private float scanlineUvSpeed = 0.05f;
         [SerializeField] private bool useUnscaledTime = true;
         [SerializeField, HideInInspector] private float tilingRestHeight;
+        [SerializeField, Tooltip("Clips the scanline RawImage to the interior of a sibling Frame. The Frame graphic stays in front.")]
+        private bool clipInsideFrame;
 
         public RawImage ScanlineOverlay => scanlineOverlay;
         public bool ScanlinesEnabled => scanlinesEnabled;
@@ -40,8 +42,11 @@ namespace Chainbound.Combat
 
         private void OnValidate()
         {
-            if (scanlineOverlay != null)
-                ApplyPresentation();
+            if (scanlineOverlay == null)
+                return;
+
+            scanlineOverlay.color = scanlineColor;
+            ApplyUvRect(resetPosition: true);
         }
 
         private void Update()
@@ -148,15 +153,100 @@ namespace Chainbound.Combat
             }
 
             if (scanlineOverlay == null)
+            {
+                RawImage[] images = GetComponentsInChildren<RawImage>(true);
+                for (int i = 0; i < images.Length; i++)
+                {
+                    if (images[i] != null && images[i].name == OverlayName)
+                    {
+                        scanlineOverlay = images[i];
+                        break;
+                    }
+                }
+            }
+
+            if (scanlineOverlay == null)
                 return;
 
-            var rect = scanlineOverlay.rectTransform;
+            if (clipInsideFrame && TryClipOverlayInsideFrame())
+                return;
+
+            StretchToParent(scanlineOverlay.rectTransform);
+            scanlineOverlay.rectTransform.SetAsFirstSibling();
+        }
+
+        private bool TryClipOverlayInsideFrame()
+        {
+            Transform frameTransform = transform.Find("Frame");
+            RectTransform frame = frameTransform as RectTransform;
+            Image frameImage = frame != null ? frame.GetComponent<Image>() : null;
+            if (frame == null)
+                return false;
+
+            RectTransform window = EnsureClipWindow();
+            int insertIndex = scanlineOverlay.transform.parent == transform
+                ? scanlineOverlay.transform.GetSiblingIndex()
+                : window.GetSiblingIndex();
+
+            if (scanlineOverlay.transform.parent != window)
+                scanlineOverlay.transform.SetParent(window, false);
+
+            StretchToParent(scanlineOverlay.rectTransform);
+            FitWindowToFrameInterior(window, frameImage);
+            if (window.parent != transform)
+                window.SetParent(transform, false);
+            window.SetSiblingIndex(Mathf.Clamp(insertIndex, 0, transform.childCount - 1));
+            return true;
+        }
+
+        private RectTransform EnsureClipWindow()
+        {
+            Transform existing = transform.Find("ScanlineWindow");
+            RectTransform window = existing as RectTransform;
+            if (window == null)
+            {
+                var go = new GameObject("ScanlineWindow", typeof(RectTransform), typeof(RectMask2D));
+                go.transform.SetParent(transform, false);
+                window = go.GetComponent<RectTransform>();
+            }
+
+            if (window.GetComponent<RectMask2D>() == null)
+                window.gameObject.AddComponent<RectMask2D>();
+            return window;
+        }
+
+        private static void FitWindowToFrameInterior(RectTransform window, Image frameImage)
+        {
+            window.anchorMin = Vector2.zero;
+            window.anchorMax = Vector2.one;
+            window.pivot = new Vector2(0.5f, 0.5f);
+            window.localScale = Vector3.one;
+            window.anchoredPosition = Vector2.zero;
+
+            Vector4 inset = FrameBorderInset(frameImage);
+            window.offsetMin = new Vector2(inset.x, inset.y);
+            window.offsetMax = new Vector2(-inset.z, -inset.w);
+        }
+
+        private static Vector4 FrameBorderInset(Image frameImage)
+        {
+            if (frameImage == null || frameImage.sprite == null)
+                return Vector4.zero;
+
+            float pixelsPerUnit = frameImage.pixelsPerUnit * Mathf.Max(0.01f, frameImage.pixelsPerUnitMultiplier);
+            if (pixelsPerUnit <= 0.0001f)
+                return Vector4.zero;
+
+            return frameImage.sprite.border / pixelsPerUnit;
+        }
+
+        private static void StretchToParent(RectTransform rect)
+        {
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
             rect.localScale = Vector3.one;
-            rect.SetAsFirstSibling();
         }
     }
 }

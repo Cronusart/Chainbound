@@ -28,10 +28,10 @@ MonoBehaviour:
   offTypeMoveExceptions: []
   learnableMoves:
   - {fileID: 11400000, guid: 4aeed331dfd2cbc4cb388c346c348a14, type: 2}
-  - {fileID: 11400000, guid: 4fd59dbba678d734ea6d95cdddd3e5e0, type: 2}
   - {fileID: 11400000, guid: b663f1769efeb2741894a7c388cbb6f2, type: 2}
-  - {fileID: 11400000, guid: 0d20685c13b94754d9ebb84a2727508e, type: 2}
   - {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  - {fileID: 11400000, guid: 6f70eabe5a4faca468a93dbcae9bf472, type: 2}
+  - {fileID: 11400000, guid: d4dc11fd94b7c40478526873edf69c00, type: 2}
   learnLevels: 0100000001000000010000000100000001000000
   exclusiveMoves: []
   flagshipMove: {fileID: 11400000, guid: 4aeed331dfd2cbc4cb388c346c348a14, type: 2}
@@ -47,15 +47,6 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 4fd59dbba678d734ea6d95cdddd3e5e0, type: 2}
-    weight: 23
-    useWeightAtStarFive: 0
-    weightAtStarFive: 23
-    isSignature: 0
-    poolTag: 0
-    minStar: 0
-    maxStar: 5
-    excludeIfOwned: 0
   - move: {fileID: 11400000, guid: b663f1769efeb2741894a7c388cbb6f2, type: 2}
     weight: 23
     useWeightAtStarFive: 0
@@ -65,7 +56,7 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: 0d20685c13b94754d9ebb84a2727508e, type: 2}
+  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23
@@ -74,7 +65,16 @@ MonoBehaviour:
     minStar: 0
     maxStar: 5
     excludeIfOwned: 0
-  - move: {fileID: 11400000, guid: f363d2cd51688d847a35195a0c39f0d2, type: 2}
+  - move: {fileID: 11400000, guid: 6f70eabe5a4faca468a93dbcae9bf472, type: 2}
+    weight: 23
+    useWeightAtStarFive: 0
+    weightAtStarFive: 23
+    isSignature: 0
+    poolTag: 0
+    minStar: 0
+    maxStar: 5
+    excludeIfOwned: 0
+  - move: {fileID: 11400000, guid: d4dc11fd94b7c40478526873edf69c00, type: 2}
     weight: 23
     useWeightAtStarFive: 0
     weightAtStarFive: 23

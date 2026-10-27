@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveId: double_or_nothing
   displayName: Double-or-Nothing
-  description: Passive - end turn 60% +1 AP; 40% -1 AP and AP-drain immunity.
+  description: Passive - end turn 60% +1 AP; 40% -1 AP.
   category: 4
   baseType: 14
-  rarity: 0
+  rarity: 5
   targeting: 4
   contactType: 2
   power: 0
@@ -45,6 +45,7 @@ MonoBehaviour:
     applyStatusEffectsOnMiss: 0
     applyStageChangesOnMiss: 0
     applyHealingOnDamagingMoves: 0
+    moveEffectsOncePerTarget: 0
     hitCount:
       forceMinimumHits: 0
       forceMaximumHits: 0

@@ -152,6 +152,7 @@ serve(async (req: Request) => {
       modifierCount,
       config.generatorVersion,
       config.modifierPoolHash,
+      str(known.move_id),
     );
     const storedIds = existing && Array.isArray(existing.modifier_ids)
       ? existing.modifier_ids.map((value: unknown) => str(value))

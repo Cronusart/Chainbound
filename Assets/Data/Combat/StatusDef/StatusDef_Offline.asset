@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: StatusDef_Offline
   m_EditorClassIdentifier: 
   statusId: 201
-  displayName: Offline
-  effectSummary: Sleep; wakes on damage
+  displayName: 'Offline [Deprecated]'
+  effectSummary: Deprecated; no producer.
   statusClass: 0
   origin: 1
   defaultDuration: 2

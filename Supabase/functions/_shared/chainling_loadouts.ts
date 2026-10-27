@@ -11,12 +11,19 @@ interface MoveItemRow {
   move_id: string | null;
   modifier1_id: string | null;
   modifier2_id: string | null;
+  ownership_known_id: string | null;
+}
+
+interface KnownAcquisitionRow {
+  known_id: string;
+  acquisition: string | null;
 }
 
 export interface ChainlingLoadoutPayload {
   move_ids: string[];
   modifier1_section_ids: string[];
   modifier2_section_ids: string[];
+  acquisitions: string[];
 }
 
 export async function loadChainlingLoadouts(
@@ -47,12 +54,14 @@ export async function loadChainlingLoadouts(
   if (moveItemIds.length > 0) {
     const { data: moveItemData, error: moveItemError } = await supabase
       .from("move_items")
-      .select("id, move_id, modifier1_id, modifier2_id")
+      .select("id, move_id, modifier1_id, modifier2_id, ownership_known_id")
       .in("id", moveItemIds);
 
     if (moveItemError) throw moveItemError;
     for (const row of (moveItemData ?? []) as MoveItemRow[]) moveItems.set(row.id, row);
   }
+
+  const acquisitionByKnownId = await loadAcquisitions(supabase, Array.from(moveItems.values()));
 
   for (const loadoutRow of loadoutRows) {
     const slot = loadoutRow.slot ?? -1;
@@ -64,10 +73,33 @@ export async function loadChainlingLoadouts(
     loadout.move_ids[slot] = moveItem.move_id;
     loadout.modifier1_section_ids[slot] = moveItem.modifier1_id ?? "";
     loadout.modifier2_section_ids[slot] = moveItem.modifier2_id ?? "";
+    loadout.acquisitions[slot] = acquisitionByKnownId.get(moveItem.ownership_known_id ?? "") ?? "";
     result.set(loadoutRow.chainling_id, loadout);
   }
 
   return result;
+}
+
+async function loadAcquisitions(
+  supabase: SupabaseClient,
+  moveItems: MoveItemRow[],
+): Promise<Map<string, string>> {
+  const knownIds = Array.from(new Set(
+    moveItems.map((row) => row.ownership_known_id ?? "").filter((id) => id.length > 0),
+  ));
+  const acquisitionByKnownId = new Map<string, string>();
+  if (knownIds.length === 0) return acquisitionByKnownId;
+
+  const { data, error } = await supabase
+    .from("ownership_known_moves")
+    .select("known_id, acquisition")
+    .in("known_id", knownIds);
+  if (error) throw error;
+
+  for (const row of (data ?? []) as KnownAcquisitionRow[]) {
+    acquisitionByKnownId.set(row.known_id, row.acquisition ?? "");
+  }
+  return acquisitionByKnownId;
 }
 
 function emptyLoadout(): ChainlingLoadoutPayload {
@@ -75,6 +107,7 @@ function emptyLoadout(): ChainlingLoadoutPayload {
     move_ids: [],
     modifier1_section_ids: [],
     modifier2_section_ids: [],
+    acquisitions: [],
   };
 }
 
@@ -82,4 +115,5 @@ function ensureSlotCapacity(loadout: ChainlingLoadoutPayload, size: number): voi
   while (loadout.move_ids.length < size) loadout.move_ids.push("");
   while (loadout.modifier1_section_ids.length < size) loadout.modifier1_section_ids.push("");
   while (loadout.modifier2_section_ids.length < size) loadout.modifier2_section_ids.push("");
+  while (loadout.acquisitions.length < size) loadout.acquisitions.push("");
 }
