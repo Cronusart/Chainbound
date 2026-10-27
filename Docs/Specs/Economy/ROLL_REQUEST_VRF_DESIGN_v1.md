@@ -158,7 +158,7 @@ Per roll: the `request_roll` and `consume_roll` fees (result authority), plus `R
 
 ## Decisions needed
 
-1. Known tier weights and tier membership (design the rarity-weighted Known pool).
+1. Known tier weights and tier membership: drafted in [KNOWN_RARITY_WEIGHTS_v1.md](KNOWN_RARITY_WEIGHTS_v1.md), awaiting approval.
 2. Whether to keep v1 HMAC as a closed-beta fallback, or switch outright once v2 ships.
 3. Oracle-never-fulfills policy: cancel and release, or wait indefinitely.
 4. `close_roll` retention window.
