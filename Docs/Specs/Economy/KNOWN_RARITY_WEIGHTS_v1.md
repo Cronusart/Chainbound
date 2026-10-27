@@ -162,3 +162,21 @@ Stamp uses the same mechanism with kind 2 and its own `RollOdds` row. The callba
 3. **Typed moves: yes, in the Candy Machine.** ECONOMY_01's "market" is a separate vendor that sells discounted typeless moves with an occasional typed one; it isn't the Candy Machine.
 4. **Stamp curve: Ultra**, the same curve as Known (Mythic 0.02%). Confirmed by Cronus. This replaces the server's current Stamp cut-offs (45 / 30 / 17 / 5 / 2 / 1%) once Stamp moves to `roll_request`.
 5. **Tier on-chain: approved**, so rarity weights can be tested on VRF now.
+
+## Devnet results (2026-10-27, verified from Devnet RPC)
+
+Rollout step 2 is done on Devnet, and the first round trip of step 5 passed for Known.
+
+- **Program upgrade:** extended by 102,400 bytes, then deployed in tx `34CeTC1D…rsJrvnb`. The on-chain bytecode sha256 is `ef089a72f45debcd…`, the same as the tested build. The upgrade authority is still `DkFmzzzF…`.
+- **Odds set** with `roll.cjs set-odds` (signed by the program authority), both at `odds_version` 1, Ultra, with the draft pool hash `35714e64…` (`sha256("chainbound:roll-pools:draft-devnet-test")`):
+  - Known: `CVCKchtR…`, tx `3XwFat9c…`
+  - Stamp: `BowUB7Uo…`, tx `4r95ETJV…`
+- **10 Known rolls** with `roll.cjs run` (signed by the result authority `FaAegH2t…`): 10/10 passed. All 10 request accounts are Consumed. For every roll, the stored tier equals the tier recomputed from that account's own randomness bytes, and the bytes match the results file.
+  - **Tiers:** 9 Common, 1 Uncommon (run 1, draw 780,545).
+  - **Fulfill latency:** 1,282 to 2,140 ms (p50 about 1.7 s), 2 to 5 slots.
+  - **Raw results:** `tools/vrf-efficacy/vrf-roll-results.jsonl`.
+- **Still open:**
+  - Close the 10 request PDAs once 9,000 slots have passed since consume (`roll.cjs close`).
+  - Run a Stamp round trip.
+  - Run the 1,000-draw distribution check from step 5.
+  - Swap the draft pool hash for the exporter's real one with `update_roll_odds`.
