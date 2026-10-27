@@ -1,7 +1,7 @@
 # Chainbound Terms of Use
 
 **Effective date:** [[DATE]]
-**Last updated:** October 23, 2026
+**Last updated:** October 27, 2026
 
 Welcome to **Chainbound**! These Terms of Use ("**Terms**") are a legal agreement between you and **SunOrc Games**, a [[ENTITY TYPE, e.g. LLC]] based in Texas, USA ("**SunOrc Games**," "**we**," "**us**," or "**our**"). They cover your use of the Chainbound game, its related websites, backend services, smart contracts and on-chain programs we operate, and any related features (together, the "**Game**").
 
@@ -122,7 +122,7 @@ You are responsible for all activity that happens through your account or connec
 - The value of SOL changes constantly. We are not responsible for price changes before or after your purchase.
 - If a transaction confirms on-chain but RAM or an item does not appear in your account, contact us with the transaction signature and we will investigate in good faith.
 
-**All sales are final.** All purchases are **final and non-refundable**, except where a refund is required by applicable law. Nothing in these Terms takes away any rights you have under consumer protection laws that cannot be waived.
+**All sales are final.** All purchases are **final and non-refundable**, except where a refund is required by applicable law, or RAM is returned for a Random Reward that could not be completed (Section 7). Nothing in these Terms takes away any rights you have under consumer protection laws that cannot be waived.
 
 ## 7. Chainlings, Items, NFTs and Minting
 
@@ -136,6 +136,16 @@ You are responsible for all activity that happens through your account or connec
 - **We keep the intellectual property.** Owning an NFT **does not** give you ownership of, or any copyright, trademark, or other rights in, the Chainbound name, characters, Chainling designs, artwork, animations, music, code, game mechanics, or other content associated with it (the "**Game IP**"). All Game IP stays with SunOrc Games and its licensors.
 - **Your license to the art.** As long as you lawfully own the NFT and follow these Terms, we grant you a limited, worldwide, non-exclusive, non-transferable (except with the NFT itself), royalty-free license to display the artwork linked to that NFT for your **personal, non-commercial** use, including showing it in your wallet, on marketplaces for the purpose of selling it, and on social media. This license moves to the next owner when the NFT is transferred, and ends for you when you no longer own it. You may not use the artwork for commercial purposes, modify it in misleading or offensive ways, or use it to create other tokens or products, unless we agree in writing.
 - **In-game use is a license.** Any ability to use an NFT inside the Game (for example, in battles) is a license we provide and can change.
+
+**Random Rewards and Published Odds.** Some features give you a randomly selected reward, for example the Candy Machine (Known moves) and Stamps (each a "**Random Reward**"). [[COUNSEL REVIEW: confirm this subsection, the paid-roll/tradeable-output question, and any jurisdictions where paid Random Rewards must be disabled.]]
+
+- **Odds are shown before you pay.** The Game shows the chance of each rarity tier before you spend RAM or anything else on a Random Reward.
+- **Odds are recorded on-chain.** The odds, and the random value behind each roll, are recorded by our on-chain program on the Solana blockchain and can be checked by anyone. The random value comes from a verifiable randomness service (see Section 11), not from us.
+- **Odds can change, but never mid-roll.** We may change odds or reward pools (for example, for events). A change applies only to rolls requested after it takes effect, and we will show the new odds in the Game before then. Each roll uses the odds that were in effect when it was requested.
+- **No guaranteed outcome.** A Random Reward may be of any tier, including a common or duplicate result. We do not guarantee any particular result, number of rolls before a rare result, or value.
+- **If a roll fails.** If a roll cannot be completed (for example, because the randomness service does not respond in time), we may retry it automatically, and if it still cannot be completed, we will return the RAM reserved for it. Closing the Game during a roll does not cancel or redo it; the result is waiting for you when you come back.
+- **No cash value.** Random Rewards are for entertainment and use in the Game. We do not offer any way to exchange RAM or unminted Random Rewards for money or cryptocurrency (see Section 6). Section 7's "No investment" terms apply to anything you later mint.
+- **Availability.** We may limit, change, or disable Random Rewards, or paid access to them, in some places or for some players, including where the law requires it.
 
 **Gameplay may change.** We may change, rebalance, limit, or remove the in-game features, stats, abilities, appearance in the Game, or usefulness of any NFT or item, or stop supporting it entirely, including at the end of the beta or if the Game shuts down. Off-chain metadata and artwork hosting may also change or become unavailable.
 
@@ -159,6 +169,7 @@ Using blockchain features involves real risks. By using them, you understand and
 - **Smart contract and software risk:** smart contracts, on-chain programs, wallets, and related software may have bugs, vulnerabilities, or exploits that could cause loss of tokens or data.
 - **Network risk:** the Solana network may experience congestion, delays, outages, failed transactions, high fees, forks, validator issues, or changes to its rules, any of which may affect your transactions or tokens. If a fork occurs, we may choose which chain (if any) the Game supports.
 - **Security risk:** phishing, scams, fake apps, fake websites, and impersonators exist. We will never ask for your seed phrase or private key.
+- **Randomness service risk:** Random Rewards rely on a third-party verifiable randomness service. If it is delayed, unavailable, or changes, rolls may be slower, retried, or refunded as described in Section 7, and we may switch to a different service.
 - **Regulatory risk:** laws and regulations about crypto assets and NFTs are changing and differ by country. New rules could restrict or end some or all blockchain features, in some or all places.
 - **Public and permanent data:** information recorded on-chain is public and cannot be edited or deleted by us.
 
@@ -186,6 +197,7 @@ From time to time we may run events, quests, challenges, airdrops, giveaways, sw
 The Game relies on, links to, or works with services we do not own or control ("**Third-Party Services**"), including:
 
 - **The Solana blockchain** and its network of validators and RPC providers;
+- **MagicBlock** (verifiable randomness for Random Rewards and encounters);
 - **Wallets** (such as Phantom, Solflare, and Seed Vault/Seeker);
 - **NFT marketplaces**;
 - **Supabase** (our backend database, authentication, and serverless functions provider);
@@ -203,7 +215,7 @@ You may have downloaded the Game from the Solana dApp Store. **The Solana dApp S
 
 We want Chainbound to be fair and fun. You agree **not** to:
 
-- **Cheat or exploit:** use hacks, mods, cheats, or exploit bugs, glitches, or design errors (including in the RAM shop, minting, vending rolls, rewards, or on-chain programs). If you find a bug, please report it to us instead.
+- **Cheat or exploit:** use hacks, mods, cheats, or exploit bugs, glitches, or design errors (including in the RAM shop, minting, vending rolls, Random Rewards, rewards, or on-chain programs), or try to predict, influence, replay, or reroll a Random Reward. If you find a bug, please report it to us instead.
 - **Automate:** use bots, scripts, macros, emulators, or other automation to play, farm, earn RAM, battle, or interact with the Game or its smart contracts, unless we expressly allow it.
 - **Tamper:** modify, decompile, reverse engineer, disassemble, or interfere with the Game client, servers, backend, network traffic, or smart contracts, except where the law expressly allows it.
 - **Manipulate matches:** intentionally lose, collude, win-trade, boost, or use multiple accounts to gain an unfair advantage.

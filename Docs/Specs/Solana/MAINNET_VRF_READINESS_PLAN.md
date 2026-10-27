@@ -1,0 +1,240 @@
+# Mainnet VRF Readiness Plan
+
+**Status:** Plan (2026-10-27). Nothing in this document has been built yet, except where marked.
+**Scope:** What has to be true before the `chainbound_game` program and its MagicBlock VRF rolls go live on Mainnet. Binding is out of scope here.
+**Related:**
+- [KNOWN_RARITY_WEIGHTS_v1.md](../Economy/KNOWN_RARITY_WEIGHTS_v1.md): odds, approved, live on Devnet.
+- [ROLL_REQUEST_VRF_DESIGN_v1.md](../Economy/ROLL_REQUEST_VRF_DESIGN_v1.md): the two-step roll flow.
+- [MAINNET_SMOKE_DEPLOYMENT_RUNBOOK.md](MAINNET_SMOKE_DEPLOYMENT_RUNBOOK.md): mainnet deploy mechanics.
+- [DEVNET_MAINNET_BUILD_PROFILE_BOUNDARY.md](DEVNET_MAINNET_BUILD_PROFILE_BOUNDARY.md): client and backend profile split.
+- [Docs/Legal](../../Legal/README.md): the public Terms and Privacy Policy.
+
+## Summary
+
+| # | Area | Direction (Cronus, 2026-10-27) | First concrete step |
+|---|---|---|---|
+| 1 | Authority | Move upgrade and program authority to a Squads multisig; rehearse on Devnet | Program change: transferable `program_authority` |
+| 2 | Audit | Outsource to a Solana program security firm, plus a verified build | Freeze scope and collect quotes |
+| 3 | Mainnet route | Confirmed | Follow the phases below |
+| 4 | Roll failure | Never leave a player cheated out of a roll; strict anti-exploit guardrails | Program change: `cancel_roll`; server retry-then-refund |
+| 5 | MagicBlock | Dependency accepted; keep a documented exit path | `generator_version` already allows a new entropy source |
+| 6 | Legal | Odds disclosure, loot-box and randomness terms | Draft clauses added to Terms and Privacy (counsel review pending) |
+
+## 1. Authority model and multisig
+
+### The three keys today
+
+| Role | Key | Powers | Risk today |
+|---|---|---|---|
+| Upgrade authority (loader) | `DkFmzzzF…gJmG` | Replace the whole program, odds and rules included | One keypair file in WSL. **The same key is also the recorded Mainnet upgrade authority and payer** (smoke runbook) |
+| `GameConfig.program_authority` | `DkFmzzzF…gJmG` | `update_game_config` (incl. rotating `result_authority`), `initialize_roll_odds` / `update_roll_odds`, ownership config | **Cannot be rotated:** no instruction changes it after `initialize` |
+| `GameConfig.result_authority` | `FaAegH2t…Pt5KF` | Server-side signer: RAM grants and debits, profile mutations, roll requests and consumes, stamps | Hot key by design: a Supabase secret, needed for automated signing |
+
+### Target model
+
+- **Upgrade authority and `program_authority`:** a Squads v4 multisig vault, one per cluster. Never the same key on Devnet and Mainnet.
+- **`result_authority`:** stays a hot server key (one per cluster). The program limits what it can do, it holds a small SOL float, and the multisig can rotate it with `update_game_config`.
+- **Proposed threshold:** 2-of-3, with:
+  1. Cronus's hardware wallet;
+  2. a second device wallet held by Cronus (for example the Seeker Seed Vault);
+  3. an offline backup key, or a trusted co-signer.
+
+  Optionally add a Squads time lock on Mainnet (for example 24 h) so an upgrade is visible before it executes. **Decision needed:** members, threshold, time lock.
+
+### Program change needed first
+
+`program_authority` has to become transferable. Add two instructions:
+
+- `propose_program_authority(new_authority)`, signed by the current authority, writes a pending authority to a new PDA `["authority_transfer"]`. A separate PDA avoids reallocating `GameConfig`.
+- `accept_program_authority()`, signed by the pending authority (the Squads vault, through a proposal), sets `GameConfig.program_authority` and closes the PDA.
+
+The two-step shape stops a typo from bricking config control. The same pattern applies to any other config account that has its own authority field; check `OwnershipConfig` when implementing.
+
+### Devnet rehearsal (the template for Mainnet)
+
+1. Create a Squads v4 multisig on Devnet with the chosen members and threshold. Note its **vault** address: the vault is the authority, not the multisig account. Take the Squads program ID and app from Squads' docs, not memory.
+2. Ship the authority-transfer instructions (Phase 1 below), then move config control:
+   - DkFm runs `propose_program_authority(<vault>)`.
+   - The vault runs `accept_program_authority` through a Squads proposal.
+3. Move the upgrade authority. The vault can't co-sign a CLI command, hence the flag:
+   ```
+   solana program set-upgrade-authority 9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ --new-upgrade-authority <VAULT> --skip-new-upgrade-authority-signer-check --url devnet --keypair <DkFm keypair>
+   ```
+4. Rehearse an upgrade under the multisig:
+   - `solana program write-buffer <.so>`
+   - `solana program set-buffer-authority <BUFFER> --new-buffer-authority <VAULT>`
+   - Create the upgrade proposal in Squads; members approve; execute.
+   - On newer loaders, `extend` may also need the authority, so rehearse an extend too.
+5. Rehearse an odds change under the multisig. Add a `--squads <multisig>` mode to `tools/vrf-efficacy/roll.cjs set-odds` that builds the `update_roll_odds` instruction and creates a vault proposal instead of signing directly.
+6. Rehearse a `result_authority` rotation (`update_game_config` through a proposal) and record the runbook.
+7. Record each step, address and signature in a new `MULTISIG_AUTHORITY_RUNBOOK.md`. That file becomes the Mainnet script.
+
+**Mainnet differences:**
+- Use a fresh Mainnet multisig, and a fresh Mainnet `result_authority` (not `FaAeg…`).
+- Hand the upgrade authority to the vault immediately after the first deploy.
+- Retire DkFm as the Mainnet authority, or treat it as deploy-payer only.
+
+## 2. Audit and verified build
+
+**What it is:** an outside firm that specializes in Solana and Anchor programs reviews the source for exploitable bugs, then reviews your fixes. Their findings report is published or shared with partners.
+
+**Firms that audit Solana programs** (get 2–3 quotes; this is not an endorsement): OtterSec, Neodyme, Zellic, Sec3, Halborn, Ackee Blockchain, Accretion, Adevar Labs. Competitive-audit platforms (Code4rena, Cantina, Sherlock) are another model. Ask MagicBlock and Solana ecosystem contacts about audit subsidies or referrals.
+
+**Scope to quote:**
+- `programs/chainbound_game/src/lib.rs`, a single Anchor 0.32 program of about 3,700 lines, with these surfaces: RAM ledger, Known move vault, stamps, binding, encounter VRF, roll VRF, and config and authority.
+- Optional second scope: the settlement path in Supabase Edge Functions (reconcile jobs and the RAM ledger), since that is where VRF bytes become rewards.
+
+Price depends on scope, depth and timeline. Get quotes rather than budgeting from a rule of thumb.
+
+**Prep before the audit starts:**
+- Freeze the program feature set. Binding can be its own later scope.
+- Write a one-page threat model: what each authority can do, the economic assets, the trust in MagicBlock.
+- Get `cargo test` green and add negative tests for every `has_one` and status check.
+- Run `program_autofixer` (Solana MCP), `cargo audit`, and Sec3 X-ray or a similar scanner, and fix what they find first.
+- Write a short spec per instruction. Existing design docs cover most of it.
+
+**Verified build:**
+1. Build with `solana-verify build` (a pinned Docker toolchain), so anyone can reproduce the exact `.so` from a public commit.
+2. Deploy that artifact.
+3. Run `solana-verify verify-from-repo` and submit it to the public verification registry, so explorers show "verified".
+
+This is what makes the published odds trustworthy: players can check that the deployed code is the audited source. The source must be public at the verified commit. The build pipeline must switch from plain `cargo build-sbf` to `solana-verify`.
+
+## 3. Mainnet route (confirmed)
+
+Existing Mainnet facts, from the smoke runbook:
+- The program ID `7oBf57qG…M5Pj` is reserved and not deployed.
+- The payer has 0 SOL.
+- The artifact recorded there (741 KB) predates the roll instructions and must be rebuilt.
+
+Mainnet-only checklist:
+- MagicBlock's Mainnet oracle queue address and per-request fee. Devnet's charge was 500,000 lamports; confirm the Mainnet figure with MagicBlock.
+- A paid RPC provider behind `solana_rpc_proxy`. Never ship a key in the APK.
+- A priority-fee policy for result-authority transactions.
+- The client and backend Mainnet profile (DEVNET_MAINNET_BUILD_PROFILE_BOUNDARY), un-pinning `ownershipCluster` only for the Mainnet profile.
+- New `RollOdds` accounts, set with the **real exporter `pool_hash`**, not the draft-test hash.
+
+### Cost model (measured on Devnet 2026-10-27; Mainnet rent is identical)
+
+| Item | SOL |
+|---|---|
+| Program rent at the current ~1 MB (locked, refundable if the program is closed) | 5.09 |
+| Deploy buffer (refunded when the deploy completes) | ~5.09 on hand |
+| Upload fees (~1,000 transactions plus priority fees) | ~0.01–0.2 |
+| Growth | ~0.005 per KB, using `extend` |
+| Per roll, spent (VRF 500,000 lamports + 3 transaction fees) | ~0.00052 |
+| Per roll, rent float (refunded at `close_roll`, after about 1 h) | ~0.0018 |
+
+Cost controls to design in:
+1. **One VRF request per pull, not per item.** A 10-pull derives its draws from one 32-byte result.
+2. **Use VRF where the result has value:** paid pulls, anything mintable or tradeable. Free and cosmetic rolls use server randomness.
+3. **Always close roll accounts.** `EncounterRequest` has no close instruction today (0.00127 SOL locked per encounter), so add one.
+4. **The server pays VRF costs** and folds them into prices, so players never need SOL, or a second popup, to roll.
+
+## 4. Roll timeouts, retry and refund
+
+**Goal:** a roll either completes or the player is made whole automatically, with no client action that can change an outcome.
+
+**Pattern borrowed from:**
+- Battle resume: an authoritative server row with a status; `PendingBattleResumeCoordinator` asks the server what to show after menu hydration.
+- `AppLifecycleService`: interruptions pause presentation only, never server state.
+- The `ram_shop_reconcile` lease-based cron.
+
+### Program change: `cancel_roll`
+
+- New status `ROLL_CANCELLED = 3`.
+- `cancel_roll()`, signed by the result authority: allowed only while **Pending**, and only at least `ROLL_CANCEL_DELAY_SLOTS` after `requested_at_slot` (proposed 150 slots, about 60 s).
+- A late oracle callback then fails, because `fulfill_roll` already requires Pending, so cancelled rolls never get randomness.
+- `close_roll` also accepts Cancelled, which returns the rent. Add a `RollCancelled` event and its error codes.
+
+**Why this can't be used to cheat:** cancel only works *before* randomness exists. The server can't see a bad roll and discard it. A fulfilled roll can only be consumed. If cancel and fulfill race, whichever lands first wins; if fulfill wins, the cancel fails and the roll settles normally.
+
+### Server flow (extends ROLL_REQUEST_VRF_DESIGN's two-step roll)
+
+| Time | What happens | Player sees |
+|---|---|---|
+| 0 | RAM reserved; attempt 1 `request_roll` (operation hash = `sha256(operation_id ‖ attempt)`) | Roll animation |
+| ~2 s typical | Reconcile sees Fulfilled → settles (debit the reservation, write the result) → `consume_roll` | Reveal |
+| 10 s | Still pending | "Still rolling…": they can leave; the result waits for them |
+| ≥ 150 slots | Reconcile cancels attempt 1 and requests attempt 2 (new PDA, so no MagicBlock re-request is needed) | Nothing new |
+| Attempt 2 also stuck | Cancel it; release the RAM reservation; operation becomes `refunded` | "The roll couldn't complete. Your RAM was returned." |
+
+- **Max attempts:** 2 (proposed).
+- **"Refund"** means releasing the reservation: RAM is only debited at settle, so nothing extra is ever minted or credited.
+- **No HMAC fallback for the same operation** (closes ROLL_REQUEST decision 2 for VRF operations).
+
+### Client
+
+- A `PendingRollResumeCoordinator`, shaped like the battle one. On menu hydration and when the Candy Machine opens, it asks the status endpoint for unsettled roll operations and plays the reveal, or the refund notice, once.
+- Force-quit, an app interruption or a lost connection changes nothing: the server finishes the roll anyway. Relaunching shows the stored result, never a new roll.
+- The client has no cancel or retry calls. Only the reconcile job can cancel.
+
+### Anti-exploit guardrails
+
+- **Idempotency:** one idempotency key per purchase tap; a retried request returns the same operation.
+- **In-flight cap:** at most N unsettled roll operations per profile (proposed 1 for single pulls); rate limit per profile.
+- **Reservation required:** RAM is reserved before `request_roll`; settlement debits only from that reservation.
+- **Odds pinned:** odds and pool are snapshotted on the PDA; settlement refuses a mismatched `odds_version` or `pool_hash`.
+- **Audit queries:**
+  - every settled operation has exactly one Consumed attempt;
+  - every other attempt is Cancelled with zero randomness;
+  - there are at most 2 attempts per operation.
+- **Alerts:**
+  - cancellation rate above 1% over an hour;
+  - any Fulfilled-but-unsettled roll older than 5 minutes;
+  - `result_authority` balance under its float threshold.
+- **Account-level abuse** (multi-accounting to farm free rolls) stays covered by the beta allowlist and the Terms (Section 13).
+
+## 5. MagicBlock dependency
+
+Accepted, given MagicBlock's position in the ecosystem and its transparency. Exit path, should it ever be needed:
+- `generator_version` already separates entropy sources. A future source becomes version 3, with its own request and fulfill instructions, and settled operations keep their version forever.
+- `RollOdds` and tier math are independent of the oracle.
+- Keep a MagicBlock contact for incidents, and watch their changelog for queue, fee or SDK changes. The SDK is pinned in `Cargo.toml`.
+
+## 6. Legal: odds disclosure and loot-box rules
+
+Draft clauses added on 2026-10-27, marked `[[COUNSEL REVIEW]]` so they are filled in before publishing:
+- **Terms §7:** "Random Rewards and Published Odds".
+- **Terms §8:** randomness provider risk.
+- **Terms §11:** MagicBlock listed.
+- **Terms §13:** roll manipulation.
+- **Privacy §4 and §7:** roll records and MagicBlock.
+
+**Product requirements that come with them:**
+- The Candy Machine and Stamp screens show the current odds per tier **before** purchase, read from the on-chain `RollOdds` (with the version), plus a link to verify a past roll.
+- Any odds change, events included, is a new `odds_version`, announced before it takes effect.
+
+**Questions for counsel** (from general knowledge as of 2026; verify every point):
+- **Paid input + chance + tradeable output.** RAM can be bought with SOL, and Known moves can be stamped into NFTs that trade on marketplaces. That combination is the classic gambling-test pattern in many US states and other countries. Ask specifically whether stamped or tradeable outputs from paid rolls need to be separated, region-gated, or made untradeable.
+- **Regional rules:**
+  - Belgium has treated paid loot boxes as gambling since 2018.
+  - South Korea mandates probability disclosure (since March 2024).
+  - China requires odds disclosure.
+  - The Netherlands' position changed after a 2022 court ruling.
+  - The UK relies on industry principles (2023).
+
+  Decide whether to geo-restrict paid rolls (Terms §18 already supports restricted jurisdictions).
+- **Store policies.** Google Play and Apple require loot-box odds disclosure before purchase. Check the Solana dApp Store publisher policy for its own rule before submission.
+- **Refunds.** Confirm the "failed roll → RAM returned" wording works alongside "all sales final" (Terms §6).
+- **Age.** The Terms are already 18+ (§2); confirm that's enough wherever paid randomness is offered.
+
+## Phases
+
+| Phase | Work | Approval gate |
+|---|---|---|
+| 0 | This plan, and the legal drafts | Done (2026-10-27) |
+| 1 | Program: authority transfer, `cancel_roll`, encounter close; tests; autofixer; Devnet upgrade | Devnet upgrade |
+| 2 | Devnet Squads rehearsal (section 1 steps); `roll.cjs --squads`; runbook | Multisig members and threshold |
+| 3 | Server and Unity: two-step roll with retry and refund, status endpoint, resume coordinator, odds display, audit endpoint | — |
+| 4 | Audit: scope freeze, quotes, fixes, re-review | Vendor and budget |
+| 5 | Verified build, Mainnet multisig, Mainnet deploy (smoke runbook), odds with the real pool hash | Each Mainnet transaction |
+| 6 | Counsel review of the Terms and Privacy drafts; dApp Store submission | Counsel sign-off |
+
+## Decisions needed
+
+1. Multisig members, threshold and Mainnet time lock.
+2. `ROLL_CANCEL_DELAY_SLOTS` (proposed 150) and max attempts (proposed 2).
+3. Which rolls use VRF (proposed: paid and mintable only).
+4. Audit vendor and budget, and whether the Edge Function settlement is in scope.
+5. Whether stamped or tradeable outputs of paid rolls need gating, pending counsel.

@@ -1,7 +1,7 @@
 # Chainbound Privacy Policy
 
 **Effective date:** [[DATE]]
-**Last updated:** October 23, 2026
+**Last updated:** October 27, 2026
 
 This Privacy Policy explains how **SunOrc Games** ("**we**," "**us**," or "**our**") collects, uses, shares, and protects information when you play **Chainbound** and use its related services (the "**Game**"). It also explains your choices and rights.
 
@@ -73,7 +73,8 @@ If you connect a wallet, a **player profile account** tied to your wallet addres
 - wins and losses,
 - your active party Chainling IDs,
 - your RAM balance and daily RAM earned,
-- vending roll counters, and
+- vending roll counters,
+- records of Random Rewards (such as Candy Machine rolls), which hold hashed identifiers, the random value, the odds used, and a hash of the result, and
 - your last known in-game position.
 
 In addition, your RAM purchases, mints, NFT ownership, and other Solana transactions are recorded on-chain together with your wallet address.
@@ -126,6 +127,7 @@ We share information only as described here:
 
   They process information on our behalf and under their own security and privacy commitments.
 - **The Solana network:** when you transact or your on-chain profile is updated, data is broadcast to the public Solana blockchain and to the RPC providers, validators, and wallets that relay it. That data is public by nature.
+- **MagicBlock (verifiable randomness):** when a roll is requested, MagicBlock's oracle reads the public on-chain roll request and writes back a random value. It receives only what is already on-chain; we do not send it your name, email, or other off-chain information.
 - **Wallets and marketplaces:** your wallet provider, and any marketplace you use to trade NFTs, receive information directly from you under their own privacy policies.
 - **The Solana dApp Store and platforms:** the dApp Store and platform sign-in providers may receive information related to your download, installation, or sign-in under their own policies.
 - **Other players:** your player name, battle results, and similar game information may be visible to other players.
