@@ -2,13 +2,18 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { jsonResponse, requirePost, str, supabaseAdmin } from "../_shared/account_helpers.ts";
 import { findFinalizedSignatureForAddress } from "../_shared/ownership_spine.ts";
 import { advanceBindOperation } from "../_shared/ownership_bind.ts";
-import { advancePurchaseSettlement, PurchaseOrderRow, reconcileQuotedPurchase } from "../_shared/ram_shop.ts";
+import {
+  advancePurchaseSettlement,
+  PurchaseOrderRow,
+  reconcileQuotedPurchase,
+  secretsMatch,
+} from "../_shared/ram_shop.ts";
 
 serve(async (req: Request) => {
   const early = requirePost(req);
   if (early) return early;
   const expected = str(Deno.env.get("RAM_RECONCILER_SECRET"));
-  if (!expected || req.headers.get("x-reconciler-secret") !== expected) {
+  if (!(await secretsMatch(req.headers.get("x-reconciler-secret") ?? "", expected))) {
     return jsonResponse({ success: false, error: "unauthorized" }, 401);
   }
   const supabase = supabaseAdmin();

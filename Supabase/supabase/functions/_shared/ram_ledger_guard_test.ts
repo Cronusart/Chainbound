@@ -10,6 +10,14 @@ Deno.test("post-activation migrations reject unapproved direct RAM balance write
     "20261009143000_ram_v2_pre_rollout_hardening.sql",
     "20261014030000_fisher_ape_lucky_crayon.sql",
     "20261015042331_profile_owned_known_rolls.sql",
+    // Bundle debit: one settled known_roll op per pull, summed into one balance update.
+    "20261027120000_known_roll_bundles.sql",
+    // Shop settle: one settled shop_purchase credit per order, same transaction.
+    "20261028120000_ram_shop_ledger_credit.sql",
+    // Same settle body plus the credit_mode receipt gate.
+    "20261028120100_ram_shop_credit_mode.sql",
+    // Quest RAM through the daily cap: settled quest_reward credit of the applied amount.
+    "20261028120200_quest_reward_daily_cap.sql",
   ]);
   for await (const entry of Deno.readDir(migrationsRoot)) {
     if (!entry.isFile || !entry.name.endsWith(".sql") || entry.name < firstReviewedWriter) continue;
@@ -41,6 +49,49 @@ Deno.test("profile-owned candy rolls debit RAM through a settled ledger operatio
   assertEquals(source.includes("'known_roll', 'debit'"), true);
   assertEquals(source.includes("'settled'"), true);
   assertEquals(source.includes("SET ram_balance = ram_balance - p_ram_cost"), true);
+});
+
+Deno.test("known roll bundles debit RAM through one settled ledger operation per pull", async () => {
+  const source = await Deno.readTextFile(
+    new URL("20261027120000_known_roll_bundles.sql", migrationsRoot),
+  );
+  assertEquals(source.includes("INSERT INTO public.ram_ledger_operations"), true);
+  assertEquals(source.includes("'known_roll', 'debit', p_ram_cost_per_pull, 'settled'"), true);
+  assertEquals(source.includes("CHECK (ram_cost_total = pull_count * ram_cost_per_pull)"), true);
+  assertEquals(source.includes("IF p_ram_cost_per_pull IS DISTINCT FROM 5 THEN"), true);
+  assertEquals(source.includes("SET ram_balance = ram_balance - v_ram_cost_total"), true);
+});
+
+Deno.test("shop purchases credit RAM through a settled shop_purchase ledger operation", async () => {
+  const source = await Deno.readTextFile(
+    new URL("20261028120000_ram_shop_ledger_credit.sql", migrationsRoot),
+  );
+  assertEquals(source.includes("INSERT INTO public.ram_ledger_operations"), true);
+  assertEquals(source.includes("'shop_purchase', 'credit', v_order.ram_amount, 'settled'"), true);
+  assertEquals(source.includes("SET ram_balance = ram_balance + v_order.ram_amount"), true);
+  // Purchases stay outside the daily earn cap (RAM_00 section 3, R2 decision D2).
+  assertEquals(source.includes("UPDATE public.ram_daily_earnings"), false);
+  assertEquals(source.includes("INSERT INTO public.ram_daily_earnings"), false);
+});
+
+Deno.test("credit_mode settle keeps the shop_purchase ledger credit", async () => {
+  const source = await Deno.readTextFile(
+    new URL("20261028120100_ram_shop_credit_mode.sql", migrationsRoot),
+  );
+  assertEquals(source.includes("'shop_purchase', 'credit', v_order.ram_amount, 'settled'"), true);
+  assertEquals(source.includes("RAISE EXCEPTION 'credit_receipt_required'"), true);
+  assertEquals(source.includes("UPDATE public.ram_daily_earnings"), false);
+});
+
+Deno.test("quest rewards credit only the capped amount through the daily earn bucket", async () => {
+  const source = await Deno.readTextFile(
+    new URL("20261028120200_quest_reward_daily_cap.sql", migrationsRoot),
+  );
+  assertEquals(source.includes("'quest_reward', 'credit', v_applied, 'settled'"), true);
+  assertEquals(source.includes("v_applied := LEAST(v_reward.ram_amount, GREATEST(0, v_daily_cap - v_earned))"), true);
+  assertEquals(source.includes("SET earned = earned + v_applied"), true);
+  assertEquals(source.includes("SET ram_balance = ram_balance + v_applied"), true);
+  assertEquals(source.includes("ram_balance + v_reward.ram_amount"), false);
 });
 
 Deno.test("Edge functions never write player profile RAM directly", async () => {

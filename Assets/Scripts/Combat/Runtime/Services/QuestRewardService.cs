@@ -11,9 +11,22 @@ namespace Chainbound.Combat
         public bool alreadyApplied;
         public long ramBalance;
         public long ramBalanceVersion;
+
+        /// <summary>RAM the reward asks for, and what the 100/UTC-day earn cap let through.</summary>
+        public long requestedRam;
+        public long appliedRam;
+
+        /// <summary><c>applied</c>, <c>daily_cap_partial</c>, <c>daily_cap</c> or <c>no_ram</c>.</summary>
+        public string reason;
         public string error;
 
-        public static QuestRewardResult Ok(bool alreadyApplied, long ramBalance, long ramBalanceVersion)
+        public static QuestRewardResult Ok(
+            bool alreadyApplied,
+            long ramBalance,
+            long ramBalanceVersion,
+            long requestedRam = 0,
+            long appliedRam = 0,
+            string reason = "")
         {
             return new QuestRewardResult
             {
@@ -21,6 +34,9 @@ namespace Chainbound.Combat
                 alreadyApplied = alreadyApplied,
                 ramBalance = ramBalance,
                 ramBalanceVersion = ramBalanceVersion,
+                requestedRam = requestedRam,
+                appliedRam = appliedRam,
+                reason = reason ?? "",
                 error = "",
             };
         }
@@ -120,11 +136,17 @@ namespace Chainbound.Combat
                 if (enableDebugLogs)
                 {
                     Debug.Log(
-                        $"[QuestRewardService] Applied '{id}' (already_applied={payload.already_applied}, ram={payload.ram_balance}).",
+                        $"[QuestRewardService] Applied '{id}' (already_applied={payload.already_applied}, ram={payload.ram_balance}, applied_ram={payload.applied_ram}/{payload.requested_ram}, reason={payload.reason}).",
                         this);
                 }
 
-                return QuestRewardResult.Ok(payload.already_applied, payload.ram_balance, payload.ram_balance_version);
+                return QuestRewardResult.Ok(
+                    payload.already_applied,
+                    payload.ram_balance,
+                    payload.ram_balance_version,
+                    payload.requested_ram,
+                    payload.applied_ram,
+                    payload.reason);
             }
             catch (Exception ex)
             {
@@ -200,6 +222,9 @@ namespace Chainbound.Combat
             public bool already_applied;
             public long ram_balance;
             public long ram_balance_version;
+            public long requested_ram;
+            public long applied_ram;
+            public string reason;
             public string error;
         }
     }

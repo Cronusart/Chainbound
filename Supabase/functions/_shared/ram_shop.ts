@@ -9,7 +9,6 @@ import {
 import {
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
-  TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "npm:@solana/spl-token@0.4.14";
 import bs58 from "npm:bs58@5.0.0";
@@ -114,6 +113,138 @@ export function loadRamShopRuntimeConfig(): RamShopRuntimeConfig {
   return { cluster, rpcUrl, expectedGenesisHash, programId: new PublicKey(programText), programVersion };
 }
 
+// R2 Task 8: token tenders are classic SPL Token with pinned mints. USDC is pinned
+// on both clusters and SKR on mainnet, here and in the DB CHECKs; the devnet SKR
+// test mint exists only as a ram_shop_tender_mints row Cronus adds (SKR has no
+// devnet mint). Every token price row must match a ram_shop_tender_mints pin.
+export const PINNED_TENDER_MINTS: Record<string, Partial<Record<RamTender, string>>> = {
+  "devnet": { USDC: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU" },
+  "mainnet-beta": {
+    USDC: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    SKR: "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3",
+  },
+};
+export const TOKEN_TENDER_DECIMALS = 6;
+
+export interface TenderMintPin {
+  mint: string;
+  token_program: string;
+  decimals: number;
+}
+
+// Checks a token price against the code pin and the DB pin row.
+export function requirePinnedTenderMint(
+  cluster: string,
+  tender: RamTender,
+  mint: PublicKey,
+  tokenProgram: PublicKey,
+  decimals: number,
+  databasePin: TenderMintPin | null,
+): void {
+  if (tender === "SOL") throw new RamShopError("invalid_tender_mint", 503);
+  if (!tokenProgram.equals(TOKEN_PROGRAM_ID)) throw new RamShopError("unsupported_token_program", 503);
+  const codePin = PINNED_TENDER_MINTS[cluster]?.[tender];
+  if (codePin !== undefined && mint.toBase58() !== codePin) throw new RamShopError("tender_mint_not_pinned", 503);
+  if (
+    !databasePin || databasePin.mint !== mint.toBase58() || databasePin.token_program !== tokenProgram.toBase58() ||
+    Number(databasePin.decimals) !== decimals
+  ) {
+    throw new RamShopError("tender_mint_not_pinned", 503);
+  }
+  if (decimals !== TOKEN_TENDER_DECIMALS) throw new RamShopError("tender_decimals_mismatch", 503);
+}
+
+// Parsed mint info: a classic SPL Token mint with the pinned decimals.
+export function checkTenderMintAccount(owner: PublicKey | null, info: JsonMap | undefined, decimals: number): void {
+  if (!owner || !owner.equals(TOKEN_PROGRAM_ID)) throw new RamShopError("tender_mint_owner_mismatch", 503);
+  if (info?.isInitialized === false) throw new RamShopError("tender_mint_owner_mismatch", 503);
+  if (Number(info?.decimals ?? -1) !== decimals) throw new RamShopError("tender_decimals_mismatch", 503);
+}
+
+// Parsed info for the payer's source ATA. A missing account or a short balance is
+// the player's to fix, so these are 409s, not 500s.
+export function checkPayerTokenAccount(
+  info: JsonMap | undefined,
+  owner: PublicKey,
+  mint: PublicKey,
+  amount: bigint,
+): void {
+  if (!info) throw new RamShopError("tender_token_account_missing", 409);
+  if (str(info.mint) !== mint.toBase58() || str(info.owner) !== owner.toBase58()) {
+    throw new RamShopError("tender_token_account_missing", 409);
+  }
+  if (str(info.state) !== "initialized") throw new RamShopError("tender_token_account_frozen", 409);
+  const raw = str((info.tokenAmount as JsonMap | undefined)?.amount);
+  if (!/^[0-9]+$/.test(raw) || BigInt(raw) < amount) throw new RamShopError("tender_balance_insufficient", 409);
+}
+
+// R2 Task 7: the payee is the per-cluster treasury owner in ram_shop_treasuries,
+// pinned by the RAM_SHOP_TREASURY_OWNER Edge secret. Missing or different values
+// close checkout; a price row whose destination doesn't match disables that tender.
+export const RAM_SHOP_TREASURY_OWNER_ENV = "RAM_SHOP_TREASURY_OWNER";
+
+export function resolveTreasuryOwner(databaseOwner: string, pinnedOwner: string): PublicKey {
+  if (!databaseOwner) throw new RamShopError("treasury_owner_not_configured", 503);
+  if (!pinnedOwner) throw new RamShopError("treasury_owner_not_pinned", 503);
+  if (databaseOwner !== pinnedOwner) throw new RamShopError("treasury_owner_mismatch", 503);
+  return publicKey(databaseOwner, "invalid_treasury_owner");
+}
+
+export async function loadTreasuryOwner(supabase: SupabaseClient, cluster: string): Promise<PublicKey> {
+  const { data, error } = await supabase.from("ram_shop_treasuries").select("owner")
+    .eq("cluster", cluster).maybeSingle();
+  if (error) throw error;
+  return resolveTreasuryOwner(str(data?.owner), str(Deno.env.get(RAM_SHOP_TREASURY_OWNER_ENV)));
+}
+
+// SOL goes to the owner itself (a Squads vault PDA is a system account). Tokens go
+// to the owner's ATA; allowOwnerOffCurve because a vault owner is a PDA.
+export function expectedTreasuryDestination(
+  tender: RamTender,
+  owner: PublicKey,
+  mint: PublicKey | null,
+  tokenProgram: PublicKey | null,
+): PublicKey {
+  if (tender === "SOL") return owner;
+  if (!mint || !tokenProgram) throw new RamShopError("invalid_tender_mint", 503);
+  return getAssociatedTokenAddressSync(mint, owner, true, tokenProgram);
+}
+
+export function requireTreasuryDestination(
+  tender: RamTender,
+  configuredDestination: string,
+  owner: PublicKey,
+  mint: PublicKey | null,
+  tokenProgram: PublicKey | null,
+): PublicKey {
+  const expected = expectedTreasuryDestination(tender, owner, mint, tokenProgram);
+  if (configuredDestination !== expected.toBase58()) throw new RamShopError("treasury_destination_mismatch", 503);
+  return expected;
+}
+
+// Parsed SPL token account info for the treasury destination.
+export function checkTreasuryTokenAccount(info: JsonMap | undefined, owner: PublicKey, mint: PublicKey): void {
+  if (str(info?.mint) !== mint.toBase58()) throw new RamShopError("treasury_token_mint_mismatch", 503);
+  if (str(info?.owner) !== owner.toBase58()) throw new RamShopError("treasury_token_owner_mismatch", 503);
+  if (str(info?.state) !== "initialized") throw new RamShopError("treasury_token_account_unusable", 503);
+}
+
+// Compares secrets in time that doesn't depend on where they differ: both sides
+// are hashed to 32 bytes first, so length doesn't leak either.
+export async function secretsMatch(provided: string, expected: string): Promise<boolean> {
+  if (!expected) return false;
+  const encoder = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(provided)),
+    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+  ]);
+  const left = new Uint8Array(a);
+  const right = new Uint8Array(b);
+  let diff = 0;
+  for (let index = 0; index < left.length; index++) diff |= left[index] ^ right[index];
+  return diff === 0;
+}
+
 export async function catalogResponse(supabase: SupabaseClient, profileId: string): Promise<JsonMap> {
   const { data: profile, error: profileError } = await supabase
     .from("player_profiles").select("ram_balance, ram_balance_version").eq("player_profile_id", profileId).single();
@@ -130,17 +261,20 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
   if (settingsError) throw settingsError;
 
   let runtime: RamShopRuntimeConfig | null = null;
+  let treasuryOwner: PublicKey | null = null;
   let reason = str(settings?.maintenance_reason) || "RAM checkout is unavailable.";
   try {
     runtime = loadRamShopRuntimeConfig();
     await ensureOwnershipRpcCluster(runtime);
+    treasuryOwner = await loadTreasuryOwner(supabase, runtime.cluster);
   } catch (error) {
+    runtime = null;
     reason = error instanceof RamShopError ? error.code : "ram_shop_configuration_invalid";
   }
 
   const enabledByConfig = settings?.checkout_enabled === true && settings?.checkout_cluster === runtime?.cluster &&
     Number(settings?.quote_ttl_seconds ?? 0) > 0;
-  if (!runtime || !enabledByConfig) {
+  if (!runtime || !treasuryOwner || !enabledByConfig) {
     return {
       success: true,
       checkout_available: false,
@@ -190,13 +324,15 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
     display_name: str(row.display_name),
     ram_amount: String(row.ram_amount),
     approved_badge: str(row.approved_badge) || null,
-    prices: ((row.ram_shop_tender_prices ?? []) as JsonMap[]).map((price) => ({
-      tender: str(price.tender),
-      atomic_amount: String(price.atomic_amount),
-      mint: str(price.mint_address) || null,
-      decimals: Number(price.decimals),
-    })),
-  }));
+    prices: ((row.ram_shop_tender_prices ?? []) as JsonMap[])
+      .filter((price) => paysTreasury(price, treasuryOwner!))
+      .map((price) => ({
+        tender: str(price.tender),
+        atomic_amount: String(price.atomic_amount),
+        mint: str(price.mint_address) || null,
+        decimals: Number(price.decimals),
+      })),
+  })).filter((bundle) => bundle.prices.length > 0);
   const tenders = [...new Set(bundles.flatMap((bundle) => bundle.prices.map((price) => price.tender)))];
   const available = bundles.length > 0 && tenders.length > 0;
   return {
@@ -211,6 +347,19 @@ export async function catalogResponse(supabase: SupabaseClient, profileId: strin
     bundles,
     tenders,
   };
+}
+
+// Catalog-side check (no RPC): a price row is listed only if it pays the treasury.
+function paysTreasury(price: JsonMap, owner: PublicKey): boolean {
+  try {
+    const tender = normalizeTender(str(price.tender));
+    const mint = tender === "SOL" ? null : publicKey(str(price.mint_address), "invalid_tender_mint");
+    const program = tender === "SOL" ? null : publicKey(str(price.token_program), "invalid_token_program");
+    requireTreasuryDestination(tender, str(price.destination), owner, mint, program);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function preparePurchase(
@@ -236,6 +385,7 @@ export async function preparePurchase(
   if (settings.checkout_cluster !== runtime.cluster) throw new RamShopError("catalog_cluster_mismatch", 503);
   const ttlSeconds = Number(settings.quote_ttl_seconds ?? 0);
   if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds <= 0) throw new RamShopError("quote_ttl_missing", 503);
+  const treasuryOwner = await loadTreasuryOwner(supabase, runtime.cluster);
 
   const wallet = await getActiveWallet(supabase, profileId);
   const walletAddress = str(wallet?.wallet_public_key);
@@ -283,7 +433,7 @@ export async function preparePurchase(
     [new TextEncoder().encode("ram_order_reference"), orderHash],
     runtime.programId,
   );
-  const destination = publicKey(str(price.destination), "invalid_treasury_destination");
+  let destination: PublicKey;
   let instruction: TransactionInstruction;
   let mintAddress: string | null = null;
   let tokenProgram: string | null = null;
@@ -292,21 +442,28 @@ export async function preparePurchase(
     if (price.mint_address || price.token_program || Number(price.decimals) !== 9) {
       throw new RamShopError("invalid_sol_price", 503);
     }
+    destination = requireTreasuryDestination(tender, str(price.destination), treasuryOwner, null, null);
     instruction = SystemProgram.transfer({ fromPubkey: owner, toPubkey: destination, lamports: amount });
   } else {
     const mint = publicKey(str(price.mint_address), "invalid_tender_mint");
     const program = publicKey(str(price.token_program), "invalid_token_program");
-    if (!program.equals(TOKEN_PROGRAM_ID) && !program.equals(TOKEN_2022_PROGRAM_ID)) {
-      throw new RamShopError("unsupported_token_program", 503);
-    }
-    if (
-      tender === "SKR" && runtime.cluster === "mainnet-beta" &&
-      mint.toBase58() !== "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3"
-    ) {
-      throw new RamShopError("skr_mint_mismatch", 503);
-    }
-    await verifyMintAndDestination(connection, mint, program, destination, Number(price.decimals));
+    const { data: pin, error: pinError } = await supabase.from("ram_shop_tender_mints")
+      .select("mint, token_program, decimals").eq("cluster", runtime.cluster).eq("tender", tender).maybeSingle();
+    if (pinError) throw pinError;
+    requirePinnedTenderMint(runtime.cluster, tender, mint, program, Number(price.decimals), pin as TenderMintPin | null);
+    destination = requireTreasuryDestination(tender, str(price.destination), treasuryOwner, mint, program);
     const source = getAssociatedTokenAddressSync(mint, owner, false, program);
+    await verifyMintAndDestination(
+      connection,
+      mint,
+      program,
+      destination,
+      treasuryOwner,
+      Number(price.decimals),
+      source,
+      owner,
+      amount,
+    );
     instruction = createTransferCheckedInstruction(
       source,
       mint,
@@ -401,6 +558,9 @@ export async function confirmPurchase(
   try {
     await verifyFinalizedPayment(runtime.rpcUrl, order, signature);
   } catch (error) {
+    // Someone else's transaction says nothing about this order: refuse it
+    // without recording the signature or moving the order (R2 Task 5).
+    if (error instanceof RamShopError && error.code === "payment_not_from_order_wallet") throw error;
     if (error instanceof RamShopError && error.code === "payment_execution_failed") {
       return await markOrderTerminal(supabase, order, signature, "failed", error.code);
     }
@@ -484,6 +644,7 @@ export async function advancePurchaseSettlement(
   if (order.status !== "payment_verified" && order.status !== "credit_submitted") {
     return await orderResponseWithBalanceVersion(supabase, order);
   }
+  if (await loadCreditMode(supabase) === "postgres_only") return await settleInPostgres(supabase, order);
 
   const config = loadOwnershipConfig();
   if (config.cluster !== order.cluster) throw new RamShopError("settlement_cluster_mismatch", 503);
@@ -580,6 +741,36 @@ export async function advancePurchaseSettlement(
   };
 }
 
+export type RamShopCreditMode = "chain_mirror" | "postgres_only";
+
+export async function loadCreditMode(supabase: SupabaseClient): Promise<RamShopCreditMode> {
+  const { data, error } = await supabase.from("ram_shop_settings").select("credit_mode")
+    .eq("singleton", true).single();
+  if (error) throw error;
+  const mode = str(data?.credit_mode);
+  if (mode !== "chain_mirror" && mode !== "postgres_only") throw new RamShopError("credit_mode_invalid", 503);
+  return mode;
+}
+
+// Proposal D1: the verified payment tx (signature + per-order reference, both on
+// the order) is the proof. No result-authority signing, no receipt PDA, no RPC.
+async function settleInPostgres(supabase: SupabaseClient, order: PurchaseOrderRow): Promise<JsonMap> {
+  const { data: settled, error } = await supabase.rpc("ram_shop_settle_purchase", {
+    p_order_id: order.order_id,
+    p_credit_signature: null,
+    p_receipt_address: null,
+  });
+  if (error) throw new RamShopError(normalizeDatabaseError(error.message), 409);
+  return {
+    success: true,
+    ...(settled as JsonMap),
+    credit_signature: null,
+    credit_receipt_address: null,
+    payment_signature: order.payment_signature,
+    reference: order.reference_address,
+  };
+}
+
 export async function verifyFinalizedPayment(
   rpcUrl: string,
   order: PurchaseOrderRow,
@@ -591,14 +782,41 @@ export async function verifyFinalizedPayment(
     maxSupportedTransactionVersion: 0,
   }]);
   if (!payload) throw new RamShopError("payment_not_finalized", 202);
-  const meta = payload.meta as JsonMap | null;
-  if (!meta || meta.err !== null) throw new RamShopError("payment_execution_failed", 409);
   const encoded = Array.isArray(payload.transaction) ? str(payload.transaction[0]) : "";
   if (!encoded) throw new RamShopError("payment_transaction_missing", 503);
   const transaction = Transaction.from(Buffer.from(encoded, "base64"));
+  requireOrderWalletFeePayer(transaction, order);
+  const meta = payload.meta as JsonMap | null;
+  if (!meta || meta.err !== null) throw new RamShopError("payment_execution_failed", 409);
   await verifyPaymentTransaction(transaction, order, signature);
 }
 
+// Checked before anything is recorded against the order: a signature paid by
+// another wallet can't fail, review or consume this order.
+export function requireOrderWalletFeePayer(transaction: Transaction, order: PurchaseOrderRow): void {
+  if (!transaction.feePayer?.equals(publicKey(order.wallet_address, "invalid_order_wallet"))) {
+    throw new RamShopError("payment_not_from_order_wallet", 409);
+  }
+}
+
+// Policy (R2 Task 6): exact match. The signed message must equal the bytes the
+// server quoted, so any wallet edit (priority fee, Lighthouse-style guard,
+// reordered ixs) fails with payment_message_mismatch and confirm parks the paid
+// order in manual_review for the operator runbook
+// (Docs/Specs/Economy/RAM_SHOP_MANUAL_REVIEW_RUNBOOK.md).
+//
+// Proposed alternative, not built (needs a Seeker device test first): verify
+// semantically instead of byte-for-byte.
+//   - exactly one signature, fee payer = order wallet (as today);
+//   - the transfer (SystemProgram.transfer, or transferChecked for SPL) to the
+//     order destination for the exact atomic amount appears exactly once, and
+//     carries the order's reference key exactly once;
+//   - every other instruction is ComputeBudget (limit <= MAX_COMPUTE_UNIT_LIMIT,
+//     price <= MAX_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS) or on an explicit
+//     allow-list of guard programs that move no funds;
+//   - no other instruction names the order destination or the reference key.
+// The finalized meta (pre/post balances) would then confirm the destination
+// actually received the amount.
 export async function verifyPaymentTransaction(
   transaction: Transaction,
   order: PurchaseOrderRow,
@@ -680,6 +898,10 @@ function verifyPaymentInstruction(ix: TransactionInstruction, order: PurchaseOrd
 
   const program = publicKey(order.token_program, "invalid_order_token_program");
   const mint = publicKey(order.mint_address, "invalid_order_mint");
+  const codePin = PINNED_TENDER_MINTS[order.cluster]?.[order.tender];
+  if (!program.equals(TOKEN_PROGRAM_ID) || (codePin !== undefined && mint.toBase58() !== codePin)) {
+    throw new RamShopError("payment_token_program_mismatch", 409);
+  }
   const source = getAssociatedTokenAddressSync(mint, owner, false, program);
   if (!ix.programId.equals(program) || ix.keys.length !== 5) {
     throw new RamShopError("payment_token_program_mismatch", 409);
@@ -703,22 +925,33 @@ async function verifyMintAndDestination(
   mint: PublicKey,
   tokenProgram: PublicKey,
   destination: PublicKey,
+  treasuryOwner: PublicKey,
   decimals: number,
+  source: PublicKey,
+  payer: PublicKey,
+  amount: bigint,
 ): Promise<void> {
-  const parsedAccounts = await connection.getMultipleParsedAccounts([mint, destination], { commitment: "finalized" });
+  const parsedAccounts = await connection.getMultipleParsedAccounts([mint, destination, source], {
+    commitment: "finalized",
+  });
   const mintValue = parsedAccounts.value[0];
   const destinationValue = parsedAccounts.value[1];
+  const sourceValue = parsedAccounts.value[2];
   if (!mintValue || !mintValue.owner.equals(tokenProgram)) throw new RamShopError("tender_mint_owner_mismatch", 503);
   const mintParsed = (mintValue.data as { parsed?: JsonMap }).parsed;
-  const actualDecimals = Number((mintParsed?.info as JsonMap | undefined)?.decimals ?? -1);
-  if (actualDecimals !== decimals) throw new RamShopError("tender_decimals_mismatch", 503);
+  checkTenderMintAccount(mintValue.owner, mintParsed?.info as JsonMap | undefined, decimals);
+  if (sourceValue && !sourceValue.owner.equals(tokenProgram)) throw new RamShopError("tender_token_account_missing", 409);
+  checkPayerTokenAccount(
+    sourceValue ? ((sourceValue.data as { parsed?: JsonMap }).parsed?.info as JsonMap | undefined) : undefined,
+    payer,
+    mint,
+    amount,
+  );
   if (!destinationValue || !destinationValue.owner.equals(tokenProgram)) {
     throw new RamShopError("treasury_token_program_mismatch", 503);
   }
   const destinationParsed = (destinationValue.data as { parsed?: JsonMap }).parsed;
-  if (str((destinationParsed?.info as JsonMap | undefined)?.mint) !== mint.toBase58()) {
-    throw new RamShopError("treasury_token_mint_mismatch", 503);
-  }
+  checkTreasuryTokenAccount(destinationParsed?.info as JsonMap | undefined, treasuryOwner, mint);
 }
 
 async function readPurchaseReceiptBalance(
@@ -802,6 +1035,11 @@ async function readRamBalanceVersion(supabase: SupabaseClient, profileId: string
   const version = Number(data.ram_balance_version ?? 0);
   if (!Number.isSafeInteger(version) || version <= 0) throw new RamShopError("ram_balance_version_missing", 503);
   return version;
+}
+
+// Exported for tests: which verifier codes park a paid order in manual_review.
+export function requiresManualReview(code: string): boolean {
+  return isPaymentMismatch(code);
 }
 
 function isPaymentMismatch(code: string): boolean {

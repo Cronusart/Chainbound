@@ -40,7 +40,7 @@ serve(async (req: Request) => {
     let numericOrderId: number | null = null;
     if (!orderId && signature) {
       const { data: attempt, error: attemptError } = await supabase.from("ram_payment_attempts")
-        .select("order_id").eq("signature", signature).maybeSingle();
+        .select("order_id").eq("signature", signature).eq("status", "verified").maybeSingle();
       if (attemptError) throw attemptError;
       numericOrderId = attempt ? Number(attempt.order_id) : null;
     }

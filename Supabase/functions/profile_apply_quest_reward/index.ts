@@ -58,6 +58,10 @@ serve(async (req: Request) => {
       player_profile_id: profile.player_profile_id,
       ram_balance: result.ram_balance ?? 0,
       ram_balance_version: result.ram_balance_version ?? 0,
+      // Quest RAM counts toward the 100/UTC-day earn cap (RAM Shop R2 D3).
+      requested_ram: result.requestedRam ?? 0,
+      applied_ram: result.appliedRam ?? 0,
+      reason: str(result.reason),
       error: "",
     });
   } catch (error) {
