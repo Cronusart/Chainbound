@@ -26,25 +26,25 @@ MonoBehaviour:
   idleFPS: 8
   meleeAttackSequence:
     sprites:
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
+    - {fileID: 21300000, guid: 7b0ad5c2b82684d4b810db915257712a, type: 3}
+    - {fileID: 21300000, guid: 5a318a37195e5dc45b18f5800ef1b479, type: 3}
+    - {fileID: 21300000, guid: 79f85060e1eab1348a2bbfce7da170e1, type: 3}
+    - {fileID: 21300000, guid: 155e74de689d56743a7a7e595e0ce367, type: 3}
+    - {fileID: 21300000, guid: 2d4bc989253ebe34e86ee8ca9688e1ec, type: 3}
+    - {fileID: 21300000, guid: 06e7d0938d9c2b84583e4a3729c009e2, type: 3}
+    - {fileID: 21300000, guid: 3f3ac500e6ea93a45b90628a5fccb139, type: 3}
+    - {fileID: 21300000, guid: 61c4a219205f96a4baccf911202782d9, type: 3}
   meleeAttackFPS: 8
   rangedAttackSequence:
     sprites:
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
-    - {fileID: 21300000, guid: add445ae72d35f54683825eb4e029775, type: 3}
+    - {fileID: 21300000, guid: 7b0ad5c2b82684d4b810db915257712a, type: 3}
+    - {fileID: 21300000, guid: 5a318a37195e5dc45b18f5800ef1b479, type: 3}
+    - {fileID: 21300000, guid: 79f85060e1eab1348a2bbfce7da170e1, type: 3}
+    - {fileID: 21300000, guid: 155e74de689d56743a7a7e595e0ce367, type: 3}
+    - {fileID: 21300000, guid: 2d4bc989253ebe34e86ee8ca9688e1ec, type: 3}
+    - {fileID: 21300000, guid: 06e7d0938d9c2b84583e4a3729c009e2, type: 3}
+    - {fileID: 21300000, guid: 3f3ac500e6ea93a45b90628a5fccb139, type: 3}
+    - {fileID: 21300000, guid: 61c4a219205f96a4baccf911202782d9, type: 3}
   rangedAttackFPS: 8
   hitSequence:
     sprites:
