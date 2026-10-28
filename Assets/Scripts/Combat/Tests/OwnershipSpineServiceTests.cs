@@ -41,6 +41,56 @@ namespace Chainbound.Combat.Tests
         }
 
         [Test]
+        public async Task KnownBundleReturnsEveryPullInOrderAndSpendsOnce()
+        {
+            var gateway = new FakeGateway { IsWalletConnected = false };
+            var service = Create(gateway);
+
+            IReadOnlyList<KnownMoveRecord> results = await service.GetKnownBundleAsync("bundle-1", 5);
+
+            Assert.AreEqual(5, results.Count);
+            for (int i = 0; i < results.Count; i++)
+                Assert.AreEqual($"bundle-1#{i}", results[i].instanceId);
+            Assert.AreEqual(1, gateway.BundleCalls);
+            Assert.AreEqual(0, gateway.SingleCalls);
+            Assert.AreEqual(75, service.RamBalance);
+            Assert.AreEqual(5, service.CachedKnown.Count);
+        }
+
+        [Test]
+        public async Task KnownBundleOfOneUsesTheSingleRoll()
+        {
+            var gateway = new FakeGateway { IsWalletConnected = false };
+            var service = Create(gateway);
+
+            IReadOnlyList<KnownMoveRecord> results = await service.GetKnownBundleAsync("bundle-1", 1);
+
+            Assert.AreEqual(1, results.Count);
+            Assert.AreEqual(1, gateway.SingleCalls);
+            Assert.AreEqual(0, gateway.BundleCalls);
+        }
+
+        [Test]
+        public void KnownBundleRejectsAShortAuthorityResponse()
+        {
+            var gateway = new FakeGateway { IsWalletConnected = false, BundleDropsLastPull = true };
+            var service = Create(gateway);
+
+            Assert.ThrowsAsync<InvalidOperationException>(() => service.GetKnownBundleAsync("bundle-1", 5));
+            Assert.AreEqual(0, service.CachedKnown.Count);
+        }
+
+        [Test]
+        public void KnownBundleRejectsOutOfRangePullCounts()
+        {
+            var service = Create(new FakeGateway());
+
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.GetKnownBundleAsync("bundle-1", 0));
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+                () => service.GetKnownBundleAsync("bundle-1", OwnershipSpineService.MaxKnownBundlePulls + 1));
+        }
+
+        [Test]
         public async Task RefreshHydratesKnownStampedAndRamTogether()
         {
             var gateway = new FakeGateway { IsWalletConnected = true, RamBalance = 42 };
@@ -338,12 +388,16 @@ namespace Chainbound.Combat.Tests
             public int SimulateCalls { get; private set; }
             public int ReconcileCalls { get; private set; }
             public int FetchStateCalls { get; private set; }
+            public int SingleCalls { get; private set; }
+            public int BundleCalls { get; private set; }
+            public bool BundleDropsLastPull { get; set; }
             public long RamBalance { get; set; } = 100;
             public readonly List<KnownMoveRecord> Known = new List<KnownMoveRecord>();
             public readonly List<StampedMoveRecord> Verified = new List<StampedMoveRecord>();
 
             public Task<OwnershipKnownRollResult> RollKnownAsync(string idempotencyKey)
             {
+                SingleCalls++;
                 var record = new KnownMoveRecord
                 {
                     instanceId = "known-1", moveId = "jab", modifierCount = 0, generatorVersion = 1, poolHash = "hash",
@@ -356,6 +410,35 @@ namespace Chainbound.Combat.Tests
                 {
                     known = record,
                     ramCost = 5,
+                    ramBalance = RamBalance,
+                });
+            }
+
+            public Task<OwnershipKnownRollResult> RollKnownBundleAsync(string idempotencyKey, int pullCount)
+            {
+                BundleCalls++;
+                var records = new List<KnownMoveRecord>(pullCount);
+                for (int i = 0; i < pullCount; i++)
+                {
+                    records.Add(new KnownMoveRecord
+                    {
+                        instanceId = $"{idempotencyKey}#{i}", moveId = "jab", modifierCount = 0, generatorVersion = 1,
+                        poolHash = "hash", acquisition = LibraryCardFaces.CandyRoll,
+                    });
+                }
+                if (BundleDropsLastPull)
+                    records.RemoveAt(records.Count - 1);
+                else
+                {
+                    Known.AddRange(records);
+                    RamBalance -= 5 * pullCount;
+                }
+                return Task.FromResult(new OwnershipKnownRollResult
+                {
+                    known = records.Count > 0 ? records[0] : null,
+                    knowns = records,
+                    pullCount = pullCount,
+                    ramCost = 5 * pullCount,
                     ramBalance = RamBalance,
                 });
             }

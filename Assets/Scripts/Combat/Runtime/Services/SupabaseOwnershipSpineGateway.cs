@@ -58,6 +58,21 @@ namespace Chainbound.Combat
             return result;
         }
 
+        public async Task<OwnershipKnownRollResult> RollKnownBundleAsync(string idempotencyKey, int pullCount)
+        {
+            RequireEnabled();
+            string profileId = RequireProfileId();
+            OwnershipKnownRollResult result = await PostAsync<OwnershipKnownRollResult>("ownership_roll_known", new KnownBundleRequest
+            {
+                player_profile_id = profileId,
+                idempotency_key = idempotencyKey,
+                pull_count = pullCount,
+            });
+            if (result != null)
+                PlayerRamBalanceStore.TryApplyAuthoritative(profileId, result.ramBalance, result.ramBalanceVersion);
+            return result;
+        }
+
         public async Task<OwnershipSpineSnapshot> FetchStateAsync()
         {
             RequireEnabled();
@@ -410,6 +425,7 @@ namespace Chainbound.Combat
         }
 
         [Serializable] private sealed class KnownRequest { public string player_profile_id; public string idempotency_key; }
+        [Serializable] private sealed class KnownBundleRequest { public string player_profile_id; public string idempotency_key; public int pull_count; }
         [Serializable] private sealed class InventoryRequest { public string player_profile_id; public string wallet_address; }
         [Serializable] private sealed class ReconcileRequest { public string player_profile_id; public string wallet_address; public string idempotency_key; }
         [Serializable] private sealed class PrepareRequest { public string player_profile_id; public string wallet_address; public string known_instance_id; public int modifier_count; public string idempotency_key; }

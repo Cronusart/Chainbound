@@ -102,6 +102,9 @@ namespace Chainbound.Combat
     public sealed class OwnershipKnownRollResult
     {
         public KnownMoveRecord known;
+        /// <summary>Every pull in request order. A single roll returns one entry, equal to <see cref="known"/>.</summary>
+        public List<KnownMoveRecord> knowns = new List<KnownMoveRecord>();
+        public int pullCount;
         public int ramCost;
         public long ramBalance;
         public long ramBalanceVersion;
@@ -146,6 +149,11 @@ namespace Chainbound.Combat
     {
         IReadOnlyList<KnownMoveRecord> CachedKnown { get; }
         Task<KnownMoveRecord> GetKnownAsync(string idempotencyKey);
+        /// <summary>
+        /// Rolls <paramref name="pullCount"/> Knowns as one bundle: RAM for every pull is spent together or
+        /// not at all, and retrying the same key and count replays the bundle. Results are in pull order.
+        /// </summary>
+        Task<IReadOnlyList<KnownMoveRecord>> GetKnownBundleAsync(string idempotencyKey, int pullCount);
         Task RefreshKnownAsync();
     }
 
@@ -172,6 +180,7 @@ namespace Chainbound.Combat
     {
         bool IsWalletConnected { get; }
         Task<OwnershipKnownRollResult> RollKnownAsync(string idempotencyKey);
+        Task<OwnershipKnownRollResult> RollKnownBundleAsync(string idempotencyKey, int pullCount);
         Task<OwnershipSpineSnapshot> FetchStateAsync();
         Task<IReadOnlyList<KnownMoveRecord>> FetchKnownAsync();
         Task<StampTransactionReview> SimulateStampAsync(StampMoveRequest request);
@@ -191,6 +200,8 @@ namespace Chainbound.Combat
     public sealed class OwnershipSpineService : IOwnershipSpineRuntimeService
     {
         public const int DefaultFirstStampRamCost = 75;
+        /// <summary>Matches KNOWN_ROLL_MAX_PULLS in ownership_roll_known.</summary>
+        public const int MaxKnownBundlePulls = 20;
 
         private readonly IOwnershipSpineGateway gateway;
         private readonly string trustedCollection;
@@ -235,12 +246,34 @@ namespace Chainbound.Combat
             ApplyAuthoritativeBalance(rolled.ramBalance, rolled.ramBalanceVersion);
             UpsertKnown(result);
             await RefreshAsync();
-            for (int i = 0; i < known.Count; i++)
+            return FindCachedKnown(result.instanceId)
+                ?? throw new InvalidOperationException("Confirmed Known roll was not returned by authoritative inventory.");
+        }
+
+        public async Task<IReadOnlyList<KnownMoveRecord>> GetKnownBundleAsync(string idempotencyKey, int pullCount)
+        {
+            if (string.IsNullOrWhiteSpace(idempotencyKey))
+                throw new ArgumentException("An idempotency key is required.", nameof(idempotencyKey));
+            if (pullCount < 1 || pullCount > MaxKnownBundlePulls)
+                throw new ArgumentOutOfRangeException(nameof(pullCount));
+            if (pullCount == 1)
+                return new[] { await GetKnownAsync(idempotencyKey) };
+
+            OwnershipKnownRollResult rolled = await gateway.RollKnownBundleAsync(idempotencyKey, pullCount);
+            List<KnownMoveRecord> results = rolled?.knowns;
+            if (results == null || results.Count != pullCount || !results.TrueForAll(IsValidKnown))
+                throw new InvalidOperationException("Authority returned an invalid Known bundle.");
+            ApplyAuthoritativeBalance(rolled.ramBalance, rolled.ramBalanceVersion);
+            foreach (KnownMoveRecord result in results)
+                UpsertKnown(result);
+            await RefreshAsync();
+            var confirmed = new List<KnownMoveRecord>(pullCount);
+            foreach (KnownMoveRecord result in results)
             {
-                if (string.Equals(known[i].instanceId, result.instanceId, StringComparison.Ordinal))
-                    return known[i];
+                confirmed.Add(FindCachedKnown(result.instanceId)
+                    ?? throw new InvalidOperationException("Confirmed Known bundle was not returned by authoritative inventory."));
             }
-            throw new InvalidOperationException("Confirmed Known roll was not returned by authoritative inventory.");
+            return confirmed;
         }
 
         public async Task RefreshAsync()
@@ -621,6 +654,9 @@ namespace Chainbound.Combat
         private static bool IsValidKnown(KnownMoveRecord value) =>
             value != null && !string.IsNullOrWhiteSpace(value.instanceId)
             && !string.IsNullOrWhiteSpace(value.moveId) && value.modifierCount == 0;
+
+        private KnownMoveRecord FindCachedKnown(string instanceId) =>
+            known.Find(item => string.Equals(item.instanceId, instanceId, StringComparison.Ordinal));
 
         private void UpsertKnown(KnownMoveRecord value)
         {

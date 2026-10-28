@@ -161,6 +161,25 @@ namespace Chainbound.Combat
             return Task.FromResult(record);
         }
 
+        public Task<IReadOnlyList<KnownMoveRecord>> GetKnownBundleAsync(string idempotencyKey, int pullCount)
+        {
+            if (pullCount < 1 || pullCount > OwnershipSpineService.MaxKnownBundlePulls)
+                throw new ArgumentOutOfRangeException(nameof(pullCount));
+            if (moves.Count == 0)
+                throw new InvalidOperationException("No moves are loaded in the candy catalog.");
+
+            // Same all-or-nothing rule as the server bundle: price every pull before rolling any.
+            SpendRam(RamCostGetKnown * pullCount, "Get Known");
+            var records = new List<KnownMoveRecord>(pullCount);
+            for (int i = 0; i < pullCount; i++)
+            {
+                KnownMoveRecord record = CreateKnown(PickMove().moveId);
+                known.Add(record);
+                records.Add(record);
+            }
+            return Task.FromResult<IReadOnlyList<KnownMoveRecord>>(records);
+        }
+
         public Task RefreshKnownAsync() => Task.CompletedTask;
 
         public Task<StampTransactionReview> ReviewStampAsync(StampMoveRequest request)
