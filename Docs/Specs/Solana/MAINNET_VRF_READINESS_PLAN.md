@@ -46,6 +46,18 @@
   - **Recovery:** if A or B is lost, C plus the surviving key vote a Squads config change that swaps in a new member.
   - **Upgrade path:** a hardware wallet can later replace B or C through the same members vote.
   - **Squads settings:** set the config authority to **none**, so member and threshold changes also need 2-of-3.
+- **Mainnet multisig created** (2026-10-27, verified from Mainnet RPC):
+
+  | Field | Value |
+  |---|---|
+  | Multisig account | `BUMqmAsxyXG5P1C3UhKFGnt1zp7qT12WYb9GujzccGfD` |
+  | Vault (index 0) | `3Xp4tmmVNpS9bSvDYkgitV1F17SjjaCMxc7hJEqM2tre` (derivation checked; holds 0.001 SOL) |
+  | Threshold | 2 of 3 |
+  | Config authority | none, so changes need a member vote |
+  | Time lock | **0. Raise it to 24 h with a config transaction before the vault takes any Mainnet authority** |
+  | Members (all with Initiate, Vote and Execute) | `63PMxx…XME` (offline recovery, C), `9zMwTbQtjvexJzuMZjzbKS7LtWNXVYG3auBNeV82VHUj`, `AxrH7pwxL1kdfMDHBRTt6YhuNCWpcNkqjJJ633gVoCLu` (A and B: which is which is still to be confirmed) |
+
+  This multisig is on **Mainnet**, so it can't sign for the Devnet program. The Devnet rehearsal needs its own Devnet multisig with the same three members.
 - **Time lock** (decided 2026-10-27):
   - **Mainnet: 24 h.** Approved upgrades, odds changes and config changes wait 24 h before they can execute. Hotfixes are planned with that delay.
   - **Devnet: none.** Before Mainnet, rehearse the time lock once on a short-lived Devnet multisig with a short value.
