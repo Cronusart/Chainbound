@@ -11,6 +11,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@sqds/multisig": "2.1.4"
+    "@solana-mobile/wallet-standard-mobile": "0.7.0",
+    "@sqds/multisig": "2.1.4",
+    "@wallet-standard/app": "1.1.1",
+    "buffer": "6.0.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

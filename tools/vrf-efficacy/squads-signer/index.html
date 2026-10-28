@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Devnet Authority Signer</title>
+  <style>
+    :root { --bg: #f6f6f4; --fg: #1d1d1b; --muted: #6b6b66; --card: #fff; --line: #deded8; --ok: #1f7a3a; --bad: #b3261e; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #141413; --fg: #ecece8; --muted: #a3a39c; --card: #1e1e1c; --line: #33332f; --ok: #6fcf8a; --bad: #f2867e; } }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 20px; margin: 8px 0 4px; }
+    .note { color: var(--muted); margin: 0 0 16px; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; }
+    button { font: inherit; padding: 9px 14px; margin: 4px 6px 4px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+    button:disabled { opacity: .45; cursor: default; }
+    .pass { color: var(--ok); }
+    .fail { color: var(--bad); }
+    .log { font-family: ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; padding: 2px 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Devnet authority handoff</h1>
+  <p class="note">Devnet only. Moves <code>GameConfig.program_authority</code> to the Squads vault by having the vault sign <code>accept_program_authority</code>. Set your wallet to Devnet; the page sends through a Devnet RPC itself.</p>
+
+  <section>
+    <dl>
+      <dt>Multisig</dt><dd id="multisig"></dd>
+      <dt>Vault</dt><dd id="vault"></dd>
+      <dt>Threshold</dt><dd id="threshold">…</dd>
+      <dt>Program authority</dt><dd id="authority">…</dd>
+      <dt>Pending handoff</dt><dd id="pending">…</dd>
+      <dt>Your wallet</dt><dd id="who">not connected</dd>
+      <dt>Status</dt><dd id="status">loading…</dd>
+    </dl>
+  </section>
+
+  <section>
+    <div id="wallets"></div>
+  </section>
+
+  <section>
+    <div id="proposal">…</div>
+    <div style="margin-top:10px">
+      <button id="create" disabled>Create proposal (and approve)</button>
+      <button id="approve" disabled>Approve</button>
+      <button id="execute" disabled>Execute</button>
+      <button id="refresh">Refresh</button>
+    </div>
+  </section>
+
+  <section>
+    <div id="log"></div>
+  </section>
+</main>
+<script src="dist/app.js"></script>
+</body>
+</html>

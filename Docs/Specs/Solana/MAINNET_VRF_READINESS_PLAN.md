@@ -70,6 +70,16 @@
   | Settings (read back from chain) | 2 of 3, time lock 0, config authority none; the same three members as Mainnet, all with Initiate, Vote and Execute |
 
   `propose_program_authority(G4eq…)` simulated cleanly against the live Devnet program (10,828 CUs).
+- **Devnet signing path.** The hosted Squads app has no working Devnet mode (`devnet.squads.so` now redirects to squads.xyz), so the rehearsal uses a local page, `tools/vrf-efficacy/squads-signer/`, built on the pinned `@sqds/multisig` SDK.
+  - **Wallets:** any Wallet Standard browser wallet (Phantom), plus Mobile Wallet Adapter for the Seeker's Seed Vault.
+  - **Scope:** it builds only `accept_program_authority`, and refuses any RPC that isn't Devnet.
+  - **Checks before approving:** it decodes the on-chain vault transaction and confirms one instruction, the right program, the right discriminator, the right accounts in order, and vault index 0.
+  - **Sending:** wallets only sign; the page sends through the Devnet RPC itself.
+  - **Tested:** create, approve and propose simulated cleanly as Phantom (51,028 CUs), but execute can't be simulated until the propose step has run.
+  - **Steps:**
+    1. Run `node tools/vrf-efficacy/squads-signer/server.cjs` and open `http://localhost:8787` (bound to 127.0.0.1 only).
+    2. Phantom (desktop): Create proposal (this also records Phantom's approval).
+    3. Seeker: run `adb reverse tcp:8787 tcp:8787` over USB, then open `http://localhost:8787` in Chrome on the Seeker. localhost is a secure context, which MWA needs. Approve and execute with the Seed Vault.
 - **Time lock** (decided 2026-10-27):
   - **Mainnet: 24 h.** Approved upgrades, odds changes and config changes wait 24 h before they can execute. Hotfixes are planned with that delay.
   - **Devnet: none.** Before Mainnet, rehearse the time lock once on a short-lived Devnet multisig with a short value.
