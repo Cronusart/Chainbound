@@ -148,7 +148,7 @@ Mainnet-only checklist:
 | Per roll, rent float (refunded at `close_roll`, after about 1 h) | ~0.0018 |
 
 Cost controls to design in:
-1. **One VRF request per pull, not per item.** A 10-pull derives its draws from one 32-byte result.
+1. **One VRF request per bundle, not per pull.** Decided 2026-10-27: Candy Machine bundles of 1, 10 and 20 pulls. One 32-byte result feeds every pull through `sha256(domain ‖ randomness ‖ i)`, with tiers drawn on-chain. This is in the Phase 1 build; capacity rule and UI are in [ROLL_REQUEST_VRF_DESIGN_v1.md, Multi-roll bundles](../Economy/ROLL_REQUEST_VRF_DESIGN_v1.md#multi-roll-bundles).
 2. **Use VRF where the result has value:** paid pulls, anything mintable or tradeable. Free and cosmetic rolls use server randomness.
 3. **Always close roll accounts.** `EncounterRequest` has no close instruction today (0.00127 SOL locked per encounter), so add one.
 4. **The server pays VRF costs** and folds them into prices, so players never need SOL, or a second popup, to roll.
@@ -251,8 +251,10 @@ Draft clauses added on 2026-10-27, marked `[[COUNSEL REVIEW]]` so they are fille
 | 1 | Program: authority transfer, `cancel_roll`, encounter close; tests; autofixer; Devnet upgrade | Devnet upgrade |
 
 **Phase 1 build (2026-10-27):**
-- **Code:** 5 new instructions (43 total); the 38 existing instructions, the `RollRequest` layout and error codes 6000–6041 are unchanged. New errors are 6042–6044; 20/20 unit tests pass.
-- **Artifact:** `chainbound_game.so` is 1,041,864 bytes, sha256 `5604fcca620459ff369f1619a0181c033feff7e5aacdebc96f17b551b45bcd42`.
+- **Code:** 5 new instructions (43 total). New errors are 6042–6045; error codes 6000–6041 are unchanged. 23/23 unit tests pass.
+- **Bundles (multi-roll) change two things:** `request_roll` gains a `pull_count` argument, and `RollRequest` changes layout (`tier` → `pull_count`, plus `tiers[20]`; 236 bytes). Every other existing instruction is unchanged.
+- **Close old rolls first:** any old-layout `RollRequest` on Devnet can't be closed after the upgrade, so the 20 test rolls must be closed before it.
+- **Artifact:** `chainbound_game.so` is 1,044,512 bytes, sha256 `1f4293ab1afa2d0966802633ab9102342c0e182547ca967bd91781a3d49dadba`.
 - **Devnet upgrade:** needs `solana program extend 9312… 51200` first (about 0.26 SOL more rent; the current capacity is 1,001,667 bytes).
 - **Autofixer:** `program_autofixer` has not run, because the Solana MCP isn't connected in this session. Run it before the Devnet upgrade.
 | 2 | Devnet Squads rehearsal (section 1 steps); `roll.cjs --squads`; runbook | Multisig decided; each Devnet authority transfer |

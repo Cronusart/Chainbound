@@ -54,6 +54,9 @@ const ROLL_CONSUMED: u8 = 2;
 const ROLL_CANCELLED: u8 = 3;
 const ROLL_TIER_COUNT: usize = 6;
 const ROLL_TIER_UNSET: u8 = u8::MAX;
+// One VRF request settles a whole bundle; the store offers 1, 10 and 20.
+const ROLL_MAX_PULLS: usize = 20;
+const ROLL_PULL_DOMAIN: &[u8] = b"chainbound:roll-pull:v1";
 const ROLL_PPM_TOTAL: u32 = 1_000_000;
 // About an hour of Devnet slots; the retention window is still an open design decision.
 const ROLL_CLOSE_DELAY_SLOTS: u64 = 9_000;
@@ -1335,19 +1338,23 @@ pub mod chainbound_game {
         Ok(())
     }
 
-    /// Requests VRF bytes for one paid operation (Known roll or Stamp). One PDA per operation, so
-    /// a second request for the same operation fails at init.
+    /// Requests VRF bytes for one paid operation (Known roll or Stamp) of `pull_count` pulls; a
+    /// 10-pull costs one oracle request, not ten. One PDA per operation, so a second request for
+    /// the same operation fails at init.
     pub fn request_roll(
         ctx: Context<RequestRoll>,
         kind: u8,
         operation_hash: [u8; 32],
         subject_hash: [u8; 32],
+        pull_count: u8,
     ) -> Result<()> {
         validate_roll_kind(kind)?;
+        validate_pull_count(pull_count)?;
         let odds = &ctx.accounts.roll_odds;
         let request = &mut ctx.accounts.roll_request;
         request.status = ROLL_PENDING;
-        request.tier = ROLL_TIER_UNSET;
+        request.pull_count = pull_count;
+        request.tiers = [ROLL_TIER_UNSET; ROLL_MAX_PULLS];
         request.randomness = [0; 32];
         request.kind = kind;
         request.operation_hash = operation_hash;
@@ -1367,12 +1374,14 @@ pub mod chainbound_game {
             &subject_hash,
             request.odds_version,
             &request.pool_hash,
+            pull_count,
         );
         emit!(RollRequested {
             kind,
             operation_hash,
             subject_hash,
             odds_version: request.odds_version,
+            pull_count,
             caller_seed,
         });
 
@@ -1394,15 +1403,16 @@ pub mod chainbound_game {
         Ok(())
     }
 
-    /// MagicBlock callback. Stores the bytes and draws the rarity tier on-chain from the odds
-    /// snapshot taken at request time.
+    /// MagicBlock callback. Stores the bytes and draws every pull's rarity tier on-chain from the
+    /// odds snapshot taken at request time.
     pub fn fulfill_roll(ctx: Context<FulfillRoll>, randomness: [u8; 32]) -> Result<()> {
         let request = &mut ctx.accounts.roll_request;
         request.fulfill(randomness, Clock::get()?.slot)?;
         emit!(RollFulfilled {
             kind: request.kind,
             operation_hash: request.operation_hash,
-            tier: request.tier,
+            pull_count: request.pull_count,
+            tiers: request.tiers,
             odds_version: request.odds_version,
         });
         Ok(())
@@ -1415,7 +1425,7 @@ pub mod chainbound_game {
         emit!(RollConsumed {
             kind: request.kind,
             operation_hash: request.operation_hash,
-            tier: request.tier,
+            pull_count: request.pull_count,
             result_hash,
         });
         Ok(())
@@ -2646,9 +2656,9 @@ impl RollOdds {
 
 #[account]
 pub struct RollRequest {
-    // Status, tier and randomness first so clients can poll a compact prefix.
+    // Status, pull count and randomness first so clients can poll a compact prefix.
     pub status: u8,
-    pub tier: u8,
+    pub pull_count: u8,
     pub randomness: [u8; 32],
     pub kind: u8,
     pub operation_hash: [u8; 32],
@@ -2660,12 +2670,27 @@ pub struct RollRequest {
     pub fulfilled_at_slot: u64,
     pub consumed_at_slot: u64,
     pub result_hash: [u8; 32],
+    // Tier per pull, Common..Mythic; entries at or past `pull_count` stay unset.
+    pub tiers: [u8; ROLL_MAX_PULLS],
     pub bump: u8,
 }
 
 impl RollRequest {
-    pub const LEN: usize =
-        1 + 1 + 32 + 1 + 32 + 32 + 4 + (4 * ROLL_TIER_COUNT) + 32 + 8 + 8 + 8 + 32 + 1;
+    pub const LEN: usize = 1
+        + 1
+        + 32
+        + 1
+        + 32
+        + 32
+        + 4
+        + (4 * ROLL_TIER_COUNT)
+        + 32
+        + 8
+        + 8
+        + 8
+        + 32
+        + ROLL_MAX_PULLS
+        + 1;
 
     fn fulfill(&mut self, randomness: [u8; 32], fulfilled_at_slot: u64) -> Result<()> {
         require!(
@@ -2673,7 +2698,9 @@ impl RollRequest {
             ChainboundError::InvalidRollStatus
         );
         self.randomness = randomness;
-        self.tier = roll_tier(&randomness, &self.cumulative_ppm)?;
+        for index in 0..self.pull_count {
+            self.tiers[index as usize] = pull_tier(&randomness, index, &self.cumulative_ppm)?;
+        }
         self.fulfilled_at_slot = fulfilled_at_slot;
         self.status = ROLL_FULFILLED;
         Ok(())
@@ -2755,13 +2782,36 @@ fn roll_tier(randomness: &[u8; 32], cumulative_ppm: &[u32; ROLL_TIER_COUNT]) -> 
     err!(ChainboundError::InvalidRollOdds)
 }
 
-/// Binds the oracle input to the operation, the subject and the odds version.
+fn validate_pull_count(pull_count: u8) -> Result<()> {
+    require!(
+        pull_count >= 1 && pull_count as usize <= ROLL_MAX_PULLS,
+        ChainboundError::InvalidPullCount
+    );
+    Ok(())
+}
+
+/// Bytes for pull `index` of a bundle: `sha256(domain ‖ randomness ‖ index)`. Bytes 0..8 draw the
+/// tier here; the server picks the move within the tier from bytes 8..16.
+fn pull_bytes(randomness: &[u8; 32], index: u8) -> [u8; 32] {
+    hashv(&[ROLL_PULL_DOMAIN, randomness, &[index]]).to_bytes()
+}
+
+fn pull_tier(
+    randomness: &[u8; 32],
+    index: u8,
+    cumulative_ppm: &[u32; ROLL_TIER_COUNT],
+) -> Result<u8> {
+    roll_tier(&pull_bytes(randomness, index), cumulative_ppm)
+}
+
+/// Binds the oracle input to the operation, the subject, the odds version and the bundle size.
 fn roll_caller_seed(
     kind: u8,
     operation_hash: &[u8; 32],
     subject_hash: &[u8; 32],
     odds_version: u32,
     pool_hash: &[u8; 32],
+    pull_count: u8,
 ) -> [u8; 32] {
     hashv(&[
         ROLL_SEED_DOMAIN,
@@ -2770,6 +2820,7 @@ fn roll_caller_seed(
         subject_hash,
         &odds_version.to_le_bytes(),
         pool_hash,
+        &[pull_count],
     ])
     .to_bytes()
 }
@@ -3021,6 +3072,7 @@ pub struct RollRequested {
     pub operation_hash: [u8; 32],
     pub subject_hash: [u8; 32],
     pub odds_version: u32,
+    pub pull_count: u8,
     pub caller_seed: [u8; 32],
 }
 
@@ -3028,7 +3080,8 @@ pub struct RollRequested {
 pub struct RollFulfilled {
     pub kind: u8,
     pub operation_hash: [u8; 32],
-    pub tier: u8,
+    pub pull_count: u8,
+    pub tiers: [u8; ROLL_MAX_PULLS],
     pub odds_version: u32,
 }
 
@@ -3036,7 +3089,7 @@ pub struct RollFulfilled {
 pub struct RollConsumed {
     pub kind: u8,
     pub operation_hash: [u8; 32],
-    pub tier: u8,
+    pub pull_count: u8,
     pub result_hash: [u8; 32],
 }
 
@@ -3527,6 +3580,8 @@ pub enum ChainboundError {
     InvalidAuthorityTransfer,
     #[msg("Encounter request retention window has not passed.")]
     EncounterCloseTooEarly,
+    #[msg("Roll bundle must have between 1 and 20 pulls.")]
+    InvalidPullCount,
 }
 
 #[cfg(test)]
@@ -3656,9 +3711,14 @@ mod tests {
     }
 
     fn test_roll_request() -> RollRequest {
+        test_roll_bundle(1)
+    }
+
+    fn test_roll_bundle(pull_count: u8) -> RollRequest {
         RollRequest {
             status: ROLL_PENDING,
-            tier: ROLL_TIER_UNSET,
+            pull_count,
+            tiers: [ROLL_TIER_UNSET; ROLL_MAX_PULLS],
             randomness: [0; 32],
             kind: ROLL_KIND_KNOWN,
             operation_hash: [3; 32],
@@ -3722,18 +3782,66 @@ mod tests {
     #[test]
     fn roll_request_draws_tier_on_fulfill_and_transitions_once() {
         let mut request = test_roll_request();
-        request.fulfill(bytes_with_draw(999_850), 103).unwrap();
+        let randomness = [7u8; 32];
+        request.fulfill(randomness, 103).unwrap();
         assert_eq!(request.status, ROLL_FULFILLED);
-        assert_eq!(request.tier, 5);
+        assert_eq!(request.tiers[0], 1);
+        assert_eq!(request.tiers[1], ROLL_TIER_UNSET);
         assert_eq!(request.fulfilled_at_slot, 103);
         assert!(request.fulfill(bytes_with_draw(0), 104).is_err());
-        assert_eq!(request.tier, 5);
+        assert_eq!(request.tiers[0], 1);
 
         assert!(request.consume([0; 32], 110).is_err());
         request.consume([9; 32], 110).unwrap();
         assert_eq!(request.status, ROLL_CONSUMED);
         assert_eq!(request.result_hash, [9; 32]);
         assert!(request.consume([8; 32], 111).is_err());
+    }
+
+    #[test]
+    fn pull_bytes_match_the_cross_language_vector() {
+        // Same values as tools/vrf-efficacy/roll.cjs: sha256("chainbound:roll-pull:v1" ‖ [7; 32] ‖ i).
+        let randomness = [7u8; 32];
+        let draw = |index: u8| {
+            let mut head = [0u8; 8];
+            head.copy_from_slice(&pull_bytes(&randomness, index)[0..8]);
+            u64::from_le_bytes(head) % ROLL_PPM_TOTAL as u64
+        };
+        assert_eq!(draw(0), 884_577);
+        assert_eq!(draw(1), 385_164);
+        assert_eq!(draw(19), 166_598);
+        assert_eq!(pull_tier(&randomness, 0, &ULTRA_CUMULATIVE_PPM).unwrap(), 1);
+        assert_eq!(pull_tier(&randomness, 1, &ULTRA_CUMULATIVE_PPM).unwrap(), 0);
+    }
+
+    #[test]
+    fn bundle_fulfill_draws_one_tier_per_pull_from_one_randomness() {
+        let randomness = [7u8; 32];
+        for pull_count in [1u8, 10, 20] {
+            let mut request = test_roll_bundle(pull_count);
+            request.fulfill(randomness, 101).unwrap();
+            for index in 0..ROLL_MAX_PULLS {
+                if index < pull_count as usize {
+                    assert_eq!(
+                        request.tiers[index],
+                        pull_tier(&randomness, index as u8, &ULTRA_CUMULATIVE_PPM).unwrap()
+                    );
+                } else {
+                    assert_eq!(request.tiers[index], ROLL_TIER_UNSET);
+                }
+            }
+        }
+        // Each pull gets its own bytes.
+        assert_ne!(pull_bytes(&randomness, 0), pull_bytes(&randomness, 1));
+    }
+
+    #[test]
+    fn pull_count_must_be_between_one_and_twenty() {
+        assert!(validate_pull_count(0).is_err());
+        assert!(validate_pull_count(1).is_ok());
+        assert!(validate_pull_count(10).is_ok());
+        assert!(validate_pull_count(20).is_ok());
+        assert!(validate_pull_count(21).is_err());
     }
 
     #[test]
@@ -3756,7 +3864,7 @@ mod tests {
         assert!(request.cancel(cancel_at - 1).is_err());
         request.cancel(cancel_at).unwrap();
         assert_eq!(request.status, ROLL_CANCELLED);
-        assert_eq!(request.tier, ROLL_TIER_UNSET);
+        assert_eq!(request.tiers, [ROLL_TIER_UNSET; ROLL_MAX_PULLS]);
         assert_eq!(request.randomness, [0; 32]);
         assert_eq!(request.consumed_at_slot, cancel_at);
 
@@ -3822,13 +3930,14 @@ mod tests {
 
     #[test]
     fn roll_caller_seed_binds_every_input() {
-        let base = roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32]);
-        assert_ne!(base, roll_caller_seed(2, &[1; 32], &[2; 32], 1, &[3; 32]));
-        assert_ne!(base, roll_caller_seed(1, &[9; 32], &[2; 32], 1, &[3; 32]));
-        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[9; 32], 1, &[3; 32]));
-        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 2, &[3; 32]));
-        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[9; 32]));
-        assert_eq!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32]));
+        let base = roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32], 1);
+        assert_ne!(base, roll_caller_seed(2, &[1; 32], &[2; 32], 1, &[3; 32], 1));
+        assert_ne!(base, roll_caller_seed(1, &[9; 32], &[2; 32], 1, &[3; 32], 1));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[9; 32], 1, &[3; 32], 1));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 2, &[3; 32], 1));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[9; 32], 1));
+        assert_ne!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32], 10));
+        assert_eq!(base, roll_caller_seed(1, &[1; 32], &[2; 32], 1, &[3; 32], 1));
     }
 
     #[test]

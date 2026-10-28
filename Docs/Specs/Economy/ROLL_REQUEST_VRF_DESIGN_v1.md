@@ -120,7 +120,57 @@ All-In and other Meme moves join only when that's decided (`COMBAT_ISSUES_MASTER
 
 **Stamp modifiers.** These are exactly today's rules: `eligibleModifierPoolForMove(host)` for the first pick, then `eligibleSecondModifiersForMove(host, first)`, then `lockModifierEffectValues` reading from bytes 24–31.
 
+**Bundles change the byte source** (2026-10-27, see [Multi-roll bundles](#multi-roll-bundles)). Each pull now reads its own bytes, `b_i = sha256("chainbound:roll-pull:v1" ‖ randomness ‖ i)`, using the slices above; bytes 0–7 are drawn on-chain. A single roll is simply pull 0. Bytes 16–31 of `b_i` remain available for Stamp.
+
 **Shared test vectors.** A checked-in JSON file lists bytes, inputs and the expected result. The Deno tests and the Unity EditMode tests both assert against it, so the TS and C# derivations can't drift apart.
+
+## Multi-roll bundles
+
+**Decided 2026-10-27 (Cronus):** the Candy Machine sells Known rolls as bundles of **1, 10 and 20 pulls**. One VRF request settles the whole bundle, so the oracle cost per pull drops tenfold or twentyfold.
+
+| Bundle | RAM (5 per pull, no discount yet) | VRF requests | VRF + fees spent | Per pull |
+|---|---:|---:|---:|---:|
+| 1 | 5 | 1 | ~0.00052 SOL | ~0.00052 SOL |
+| 10 | 50 | 1 | ~0.00052 SOL | ~0.000052 SOL |
+| 20 | 100 | 1 | ~0.00052 SOL | ~0.000026 SOL |
+
+### On-chain (in the Phase 1 build; not deployed yet)
+
+- `request_roll(kind, operation_hash, subject_hash, pull_count)`. The program accepts 1–20; the server only offers 1, 10 and 20.
+- `pull_count` is part of the caller seed, so the bundle size can't be changed after the request.
+- `RollRequest.tier` becomes `pull_count` (same offset), and `tiers: [u8; 20]` is added after `result_hash`. `fulfill_roll` draws `tiers[i]` from `b_i[0..8]` for every pull; unused entries stay 255. `RollFulfilled` carries the full `tiers` array.
+- **Pulls are independent:** each has the same published odds, and duplicates are possible. There is no pity or guarantee, and none is implied in the odds disclosure.
+
+### Settlement
+
+- **All or nothing.** One operation, one RAM reservation of `5 × pull_count`, and one `result_hash` over every pull. A cancel or refund covers the whole bundle; there's no partial delivery.
+- **Move within tier:** from `b_i[8..16]`, using the per-tier pool for the request's `odds_version` and `pool_hash`.
+
+### Storage capacity
+
+**Rule: a roll never destroys or silently drops a move.**
+
+- **The limit:** the Known inventory caps at 50 (`MAX_KNOWN_MOVES` in the program's `MoveVault`, `CombatConstants.MAX_KNOWN_MOVES` in Unity).
+- **The check:** before reserving RAM, the server refuses a bundle when free slots are fewer than `pull_count`. It returns `inventory_full` with `freeSlots` and `required`. The check runs inside the same Postgres transaction as the reservation, so two parallel requests can't both pass it.
+- **Gap today:** the profile-owned Known roll (`ownership_roll_known_atomic`, migration `20261015042331`) does **not** check capacity. This must be added with bundles.
+- **Rejected alternatives:**
+  - auto-burning overflow for RAM (destroys a possible Mythic without consent);
+  - an overflow mailbox (more state, and it just defers the same choice). It can be revisited if players ask.
+
+### Candy Machine UI
+
+- **Three buttons:** ×1, ×10, ×20, each showing its RAM price and "needs N free slots".
+- **Disabled state:** when RAM or free slots are short, the button is disabled and says why ("Free 7 slots"), with a shortcut to the Known list, where moves can be burned for RAM (`burn_known_move_for_ram`).
+- **Odds panel:** per-pull odds from `RollOdds`, plus an optional "chance of at least one Epic or better" line for 10 and 20 pulls. For example, with Ultra and 10 pulls, `1 − 0.98^10` is about 18%.
+- **Reveal:**
+  - ×1 keeps the single reveal.
+  - ×10 and ×20 use a grid: cards flip in pull order with a tap-to-skip, the highest tier gets a final spotlight, and a summary row closes it out.
+  - The reveal waits for the whole bundle, so it fits inside the same 2.5 s latency budget.
+- **Resume:** a bundle left mid-reveal (app killed or interrupted) replays its summary from the stored operation via the resume coordinator. It never re-rolls.
+
+### Stamps
+
+Stamps stay single (`pull_count = 1`), since a Stamp targets one specific Known.
 
 ## Anti-grinding and audit
 

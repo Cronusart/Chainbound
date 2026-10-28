@@ -6,7 +6,7 @@
 //   node tools/vrf-efficacy/roll.cjs show-odds
 //   node tools/vrf-efficacy/roll.cjs set-odds --keypair <program authority> --kind known|stamp
 //          --odds ultra|steep [--pool-hash <hex>] [--dry-run]
-//   node tools/vrf-efficacy/roll.cjs run --keypair <result authority> [--kind known] [--runs 10]
+//   node tools/vrf-efficacy/roll.cjs run --keypair <result authority> [--kind known] [--runs 10] [--pulls 1|10|20]
 //          [--gap 3] [--timeout 60] [--out vrf-roll-results.jsonl] [--dry-run]
 //   node tools/vrf-efficacy/roll.cjs close --keypair <result authority> --results <file>
 //   node tools/vrf-efficacy/roll.cjs cancel-check --keypair <result authority> [--kind known]
@@ -40,6 +40,7 @@ const ROLL_CLOSE_DELAY_SLOTS = 9_000;
 const ROLL_CANCEL_DELAY_SLOTS = 150;
 const ROLL_CONSUMED = 2;
 const ROLL_CANCELLED = 3;
+const ROLL_MAX_PULLS = 20;
 const ERR_INVALID_ROLL_STATUS = 6039;
 const ERR_ROLL_CANCEL_TOO_EARLY = 6042;
 
@@ -68,6 +69,12 @@ function rollTier(randomness, cumulativePpm) {
   return cumulativePpm.findIndex((t) => draw < t);
 }
 
+// Same rule as pull_bytes / pull_tier in lib.rs: one VRF result feeds every pull of a bundle.
+const ROLL_PULL_DOMAIN = Buffer.from("chainbound:roll-pull:v1");
+const pullBytes = (randomness, index) => sha256(ROLL_PULL_DOMAIN, Buffer.from(randomness), Buffer.from([index]));
+const pullTiers = (randomness, pullCount, cumulativePpm) =>
+  Array.from({ length: pullCount }, (_, i) => rollTier(pullBytes(randomness, i), cumulativePpm));
+
 const pda = (seeds) => PublicKey.findProgramAddressSync(seeds, PROGRAM_ID)[0];
 const gameConfigPda = () => pda([Buffer.from("game_config")]);
 const rollOddsPda = (kind) => pda([Buffer.from("roll_odds"), Buffer.from([kind])]);
@@ -88,15 +95,16 @@ async function readOdds(connection, kind) {
   };
 }
 
-// RollRequest: disc(8) status(1) tier(1) randomness(32) kind(1) operation_hash(32) subject_hash(32)
-// odds_version(4) cumulative_ppm(24) pool_hash(32) requested(8) fulfilled(8) consumed(8) result_hash(32) bump(1)
+// RollRequest: disc(8) status(1) pull_count(1) randomness(32) kind(1) operation_hash(32) subject_hash(32)
+// odds_version(4) cumulative_ppm(24) pool_hash(32) requested(8) fulfilled(8) consumed(8) result_hash(32)
+// tiers(20) bump(1)
 async function readRoll(connection, address, commitment = "confirmed") {
   const info = await connection.getAccountInfo(address, commitment);
   if (!info) return null;
   const d = info.data;
   return {
     status: d[8],
-    tier: d[9],
+    pullCount: d[9],
     randomness: d.subarray(10, 42),
     kind: d[42],
     operationHash: d.subarray(43, 75).toString("hex"),
@@ -106,6 +114,7 @@ async function readRoll(connection, address, commitment = "confirmed") {
     requestedAtSlot: Number(d.readBigUInt64LE(167)),
     fulfilledAtSlot: Number(d.readBigUInt64LE(175)),
     consumedAtSlot: Number(d.readBigUInt64LE(183)),
+    tiers: Array.from(d.subarray(223, 223 + d[9])),
   };
 }
 
@@ -128,7 +137,7 @@ function setOddsIx(authority, kind, cumulativePpm, poolHash, exists) {
   return new TransactionInstruction({ programId: PROGRAM_ID, keys, data });
 }
 
-function requestRollIx(authority, kind, opHash, subjectHash) {
+function requestRollIx(authority, kind, opHash, subjectHash, pullCount) {
   return new TransactionInstruction({
     programId: PROGRAM_ID,
     keys: [
@@ -142,7 +151,7 @@ function requestRollIx(authority, kind, opHash, subjectHash) {
       { pubkey: SLOT_HASHES, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
-    data: Buffer.concat([disc("request_roll"), Buffer.from([kind]), opHash, subjectHash]),
+    data: Buffer.concat([disc("request_roll"), Buffer.from([kind]), opHash, subjectHash, Buffer.from([pullCount])]),
   });
 }
 
@@ -335,6 +344,8 @@ async function runRolls(connection, args) {
   const gapMs = Number(args.gap || 3) * 1000;
   const timeoutMs = Number(args.timeout || 60) * 1000;
   const out = args.out || "vrf-roll-results.jsonl";
+  const pulls = Number(args.pulls || 1);
+  if (!Number.isInteger(pulls) || pulls < 1 || pulls > ROLL_MAX_PULLS) throw new Error(`--pulls must be 1..${ROLL_MAX_PULLS}`);
 
   const signer = loadKeypair(args.keypair);
   const address = signer.publicKey.toBase58();
@@ -343,11 +354,11 @@ async function runRolls(connection, args) {
   if (address !== resultAuthority) throw new Error(`keypair is ${address}, but GameConfig.result_authority is ${resultAuthority}`);
   const odds = await readOdds(connection, kind);
   if (!odds) throw new Error(`RollOdds for ${args.kind || "known"} is not initialized; run set-odds first`);
-  console.log(`result authority ${address}  odds v${odds.oddsVersion} ${JSON.stringify(odds.cumulativePpm)}`);
+  console.log(`result authority ${address}  odds v${odds.oddsVersion} ${JSON.stringify(odds.cumulativePpm)}  ${pulls} pull(s) per request`);
 
   const subjectHash = sha256(Buffer.from("chainbound:devnet-roll-test"));
   if (args["dry-run"]) {
-    const ix = requestRollIx(signer.publicKey, kind, crypto.randomBytes(32), subjectHash);
+    const ix = requestRollIx(signer.publicKey, kind, crypto.randomBytes(32), subjectHash, pulls);
     const sim = await simulateUnsigned(connection, signer.publicKey, [ix]);
     console.log(`dry run: request_roll err=${JSON.stringify(sim.err)} units=${sim.unitsConsumed}`);
     for (const l of (sim.logs || []).filter((l) => /Instruction|Error|failed/.test(l))) console.log(`  ${l}`);
@@ -358,39 +369,42 @@ async function runRolls(connection, args) {
   for (let n = 1; n <= runs; n++) {
     const opHash = crypto.randomBytes(32);
     const rollPda = rollRequestPda(kind, opHash);
-    const rec = { run: n, kind, pda: rollPda.toBase58(), operationHashHex: opHash.toString("hex"), ok: false };
+    const rec = { run: n, kind, pulls, pda: rollPda.toBase58(), operationHashHex: opHash.toString("hex"), ok: false };
     try {
       const t0 = Date.now();
-      rec.requestSig = await send(connection, signer, requestRollIx(signer.publicKey, kind, opHash, subjectHash));
+      rec.requestSig = await send(connection, signer, requestRollIx(signer.publicKey, kind, opHash, subjectHash, pulls));
       const roll = await waitFulfilled(connection, rollPda, t0 + timeoutMs);
       if (!roll) throw new Error("timeout waiting for fulfill");
       rec.msFulfilled = Date.now() - t0;
-      rec.tier = roll.tier;
-      rec.tierName = TIERS[roll.tier];
+      rec.tiers = roll.tiers;
       rec.oddsVersion = roll.oddsVersion;
       rec.randomnessHex = Buffer.from(roll.randomness).toString("hex");
-      rec.recomputedTier = rollTier(roll.randomness, roll.cumulativePpm);
+      rec.recomputedTiers = pullTiers(roll.randomness, roll.pullCount, roll.cumulativePpm);
       rec.slotDelta = roll.fulfilledAtSlot - roll.requestedAtSlot;
-      const resultHash = sha256(Buffer.from("chainbound:devnet-roll-test-result"), opHash, Buffer.from([roll.tier]));
+      const resultHash = sha256(Buffer.from("chainbound:devnet-roll-test-result"), opHash, Buffer.from(roll.tiers));
       rec.consumeSig = await send(connection, signer, consumeRollIx(signer.publicKey, rollPda, resultHash));
       const after = await readRoll(connection, rollPda);
       rec.consumedAtSlot = after.consumedAtSlot;
-      rec.ok = after.status === 2 && rec.recomputedTier === rec.tier;
+      rec.ok = after.status === ROLL_CONSUMED && roll.pullCount === pulls &&
+        JSON.stringify(rec.recomputedTiers) === JSON.stringify(rec.tiers);
       if (!rec.ok) rec.error = "post-check failed";
     } catch (error) {
       rec.error = error.message;
     }
     records.push(rec);
     fs.appendFileSync(out, JSON.stringify(rec) + "\n");
-    console.log(`run ${n}: ${rec.ok ? "ok" : "FAIL"}  tier ${rec.tierName ?? "-"}  recomputed ${TIERS[rec.recomputedTier] ?? "-"}  ` +
+    const names = (rec.tiers || []).map((t) => TIERS[t]).join(",");
+    console.log(`run ${n}: ${rec.ok ? "ok" : "FAIL"}  tiers ${names || "-"}  ` +
       `${rec.msFulfilled ?? "-"} ms  slots ${rec.slotDelta ?? "-"}  ${rec.error ?? ""}`);
     if (n < runs) await sleep(gapMs);
   }
 
   const ok = records.filter((r) => r.ok);
+  const allTiers = ok.flatMap((r) => r.tiers);
   console.log("\n=== summary");
-  console.log(`runs ok: ${ok.length}/${records.length}  (on-chain tier == tier recomputed from bytes: ${ok.length})`);
-  const counts = histogram(ok.map((r) => r.tier));
+  console.log(`requests ok: ${ok.length}/${records.length}  (on-chain tiers == tiers recomputed from bytes: ${ok.length})`);
+  console.log(`pulls: ${allTiers.length} from ${ok.length} VRF request(s)`);
+  const counts = histogram(allTiers);
   TIERS.forEach((name, i) => console.log(`${name.padEnd(10)} ${counts[i]}`));
   console.log(`results written to ${out}; close the PDAs after ${ROLL_CLOSE_DELAY_SLOTS} slots (~1 h) with the close command`);
 }
@@ -441,29 +455,29 @@ async function cancelCheck(connection, args) {
   const subjectHash = sha256(Buffer.from("chainbound:devnet-roll-test"));
   const rec = { run: "cancel-check", kind, pda: rollPda.toBase58(), operationHashHex: opHash.toString("hex"), ok: false };
   try {
-    rec.requestSig = await send(connection, signer, requestRollIx(signer.publicKey, kind, opHash, subjectHash));
+    rec.requestSig = await send(connection, signer, requestRollIx(signer.publicKey, kind, opHash, subjectHash, 1));
     const early = await expectSimError(connection, signer.publicKey, cancelRollIx(signer.publicKey, rollPda), ERR_ROLL_CANCEL_TOO_EARLY);
     rec.cancelWhilePending = early.code;
     const roll = await waitFulfilled(connection, rollPda, Date.now() + 60_000);
     if (!roll) throw new Error("timeout waiting for fulfill");
-    rec.tier = roll.tier;
-    rec.tierName = TIERS[roll.tier];
+    rec.tiers = roll.tiers;
     rec.randomnessHex = Buffer.from(roll.randomness).toString("hex");
-    rec.recomputedTier = rollTier(roll.randomness, roll.cumulativePpm);
+    rec.recomputedTiers = pullTiers(roll.randomness, roll.pullCount, roll.cumulativePpm);
     const late = await expectSimError(connection, signer.publicKey, cancelRollIx(signer.publicKey, rollPda), ERR_INVALID_ROLL_STATUS);
     rec.cancelAfterFulfill = late.code;
-    const resultHash = sha256(Buffer.from("chainbound:devnet-roll-test-result"), opHash, Buffer.from([roll.tier]));
+    const resultHash = sha256(Buffer.from("chainbound:devnet-roll-test-result"), opHash, Buffer.from(roll.tiers));
     rec.consumeSig = await send(connection, signer, consumeRollIx(signer.publicKey, rollPda, resultHash));
     const after = await readRoll(connection, rollPda);
     rec.consumedAtSlot = after.consumedAtSlot;
-    rec.ok = early.ok && late.ok && after.status === ROLL_CONSUMED && rec.recomputedTier === rec.tier;
+    rec.ok = early.ok && late.ok && after.status === ROLL_CONSUMED &&
+      JSON.stringify(rec.recomputedTiers) === JSON.stringify(rec.tiers);
   } catch (error) {
     rec.error = error.message;
   }
   fs.appendFileSync(out, JSON.stringify(rec) + "\n");
   console.log(`cancel while pending: ${rec.cancelWhilePending ?? "-"} (want ${ERR_ROLL_CANCEL_TOO_EARLY} RollCancelTooEarly)`);
   console.log(`cancel after fulfill: ${rec.cancelAfterFulfill ?? "-"} (want ${ERR_INVALID_ROLL_STATUS} InvalidRollStatus)`);
-  console.log(`roll settled as ${rec.tierName ?? "-"}; ${rec.ok ? "PASS" : "FAIL"} ${rec.error ?? ""}`);
+  console.log(`roll settled as ${(rec.tiers || []).map((t) => TIERS[t]).join(",") || "-"}; ${rec.ok ? "PASS" : "FAIL"} ${rec.error ?? ""}`);
   console.log(`(the cancel window is ${ROLL_CANCEL_DELAY_SLOTS} slots after the request)`);
 }
 
@@ -542,7 +556,7 @@ async function main() {
   }
 }
 
-module.exports = { rollTier, cumulative, ODDS, scopedVrfIdentity, customErrorCode };
+module.exports = { rollTier, pullBytes, pullTiers, cumulative, ODDS, scopedVrfIdentity, customErrorCode };
 
 if (require.main === module) {
   main().catch((error) => {
