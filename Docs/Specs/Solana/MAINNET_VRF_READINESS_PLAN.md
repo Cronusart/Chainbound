@@ -256,7 +256,17 @@ Draft clauses added on 2026-10-27, marked `[[COUNSEL REVIEW]]` so they are fille
 - **Close old rolls first:** any old-layout `RollRequest` on Devnet can't be closed after the upgrade, so the 20 test rolls must be closed before it.
 - **Artifact:** `chainbound_game.so` is 1,044,512 bytes, sha256 `1f4293ab1afa2d0966802633ab9102342c0e182547ca967bd91781a3d49dadba`.
 - **Devnet upgrade:** needs `solana program extend 9312… 51200` first (about 0.26 SOL more rent; the current capacity is 1,001,667 bytes).
-- **Autofixer:** `program_autofixer` has not run, because the Solana MCP isn't connected in this session. Run it before the Devnet upgrade.
+- **Autofixer:** `program_autofixer` has not run, because the Solana MCP isn't connected in this session. It's still owed; run it before the audit scope freezes.
+
+**Phase 1 on Devnet (2026-10-27, verified from Devnet RPC):**
+- **Upgrade:** first all 20 old-layout test rolls were closed (0 remain open). Then the program was extended by 51,200 bytes (data length now 1,052,912) and upgraded at slot 515,881,383. The on-chain bytecode sha256 equals the build (`1f4293ab…`). The upgrade authority is still DkFm.
+- **One ×10 bundle:** one VRF request produced 10 tiers (5 Common, 5 Uncommon). The account is 244 bytes, Consumed, with all 10 on-chain tiers matching the tiers recomputed from its randomness, unused entries left at 255, and the result hash set.
+- **`cancel-check`:**
+  - cancel while Pending → `6042 RollCancelTooEarly`;
+  - cancel after fulfill → `6039 InvalidRollStatus`;
+  - the roll then settled normally (Consumed, tier matches).
+- **Results:** in `tools/vrf-efficacy/vrf-bundle-results.jsonl`. Close those two PDAs about an hour after consume.
+- **Not yet exercised live:** the authority handoff, which waits for the Squads vault (Phase 2), and `close_encounter_request`.
 | 2 | Devnet Squads rehearsal (section 1 steps); `roll.cjs --squads`; runbook | Multisig decided; each Devnet authority transfer |
 | 3 | Server and Unity: two-step roll with retry and refund, status endpoint, resume coordinator, odds display, audit endpoint | — |
 | 4 | Audit: scope freeze, quotes, fixes, re-review | Vendor and budget |
