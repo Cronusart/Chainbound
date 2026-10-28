@@ -1,70 +1,117 @@
 # Chainbound
 
-Chainbound is a Unity-built creature battler that combines party-based combat, stylized world exploration, and optional Solana-backed progression. This repo is structured as a public hackathon monorepo: the Unity client is the center of gravity, with Supabase edge functions and an optional Anchor workspace included for the backend and on-chain side of the stack.
+Chainbound is a creature-collector battler from **SunOrc Games** (Texas). You explore a stylized overworld, catch Chainlings, and fight turn-based 2v2 battles. The Unity client is the game. Supabase holds profiles and trusted server actions, a .NET battle service on Cloud Run resolves authoritative PvE capture, and a Solana program on devnet holds wallet accounts, the ownership spine, and MagicBlock verifiable randomness.
 
-## Demo Highlights
-- Turn-based 2v2 combat with action selection, targeting, swap flow, and presentation-driven battle scenes
-- Combat test harness for iterating on move timing, VFX, camera behavior, and UX without full progression setup
-- Wallet-aware service layer with devnet-safe defaults and local config overrides
-- Supabase edge functions for profile bootstrap and progression flags
-- Optional Solana/Anchor program for the ownership spine (Known / Stamped moves). The closed-beta client does not expose mint, stamp, or wager instructions.
+The Android build is aimed at the [Solana dApp Store](Docs/Release/SolanaSeekerBeta.md) (Seeker and Mobile Wallet Adapter). Public contact: **chainboundgame@gmail.com**.
 
-## Tech Stack
-- Unity `6000.0.24f1`
-- C# gameplay and runtime systems
-- Supabase Edge Functions
-- Solana Unity SDK packages under `Packages/`
-- Optional Rust + Anchor workspace under `backend/chainbound_game`
+## What you can play
 
-## Repo Map
-- `Assets/`: Unity scenes, scripts, prefabs, art, and runtime content
-- `Assets/Scripts/Combat/`: combat runtime, presentation, AI, data, and tests
-- `Assets/Scenes/`: playable scenes including `main_menu.unity` and `Combat2_TestHarness.unity`
-- `Supabase/`: edge functions and SQL migrations for server-side profile flows
-- `backend/chainbound_game/`: optional Anchor workspace for on-chain development
-- `Docs/`: curated architecture, setup, and gameplay docs
-- `Packages/`: Unity package manifest plus embedded package sources required by the project
+- Turn-based 2v2 combat: action select, targeting, swaps, and a presentation-driven battle scene.
+- `Assets/Scenes/Combat2_TestHarness.unity` — combat UX, timing, VFX, and camera without a full profile.
+- `Assets/Scenes/main_menu.unity` — menu and account entry. `Assets/Scenes/Bootstrap.unity` brings up services.
+- Overworld scenes such as `Loomville.unity`, `Jungle.unity`, and `player_room.unity`, with narrative sequences and wild encounters.
+- Profile-backed party, inventory, and capture. Authoritative capture talks to the Cloud Run battle service when that rollout flag is on.
+
+## Tech stack
+
+| Piece | What this repo uses |
+|---|---|
+| Client | Unity **6000.6.6f1** (target editor), C#, Universal Render Pipeline |
+| Mobile | Solana Mobile Wallet Adapter, embedded PlaySolana Unity SDK under `Packages/PlaySolana.Unity-SDK-main` |
+| Chain client | Project-owned Solana client in `Assets/Scripts/Solana` (not the retired Solana Unity SDK) |
+| Profiles | Supabase Postgres, Auth, and Edge Functions in `Supabase/` |
+| Battles | .NET 8 `backend/Chainbound.BattleService`, image in `Dockerfile`, Cloud Run port 8080 |
+| Program | Anchor 0.32.1 / Rust 1.89 program `backend/chainbound_game` |
+| Randomness | MagicBlock base-layer VRF via `ephemeral-rollups-sdk` |
+
+`ProjectSettings/ProjectVersion.txt` in this commit still records Unity `6000.0.24f1` (`11fa355cd605`). Open the project in **6000.6.6f1**. That file is updated when the editor upgrade is committed.
+
+Devnet battle-service URL and the capture rollout flag: `Assets/Data/Combat/Capture/AuthoritativeCombatServiceConfig.asset` (Cloud Run, `us-central1`).
+
+## MagicBlock VRF
+
+MagicBlock supplies 32 bytes of verifiable randomness for one encounter request. Chainbound does not draw those bytes itself. The program creates an `EncounterRequest` account, asks MagicBlock's base-layer queue, and accepts the callback only from MagicBlock's program-scoped VRF identity.
+
+| Instruction | Role |
+|---|---|
+| `request_encounter` | Player-funded PDA. Seeds: `encounter_request`, wallet, 32-byte request seed. CPI to the pinned queue. |
+| `fulfill_encounter` | MagicBlock callback. Writes randomness and moves Pending → Fulfilled. |
+| `consume_encounter_randomness` | Owner-signed, exactly once. Fulfilled → Consumed. |
+
+Pinned addresses (the same constants the Unity client refuses to start without):
+
+- VRF program `Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz`
+- Oracle queue `Cuj97ggrhhidhbu39TijNVqE74xvKJ69gDervRUXAxGh`
+
+The devnet game program is `9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ` (`Anchor.toml`, `declare_id!`). That devnet binary includes the `encounter_request` path. This repo does not record a completed Devnet efficacy signature (request, callback, and consume). The open checklist is [Docs/Specs/Economy/OWNERSHIP_SPINE_PHASE1_OPERATOR_CHECKLIST.md](Docs/Specs/Economy/OWNERSHIP_SPINE_PHASE1_OPERATOR_CHECKLIST.md) section 8.
+
+Where to read it:
+
+- Program: `backend/chainbound_game/programs/chainbound_game/src/lib.rs` (`request_encounter`, `EncounterRequest`)
+- SDK pin: `backend/chainbound_game/programs/chainbound_game/Cargo.toml`
+- IDL check: `backend/chainbound_game/tests/vrf_idl.ts`
+- Client: `Assets/Scripts/Solana/VRF/VrfService.cs` and `Assets/Scripts/Solana/Config/SolanaConfigSO.cs`
+- Editor proof: **Chainbound → Solana → Run MagicBlock VRF Devnet Efficacy** in `Assets/Scripts/Editor/MagicBlockVrfEfficacyMenu.cs`
+
+Scope, so the integration is not overstated:
+
+- Overworld wild encounters roll in `EncounterRollService` (local seeded tables). `EncounterTriggerZone` calls that service.
+- Player builds compose the real `VrfService`. Editor and test builds use `DeterministicVrfService` while `useDeterministicVrfInEditor` is on.
+- `VrfService` is what the efficacy menu calls. Stamp modifier draws and capture IVs do not read this `EncounterRequest`.
+- `ClosedBetaFeaturePolicy` does not list `request_encounter`. `VrfService` does not consult that allowlist.
+
+## How the pieces fit
+
+1. Unity owns combat presentation, overworld, UI, wallet session, and local prediction.
+2. Supabase Edge Functions perform trusted profile, inventory, narrative, and ownership calls. The client never ships the service-role key. Android RPC goes through `solana_rpc_proxy`, which keeps the provider URL server-side.
+3. `Chainbound.BattleService` is the authority for resumable PvE capture. It links the Unity-free rules in `Assets/Scripts/Combat/Core`, so the client and the service share the same fixed-point simulation. Battle RAM settlement is profile-native in Postgres (`battle_reward_settle`).
+4. The Anchor program is the on-chain ownership spine: player profile, per-wallet move vault, per-wallet chainling vault, Known moves, Stamp (Metaplex Core), Bind, and the VRF encounter request above. Local combat does not require a deploy.
+
+Closed-beta player transactions are limited to `create_profile`, `create_move_vault`, `initialize_chainling_vault`, `initialize_equipped_registry`, and `update_position` (`Assets/Scripts/Combat/Runtime/Services/ClosedBetaFeaturePolicy.cs`). Known roll, Stamp, Bind, and encounter VRF stay off that list. The devnet ownership report is still NO-GO for turning player ownership flags on: [Docs/Specs/Economy/OWNERSHIP_SPINE_PHASE1_DEVNET.md](Docs/Specs/Economy/OWNERSHIP_SPINE_PHASE1_DEVNET.md).
+
+A casual Colosseum queue and Supabase matchmaking functions are in the tree. Ranked escrow, tournaments, and a competitive ladder are not playable modes. Notes for those sit under `Docs/review-unimplemented/`.
+
+## Repo map
+
+- `Assets/` — scenes, scripts, prefabs, and content
+- `Assets/Scripts/Combat/` — battle runtime, presentation, AI, and tests
+- `Assets/Scripts/Solana/` — wallet, RPC, program client, VRF
+- `Assets/Scenes/` — `main_menu.unity`, `Bootstrap.unity`, `Combat2_TestHarness.unity`, overworld scenes
+- `Supabase/` — Edge Functions and SQL migrations
+- `backend/Chainbound.BattleService/` — .NET 8 battle and capture authority, plus `Dockerfile`
+- `backend/chainbound_game/` — Anchor workspace, IDL, and TypeScript tests
+- `Docs/` — start at [Docs/INDEX.md](Docs/INDEX.md)
+- `Packages/` — Unity manifest, PlaySolana SDK, embedded Newtonsoft.Json
+- `tools/` — capture verification, library-card render, ownership smoke scripts
 
 ## Quickstart
-1. Install Unity `6000.0.24f1`.
-2. Open this folder in Unity Hub.
-3. For Editor-only development, copy `Assets/StreamingAssets/Config.sample.json` to `Assets/StreamingAssets/Config.json`.
-4. For Android builds, copy that sample to `Assets/Resources/ChainboundLocalConfig.json`, keep `ownershipCluster` pinned to `devnet`, and set `solanaRpcEndpoint` to the authenticated `solana_rpc_proxy` Edge Function URL. The provider credential remains in Supabase secrets and is never packaged in the APK. `CHAINBOUND_SOLANA_RPC_ENDPOINT` remains an Editor-only override for direct local testing.
-5. If you want backend profile flows, create a local `.env` from `.env.example` for Supabase secrets.
-6. Open one of the main demo scenes and press Play.
 
-## Best Demo Paths
-- `Assets/Scenes/main_menu.unity`
-  - Best high-level entry point for a judge or demo walkthrough.
-- `Assets/Scenes/Combat2_TestHarness.unity`
-  - Best engineering/demo scene for validating combat UX, camera work, targeting, and battle presentation changes.
+1. Install Unity **6000.6.6f1** and open this folder in Unity Hub.
+2. For Editor RPC overrides, copy `Assets/StreamingAssets/Config.sample.json` to `Assets/StreamingAssets/Config.json`. Leave `ownershipCluster` on `devnet`.
+3. For Android, copy that sample to `Assets/Resources/ChainboundLocalConfig.json` (gitignored). Point `solanaRpcEndpoint` at the authenticated `solana_rpc_proxy` function URL. The provider credential stays in Supabase secrets. `CHAINBOUND_SOLANA_RPC_ENDPOINT` is an Editor-only direct-RPC override.
+4. For Edge Functions locally, copy `.env.example` to `.env` and fill it outside git. Do not commit secrets, keypairs, or keystores.
+5. Press Play in `main_menu.unity` or `Combat2_TestHarness.unity`.
 
-## Architecture Snapshot
-- Unity client:
-  - Owns combat flow, scene presentation, UI, exploration systems, and wallet/service orchestration.
-- Supabase edge layer:
-  - Handles trusted profile mutations that should not run with client-side credentials.
-- Optional on-chain workspace:
-  - `backend/chainbound_game` contains the Anchor program (profile, vault, Known roll, Stamp, Bind, and gated encounter instructions). Local Unity combat does not require it. The player beta policy only allows profile and vault setup instructions.
+Building the program is separate from opening the client. `backend/chainbound_game/Anchor.toml` targets devnet. Deploy keys stay outside the repo. Regenerate the IDL and the Unity client with `anchor build`, then `backend/chainbound_game/scripts/generate-unity-client.ps1`. Do not hand-edit either artifact.
 
-## Config And Security
-- No service-role keys, wallet seed phrases, or private RPC credentials should be committed.
-- Public-safe samples live in `.env.example` and `Assets/StreamingAssets/Config.sample.json`.
-- Real runtime values come from ignored local config or Editor environment variables. Android uses the public Supabase proxy URL; client RPC URLs packaged in an APK are observable and must never carry a provider key.
-- See [SECURITY_NOTES.md](SECURITY_NOTES.md) for the repo's secret-handling policy.
+## Config and security
 
-## Current State And Limitations
-- The Unity client is the primary deliverable: combat, overworld narrative, menus, and profile-backed capture.
-- Supabase edge functions cover account, party, inventory, capture, and ownership calls. They are not a full live-service platform.
-- The Anchor program implements the ownership spine. A devnet report in `Docs/Specs/Economy/` still marks player-facing ownership flags NO-GO, and `ClosedBetaFeaturePolicy` blocks stamp, bind, vending, and wager instructions in the beta client.
-- PvP lobby, ranked escrow, tournaments, and a competitive ladder are not playable modes. Client wager types exist and stay off the closed-beta path. The design notes are parked under `Docs/review-unimplemented/`.
-- The combat harness is the fastest way to evaluate battle presentation without full progression setup.
+No service-role keys, wallet seeds, or private RPC credentials belong in git. Samples are `.env.example` and `Assets/StreamingAssets/Config.sample.json`. See [SECURITY_NOTES.md](SECURITY_NOTES.md).
+
+The game is for adults 18+ (or the local age of majority, if higher). Terms and privacy: [Docs/Legal/TERMS_OF_USE.md](Docs/Legal/TERMS_OF_USE.md), [Docs/Legal/PRIVACY_POLICY.md](Docs/Legal/PRIVACY_POLICY.md).
 
 ## Documentation
-- [Docs/INDEX.md](Docs/INDEX.md) — mechanics map and what is actually implemented
-- [Docs/README.md](Docs/README.md)
+
+- [Docs/INDEX.md](Docs/INDEX.md) — mechanic, status, and code path
 - [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md)
 - [Docs/HOW_TO_PLAY.md](Docs/HOW_TO_PLAY.md)
+- [Docs/Release/BETA_FEATURE_ALLOWLIST.md](Docs/Release/BETA_FEATURE_ALLOWLIST.md)
+- [Docs/Release/SolanaSeekerBeta.md](Docs/Release/SolanaSeekerBeta.md)
 - [Assets/Scripts/Combat/README.md](Assets/Scripts/Combat/README.md)
 - [Supabase/README.md](Supabase/README.md)
 - [backend/chainbound_game/README.md](backend/chainbound_game/README.md)
+- [backend/Chainbound.BattleService/README.md](backend/Chainbound.BattleService/README.md)
+
+## Contact
+
+SunOrc Games · Texas · **chainboundgame@gmail.com**
