@@ -26,6 +26,7 @@ import {
 import {
   ACCEPT_HEX,
   AUTHORITY_TRANSFER,
+  DEFAULT_POOL_HASH,
   GAME_CONFIG,
   KINDS,
   LOADER,
@@ -40,10 +41,13 @@ import {
   VAULT,
   acceptInstruction,
   cumulative,
+  decodeOddsData,
+  readOdds,
   rollOddsPda,
+  setOddsIx,
   setUpgradeAuthorityInstruction,
-  updateOddsInstruction,
   upgradeInstruction,
+  weightsFromCumulative,
 } from "./instructions.mjs";
 
 const RPC = "https://api.devnet.solana.com";
@@ -55,7 +59,7 @@ const BUFFER_HEADER_LEN = 37;
 const connection = new Connection(RPC, "confirmed");
 
 const $ = (id) => document.getElementById(id);
-const state = { wallet: null, account: null, member: null, chain: null, shown: null };
+const state = { wallet: null, account: null, member: null, chain: null, shown: null, oddsSimulation: null };
 
 function log(text, kind = "") {
   const line = document.createElement("div");
@@ -94,17 +98,6 @@ function extendHint(needed, capacity) {
   return `solana program extend ${PROGRAM_ID.toBase58()} ${extra} --url devnet --keypair <any funded payer>`;
 }
 
-async function readOdds(kind) {
-  const info = await connection.getAccountInfo(rollOddsPda(kind), "confirmed");
-  if (!info) return null;
-  const d = info.data;
-  return {
-    oddsVersion: d.readUInt32LE(9),
-    cumulativePpm: [0, 1, 2, 3, 4, 5].map((i) => d.readUInt32LE(13 + 4 * i)),
-    poolHash: hex(d.subarray(37, 69)),
-  };
-}
-
 // Buffer: enum(4) Option<Pubkey>(1 + 32) then the program bytes.
 async function readBuffer(address) {
   const info = await connection.getAccountInfo(address, "confirmed");
@@ -129,7 +122,7 @@ async function readChain() {
       current: new PublicKey(transferInfo.data.subarray(8, 40)),
       pending: new PublicKey(transferInfo.data.subarray(40, 72)),
     },
-    odds: { known: await readOdds(KINDS.known), stamp: await readOdds(KINDS.stamp) },
+    odds: { known: await readOdds(connection, KINDS.known), stamp: await readOdds(connection, KINDS.stamp) },
     ms,
     latestIndex: BigInt(ms.transactionIndex.toString()),
   };
@@ -160,6 +153,11 @@ async function decodeInner(ix, ixKeys, programId, transfer) {
     const weights = cum.map((t, i) => t - (i ? cum[i - 1] : 0));
     return {
       title: `update_roll_odds: ${kindName ?? "unknown kind"}`,
+      kindName,
+      targetOdds: kindName ? {
+        cumulativePpm: cum,
+        poolHash: hex(data.subarray(32, 64)),
+      } : null,
       details: [
         ...weights.map((w, i) => `${TIERS[i].padEnd(10)} ${(w / 10_000).toFixed(2)}%  (${w} ppm)`),
         `pool hash: ${hex(data.subarray(32, 64))}`,
@@ -208,7 +206,10 @@ async function decodeInner(ix, ixKeys, programId, transfer) {
 async function readProposal(index, transfer) {
   const [txPda] = multisig.getTransactionPda({ multisigPda: MULTISIG, index });
   const [proposalPda] = multisig.getProposalPda({ multisigPda: MULTISIG, transactionIndex: index });
-  const out = { index, title: "", details: [], checks: [], ok: false, status: "none", approved: [], rejected: [] };
+  const out = {
+    index, title: "", details: [], checks: [], ok: false, status: "none", approved: [], rejected: [],
+    kindName: null, targetOdds: null,
+  };
   try {
     const vtx = await multisig.accounts.VaultTransaction.fromAccountAddress(connection, txPda);
     const keys = vtx.message.accountKeys;
@@ -220,6 +221,8 @@ async function readProposal(index, transfer) {
       : { title: "empty", details: [], checks: [] };
     out.title = decoded.title;
     out.details = decoded.details;
+    out.kindName = decoded.kindName || null;
+    out.targetOdds = decoded.targetOdds || null;
     out.checks = [["exactly one instruction", ixs.length === 1], ...decoded.checks, ["vault index 0", vtx.vaultIndex === 0]];
     out.ok = out.checks.every(([, pass]) => pass);
   } catch {
@@ -249,13 +252,18 @@ async function buildFromForm() {
     const kindName = $("odds-kind").value;
     const current = odds[kindName];
     if (!current) throw new Error(`${kindName} odds are not initialized; initialize_roll_odds is not offered here`);
-    const weights = ODDS[$("odds-preset").value];
-    const poolHex = ($("odds-pool").value || current.poolHash).trim();
+    const preset = $("odds-preset").value;
+    const weights = ODDS[preset];
+    if (!weights) throw new Error(`unsupported odds preset ${preset}`);
+    const cumulativePpm = cumulative(weights);
+    const poolHex = ($("odds-pool").value || DEFAULT_POOL_HASH).trim();
     if (!/^[0-9a-fA-F]{64}$/.test(poolHex)) throw new Error("pool hash must be 64 hex characters");
+    const instruction = setOddsIx(VAULT, KINDS[kindName], cumulativePpm, Buffer.from(poolHex, "hex"), true);
     return {
-      instruction: updateOddsInstruction(KINDS[kindName], cumulative(weights), Buffer.from(poolHex, "hex")),
-      memo: `chainbound: update_roll_odds ${kindName} ${$("odds-preset").value}`,
-      summary: `${kindName} odds to ${$("odds-preset").value}`,
+      instruction,
+      memo: `chainbound: update_roll_odds ${kindName} ${preset}`,
+      summary: `${kindName} odds to ${preset}`,
+      oddsTarget: { kindName, preset, weights, cumulativePpm, poolHash: poolHex.toLowerCase() },
     };
   }
   if (type === "upgrade") {
@@ -291,6 +299,39 @@ function row(parent, text, cls = "") {
   parent.append(div);
 }
 
+function formatOddsResult(oddsByKind) {
+  return Object.entries(oddsByKind).map(([kindName, odds]) => {
+    if (!odds) return `${kindName}: not initialized`;
+    const weights = weightsFromCumulative(odds.cumulativePpm);
+    return [
+      `${kindName}:`,
+      `  odds_version ${odds.oddsVersion}`,
+      `  ppm ${weights.join("/")}`,
+      `  cumulative_ppm ${odds.cumulativePpm.join("/")}`,
+      `  pool_hash ${odds.poolHash}`,
+    ].join("\n");
+  }).join("\n");
+}
+
+function renderOddsSimulation() {
+  const box = $("odds-simulation");
+  const simulation = state.oddsSimulation;
+  if (!simulation) {
+    box.className = "detail";
+    box.textContent = "Not simulated yet. Creation always repeats this simulation before opening the wallet.";
+    return;
+  }
+  const { target, err, unitsConsumed, logs } = simulation;
+  box.className = err ? "detail fail" : "detail pass";
+  box.textContent = [
+    `${err ? "FAIL" : "PASS"} vault-signer simulation: err=${JSON.stringify(err)} units=${unitsConsumed}`,
+    `${target.kindName} ${target.preset}: odds_version ${target.nextOddsVersion}`,
+    `ppm ${target.weights.join("/")}`,
+    `pool_hash ${target.poolHash}`,
+    ...(logs || []).filter((line) => /Instruction|Error|failed|consumed/.test(line)).slice(-5),
+  ].join("\n");
+}
+
 async function render() {
   $("vault").textContent = VAULT.toBase58();
   $("multisig").textContent = MULTISIG.toBase58();
@@ -310,7 +351,8 @@ async function render() {
     ? `${transfer.pending.toBase58()}${transfer.pending.equals(VAULT) ? "  (the vault)" : "  ⚠ NOT the vault"}`
     : "none";
   $("threshold").textContent = `${ms.threshold} of ${ms.members.length}`;
-  if (!$("odds-pool").value && chain.odds[$("odds-kind").value]) $("odds-pool").placeholder = chain.odds[$("odds-kind").value].poolHash;
+  $("odds-result").textContent = formatOddsResult(chain.odds);
+  renderOddsSimulation();
 
   const memberKeys = ms.members.map((m) => m.key.toBase58());
   const me = state.account ? state.account.address : null;
@@ -339,6 +381,7 @@ async function render() {
   const voted = shown && me && (shown.approved.includes(me) || shown.rejected.includes(me));
   const lastApproval = active && shown.ok && !voted && shown.approved.length + 1 >= ms.threshold;
   $("create").disabled = !state.member;
+  $("simulate-odds").disabled = !(state.member && $("type").value === "odds");
   $("approve").disabled = !(state.member && active && shown.ok && !voted);
   $("reject").disabled = !(state.member && active && !voted);
   $("execute").disabled = !(state.member && (approved || lastApproval));
@@ -392,6 +435,55 @@ function bs58(bytes) {
   return s;
 }
 
+function decodeSimulatedAccount(account) {
+  if (!account) return null;
+  const data = Array.isArray(account.data) ? Buffer.from(account.data[0], "base64") : Buffer.from(account.data);
+  return decodeOddsData(data);
+}
+
+// Simulates the actual program instruction before a Squads proposal is created. Signature checks
+// are disabled so the vault is represented as the required signer without any wallet signature.
+async function simulateSetOdds(built = null) {
+  const proposal = built || await buildFromForm();
+  if (!proposal.oddsTarget) throw new Error("select Set odds before running the vault simulation");
+  const payer = new PublicKey(state.account.address);
+  const { blockhash } = await connection.getLatestBlockhash("confirmed");
+  const message = new TransactionMessage({
+    payerKey: payer,
+    recentBlockhash: blockhash,
+    instructions: [proposal.instruction],
+  }).compileToV0Message();
+  const address = rollOddsPda(KINDS[proposal.oddsTarget.kindName]).toBase58();
+  const sim = await connection.simulateTransaction(new VersionedTransaction(message), {
+    sigVerify: false,
+    replaceRecentBlockhash: true,
+    accounts: { encoding: "base64", addresses: [address] },
+  });
+  const simulatedOdds = decodeSimulatedAccount(sim.value.accounts && sim.value.accounts[0]);
+  const current = state.chain.odds[proposal.oddsTarget.kindName];
+  const target = {
+    ...proposal.oddsTarget,
+    nextOddsVersion: simulatedOdds ? simulatedOdds.oddsVersion : current.oddsVersion + 1,
+  };
+  let err = sim.value.err;
+  if (!err && !simulatedOdds) err = "simulation did not return the roll-odds account";
+  if (!err && (simulatedOdds.poolHash !== target.poolHash ||
+      simulatedOdds.cumulativePpm.join(",") !== target.cumulativePpm.join(","))) {
+    err = "simulated account does not match the requested odds/hash";
+  }
+  state.oddsSimulation = {
+    err,
+    unitsConsumed: sim.value.unitsConsumed,
+    logs: sim.value.logs || [],
+    simulatedOdds,
+    target,
+  };
+  renderOddsSimulation();
+  if (err) throw new Error(`vault set_odds simulation failed: ${JSON.stringify(err)}`);
+  log(`vault set_odds simulation passed for ${target.kindName}: odds_version ${target.nextOddsVersion}, ppm ${target.weights.join("/")}`, "pass");
+  return proposal;
+}
+
 // Simulates, has the connected wallet sign, and sends through the Devnet RPC, so the wallet's own
 // network setting can't redirect the transaction.
 async function signAndSend(instructions, label) {
@@ -425,7 +517,9 @@ async function signAndSend(instructions, label) {
 // ---- actions
 
 async function createProposal() {
-  const { instruction, memo, summary } = await buildFromForm();
+  let built = await buildFromForm();
+  if (built.oddsTarget) built = await simulateSetOdds(built);
+  const { instruction, memo, summary } = built;
   const member = new PublicKey(state.account.address);
   const index = state.chain.latestIndex + 1n;
   const inner = new TransactionMessage({ payerKey: VAULT, recentBlockhash: PublicKey.default.toBase58(), instructions: [instruction] });
@@ -461,11 +555,16 @@ async function execute() {
   });
   ixs.push(instruction);
   await signAndSend(ixs, `execute #${shown.index}`);
+  if (shown.kindName) {
+    const odds = await readOdds(connection, KINDS[shown.kindName]);
+    const weights = weightsFromCumulative(odds.cumulativePpm);
+    log(`set_odds result ${shown.kindName}: odds_version ${odds.oddsVersion}, ppm ${weights.join("/")}, pool_hash ${odds.poolHash}`, "pass");
+  }
 }
 
 function guard(fn) {
   return async () => {
-    for (const id of ["create", "approve", "reject", "execute"]) $(id).disabled = true;
+    for (const id of ["create", "simulate-odds", "approve", "reject", "execute"]) $(id).disabled = true;
     try {
       await render();
       await fn();
@@ -485,12 +584,20 @@ registerMwa({
 });
 
 $("create").onclick = guard(createProposal);
+$("simulate-odds").onclick = guard(simulateSetOdds);
 $("approve").onclick = guard(() => vote("approve"));
 $("reject").onclick = guard(() => vote("reject"));
 $("execute").onclick = guard(execute);
 $("refresh").onclick = () => render();
-$("type").onchange = showForm;
-$("odds-kind").onchange = () => render();
+$("type").onchange = () => {
+  state.oddsSimulation = null;
+  showForm();
+  renderOddsSimulation();
+  render().catch((error) => log(error.message, "fail"));
+};
+for (const id of ["odds-kind", "odds-preset", "odds-pool"]) {
+  $(id).oninput = () => { state.oddsSimulation = null; renderOddsSimulation(); };
+}
 $("recovery-target").placeholder = DEFAULT_RECOVERY;
 listWallets();
 render();

@@ -64,7 +64,7 @@
   <section>
     <label for="type">New proposal</label>
     <select id="type">
-      <option value="odds">Change roll odds</option>
+      <option value="odds">Set odds</option>
       <option value="upgrade">Upgrade program from a buffer</option>
       <option value="recovery">Recovery: hand the upgrade authority back</option>
       <option value="accept">Accept program authority (pending handoff)</option>
@@ -73,10 +73,15 @@
     <div id="form-odds">
       <label for="odds-kind">Kind</label>
       <select id="odds-kind"><option value="known">Known</option><option value="stamp">Stamp</option></select>
-      <label for="odds-preset">Curve</label>
-      <select id="odds-preset"><option value="ultra">Ultra (Mythic 0.02%)</option><option value="steep">Steep (Mythic 0.05%)</option></select>
-      <label for="odds-pool">Pool hash (blank keeps the current one)</label>
-      <input id="odds-pool" spellcheck="false">
+      <label for="odds-preset">Odds preset</label>
+      <select id="odds-preset"><option value="ultra">Ultra — 640000/250000/90000/17000/2800/200 ppm</option></select>
+      <label for="odds-pool">Pool hash</label>
+      <input id="odds-pool" spellcheck="false" value="a73693d8f57706f53b00fc0148ebe6cb073501c6cf13326c7ddb136a4c787067">
+      <div class="detail">One proposal updates one kind. Run Known and Stamp separately. The vault is the set_odds authority.</div>
+      <div style="margin-top:10px">
+        <button id="simulate-odds" disabled>Simulate set_odds as vault</button>
+      </div>
+      <pre id="odds-simulation" class="detail">Not simulated yet.</pre>
     </div>
 
     <div id="form-upgrade" hidden>
@@ -100,6 +105,11 @@
     <div style="margin-top:10px">
       <button id="create" disabled>Create proposal (and approve)</button>
     </div>
+  </section>
+
+  <section>
+    <div class="title">On-chain roll.cjs show-odds result</div>
+    <pre id="odds-result" class="detail">loading…</pre>
   </section>
 
   <section>

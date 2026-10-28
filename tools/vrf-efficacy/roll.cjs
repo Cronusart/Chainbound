@@ -21,21 +21,22 @@ const fs = require("fs");
 const crypto = require("crypto");
 const { web3, DEFAULT_RPC, PROGRAM_ID, ORACLE_QUEUE, scopedVrfIdentity, simulateUnsigned, customErrorCode, parseArgs } =
   require("./common.cjs");
+const {
+  DEFAULT_POOL_HASH,
+  KINDS,
+  ODDS,
+  TIERS,
+  cumulative,
+  readOdds,
+  rollOddsPda,
+  setOddsIx,
+} = require("./odds-shared.cjs");
 
 const { Connection, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction } = web3;
 const VRF_PROGRAM = new PublicKey("Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz");
 const SLOT_HASHES = new PublicKey("SysvarS1otHashes111111111111111111111111111");
 const UPGRADE_AUTHORITY = "DkFmzzzF89tYZu2JWR1uq3H13U5np9NU6MHF4E61gJmG";
 
-const TIERS = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"];
-const KINDS = { known: 1, stamp: 2 };
-// Weights in parts per million, Common..Mythic.
-const ODDS = {
-  ultra: [640_000, 250_000, 90_000, 17_000, 2_800, 200],
-  steep: [620_000, 250_000, 100_000, 25_000, 4_500, 500],
-};
-// Placeholder until CombatServerTablesExporter generates the per-tier pools and their hash.
-const DRAFT_POOL_HASH = sha256(Buffer.from("chainbound:roll-pools:draft-devnet-test"));
 const ROLL_CLOSE_DELAY_SLOTS = 9_000;
 const ROLL_CANCEL_DELAY_SLOTS = 150;
 const ROLL_CONSUMED = 2;
@@ -51,11 +52,6 @@ function sha256(...parts) {
 }
 
 const disc = (name) => sha256(Buffer.from(`global:${name}`)).subarray(0, 8);
-
-function cumulative(weights) {
-  let sum = 0;
-  return weights.map((w) => (sum += w));
-}
 
 function u32s(values) {
   const b = Buffer.alloc(4 * values.length);
@@ -77,23 +73,9 @@ const pullTiers = (randomness, pullCount, cumulativePpm) =>
 
 const pda = (seeds) => PublicKey.findProgramAddressSync(seeds, PROGRAM_ID)[0];
 const gameConfigPda = () => pda([Buffer.from("game_config")]);
-const rollOddsPda = (kind) => pda([Buffer.from("roll_odds"), Buffer.from([kind])]);
 const rollRequestPda = (kind, opHash) => pda([Buffer.from("roll_request"), Buffer.from([kind]), opHash]);
 const programIdentity = () => pda([Buffer.from("identity")]);
 const authorityTransferPda = () => pda([Buffer.from("authority_transfer")]);
-
-// RollOdds: disc(8) kind(1) odds_version(4) cumulative_ppm(24) pool_hash(32) bump(1)
-async function readOdds(connection, kind) {
-  const info = await connection.getAccountInfo(rollOddsPda(kind), "confirmed");
-  if (!info) return null;
-  const d = info.data;
-  return {
-    kind: d[8],
-    oddsVersion: d.readUInt32LE(9),
-    cumulativePpm: [0, 1, 2, 3, 4, 5].map((i) => d.readUInt32LE(13 + 4 * i)),
-    poolHash: d.subarray(37, 69).toString("hex"),
-  };
-}
 
 // RollRequest: disc(8) status(1) pull_count(1) randomness(32) kind(1) operation_hash(32) subject_hash(32)
 // odds_version(4) cumulative_ppm(24) pool_hash(32) requested(8) fulfilled(8) consumed(8) result_hash(32)
@@ -116,25 +98,6 @@ async function readRoll(connection, address, commitment = "confirmed") {
     consumedAtSlot: Number(d.readBigUInt64LE(183)),
     tiers: Array.from(d.subarray(223, 223 + d[9])),
   };
-}
-
-function setOddsIx(authority, kind, cumulativePpm, poolHash, exists) {
-  const keys = exists
-    ? [
-        { pubkey: rollOddsPda(kind), isSigner: false, isWritable: true },
-        { pubkey: gameConfigPda(), isSigner: false, isWritable: false },
-        { pubkey: authority, isSigner: true, isWritable: false },
-      ]
-    : [
-        { pubkey: rollOddsPda(kind), isSigner: false, isWritable: true },
-        { pubkey: gameConfigPda(), isSigner: false, isWritable: false },
-        { pubkey: authority, isSigner: true, isWritable: true },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-      ];
-  const data = exists
-    ? Buffer.concat([disc("update_roll_odds"), u32s(cumulativePpm), poolHash])
-    : Buffer.concat([disc("initialize_roll_odds"), Buffer.from([kind]), u32s(cumulativePpm), poolHash]);
-  return new TransactionInstruction({ programId: PROGRAM_ID, keys, data });
 }
 
 function requestRollIx(authority, kind, opHash, subjectHash, pullCount) {
@@ -305,7 +268,7 @@ async function setOdds(connection, args) {
   const weights = ODDS[args.odds];
   if (!weights) throw new Error("--odds ultra|steep is required");
   const cum = cumulative(weights);
-  const poolHash = args["pool-hash"] ? Buffer.from(args["pool-hash"], "hex") : DRAFT_POOL_HASH;
+  const poolHash = Buffer.from(args["pool-hash"] || DEFAULT_POOL_HASH, "hex");
   if (poolHash.length !== 32) throw new Error("--pool-hash must be 32 bytes of hex");
 
   const signer = loadKeypair(args.keypair);

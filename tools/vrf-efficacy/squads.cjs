@@ -4,7 +4,7 @@
 // Refuses to run anywhere but Devnet.
 //
 //   node tools/vrf-efficacy/squads.cjs create-multisig --payer <devnet keypair> --members <a,b,c>
-//          [--threshold 2] [--time-lock 0] [--dry-run]
+//          [--threshold 2] [--time-lock 0] [--memo <text>] [--dry-run]
 //   node tools/vrf-efficacy/squads.cjs show-multisig --multisig <address>
 const fs = require("fs");
 const multisig = require("@sqds/multisig");
@@ -67,7 +67,7 @@ async function createMultisig(connection, args) {
     timeLock,
     createKey: createKey.publicKey,
     rentCollector: null,
-    memo: "chainbound devnet authority rehearsal",
+    memo: args.memo || "chainbound devnet authority rehearsal",
   });
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
   const message = new TransactionMessage({ payerKey: payer.publicKey, recentBlockhash: blockhash, instructions: [ix] })

@@ -12,8 +12,8 @@ import {
   extendCheckedInstruction,
   extendInstruction,
   rollOddsPda,
+  setOddsIx,
   setUpgradeAuthorityInstruction,
-  updateOddsInstruction,
 } from "./src/instructions.mjs";
 
 const connection = new Connection("https://api.devnet.solana.com", "confirmed");
@@ -39,8 +39,8 @@ const poolHash = Buffer.from(odds.data.subarray(37, 69));
 const ultra = cumulative(ODDS.ultra);
 
 const results = [
-  await simulate("vault updates Known odds (Ultra, same pool)", [updateOddsInstruction(KINDS.known, ultra, poolHash)]),
-  await simulate("DkFm can no longer update odds", [updateOddsInstruction(KINDS.known, ultra, poolHash, DKFM)], INVALID_AUTHORITY),
+  await simulate("vault updates Known odds (Ultra, same pool)", [setOddsIx(VAULT, KINDS.known, ultra, poolHash, true)]),
+  await simulate("DkFm can no longer update odds", [setOddsIx(DKFM, KINDS.known, ultra, poolHash, true)], INVALID_AUTHORITY),
   await simulate("vault can hand the upgrade authority back (recovery proposal)", [setUpgradeAuthorityInstruction(DKFM, VAULT)]),
   await simulate("DkFm can no longer move the upgrade authority", [setUpgradeAuthorityInstruction(DKFM, DKFM)], ANY_ERROR),
   await simulate(`ExtendProgram by any payer (${MIN_EXTEND} bytes, no authority)`, [extendInstruction(MIN_EXTEND, FEE_PAYER)]),
