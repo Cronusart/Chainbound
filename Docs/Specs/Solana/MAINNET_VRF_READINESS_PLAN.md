@@ -259,7 +259,7 @@ Draft clauses added on 2026-10-27, marked `[[COUNSEL REVIEW]]` so they are fille
 - **Autofixer:** `program_autofixer` has not run, because the Solana MCP isn't connected in this session. It's still owed; run it before the audit scope freezes.
 
 **Phase 1 on Devnet (2026-10-27, verified from Devnet RPC):**
-- **Upgrade:** first all 20 old-layout test rolls were closed (0 remain open). Then the program was extended by 51,200 bytes (data length now 1,052,912) and upgraded at slot 515,881,383. The on-chain bytecode sha256 equals the build (`1f4293ab…`). The upgrade authority is still DkFm.
+- **Upgrade:** first all 20 old-layout test rolls were closed (0 remain open). Then the program was extended by 51,200 bytes (data length now 1,052,912) and upgraded at slot 515,881,383 (tx `GjekHBXLGF3WAPZHRm7MtkRD81UVBXQ7VyxpupcLcAxgx1oodwG9tbggDM6UcJe48VXjNaYcr4uZ4nXci3vZkje`, finalized). The on-chain bytecode sha256 equals the build (`1f4293ab…`). The upgrade authority is still DkFm.
 - **One ×10 bundle:** one VRF request produced 10 tiers (5 Common, 5 Uncommon). The account is 244 bytes, Consumed, with all 10 on-chain tiers matching the tiers recomputed from its randomness, unused entries left at 255, and the result hash set.
 - **`cancel-check`:**
   - cancel while Pending → `6042 RollCancelTooEarly`;
