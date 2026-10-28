@@ -34,12 +34,26 @@
 
 - **Upgrade authority and `program_authority`:** a Squads v4 multisig vault, one per cluster. Never the same key on Devnet and Mainnet.
 - **`result_authority`:** stays a hot server key (one per cluster). The program limits what it can do, it holds a small SOL float, and the multisig can rotate it with `update_game_config`.
-- **Proposed threshold:** 2-of-3, with:
-  1. Cronus's hardware wallet;
-  2. a second device wallet held by Cronus (for example the Seeker Seed Vault);
-  3. an offline backup key, or a trusted co-signer.
+- **Threshold: 2-of-3, all three keys held by Cronus** (decided 2026-10-27). Each member has one job and lives on a separate device:
 
-  Optionally add a Squads time lock on Mainnet (for example 24 h) so an upgrade is visible before it executes. **Decision needed:** members, threshold, time lock.
+  | Member | Device | Role |
+  |---|---|---|
+  | A | Seeker Seed Vault | Daily approver; the key never leaves the secure element |
+  | B | Phantom, a **fresh account used only for the multisig** | Proposer and second approver from desktop |
+  | C | Offline recovery key | Used only if A or B is lost or compromised |
+
+  - **How to make key C:** run `solana-keygen new --no-outfile` on a machine that is offline at the time. Write the seed phrase on paper, store it somewhere safe, and record only the public key. It never goes on disk, in a password manager synced to the cloud, or in this repo.
+  - **Recovery:** if A or B is lost, C plus the surviving key vote a Squads config change that swaps in a new member.
+  - **Upgrade path:** a hardware wallet can later replace B or C through the same members vote.
+  - **Squads settings:** set the config authority to **none**, so member and threshold changes also need 2-of-3.
+- **Time lock** (decided 2026-10-27):
+  - **Mainnet: 24 h.** Approved upgrades, odds changes and config changes wait 24 h before they can execute. Hotfixes are planned with that delay.
+  - **Devnet: none.** Before Mainnet, rehearse the time lock once on a short-lived Devnet multisig with a short value.
+- **To confirm in the rehearsal:**
+  - Seeker Seed Vault can approve Squads proposals over Mobile Wallet Adapter.
+  - Approvals from both wallets reach the Squads app.
+
+  If the Seed Vault path doesn't work, member A falls back to a second fresh browser-wallet account on a different device until a hardware wallet is added.
 
 ### Program change needed first
 
@@ -225,7 +239,7 @@ Draft clauses added on 2026-10-27, marked `[[COUNSEL REVIEW]]` so they are fille
 |---|---|---|
 | 0 | This plan, and the legal drafts | Done (2026-10-27) |
 | 1 | Program: authority transfer, `cancel_roll`, encounter close; tests; autofixer; Devnet upgrade | Devnet upgrade |
-| 2 | Devnet Squads rehearsal (section 1 steps); `roll.cjs --squads`; runbook | Multisig members and threshold |
+| 2 | Devnet Squads rehearsal (section 1 steps); `roll.cjs --squads`; runbook | Multisig decided; each Devnet authority transfer |
 | 3 | Server and Unity: two-step roll with retry and refund, status endpoint, resume coordinator, odds display, audit endpoint | — |
 | 4 | Audit: scope freeze, quotes, fixes, re-review | Vendor and budget |
 | 5 | Verified build, Mainnet multisig, Mainnet deploy (smoke runbook), odds with the real pool hash | Each Mainnet transaction |
@@ -233,7 +247,7 @@ Draft clauses added on 2026-10-27, marked `[[COUNSEL REVIEW]]` so they are fille
 
 ## Decisions needed
 
-1. Multisig members, threshold and Mainnet time lock.
+1. ~~Multisig members, threshold and Mainnet time lock.~~ Decided 2026-10-27: 2-of-3 solo (Seeker Seed Vault, a fresh Phantom account, an offline recovery key); 24 h time lock on Mainnet, none on Devnet. See section 1.
 2. `ROLL_CANCEL_DELAY_SLOTS` (proposed 150) and max attempts (proposed 2).
 3. Which rolls use VRF (proposed: paid and mintable only).
 4. Audit vendor and budget, and whether the Edge Function settlement is in scope.
