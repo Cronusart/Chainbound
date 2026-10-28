@@ -80,6 +80,18 @@
     1. Run `node tools/vrf-efficacy/squads-signer/server.cjs` and open `http://localhost:8787` (bound to 127.0.0.1 only).
     2. Phantom (desktop): Create proposal (this also records Phantom's approval).
     3. Seeker: run `adb reverse tcp:8787 tcp:8787` over USB, then open `http://localhost:8787` in Chrome on the Seeker. localhost is a secure context, which MWA needs. Approve and execute with the Seed Vault.
+- **`program_authority` handed to the Devnet vault** (2026-10-27, verified from Devnet RPC):
+
+  | Step | Signer | Tx |
+  |---|---|---|
+  | `propose_program_authority(G4eq…)` | DkFm | `47kxUGYVmnTT5VsDCjiQ1HVCUArWFDoywBBjGJrCaUyc7es1k2tpfZ5Pryn3YPwJpUfYSFL7nJYfyiZZ35YqKA7v` |
+  | Vault transaction #1 create, proposal, approve | Phantom `AxrH…` | `46dFBommxYJTEThsG4CYJEQ8QSTUoZ2NnU9Ce4KLkgXXJBMzMxhZtRnDc17UdBBk6PpUALW7ecC6PiF8DXJxB5L6` |
+  | Approve, execute → `AcceptProgramAuthority` | Seeker Seed Vault `9zMw…` over MWA | `2ykKMgC3Yfvq4s2zx37gAyJ6gMfaStDdFcSiLjdjjPi9ruhjwL4HfTx4qP8ESbs6MbFm8nmyfwUhNDAANXRiDH6x` (slot 515,901,688) |
+
+  - **Result:** `GameConfig.program_authority` is now `G4eqvbNwpJazSYkmS6y1Zq4zjLcABrFDZKiPV2JVNP7S`, and the `authority_transfer` PDA is closed.
+  - **Stored instruction:** the vault transaction stored the accept instruction with exactly the expected accounts.
+  - **Seeker:** the Seed Vault can approve and execute Squads transactions over MWA in Chrome. That item in "to confirm in the rehearsal" is done.
+  - **What DkFm can no longer do:** set odds or change `GameConfig`. Those now need 2 of 3. DkFm is still the **upgrade** authority.
 - **Time lock** (decided 2026-10-27):
   - **Mainnet: 24 h.** Approved upgrades, odds changes and config changes wait 24 h before they can execute. Hotfixes are planned with that delay.
   - **Devnet: none.** Before Mainnet, rehearse the time lock once on a short-lived Devnet multisig with a short value.

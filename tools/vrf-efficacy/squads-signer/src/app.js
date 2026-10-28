@@ -75,13 +75,19 @@ async function readProposal(index, transfer) {
     const ixs = vtx.message.instructions;
     const ix = ixs[0];
     const ixKeys = ix ? Array.from(ix.accountIndexes).map((i) => keys[i]) : [];
-    const expected = transfer ? [AUTHORITY_TRANSFER, GAME_CONFIG, VAULT, transfer.current] : [];
+    // Once the accept has executed the proposal account is closed, so the current authority can
+    // only be checked while a handoff is pending.
+    const expected = [AUTHORITY_TRANSFER, GAME_CONFIG, VAULT];
+    const accountsMatch = ixKeys.length === 4 && expected.every((k, i) => ixKeys[i].equals(k)) &&
+      (!transfer || ixKeys[3].equals(transfer.current));
+    const accountsLabel = transfer
+      ? "accounts are transfer, config, vault, current authority"
+      : `accounts are transfer, config, vault (current authority was ${ixKeys[3] ? short(ixKeys[3]) : "?"})`;
     out.checks = [
       ["exactly one instruction", ixs.length === 1],
       ["targets the Chainbound program", Boolean(ix) && keys[ix.programIdIndex].equals(PROGRAM_ID)],
       ["is accept_program_authority", Boolean(ix) && Buffer.from(ix.data).toString("hex") === ACCEPT_DISCRIMINATOR_HEX],
-      ["accounts are transfer, config, vault, current authority",
-        expected.length === 4 && ixKeys.length === 4 && ixKeys.every((k, i) => k.equals(expected[i]))],
+      [accountsLabel, accountsMatch],
       ["vault index 0", vtx.vaultIndex === 0],
     ];
     out.ok = out.checks.every(([, pass]) => pass);
