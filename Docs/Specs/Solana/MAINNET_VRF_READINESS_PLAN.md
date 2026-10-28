@@ -92,6 +92,28 @@
   - **Stored instruction:** the vault transaction stored the accept instruction with exactly the expected accounts.
   - **Seeker:** the Seed Vault can approve and execute Squads transactions over MWA in Chrome. That item in "to confirm in the rehearsal" is done.
   - **What DkFm can no longer do:** set odds or change `GameConfig`. Those now need 2 of 3. DkFm is still the **upgrade** authority.
+- **Signing page, version 2** (2026-10-27): it now proposes, decodes and shows four kinds of vault transaction. The instruction builders live in `src/instructions.mjs`, shared by the page and `simulate.mjs`.
+
+  | Proposal | Inner instruction | What approvers see decoded |
+  |---|---|---|
+  | Change roll odds | `update_roll_odds` | kind, per-tier %, pool hash, threshold validity |
+  | Upgrade program | loader `Upgrade` | buffer address, size, sha256 (compare with the build), buffer authority, spill |
+  | Recovery | loader `SetAuthority` | the new upgrade authority (default DkFm) |
+  | Accept | `accept_program_authority` | the previous authority |
+
+  - **Reject:** a Reject button clears a bad proposal (2 rejections).
+  - **`simulate.mjs` on Devnet, all PASS:**
+    - the vault updates Known odds;
+    - DkFm updating odds now fails with `6012 InvalidAuthority`;
+    - DkFm `SetAuthority` → vault succeeds;
+    - in the same transaction, vault `SetAuthority` → DkFm also succeeds, which proves the recovery exit works once the vault holds the upgrade authority.
+  - **Not offered:** `extend`, and `initialize_roll_odds`. Both odds accounts already exist.
+- **Next, upgrade under the multisig:**
+  1. Run `set-upgrade-authority` to move the upgrade authority to the vault (DkFm signs).
+  2. `solana program write-buffer` the current build.
+  3. `set-buffer-authority` to the vault.
+  4. Create an Upgrade proposal with spill = DkFm; Phantom creates it, and the Seeker approves and executes.
+  5. Verify the programdata hash matches the build.
 - **Time lock** (decided 2026-10-27):
   - **Mainnet: 24 h.** Approved upgrades, odds changes and config changes wait 24 h before they can execute. Hotfixes are planned with that delay.
   - **Devnet: none.** Before Mainnet, rehearse the time lock once on a short-lived Devnet multisig with a short value.

@@ -20,12 +20,17 @@
     .pass { color: var(--ok); }
     .fail { color: var(--bad); }
     .log { font-family: ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; padding: 2px 0; }
+    .title { font-weight: 600; margin: 6px 0 2px; }
+    .detail { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
+    label { display: block; margin: 8px 0 2px; color: var(--muted); font-size: 13px; }
+    input, select { font: inherit; width: 100%; box-sizing: border-box; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+    .warn { color: var(--bad); font-size: 13px; margin-top: 8px; }
   </style>
 </head>
 <body>
 <main>
-  <h1>Devnet authority handoff</h1>
-  <p class="note">Devnet only. Moves <code>GameConfig.program_authority</code> to the Squads vault by having the vault sign <code>accept_program_authority</code>. Set your wallet to Devnet; the page sends through a Devnet RPC itself.</p>
+  <h1>Devnet vault signer</h1>
+  <p class="note">Devnet only. Proposals, approvals and execution for the Squads vault that holds Chainbound's authorities. Set your wallet to Devnet; the page sends through a Devnet RPC itself.</p>
 
   <section>
     <dl>
@@ -33,6 +38,7 @@
       <dt>Vault</dt><dd id="vault"></dd>
       <dt>Threshold</dt><dd id="threshold">…</dd>
       <dt>Program authority</dt><dd id="authority">…</dd>
+      <dt>Upgrade authority</dt><dd id="upgrade-authority">…</dd>
       <dt>Pending handoff</dt><dd id="pending">…</dd>
       <dt>Your wallet</dt><dd id="who">not connected</dd>
       <dt>Status</dt><dd id="status">loading…</dd>
@@ -44,12 +50,54 @@
   </section>
 
   <section>
-    <div id="proposal">…</div>
+    <label for="index">Show multisig transaction # (blank = latest)</label>
+    <input id="index" inputmode="numeric" placeholder="latest">
+    <div id="proposal" style="margin-top:10px">…</div>
     <div style="margin-top:10px">
-      <button id="create" disabled>Create proposal (and approve)</button>
       <button id="approve" disabled>Approve</button>
+      <button id="reject" disabled>Reject</button>
       <button id="execute" disabled>Execute</button>
       <button id="refresh">Refresh</button>
+    </div>
+  </section>
+
+  <section>
+    <label for="type">New proposal</label>
+    <select id="type">
+      <option value="odds">Change roll odds</option>
+      <option value="upgrade">Upgrade program from a buffer</option>
+      <option value="recovery">Recovery: hand the upgrade authority back</option>
+      <option value="accept">Accept program authority (pending handoff)</option>
+    </select>
+
+    <div id="form-odds">
+      <label for="odds-kind">Kind</label>
+      <select id="odds-kind"><option value="known">Known</option><option value="stamp">Stamp</option></select>
+      <label for="odds-preset">Curve</label>
+      <select id="odds-preset"><option value="ultra">Ultra (Mythic 0.02%)</option><option value="steep">Steep (Mythic 0.05%)</option></select>
+      <label for="odds-pool">Pool hash (blank keeps the current one)</label>
+      <input id="odds-pool" spellcheck="false">
+    </div>
+
+    <div id="form-upgrade" hidden>
+      <label for="upgrade-buffer">Buffer address (from <code>solana program write-buffer</code>; its authority must be the vault)</label>
+      <input id="upgrade-buffer" spellcheck="false">
+      <label for="upgrade-spill">Spill address for the buffer's rent (blank = your wallet)</label>
+      <input id="upgrade-spill" spellcheck="false">
+    </div>
+
+    <div id="form-recovery" hidden>
+      <label for="recovery-target">New upgrade authority (blank = DkFm)</label>
+      <input id="recovery-target" spellcheck="false">
+      <div class="warn">Takes the upgrade authority away from the multisig. Use only to recover.</div>
+    </div>
+
+    <div id="form-accept" hidden>
+      <div class="detail">Builds accept_program_authority for the pending handoff shown above.</div>
+    </div>
+
+    <div style="margin-top:10px">
+      <button id="create" disabled>Create proposal (and approve)</button>
     </div>
   </section>
 
