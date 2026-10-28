@@ -42,7 +42,14 @@ build().then(() => {
     }
     res.writeHead(200, { "content-type": entry[1], "cache-control": "no-store" });
     fs.createReadStream(path.join(root, entry[0])).pipe(res);
-  }).listen(port, "127.0.0.1", () => console.log(`signing page: http://localhost:${port}`));
+  })
+    .on("error", (error) => {
+      if (error.code !== "EADDRINUSE") throw error;
+      console.error(`port ${port} is already in use: the page is probably already running at http://localhost:${port}`);
+      console.error("stop the other server first, or pass --port <another port>");
+      process.exitCode = 1;
+    })
+    .listen(port, "127.0.0.1", () => console.log(`signing page: http://localhost:${port}`));
 }).catch((error) => {
   console.error(`build failed: ${error.message}`);
   process.exitCode = 1;
