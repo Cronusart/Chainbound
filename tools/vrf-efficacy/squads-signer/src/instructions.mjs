@@ -1,7 +1,7 @@
 // Inner instructions the Devnet vault can sign. Shared by the signing page and the Node smoke test
 // (simulate.cjs) so both build byte-identical instructions.
 import * as multisig from "@sqds/multisig";
-import { PublicKey, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY, TransactionInstruction } from "@solana/web3.js";
+import { PublicKey, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY, SystemProgram, TransactionInstruction } from "@solana/web3.js";
 
 export const PROGRAM_ID = new PublicKey("9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ");
 export const MULTISIG = new PublicKey("9kcMg2WKwF2XdUBuKnpHnso4PRuVNPVgg1VuGtbjAv9m");
@@ -68,6 +68,43 @@ export function upgradeInstruction(buffer, spill, authority = VAULT) {
       { pubkey: authority, isSigner: true, isWritable: false },
     ],
     data: Buffer.from(LOADER_UPGRADE_HEX, "hex"),
+  });
+}
+
+const extendData = (variant, additionalBytes) => {
+  const b = Buffer.alloc(8);
+  b.writeUInt32LE(variant, 0);
+  b.writeUInt32LE(additionalBytes, 4);
+  return b;
+};
+
+// ExtendProgram (variant 6): no authority, any payer. The loader requires at least 10,240 bytes.
+export function extendInstruction(additionalBytes, payer) {
+  return new TransactionInstruction({
+    programId: LOADER,
+    keys: [
+      { pubkey: PROGRAMDATA, isSigner: false, isWritable: true },
+      { pubkey: PROGRAM_ID, isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: payer, isSigner: true, isWritable: true },
+    ],
+    data: extendData(6, additionalBytes),
+  });
+}
+
+// ExtendProgramChecked (variant 9): needs the upgrade authority. Inactive behind feature gate
+// 2oMRZEDWT2tqtYMofhmmfQ8SsjqUFzT6sYXppQDavxwz on Devnet and Mainnet as of 2026-10-27.
+export function extendCheckedInstruction(additionalBytes, payer, authority = VAULT) {
+  return new TransactionInstruction({
+    programId: LOADER,
+    keys: [
+      { pubkey: PROGRAMDATA, isSigner: false, isWritable: true },
+      { pubkey: PROGRAM_ID, isSigner: false, isWritable: true },
+      { pubkey: authority, isSigner: true, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: payer, isSigner: true, isWritable: true },
+    ],
+    data: extendData(9, additionalBytes),
   });
 }
 

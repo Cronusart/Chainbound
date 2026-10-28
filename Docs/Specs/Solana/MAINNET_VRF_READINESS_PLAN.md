@@ -123,7 +123,12 @@
   - **What this proves:** the whole Mainnet upgrade path works with these wallets: buffer, vault proposal, 2-of-3 approval with Phantom and the Seed Vault, execute.
   - **Still owed:**
     - the time-lock rehearsal on a short-lived multisig;
-    - an extend proposal type, needed before any build outgrows the current 1,052,912-byte programdata;
+    - ~~an extend proposal type~~ **not needed today** (2026-10-27): extending doesn't require the upgrade authority on either network.
+      - **What simulation showed on Devnet:** `ExtendProgram` (loader variant 6) succeeds with any payer and no authority, minimum 10,240 bytes. `ExtendProgramChecked` (variant 9) is rejected.
+      - **Why:** its feature gate `2oMRZEDWT2tqtYMofhmmfQ8SsjqUFzT6sYXppQDavxwz` is **inactive on both Devnet and Mainnet** (`solana feature status`).
+      - **So:** `solana program extend` runs from the CLI with any funded payer. The signing page refuses an upgrade whose buffer doesn't fit and prints the extend command.
+      - **When the gate activates:** `simulate.mjs` will start failing its "ExtendProgramChecked still inactive" check. Extend then needs a vault proposal, and the vault itself must hold SOL for the rent, because only the vault can sign inside a vault transaction.
+      - **Side effect:** anyone can extend the program. That only costs the extender rent, and grants no control over the program;
     - executing the recovery proposal once, if wanted. It has only been simulated so far.
 - **Original upgrade checklist** (done above):
   1. Run `set-upgrade-authority` to move the upgrade authority to the vault (DkFm signs).

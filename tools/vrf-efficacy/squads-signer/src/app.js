@@ -76,10 +76,22 @@ async function sha256Hex(bytes) {
 
 // ---- chain reads
 
-async function readUpgradeAuthority() {
+const PROGRAMDATA_HEADER_LEN = 45;
+
+// ProgramData: enum(4) slot(8) Option<Pubkey>(1 + 32), then room for the program bytes.
+async function readProgramData() {
   const info = await connection.getAccountInfo(PROGRAMDATA, "confirmed");
-  // ProgramData: enum(4) slot(8) Option<Pubkey>(1 + 32)
-  return info && info.data[12] === 1 ? new PublicKey(info.data.subarray(13, 45)) : null;
+  return {
+    authority: info && info.data[12] === 1 ? new PublicKey(info.data.subarray(13, PROGRAMDATA_HEADER_LEN)) : null,
+    capacity: info ? info.data.length - PROGRAMDATA_HEADER_LEN : 0,
+  };
+}
+
+// Extend is permissionless while the ExtendProgramChecked feature gate is inactive (checked
+// 2026-10-27 on Devnet and Mainnet), so it runs from the CLI rather than as a vault proposal.
+function extendHint(needed, capacity) {
+  const extra = Math.max(10_240, needed - capacity);
+  return `solana program extend ${PROGRAM_ID.toBase58()} ${extra} --url devnet --keypair <any funded payer>`;
 }
 
 async function readOdds(kind) {
@@ -108,9 +120,11 @@ async function readChain() {
   const config = await connection.getAccountInfo(GAME_CONFIG, "confirmed");
   const transferInfo = await connection.getAccountInfo(AUTHORITY_TRANSFER, "confirmed");
   const ms = await multisig.accounts.Multisig.fromAccountAddress(connection, MULTISIG);
+  const programData = await readProgramData();
   return {
     programAuthority: new PublicKey(config.data.subarray(8, 40)),
-    upgradeAuthority: await readUpgradeAuthority(),
+    upgradeAuthority: programData.authority,
+    capacity: programData.capacity,
     transfer: transferInfo && {
       current: new PublicKey(transferInfo.data.subarray(8, 40)),
       pending: new PublicKey(transferInfo.data.subarray(40, 72)),
@@ -172,6 +186,9 @@ async function decodeInner(ix, ixKeys, programId, transfer) {
         ["accounts are programdata, program, buffer, spill, rent, clock, vault",
           ixKeys.length === 7 && keysEqual([ixKeys[0], ixKeys[1]], [PROGRAMDATA, PROGRAM_ID]) &&
           keysEqual(ixKeys.slice(4), [SYSVAR_RENT_PUBKEY, SYSVAR_CLOCK_PUBKEY, VAULT])],
+        // An executed upgrade closes its buffer, so the fit can only be checked while it exists.
+        ...(buffer ? [[`buffer fits the program (${buffer.length} of ${state.chain.capacity} bytes)`,
+          buffer.length <= state.chain.capacity]] : []),
       ],
     };
   }
@@ -248,6 +265,9 @@ async function buildFromForm() {
     if (!info) throw new Error("that address is not an upgradeable-loader buffer");
     if (!info.authority || !info.authority.equals(VAULT)) {
       throw new Error(`buffer authority is ${info.authority ? info.authority.toBase58() : "none"}; run set-buffer-authority to the vault first`);
+    }
+    if (info.length > state.chain.capacity) {
+      throw new Error(`buffer is ${info.length} bytes but the program has room for ${state.chain.capacity}; extend first: ${extendHint(info.length, state.chain.capacity)}`);
     }
     const spill = new PublicKey(($("upgrade-spill").value || state.account.address).trim());
     log(`buffer ${buffer.toBase58()}: ${info.length} bytes, sha256 ${info.sha256}`);
