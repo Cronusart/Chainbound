@@ -140,7 +140,7 @@ Public audit tool: given an operation ID, it fetches the PDA, recomputes the res
 |---|---|
 | Request transaction fails | Operation stays `vrf_pending` with no PDA; reconcile retries the request with the same seed (the PDA doesn't exist yet) |
 | Oracle doesn't fulfill within T | Stays pending; the client shows "still rolling" and resumes later. T = 10 s, from the efficacy latency sample (confirmed p90 1,994 ms) |
-| Oracle never fulfills | **Open question:** does MagicBlock support re-requesting for an existing PDA? If not, after a long deadline cancel the operation and release the RAM reservation. Never fall back to HMAC entropy for the same operation |
+| Oracle never fulfills | `cancel_roll` (result authority, Pending only, at least 150 slots after request) marks the PDA Cancelled, so a late callback fails. Reconcile retries once under a new operation hash (a new PDA, so MagicBlock never needs a re-request), then releases the RAM reservation. Never fall back to HMAC entropy for the same operation. See [MAINNET_VRF_READINESS_PLAN.md §4](../Solana/MAINNET_VRF_READINESS_PLAN.md#4-roll-timeouts-retry-and-refund) |
 | Settle fails after fulfill | Reconcile retries; settlement is idempotent on the operation ID |
 
 ## Cost (measured in efficacy run 1)

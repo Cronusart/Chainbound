@@ -51,11 +51,16 @@ const ROLL_KIND_STAMP: u8 = 2;
 const ROLL_PENDING: u8 = 0;
 const ROLL_FULFILLED: u8 = 1;
 const ROLL_CONSUMED: u8 = 2;
+const ROLL_CANCELLED: u8 = 3;
 const ROLL_TIER_COUNT: usize = 6;
 const ROLL_TIER_UNSET: u8 = u8::MAX;
 const ROLL_PPM_TOTAL: u32 = 1_000_000;
 // About an hour of Devnet slots; the retention window is still an open design decision.
 const ROLL_CLOSE_DELAY_SLOTS: u64 = 9_000;
+// About a minute: well past the measured p90 fulfill of ~2 s, so only a stuck request is cancelled.
+const ROLL_CANCEL_DELAY_SLOTS: u64 = 150;
+// Encounter requests keep the same retention as rolls before their rent can be reclaimed.
+const ENCOUNTER_CLOSE_DELAY_SLOTS: u64 = ROLL_CLOSE_DELAY_SLOTS;
 const ROLL_SEED_DOMAIN: &[u8] = b"chainbound:roll:v1";
 
 #[program]
@@ -111,6 +116,49 @@ pub mod chainbound_game {
         config.ram_daily_cap = ram_daily_cap;
         config.ram_per_burn = ram_per_burn;
         config.instruction_flags = instruction_flags;
+        Ok(())
+    }
+
+    /// Step one of handing config control to a new authority (for example a multisig vault).
+    /// Nothing changes until the new authority accepts, so a mistyped key can't lock the config.
+    pub fn propose_program_authority(
+        ctx: Context<ProposeProgramAuthority>,
+        new_authority: Pubkey,
+    ) -> Result<()> {
+        validate_authority_proposal(&ctx.accounts.game_config.program_authority, &new_authority)?;
+        let transfer = &mut ctx.accounts.authority_transfer;
+        transfer.current_authority = ctx.accounts.program_authority.key();
+        transfer.pending_authority = new_authority;
+        transfer.proposed_at_slot = Clock::get()?.slot;
+        transfer.bump = ctx.bumps.authority_transfer;
+        emit!(ProgramAuthorityProposed {
+            current_authority: transfer.current_authority,
+            pending_authority: new_authority,
+        });
+        Ok(())
+    }
+
+    /// Step two: the pending authority signs to take control. The proposal's rent goes back to
+    /// the authority that paid for it.
+    pub fn accept_program_authority(ctx: Context<AcceptProgramAuthority>) -> Result<()> {
+        let config = &mut ctx.accounts.game_config;
+        let previous_authority = config.program_authority;
+        config.program_authority = ctx.accounts.pending_authority.key();
+        emit!(ProgramAuthorityTransferred {
+            previous_authority,
+            new_authority: config.program_authority,
+        });
+        Ok(())
+    }
+
+    /// Withdraws an unaccepted proposal so a different authority can be proposed.
+    pub fn cancel_program_authority_transfer(
+        ctx: Context<CancelProgramAuthorityTransfer>,
+    ) -> Result<()> {
+        emit!(ProgramAuthorityTransferCancelled {
+            current_authority: ctx.accounts.program_authority.key(),
+            pending_authority: ctx.accounts.authority_transfer.pending_authority,
+        });
         Ok(())
     }
 
@@ -1230,6 +1278,15 @@ pub mod chainbound_game {
         ctx.accounts.encounter_request.consume()
     }
 
+    /// Returns a consumed encounter request's rent to the player who paid it, after the
+    /// retention window. Anyone may send it (for example a server sweep); the rent can only go
+    /// to the request's owner.
+    pub fn close_encounter_request(ctx: Context<CloseEncounterRequest>) -> Result<()> {
+        ctx.accounts
+            .encounter_request
+            .ensure_closable(Clock::get()?.slot)
+    }
+
     /// Creates the published tier odds for one roll kind. Thresholds are cumulative parts per
     /// million, Common..Mythic.
     pub fn initialize_roll_odds(
@@ -1364,8 +1421,23 @@ pub mod chainbound_game {
         Ok(())
     }
 
-    /// Returns a consumed request's rent once the retention window has passed. Events keep the
-    /// audit trail.
+    /// Cancels a request the oracle never fulfilled. Only a Pending request qualifies, so a
+    /// cancel can never discard randomness that was already drawn; a late callback then fails on
+    /// the status check. The server retries under a new operation hash or releases the RAM.
+    pub fn cancel_roll(ctx: Context<CancelRoll>) -> Result<()> {
+        let request = &mut ctx.accounts.roll_request;
+        request.cancel(Clock::get()?.slot)?;
+        emit!(RollCancelled {
+            kind: request.kind,
+            operation_hash: request.operation_hash,
+            requested_at_slot: request.requested_at_slot,
+            cancelled_at_slot: request.consumed_at_slot,
+        });
+        Ok(())
+    }
+
+    /// Returns a consumed or cancelled request's rent once the retention window has passed.
+    /// Events keep the audit trail.
     pub fn close_roll(ctx: Context<CloseRoll>) -> Result<()> {
         ctx.accounts
             .roll_request
@@ -1405,6 +1477,67 @@ pub struct UpdateGameConfig<'info> {
         has_one = program_authority @ ChainboundError::InvalidAuthority
     )]
     pub config: Account<'info, GameConfig>,
+    pub program_authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ProposeProgramAuthority<'info> {
+    #[account(
+        init,
+        payer = program_authority,
+        space = 8 + AuthorityTransfer::LEN,
+        seeds = [b"authority_transfer"],
+        bump
+    )]
+    pub authority_transfer: Account<'info, AuthorityTransfer>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = program_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
+    pub program_authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AcceptProgramAuthority<'info> {
+    #[account(
+        mut,
+        close = current_authority,
+        seeds = [b"authority_transfer"],
+        bump = authority_transfer.bump,
+        constraint = authority_transfer.pending_authority == pending_authority.key()
+            @ ChainboundError::InvalidAuthorityTransfer,
+        constraint = authority_transfer.current_authority == game_config.program_authority
+            @ ChainboundError::InvalidAuthorityTransfer
+    )]
+    pub authority_transfer: Account<'info, AuthorityTransfer>,
+    #[account(mut, seeds = [b"game_config"], bump = game_config.bump)]
+    pub game_config: Account<'info, GameConfig>,
+    pub pending_authority: Signer<'info>,
+    /// CHECK: Only receives the proposal's rent; pinned to the authority that paid it.
+    #[account(mut, address = authority_transfer.current_authority @ ChainboundError::InvalidAuthorityTransfer)]
+    pub current_authority: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CancelProgramAuthorityTransfer<'info> {
+    #[account(
+        mut,
+        close = program_authority,
+        seeds = [b"authority_transfer"],
+        bump = authority_transfer.bump
+    )]
+    pub authority_transfer: Account<'info, AuthorityTransfer>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = program_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    #[account(mut)]
     pub program_authority: Signer<'info>,
 }
 
@@ -1747,6 +1880,21 @@ pub struct ConsumeEncounterRandomness<'info> {
 }
 
 #[derive(Accounts)]
+pub struct CloseEncounterRequest<'info> {
+    #[account(
+        mut,
+        close = owner,
+        seeds = [b"encounter_request", owner.key().as_ref(), encounter_request.request_seed.as_ref()],
+        bump = encounter_request.bump,
+        has_one = owner @ ChainboundError::InvalidAuthority
+    )]
+    pub encounter_request: Account<'info, EncounterRequest>,
+    /// CHECK: Pinned by `has_one` and the PDA seeds; it only receives the rent it paid.
+    #[account(mut)]
+    pub owner: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
 #[instruction(kind: u8)]
 pub struct InitializeRollOdds<'info> {
     #[account(
@@ -1824,6 +1972,27 @@ pub struct FulfillRoll<'info> {
 
 #[derive(Accounts)]
 pub struct ConsumeRoll<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"roll_request",
+            roll_request.kind.to_le_bytes().as_ref(),
+            roll_request.operation_hash.as_ref()
+        ],
+        bump = roll_request.bump
+    )]
+    pub roll_request: Account<'info, RollRequest>,
+    #[account(
+        seeds = [b"game_config"],
+        bump = game_config.bump,
+        has_one = result_authority @ ChainboundError::InvalidAuthority
+    )]
+    pub game_config: Account<'info, GameConfig>,
+    pub result_authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct CancelRoll<'info> {
     #[account(
         mut,
         seeds = [
@@ -2286,6 +2455,28 @@ impl GameConfig {
     pub const LEN: usize = 32 + 32 + 2 + 2 + 4 + 8 + 1;
 }
 
+/// A pending `program_authority` handoff. Kept outside `GameConfig` so the config layout and
+/// size never change.
+#[account]
+pub struct AuthorityTransfer {
+    pub current_authority: Pubkey,
+    pub pending_authority: Pubkey,
+    pub proposed_at_slot: u64,
+    pub bump: u8,
+}
+
+impl AuthorityTransfer {
+    pub const LEN: usize = 32 + 32 + 8 + 1;
+}
+
+fn validate_authority_proposal(current: &Pubkey, proposed: &Pubkey) -> Result<()> {
+    require!(
+        *proposed != Pubkey::default() && proposed != current,
+        ChainboundError::InvalidAuthorityTransfer
+    );
+    Ok(())
+}
+
 #[account]
 pub struct PlayerProfile {
     pub owner: Pubkey,
@@ -2421,6 +2612,23 @@ impl EncounterRequest {
         self.status = ENCOUNTER_CONSUMED;
         Ok(())
     }
+
+    /// The layout has no consume slot, so retention counts from fulfillment.
+    fn ensure_closable(&self, current_slot: u64) -> Result<()> {
+        require!(
+            self.status == ENCOUNTER_CONSUMED,
+            ChainboundError::InvalidEncounterStatus
+        );
+        let open_at = self
+            .fulfilled_at_slot
+            .checked_add(ENCOUNTER_CLOSE_DELAY_SLOTS)
+            .ok_or(ChainboundError::ArithmeticOverflow)?;
+        require!(
+            current_slot >= open_at,
+            ChainboundError::EncounterCloseTooEarly
+        );
+        Ok(())
+    }
 }
 
 #[account]
@@ -2483,9 +2691,26 @@ impl RollRequest {
         Ok(())
     }
 
+    /// Records the cancel slot in `consumed_at_slot`, which doubles as the settled slot that the
+    /// retention window counts from. Randomness and tier stay unset.
+    fn cancel(&mut self, current_slot: u64) -> Result<()> {
+        require!(
+            self.status == ROLL_PENDING,
+            ChainboundError::InvalidRollStatus
+        );
+        let cancel_at = self
+            .requested_at_slot
+            .checked_add(ROLL_CANCEL_DELAY_SLOTS)
+            .ok_or(ChainboundError::ArithmeticOverflow)?;
+        require!(current_slot >= cancel_at, ChainboundError::RollCancelTooEarly);
+        self.consumed_at_slot = current_slot;
+        self.status = ROLL_CANCELLED;
+        Ok(())
+    }
+
     fn ensure_closable(&self, current_slot: u64) -> Result<()> {
         require!(
-            self.status == ROLL_CONSUMED,
+            self.status == ROLL_CONSUMED || self.status == ROLL_CANCELLED,
             ChainboundError::InvalidRollStatus
         );
         let open_at = self
@@ -2813,6 +3038,32 @@ pub struct RollConsumed {
     pub operation_hash: [u8; 32],
     pub tier: u8,
     pub result_hash: [u8; 32],
+}
+
+#[event]
+pub struct RollCancelled {
+    pub kind: u8,
+    pub operation_hash: [u8; 32],
+    pub requested_at_slot: u64,
+    pub cancelled_at_slot: u64,
+}
+
+#[event]
+pub struct ProgramAuthorityProposed {
+    pub current_authority: Pubkey,
+    pub pending_authority: Pubkey,
+}
+
+#[event]
+pub struct ProgramAuthorityTransferred {
+    pub previous_authority: Pubkey,
+    pub new_authority: Pubkey,
+}
+
+#[event]
+pub struct ProgramAuthorityTransferCancelled {
+    pub current_authority: Pubkey,
+    pub pending_authority: Pubkey,
 }
 
 #[event]
@@ -3270,6 +3521,12 @@ pub enum ChainboundError {
     InvalidRollResult,
     #[msg("Roll request retention window has not passed.")]
     RollCloseTooEarly,
+    #[msg("Roll request is still inside its fulfillment window and cannot be cancelled yet.")]
+    RollCancelTooEarly,
+    #[msg("Authority transfer target is invalid, or does not match the pending proposal.")]
+    InvalidAuthorityTransfer,
+    #[msg("Encounter request retention window has not passed.")]
+    EncounterCloseTooEarly,
 }
 
 #[cfg(test)]
@@ -3490,6 +3747,77 @@ mod tests {
             .ensure_closable(200 + ROLL_CLOSE_DELAY_SLOTS - 1)
             .is_err());
         assert!(request.ensure_closable(200 + ROLL_CLOSE_DELAY_SLOTS).is_ok());
+    }
+
+    #[test]
+    fn roll_cancel_only_from_pending_after_the_fulfillment_window() {
+        let mut request = test_roll_request();
+        let cancel_at = request.requested_at_slot + ROLL_CANCEL_DELAY_SLOTS;
+        assert!(request.cancel(cancel_at - 1).is_err());
+        request.cancel(cancel_at).unwrap();
+        assert_eq!(request.status, ROLL_CANCELLED);
+        assert_eq!(request.tier, ROLL_TIER_UNSET);
+        assert_eq!(request.randomness, [0; 32]);
+        assert_eq!(request.consumed_at_slot, cancel_at);
+
+        // A late oracle callback, a consume and a second cancel all fail.
+        assert!(request.fulfill(bytes_with_draw(999_900), cancel_at + 1).is_err());
+        assert!(request.consume([9; 32], cancel_at + 1).is_err());
+        assert!(request.cancel(cancel_at + 1).is_err());
+        assert_eq!(request.randomness, [0; 32]);
+
+        assert!(request
+            .ensure_closable(cancel_at + ROLL_CLOSE_DELAY_SLOTS - 1)
+            .is_err());
+        assert!(request
+            .ensure_closable(cancel_at + ROLL_CLOSE_DELAY_SLOTS)
+            .is_ok());
+    }
+
+    #[test]
+    fn roll_cancel_cannot_discard_drawn_randomness() {
+        let mut fulfilled = test_roll_request();
+        fulfilled.fulfill(bytes_with_draw(5), 101).unwrap();
+        assert!(fulfilled.cancel(u64::MAX).is_err());
+        assert_eq!(fulfilled.status, ROLL_FULFILLED);
+
+        let mut consumed = test_roll_request();
+        consumed.fulfill(bytes_with_draw(5), 101).unwrap();
+        consumed.consume([1; 32], 102).unwrap();
+        assert!(consumed.cancel(u64::MAX).is_err());
+        assert_eq!(consumed.status, ROLL_CONSUMED);
+    }
+
+    #[test]
+    fn authority_proposal_rejects_default_and_current_keys() {
+        let current = Pubkey::new_unique();
+        let next = Pubkey::new_unique();
+        assert!(validate_authority_proposal(&current, &next).is_ok());
+        assert!(validate_authority_proposal(&current, &current).is_err());
+        assert!(validate_authority_proposal(&current, &Pubkey::default()).is_err());
+    }
+
+    #[test]
+    fn encounter_close_requires_consumed_and_retention_window() {
+        let mut request = EncounterRequest {
+            status: ENCOUNTER_PENDING,
+            randomness: [0; 32],
+            owner: Pubkey::new_unique(),
+            request_seed: [1; 32],
+            requested_at_slot: 10,
+            fulfilled_at_slot: 0,
+            bump: 1,
+        };
+        assert!(request.ensure_closable(u64::MAX).is_err());
+        request.fulfill([2; 32], 20).unwrap();
+        assert!(request.ensure_closable(u64::MAX).is_err());
+        request.consume().unwrap();
+        assert!(request
+            .ensure_closable(20 + ENCOUNTER_CLOSE_DELAY_SLOTS - 1)
+            .is_err());
+        assert!(request
+            .ensure_closable(20 + ENCOUNTER_CLOSE_DELAY_SLOTS)
+            .is_ok());
     }
 
     #[test]

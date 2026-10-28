@@ -9,6 +9,14 @@
 //   node tools/vrf-efficacy/roll.cjs run --keypair <result authority> [--kind known] [--runs 10]
 //          [--gap 3] [--timeout 60] [--out vrf-roll-results.jsonl] [--dry-run]
 //   node tools/vrf-efficacy/roll.cjs close --keypair <result authority> --results <file>
+//   node tools/vrf-efficacy/roll.cjs cancel-check --keypair <result authority> [--kind known]
+//          [--out vrf-roll-results.jsonl]
+//   node tools/vrf-efficacy/roll.cjs show-authority
+//   node tools/vrf-efficacy/roll.cjs propose-authority --keypair <program authority> --new <vault>
+//          [--dry-run]
+//   node tools/vrf-efficacy/roll.cjs cancel-authority-transfer --keypair <program authority> [--dry-run]
+//   node tools/vrf-efficacy/roll.cjs accept-authority-ix --new <vault>   (prints the instruction for
+//          the multisig to sign; it never signs anything)
 const fs = require("fs");
 const crypto = require("crypto");
 const { web3, DEFAULT_RPC, PROGRAM_ID, ORACLE_QUEUE, scopedVrfIdentity, simulateUnsigned, customErrorCode, parseArgs } =
@@ -29,6 +37,11 @@ const ODDS = {
 // Placeholder until CombatServerTablesExporter generates the per-tier pools and their hash.
 const DRAFT_POOL_HASH = sha256(Buffer.from("chainbound:roll-pools:draft-devnet-test"));
 const ROLL_CLOSE_DELAY_SLOTS = 9_000;
+const ROLL_CANCEL_DELAY_SLOTS = 150;
+const ROLL_CONSUMED = 2;
+const ROLL_CANCELLED = 3;
+const ERR_INVALID_ROLL_STATUS = 6039;
+const ERR_ROLL_CANCEL_TOO_EARLY = 6042;
 
 function sha256(...parts) {
   const h = crypto.createHash("sha256");
@@ -60,6 +73,7 @@ const gameConfigPda = () => pda([Buffer.from("game_config")]);
 const rollOddsPda = (kind) => pda([Buffer.from("roll_odds"), Buffer.from([kind])]);
 const rollRequestPda = (kind, opHash) => pda([Buffer.from("roll_request"), Buffer.from([kind]), opHash]);
 const programIdentity = () => pda([Buffer.from("identity")]);
+const authorityTransferPda = () => pda([Buffer.from("authority_transfer")]);
 
 // RollOdds: disc(8) kind(1) odds_version(4) cumulative_ppm(24) pool_hash(32) bump(1)
 async function readOdds(connection, kind) {
@@ -154,6 +168,68 @@ function closeRollIx(authority, address) {
     ],
     data: disc("close_roll"),
   });
+}
+
+function cancelRollIx(authority, address) {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    keys: [
+      { pubkey: address, isSigner: false, isWritable: true },
+      { pubkey: gameConfigPda(), isSigner: false, isWritable: false },
+      { pubkey: authority, isSigner: true, isWritable: false },
+    ],
+    data: disc("cancel_roll"),
+  });
+}
+
+function proposeAuthorityIx(authority, newAuthority) {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    keys: [
+      { pubkey: authorityTransferPda(), isSigner: false, isWritable: true },
+      { pubkey: gameConfigPda(), isSigner: false, isWritable: false },
+      { pubkey: authority, isSigner: true, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.concat([disc("propose_program_authority"), newAuthority.toBuffer()]),
+  });
+}
+
+function acceptAuthorityIx(newAuthority, currentAuthority) {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    keys: [
+      { pubkey: authorityTransferPda(), isSigner: false, isWritable: true },
+      { pubkey: gameConfigPda(), isSigner: false, isWritable: true },
+      { pubkey: newAuthority, isSigner: true, isWritable: false },
+      { pubkey: currentAuthority, isSigner: false, isWritable: true },
+    ],
+    data: disc("accept_program_authority"),
+  });
+}
+
+function cancelAuthorityTransferIx(authority) {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    keys: [
+      { pubkey: authorityTransferPda(), isSigner: false, isWritable: true },
+      { pubkey: gameConfigPda(), isSigner: false, isWritable: false },
+      { pubkey: authority, isSigner: true, isWritable: true },
+    ],
+    data: disc("cancel_program_authority_transfer"),
+  });
+}
+
+// AuthorityTransfer: disc(8) current_authority(32) pending_authority(32) proposed_at_slot(8) bump(1)
+async function readAuthorityTransfer(connection) {
+  const info = await connection.getAccountInfo(authorityTransferPda(), "confirmed");
+  if (!info) return null;
+  const d = info.data;
+  return {
+    currentAuthority: new PublicKey(d.subarray(8, 40)).toBase58(),
+    pendingAuthority: new PublicKey(d.subarray(40, 72)).toBase58(),
+    proposedAtSlot: Number(d.readBigUInt64LE(72)),
+  };
 }
 
 function loadKeypair(file) {
@@ -330,7 +406,8 @@ async function closeRolls(connection, args) {
     const address = new PublicKey(r.pda);
     const roll = await readRoll(connection, address);
     if (!roll) continue;
-    if (roll.status !== 2 || slot < roll.consumedAtSlot + ROLL_CLOSE_DELAY_SLOTS) {
+    const settled = roll.status === ROLL_CONSUMED || roll.status === ROLL_CANCELLED;
+    if (!settled || slot < roll.consumedAtSlot + ROLL_CLOSE_DELAY_SLOTS) {
       console.log(`skip ${r.pda}: status ${roll.status}, opens at slot ${roll.consumedAtSlot + ROLL_CLOSE_DELAY_SLOTS} (now ${slot})`);
       continue;
     }
@@ -338,6 +415,110 @@ async function closeRolls(connection, args) {
     closed++;
   }
   console.log(`${closed} closed`);
+}
+
+async function expectSimError(connection, payer, ix, expected) {
+  const sim = await simulateUnsigned(connection, payer, [ix]);
+  const code = customErrorCode(sim.err);
+  return { code, ok: code === expected };
+}
+
+// One live roll that proves cancel can't touch it: too early while Pending, and refused once
+// fulfilled. A genuinely stuck request can't be produced on demand, since the oracle answers in ~2 s;
+// the Pending-after-window path is covered by the program's unit tests.
+async function cancelCheck(connection, args) {
+  const kind = KINDS[args.kind || "known"];
+  if (!kind) throw new Error("--kind known|stamp");
+  const out = args.out || "vrf-roll-results.jsonl";
+  const signer = loadKeypair(args.keypair);
+  const address = signer.publicKey.toBase58();
+  if (address === UPGRADE_AUTHORITY) throw new Error("refusing to use the program upgrade authority");
+  const { resultAuthority } = await readAuthorities(connection);
+  if (address !== resultAuthority) throw new Error(`keypair is ${address}, but GameConfig.result_authority is ${resultAuthority}`);
+
+  const opHash = crypto.randomBytes(32);
+  const rollPda = rollRequestPda(kind, opHash);
+  const subjectHash = sha256(Buffer.from("chainbound:devnet-roll-test"));
+  const rec = { run: "cancel-check", kind, pda: rollPda.toBase58(), operationHashHex: opHash.toString("hex"), ok: false };
+  try {
+    rec.requestSig = await send(connection, signer, requestRollIx(signer.publicKey, kind, opHash, subjectHash));
+    const early = await expectSimError(connection, signer.publicKey, cancelRollIx(signer.publicKey, rollPda), ERR_ROLL_CANCEL_TOO_EARLY);
+    rec.cancelWhilePending = early.code;
+    const roll = await waitFulfilled(connection, rollPda, Date.now() + 60_000);
+    if (!roll) throw new Error("timeout waiting for fulfill");
+    rec.tier = roll.tier;
+    rec.tierName = TIERS[roll.tier];
+    rec.randomnessHex = Buffer.from(roll.randomness).toString("hex");
+    rec.recomputedTier = rollTier(roll.randomness, roll.cumulativePpm);
+    const late = await expectSimError(connection, signer.publicKey, cancelRollIx(signer.publicKey, rollPda), ERR_INVALID_ROLL_STATUS);
+    rec.cancelAfterFulfill = late.code;
+    const resultHash = sha256(Buffer.from("chainbound:devnet-roll-test-result"), opHash, Buffer.from([roll.tier]));
+    rec.consumeSig = await send(connection, signer, consumeRollIx(signer.publicKey, rollPda, resultHash));
+    const after = await readRoll(connection, rollPda);
+    rec.consumedAtSlot = after.consumedAtSlot;
+    rec.ok = early.ok && late.ok && after.status === ROLL_CONSUMED && rec.recomputedTier === rec.tier;
+  } catch (error) {
+    rec.error = error.message;
+  }
+  fs.appendFileSync(out, JSON.stringify(rec) + "\n");
+  console.log(`cancel while pending: ${rec.cancelWhilePending ?? "-"} (want ${ERR_ROLL_CANCEL_TOO_EARLY} RollCancelTooEarly)`);
+  console.log(`cancel after fulfill: ${rec.cancelAfterFulfill ?? "-"} (want ${ERR_INVALID_ROLL_STATUS} InvalidRollStatus)`);
+  console.log(`roll settled as ${rec.tierName ?? "-"}; ${rec.ok ? "PASS" : "FAIL"} ${rec.error ?? ""}`);
+  console.log(`(the cancel window is ${ROLL_CANCEL_DELAY_SLOTS} slots after the request)`);
+}
+
+async function showAuthority(connection) {
+  const { programAuthority, resultAuthority } = await readAuthorities(connection);
+  console.log(`program_authority  ${programAuthority}`);
+  console.log(`result_authority   ${resultAuthority}`);
+  const pending = await readAuthorityTransfer(connection);
+  console.log(`pending transfer   ${pending ? JSON.stringify(pending) : "none"}  (PDA ${authorityTransferPda().toBase58()})`);
+}
+
+async function proposeAuthority(connection, args) {
+  if (!args.new) throw new Error("--new <vault address> is required");
+  const newAuthority = new PublicKey(args.new);
+  const signer = loadKeypair(args.keypair);
+  const { programAuthority } = await readAuthorities(connection);
+  if (signer.publicKey.toBase58() !== programAuthority) {
+    throw new Error(`keypair is ${signer.publicKey.toBase58()}, but GameConfig.program_authority is ${programAuthority}`);
+  }
+  console.log(`propose program_authority ${programAuthority} -> ${newAuthority.toBase58()}`);
+  const ix = proposeAuthorityIx(signer.publicKey, newAuthority);
+  if (args["dry-run"]) {
+    const sim = await simulateUnsigned(connection, signer.publicKey, [ix]);
+    console.log(`dry run: err=${JSON.stringify(sim.err)} units=${sim.unitsConsumed}`);
+    for (const l of (sim.logs || []).filter((l) => /Instruction|Error|failed/.test(l))) console.log(`  ${l}`);
+    return;
+  }
+  console.log(`propose tx ${await send(connection, signer, ix)}`);
+  console.log("nothing changes until the new authority signs accept_program_authority (see accept-authority-ix)");
+}
+
+async function cancelAuthorityTransfer(connection, args) {
+  const signer = loadKeypair(args.keypair);
+  const ix = cancelAuthorityTransferIx(signer.publicKey);
+  if (args["dry-run"]) {
+    const sim = await simulateUnsigned(connection, signer.publicKey, [ix]);
+    console.log(`dry run: err=${JSON.stringify(sim.err)} units=${sim.unitsConsumed}`);
+    return;
+  }
+  console.log(`cancel tx ${await send(connection, signer, ix)}`);
+}
+
+// The vault can't sign here, so this only prints the instruction for a multisig proposal.
+async function printAcceptAuthorityIx(connection, args) {
+  const pending = await readAuthorityTransfer(connection);
+  if (!pending) throw new Error("no pending authority transfer; run propose-authority first");
+  if (args.new && args.new !== pending.pendingAuthority) {
+    throw new Error(`pending authority is ${pending.pendingAuthority}, not ${args.new}`);
+  }
+  const ix = acceptAuthorityIx(new PublicKey(pending.pendingAuthority), new PublicKey(pending.currentAuthority));
+  console.log(JSON.stringify({
+    programId: ix.programId.toBase58(),
+    keys: ix.keys.map((k) => ({ pubkey: k.pubkey.toBase58(), isSigner: k.isSigner, isWritable: k.isWritable })),
+    dataHex: ix.data.toString("hex"),
+  }, null, 2));
 }
 
 async function main() {
@@ -350,7 +531,14 @@ async function main() {
     case "set-odds": return setOdds(connection, args);
     case "run": return runRolls(connection, args);
     case "close": return closeRolls(connection, args);
-    default: throw new Error("command: simulate | show-odds | set-odds | run | close");
+    case "cancel-check": return cancelCheck(connection, args);
+    case "show-authority": return showAuthority(connection);
+    case "propose-authority": return proposeAuthority(connection, args);
+    case "cancel-authority-transfer": return cancelAuthorityTransfer(connection, args);
+    case "accept-authority-ix": return printAcceptAuthorityIx(connection, args);
+    default:
+      throw new Error("command: simulate | show-odds | set-odds | run | close | cancel-check | show-authority | " +
+        "propose-authority | cancel-authority-transfer | accept-authority-ix");
   }
 }
 

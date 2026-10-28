@@ -40,7 +40,7 @@
   |---|---|---|
   | A | Seeker Seed Vault | Daily approver; the key never leaves the secure element |
   | B | Phantom, a **fresh account used only for the multisig** | Proposer and second approver from desktop |
-  | C | Offline recovery key | Used only if A or B is lost or compromised |
+  | C | Offline recovery key `63PMxx4dp7qBr7NRzpFg1XMowJNT5G1H19UXrnG1XME` (created 2026-10-27; seed phrase on paper only) | Used only if A or B is lost or compromised |
 
   - **How to make key C:** run `solana-keygen new --no-outfile` on a machine that is offline at the time. Write the seed phrase on paper, store it somewhere safe, and record only the public key. It never goes on disk, in a password manager synced to the cloud, or in this repo.
   - **Recovery:** if A or B is lost, C plus the surviving key vote a Squads config change that swaps in a new member.
@@ -57,12 +57,20 @@
 
 ### Program change needed first
 
+**Status:** implemented and unit-tested (Phase 1), but not deployed yet.
+
 `program_authority` has to become transferable. Add two instructions:
 
 - `propose_program_authority(new_authority)`, signed by the current authority, writes a pending authority to a new PDA `["authority_transfer"]`. A separate PDA avoids reallocating `GameConfig`.
 - `accept_program_authority()`, signed by the pending authority (the Squads vault, through a proposal), sets `GameConfig.program_authority` and closes the PDA.
 
-The two-step shape stops a typo from bricking config control. The same pattern applies to any other config account that has its own authority field; check `OwnershipConfig` when implementing.
+The two-step shape stops a typo from bricking config control. A third instruction, `cancel_program_authority_transfer`, lets the current authority withdraw an unaccepted proposal. `OwnershipConfig` has no authority field of its own; it checks `GameConfig.program_authority`, so one transfer covers both configs.
+
+Tooling, in `tools/vrf-efficacy/roll.cjs`:
+- `show-authority`: shows the current authority and any pending transfer.
+- `propose-authority --new <vault> [--dry-run]`: proposes the new authority (signed by DkFm).
+- `cancel-authority-transfer`: withdraws an unaccepted proposal.
+- `accept-authority-ix`: prints the accept instruction for the Squads proposal. It never signs anything.
 
 ### Devnet rehearsal (the template for Mainnet)
 
@@ -156,6 +164,8 @@ Cost controls to design in:
 
 ### Program change: `cancel_roll`
 
+**Status:** implemented and unit-tested (Phase 1), but not deployed yet. On Devnet, `roll.cjs cancel-check` makes one live roll and checks two refusals: cancel too early while Pending (`RollCancelTooEarly`, 6042), and cancel after fulfill (`InvalidRollStatus`, 6039).
+
 - New status `ROLL_CANCELLED = 3`.
 - `cancel_roll()`, signed by the result authority: allowed only while **Pending**, and only at least `ROLL_CANCEL_DELAY_SLOTS` after `requested_at_slot` (proposed 150 slots, about 60 s).
 - A late oracle callback then fails, because `fulfill_roll` already requires Pending, so cancelled rolls never get randomness.
@@ -239,6 +249,12 @@ Draft clauses added on 2026-10-27, marked `[[COUNSEL REVIEW]]` so they are fille
 |---|---|---|
 | 0 | This plan, and the legal drafts | Done (2026-10-27) |
 | 1 | Program: authority transfer, `cancel_roll`, encounter close; tests; autofixer; Devnet upgrade | Devnet upgrade |
+
+**Phase 1 build (2026-10-27):**
+- **Code:** 5 new instructions (43 total); the 38 existing instructions, the `RollRequest` layout and error codes 6000–6041 are unchanged. New errors are 6042–6044; 20/20 unit tests pass.
+- **Artifact:** `chainbound_game.so` is 1,041,864 bytes, sha256 `5604fcca620459ff369f1619a0181c033feff7e5aacdebc96f17b551b45bcd42`.
+- **Devnet upgrade:** needs `solana program extend 9312… 51200` first (about 0.26 SOL more rent; the current capacity is 1,001,667 bytes).
+- **Autofixer:** `program_autofixer` has not run, because the Solana MCP isn't connected in this session. Run it before the Devnet upgrade.
 | 2 | Devnet Squads rehearsal (section 1 steps); `roll.cjs --squads`; runbook | Multisig decided; each Devnet authority transfer |
 | 3 | Server and Unity: two-step roll with retry and refund, status endpoint, resume coordinator, odds display, audit endpoint | — |
 | 4 | Audit: scope freeze, quotes, fixes, re-review | Vendor and budget |

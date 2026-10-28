@@ -12,6 +12,12 @@ namespace Chainbound.Combat
         public const string ProgramId = "9312ay7VrpvNYmyEx8TYCqhafbZ2Y5WGVbt6Qp772uUQ";
         public const string GameConfigSeed = "game_config";
 
+        public const string AcceptProgramAuthority = "accept_program_authority";
+        public static readonly byte[] AcceptProgramAuthorityDiscriminator = { 224, 193, 101, 195, 243, 34, 10, 108 };
+        public static readonly string[] AcceptProgramAuthorityAccounts = { "authority_transfer", "game_config", "pending_authority", "current_authority" };
+        public static readonly bool[] AcceptProgramAuthorityWritable = { true, true, false, true };
+        public static readonly bool[] AcceptProgramAuthoritySigner = { false, false, true, false };
+
         public const string AddChainlingFromCapture = "add_chainling_from_capture";
         public static readonly byte[] AddChainlingFromCaptureDiscriminator = { 192, 82, 146, 130, 87, 148, 119, 183 };
         public static readonly string[] AddChainlingFromCaptureAccounts = { "vault", "config", "result_authority" };
@@ -36,11 +42,29 @@ namespace Chainbound.Combat
         public static readonly bool[] BurnKnownMoveForRamWritable = { true, true, false, false };
         public static readonly bool[] BurnKnownMoveForRamSigner = { false, false, false, true };
 
+        public const string CancelProgramAuthorityTransfer = "cancel_program_authority_transfer";
+        public static readonly byte[] CancelProgramAuthorityTransferDiscriminator = { 171, 55, 192, 147, 223, 119, 211, 212 };
+        public static readonly string[] CancelProgramAuthorityTransferAccounts = { "authority_transfer", "game_config", "program_authority" };
+        public static readonly bool[] CancelProgramAuthorityTransferWritable = { true, false, true };
+        public static readonly bool[] CancelProgramAuthorityTransferSigner = { false, false, true };
+
         public const string CancelRamReservation = "cancel_ram_reservation";
         public static readonly byte[] CancelRamReservationDiscriminator = { 187, 16, 38, 226, 202, 185, 140, 135 };
         public static readonly string[] CancelRamReservationAccounts = { "reservation", "config", "result_authority" };
         public static readonly bool[] CancelRamReservationWritable = { true, false, true };
         public static readonly bool[] CancelRamReservationSigner = { false, false, true };
+
+        public const string CancelRoll = "cancel_roll";
+        public static readonly byte[] CancelRollDiscriminator = { 17, 175, 33, 37, 26, 207, 87, 199 };
+        public static readonly string[] CancelRollAccounts = { "roll_request", "game_config", "result_authority" };
+        public static readonly bool[] CancelRollWritable = { true, false, false };
+        public static readonly bool[] CancelRollSigner = { false, false, true };
+
+        public const string CloseEncounterRequest = "close_encounter_request";
+        public static readonly byte[] CloseEncounterRequestDiscriminator = { 91, 131, 91, 161, 201, 224, 90, 142 };
+        public static readonly string[] CloseEncounterRequestAccounts = { "encounter_request", "owner" };
+        public static readonly bool[] CloseEncounterRequestWritable = { true, true };
+        public static readonly bool[] CloseEncounterRequestSigner = { false, false };
 
         public const string CloseRoll = "close_roll";
         public static readonly byte[] CloseRollDiscriminator = { 34, 110, 251, 171, 221, 168, 78, 59 };
@@ -156,6 +180,12 @@ namespace Chainbound.Combat
         public static readonly bool[] PrepareStampTicketWritable = { true, false, false, false, false, true, false };
         public static readonly bool[] PrepareStampTicketSigner = { false, false, false, false, false, true, false };
 
+        public const string ProposeProgramAuthority = "propose_program_authority";
+        public static readonly byte[] ProposeProgramAuthorityDiscriminator = { 179, 255, 15, 233, 89, 2, 16, 114 };
+        public static readonly string[] ProposeProgramAuthorityAccounts = { "authority_transfer", "game_config", "program_authority", "system_program" };
+        public static readonly bool[] ProposeProgramAuthorityWritable = { true, false, true, false };
+        public static readonly bool[] ProposeProgramAuthoritySigner = { false, false, true, false };
+
         public const string ReconcileRamDelta = "reconcile_ram_delta";
         public static readonly byte[] ReconcileRamDeltaDiscriminator = { 0, 109, 140, 149, 153, 119, 226, 15 };
         public static readonly string[] ReconcileRamDeltaAccounts = { "receipt", "profile", "owner", "config", "result_authority", "system_program" };
@@ -240,6 +270,7 @@ namespace Chainbound.Combat
         public static readonly bool[] UpdateWinsLossesWritable = { true, false, false };
         public static readonly bool[] UpdateWinsLossesSigner = { false, false, true };
 
+        public static readonly byte[] AuthorityTransferAccountDiscriminator = { 43, 243, 199, 71, 139, 255, 231, 113 };
         public static readonly byte[] BindReceiptAccountDiscriminator = { 178, 55, 40, 1, 22, 166, 212, 254 };
         public static readonly byte[] ChainlingAccountAccountDiscriminator = { 126, 210, 27, 85, 136, 74, 53, 142 };
         public static readonly byte[] ChainlingVaultAccountDiscriminator = { 249, 254, 142, 175, 246, 71, 53, 95 };

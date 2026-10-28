@@ -8,6 +8,89 @@
   },
   "instructions": [
     {
+      "name": "accept_program_authority",
+      "docs": [
+        "Step two: the pending authority signs to take control. The proposal's rent goes back to",
+        "the authority that paid for it."
+      ],
+      "discriminator": [
+        224,
+        193,
+        101,
+        195,
+        243,
+        34,
+        10,
+        108
+      ],
+      "accounts": [
+        {
+          "name": "authority_transfer",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  116,
+                  114,
+                  97,
+                  110,
+                  115,
+                  102,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending_authority",
+          "signer": true
+        },
+        {
+          "name": "current_authority",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "add_chainling_from_capture",
       "discriminator": [
         192,
@@ -575,6 +658,87 @@
       ]
     },
     {
+      "name": "cancel_program_authority_transfer",
+      "docs": [
+        "Withdraws an unaccepted proposal so a different authority can be proposed."
+      ],
+      "discriminator": [
+        171,
+        55,
+        192,
+        147,
+        223,
+        119,
+        211,
+        212
+      ],
+      "accounts": [
+        {
+          "name": "authority_transfer",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  116,
+                  114,
+                  97,
+                  110,
+                  115,
+                  102,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "cancel_ram_reservation",
       "discriminator": [
         187,
@@ -669,10 +833,163 @@
       ]
     },
     {
+      "name": "cancel_roll",
+      "docs": [
+        "Cancels a request the oracle never fulfilled. Only a Pending request qualifies, so a",
+        "cancel can never discard randomness that was already drawn; a late callback then fails on",
+        "the status check. The server retries under a new operation hash or releases the RAM."
+      ],
+      "discriminator": [
+        17,
+        175,
+        33,
+        37,
+        26,
+        207,
+        87,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "roll_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  108,
+                  108,
+                  95,
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "roll_request.kind",
+                "account": "RollRequest"
+              },
+              {
+                "kind": "account",
+                "path": "roll_request.operation_hash",
+                "account": "RollRequest"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "result_authority",
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_encounter_request",
+      "docs": [
+        "Returns a consumed encounter request's rent to the player who paid it, after the",
+        "retention window. Anyone may send it (for example a server sweep); the rent can only go",
+        "to the request's owner."
+      ],
+      "discriminator": [
+        91,
+        131,
+        91,
+        161,
+        201,
+        224,
+        90,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "encounter_request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "encounter_request.request_seed",
+                "account": "EncounterRequest"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "relations": [
+            "encounter_request"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "close_roll",
       "docs": [
-        "Returns a consumed request's rent once the retention window has passed. Events keep the",
-        "audit trail."
+        "Returns a consumed or cancelled request's rent once the retention window has passed.",
+        "Events keep the audit trail."
       ],
       "discriminator": [
         34,
@@ -2620,6 +2937,97 @@
       ]
     },
     {
+      "name": "propose_program_authority",
+      "docs": [
+        "Step one of handing config control to a new authority (for example a multisig vault).",
+        "Nothing changes until the new authority accepts, so a mistyped key can't lock the config."
+      ],
+      "discriminator": [
+        179,
+        255,
+        15,
+        233,
+        89,
+        2,
+        16,
+        114
+      ],
+      "accounts": [
+        {
+          "name": "authority_transfer",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  116,
+                  114,
+                  97,
+                  110,
+                  115,
+                  102,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "game_config"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "reconcile_ram_delta",
       "docs": [
         "Applies a one-time operator-approved delta for a frozen legacy reconciliation case."
@@ -4435,6 +4843,19 @@
   ],
   "accounts": [
     {
+      "name": "AuthorityTransfer",
+      "discriminator": [
+        43,
+        243,
+        199,
+        71,
+        139,
+        255,
+        231,
+        113
+      ]
+    },
+    {
       "name": "BindReceipt",
       "discriminator": [
         178,
@@ -4697,6 +5118,45 @@
       ]
     },
     {
+      "name": "ProgramAuthorityProposed",
+      "discriminator": [
+        66,
+        121,
+        92,
+        115,
+        90,
+        253,
+        19,
+        217
+      ]
+    },
+    {
+      "name": "ProgramAuthorityTransferCancelled",
+      "discriminator": [
+        171,
+        113,
+        104,
+        196,
+        202,
+        223,
+        127,
+        230
+      ]
+    },
+    {
+      "name": "ProgramAuthorityTransferred",
+      "discriminator": [
+        155,
+        166,
+        217,
+        98,
+        185,
+        97,
+        25,
+        171
+      ]
+    },
+    {
       "name": "PurchasedRamCredited",
       "discriminator": [
         37,
@@ -4772,6 +5232,19 @@
         198,
         160,
         29
+      ]
+    },
+    {
+      "name": "RollCancelled",
+      "discriminator": [
+        113,
+        246,
+        38,
+        232,
+        98,
+        128,
+        173,
+        118
       ]
     },
     {
@@ -5050,9 +5523,52 @@
       "code": 6041,
       "name": "RollCloseTooEarly",
       "msg": "Roll request retention window has not passed."
+    },
+    {
+      "code": 6042,
+      "name": "RollCancelTooEarly",
+      "msg": "Roll request is still inside its fulfillment window and cannot be cancelled yet."
+    },
+    {
+      "code": 6043,
+      "name": "InvalidAuthorityTransfer",
+      "msg": "Authority transfer target is invalid, or does not match the pending proposal."
+    },
+    {
+      "code": 6044,
+      "name": "EncounterCloseTooEarly",
+      "msg": "Encounter request retention window has not passed."
     }
   ],
   "types": [
+    {
+      "name": "AuthorityTransfer",
+      "docs": [
+        "A pending `program_authority` handoff. Kept outside `GameConfig` so the config layout and",
+        "size never change."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "current_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
     {
       "name": "BindReceipt",
       "type": {
@@ -5716,6 +6232,54 @@
       }
     },
     {
+      "name": "ProgramAuthorityProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "current_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProgramAuthorityTransferCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "current_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProgramAuthorityTransferred",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "previous_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
       "name": "PurchasedRamCredited",
       "type": {
         "kind": "struct",
@@ -6122,6 +6686,35 @@
           {
             "name": "balance_after",
             "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RollCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "operation_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "requested_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "cancelled_at_slot",
+            "type": "u64"
           }
         ]
       }
