@@ -58,6 +58,18 @@
   | Members (all with Initiate, Vote and Execute) | `63PMxx…XME` (offline recovery, C), `9zMwTbQtjvexJzuMZjzbKS7LtWNXVYG3auBNeV82VHUj`, `AxrH7pwxL1kdfMDHBRTt6YhuNCWpcNkqjJJ633gVoCLu` (A and B: which is which is still to be confirmed) |
 
   This multisig is on **Mainnet**, so it can't sign for the Devnet program. The Devnet rehearsal needs its own Devnet multisig with the same three members.
+
+  Member roles: `AxrH7pwx…oCLu` is **Phantom** (B), so `9zMwTbQt…VHUj` is the **Seeker Seed Vault** (A).
+- **Devnet multisig created** (2026-10-27) with `tools/vrf-efficacy/squads.cjs create-multisig`. The throwaway `Ei1HGT9c…` paid; it has no role in the multisig.
+
+  | Field | Value |
+  |---|---|
+  | Multisig account | `9kcMg2WKwF2XdUBuKnpHnso4PRuVNPVgg1VuGtbjAv9m` |
+  | Vault (index 0) | `G4eqvbNwpJazSYkmS6y1Zq4zjLcABrFDZKiPV2JVNP7S` |
+  | Create tx | `2ePNAQ5n7QEYcR6Vn3wbeKH1sB8DgKUymKad1wW5Hc5DqZ1Qgaj5qPzqKoWgSHh2FNg7EFdRrcJLRF8G8chSdry9` |
+  | Settings (read back from chain) | 2 of 3, time lock 0, config authority none; the same three members as Mainnet, all with Initiate, Vote and Execute |
+
+  `propose_program_authority(G4eq…)` simulated cleanly against the live Devnet program (10,828 CUs).
 - **Time lock** (decided 2026-10-27):
   - **Mainnet: 24 h.** Approved upgrades, odds changes and config changes wait 24 h before they can execute. Hotfixes are planned with that delay.
   - **Devnet: none.** Before Mainnet, rehearse the time lock once on a short-lived Devnet multisig with a short value.
