@@ -108,7 +108,24 @@
     - DkFm `SetAuthority` → vault succeeds;
     - in the same transaction, vault `SetAuthority` → DkFm also succeeds, which proves the recovery exit works once the vault holds the upgrade authority.
   - **Not offered:** `extend`, and `initialize_roll_odds`. Both odds accounts already exist.
-- **Next, upgrade under the multisig:**
+- **Upgrade authority moved to the vault, and one upgrade done under the multisig** (2026-10-27, verified from Devnet RPC):
+
+  | Step | Signer | Tx |
+  |---|---|---|
+  | `set-upgrade-authority` → `G4eq…` | DkFm | `4as3J4Q5n3vPFaR4uHAMf9zP6qqndgYRsKQNDUFBgkgrBAv1rdz2ThYkyG4Puog5YJ8PyEJt7aER8hp7syChqx7A` |
+  | `write-buffer` `bpZm4UAz…` (1,044,512 bytes, sha256 `1f4293ab…`), then `set-buffer-authority` → vault | DkFm | — |
+  | Vault transaction #2 create (Upgrade), proposal, approve | Phantom | `3D3ezRL64jVUbEv4aGvusbyHRQowxAEsibqWrxmTK2d4bSuhT5RbQPX3toAVN2vgqKVfo7aqBJiRd5rUvssAbGbX` |
+  | Approve, execute → `Upgraded program` | Seeker Seed Vault | `3VFumixpexaCJj3BuN6Vp2spXs5D9r59QSczeQooagLBhFrypRwK79gRUJ4qRBXWK3Ku3dwwxwMa8zfmbgdT98JG` (slot 515,921,531) |
+
+  - **Upgrade authority** is now the vault.
+  - **Deployed code:** the programdata was redeployed at slot 515,921,531, and its first 1,044,512 bytes hash to `1f4293ab…`, the same build.
+  - **Rent:** the buffer is closed, and its 5.3070 SOL went back to DkFm through the spill.
+  - **What this proves:** the whole Mainnet upgrade path works with these wallets: buffer, vault proposal, 2-of-3 approval with Phantom and the Seed Vault, execute.
+  - **Still owed:**
+    - the time-lock rehearsal on a short-lived multisig;
+    - an extend proposal type, needed before any build outgrows the current 1,052,912-byte programdata;
+    - executing the recovery proposal once, if wanted. It has only been simulated so far.
+- **Original upgrade checklist** (done above):
   1. Run `set-upgrade-authority` to move the upgrade authority to the vault (DkFm signs).
   2. `solana program write-buffer` the current build.
   3. `set-buffer-authority` to the vault.
@@ -125,7 +142,7 @@
 
 ### Program change needed first
 
-**Status:** implemented and unit-tested (Phase 1), but not deployed yet.
+**Status:** implemented, unit-tested, and deployed on Devnet at 7:59 PM CT on 2026-10-27 (program commits `423417a0` / `fdf9f88d`).
 
 `program_authority` has to become transferable. Add two instructions:
 
@@ -232,7 +249,7 @@ Cost controls to design in:
 
 ### Program change: `cancel_roll`
 
-**Status:** implemented and unit-tested (Phase 1), but not deployed yet. On Devnet, `roll.cjs cancel-check` makes one live roll and checks two refusals: cancel too early while Pending (`RollCancelTooEarly`, 6042), and cancel after fulfill (`InvalidRollStatus`, 6039).
+**Status:** implemented, unit-tested, and deployed on Devnet at 7:59 PM CT on 2026-10-27. On Devnet, `roll.cjs cancel-check` makes one live roll and checks two refusals: cancel too early while Pending (`RollCancelTooEarly`, 6042), and cancel after fulfill (`InvalidRollStatus`, 6039).
 
 - New status `ROLL_CANCELLED = 3`.
 - `cancel_roll()`, signed by the result authority: allowed only while **Pending**, and only at least `ROLL_CANCEL_DELAY_SLOTS` after `requested_at_slot` (proposed 150 slots, about 60 s).
