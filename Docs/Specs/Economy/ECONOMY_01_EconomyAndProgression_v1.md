@@ -57,6 +57,8 @@ Stars (0–5), mastery cycles, and rebirth are the progression source of truth. 
 | Elite / trainer | 15 | 40 |
 | Boss / milestone | 50 | 80 |
 
+Battle and quest RAM count toward the 100/UTC-day earn cap. The daily gift's 10 RAM ([DAILY_LOGIN_REWARDS_v1](DAILY_LOGIN_REWARDS_v1.md)) is excluded from that cap, the same as purchased RAM.
+
 Per-enemy XP defaults to 20 standard, 45 elite, and 90 boss. Participating Chainlings receive 100%; bench Chainlings present at battle start receive 50%. A newly captured wild Chainling receives no XP from its capture battle.
 
 ### Star-up Known grants

@@ -43,6 +43,12 @@ public abstract class MainMenuPanelControllerBase : MonoBehaviour
     public virtual Selectable ActiveViewDefaultSelection => DefaultSelection;
     public Selectable FallbackSelection => closeButton != null ? closeButton : DefaultSelection;
 
+    /// <summary>
+    /// Raised while open when async content shows or hides a selectable, so the
+    /// sequence controller can rebuild gamepad focus.
+    /// </summary>
+    public event Action<MainMenuPanelControllerBase> SelectablesChanged;
+
     protected virtual void Awake()
     {
         InitializeIfNeeded();
@@ -203,6 +209,13 @@ public abstract class MainMenuPanelControllerBase : MonoBehaviour
     protected void SetDefaultSelection(Selectable selectable)
     {
         defaultSelection = selectable;
+    }
+
+    protected void NotifySelectablesChanged()
+    {
+        ConfigureExplicitNavigation();
+        if (IsOpen)
+            SelectablesChanged?.Invoke(this);
     }
 
     private void CompleteClose()
