@@ -9,8 +9,7 @@ import {
   str,
   supabaseAdmin,
 } from "../_shared/account_helpers.ts";
-
-const FLAG_KEY_RE = /^[a-z][a-z0-9_]{1,63}$/;
+import { isProgressionFlagKeyValid } from "../_shared/progression_flag_key.ts";
 
 serve(async (req: Request) => {
   const early = requirePost(req);
@@ -20,7 +19,7 @@ serve(async (req: Request) => {
   if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
 
   const flagKey = str(body.flag_key);
-  if (!FLAG_KEY_RE.test(flagKey)) {
+  if (!isProgressionFlagKeyValid(flagKey)) {
     return jsonResponse({ success: false, error: "invalid_flag_key" }, 400);
   }
 
