@@ -310,6 +310,9 @@ public class MainMenuSequenceController2 : MonoBehaviour
 
     private void OnEnable()
     {
+        if (eventsPanel != null)
+            eventsPanel.SelectablesChanged += HandlePanelSelectablesChanged;
+
         if (_hudButtonAudioSuppressed)
             return;
 
@@ -319,6 +322,9 @@ public class MainMenuSequenceController2 : MonoBehaviour
 
     private void OnDisable()
     {
+        if (eventsPanel != null)
+            eventsPanel.SelectablesChanged -= HandlePanelSelectablesChanged;
+
         if (!_hudButtonAudioSuppressed)
             return;
 
@@ -788,6 +794,9 @@ public class MainMenuSequenceController2 : MonoBehaviour
         {
             CacheResolvedSession(session);
             _bootstrapComplete = true;
+            // The menu cannot ask QuestService about the coffee quest; the
+            // server status decides whether the tree shows gift boxes.
+            _ = DailyLoginRewardService.EnsureInstance().RefreshAsync();
         }, error =>
         {
             _bootstrapFailed = true;
@@ -1895,6 +1904,12 @@ public class MainMenuSequenceController2 : MonoBehaviour
                 yield break;
             ConfigurePanelNavigation(panel);
         }
+    }
+
+    private void HandlePanelSelectablesChanged(MainMenuPanelControllerBase panel)
+    {
+        if (_menuState == MenuState.ObjectPanel)
+            ConfigurePanelNavigation(panel);
     }
 
     private void ConfigurePanelNavigation(MainMenuPanelControllerBase panel)

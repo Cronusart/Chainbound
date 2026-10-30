@@ -364,7 +364,11 @@ public static class MainMenuObjectNavigationSceneBuilder
             "newGameButton", "connectWalletButton", "continueButton", "sequenceController",
         }, failures, requireCloseButton: false);
         ValidatePanel(pcPanel, 1, Array.Empty<string>(), failures);
-        ValidatePanel(eventsPanel, 1, new[] { "feed", "titleLabel", "bodyLabel" }, failures);
+        ValidatePanel(eventsPanel, 2, new[]
+        {
+            "feed", "titleLabel", "bodyLabel",
+            "giftBlockRoot", "giftGraphic", "giftStatusLabel", "claimButton", "claimButtonLabel",
+        }, failures);
         ValidatePanelPrefab(bonkPanel, "Assets/Prefabs/UI/MainMenu/GameMenuPanel.prefab", failures);
         ValidatePanelPrefab(pcPanel, "Assets/Prefabs/UI/MainMenu/PCDeskPanel.prefab", failures);
         ValidatePanelPrefab(eventsPanel, "Assets/Prefabs/UI/MainMenu/EventsPanel.prefab", failures);
@@ -813,6 +817,7 @@ public static class MainMenuObjectNavigationSceneBuilder
         SetObject(controller, "feed", feed);
         SetObject(controller, "titleLabel", title);
         SetObject(controller, "bodyLabel", body);
+        DailyLoginGiftAuthoring.BuildEventsGiftBlock(controller, DailyLoginGiftAuthoring.LoadMenuGiftSprite());
         return controller;
     }
 

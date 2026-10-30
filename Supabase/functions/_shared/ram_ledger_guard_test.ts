@@ -18,6 +18,8 @@ Deno.test("post-activation migrations reject unapproved direct RAM balance write
     "20261028120100_ram_shop_credit_mode.sql",
     // Quest RAM through the daily cap: settled quest_reward credit of the applied amount.
     "20261028120200_quest_reward_daily_cap.sql",
+    // Daily login gift: settled daily_login credit outside the earn cap, one per UTC day.
+    "20261030120000_daily_login_reward.sql",
   ]);
   for await (const entry of Deno.readDir(migrationsRoot)) {
     if (!entry.isFile || !entry.name.endsWith(".sql") || entry.name < firstReviewedWriter) continue;
@@ -92,6 +94,17 @@ Deno.test("quest rewards credit only the capped amount through the daily earn bu
   assertEquals(source.includes("SET earned = earned + v_applied"), true);
   assertEquals(source.includes("SET ram_balance = ram_balance + v_applied"), true);
   assertEquals(source.includes("ram_balance + v_reward.ram_amount"), false);
+});
+
+Deno.test("daily login gifts credit RAM through a settled ledger operation outside the earn cap", async () => {
+  const source = await Deno.readTextFile(
+    new URL("20261030120000_daily_login_reward.sql", migrationsRoot),
+  );
+  assertEquals(source.includes("INSERT INTO public.ram_ledger_operations"), true);
+  assertEquals(source.includes("'daily_login', 'credit', v_settings.ram_amount, 'settled'"), true);
+  assertEquals(source.includes("SET ram_balance = ram_balance + v_settings.ram_amount"), true);
+  // The gift is excluded from the 100/UTC-day earn cap, like a purchase.
+  assertEquals(source.includes("ram_daily_earnings"), false);
 });
 
 Deno.test("Edge functions never write player profile RAM directly", async () => {
